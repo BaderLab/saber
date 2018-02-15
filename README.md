@@ -2,4 +2,6 @@
 
 [![Build Status](https://travis-ci.org/BaderLab/multi-task-learning-BNER-trigger-word.svg?branch=master)](https://travis-ci.org/BaderLab/multi-task-learning-BNER-trigger-word)
 
-__Kari__ is a program for __information extraction__ in the biomedical domain. 
+[![Coverage Status](https://coveralls.io/repos/github/BaderLab/multi-task-learning-BNER-trigger-word/badge.svg?branch=master)](https://coveralls.io/github/BaderLab/multi-task-learning-BNER-trigger-word?branch=master)
+
+**Kari** is a deep-learning based tool for **information extraction** in the biomedical domain.
