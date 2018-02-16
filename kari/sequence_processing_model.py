@@ -1,26 +1,37 @@
-from dataset import Dataset
-
 import numpy as np
 import pandas as pd
-from keras import optimizers
-from keras.models import Model
-from keras.models import Input
-from keras.layers import LSTM
-from keras.layers import Embedding
-from keras.layers import Dense
-from keras.layers import TimeDistributed
-from keras.layers import Dropout
-from keras.layers import Bidirectional
-from keras_contrib.layers import CRF
+
 from sklearn.model_selection import train_test_split
+
+from dataset import Dataset
+from specify_model import specify_LSTM_CRF_
+from specify_model import compile_LSTM_CRF_
 
 # TODO (johngiorgi): set max_seq_len based on empirical observations
 # TODO (johngiorgi): consider smarter default values for paramas
+# TODO (johngiorgi): make sure this process is shuffling the data
 
 class SequenceProcessingModel(object):
-    def __init__(self, config_filepath, dataset_text_folder, debug, dropout_rate,
-                 gradient_clipping_value, learning_rate, maximum_number_of_epochs,
-                 optimizer, output_folder, train_model, max_seq_len=75):
+    PARAM_DEFAULT = 'default_value_please_ignore_1YVBF48GBG98BGB8432G4874BF74BB'
+
+    def __init__(self,
+                 activation_function = PARAM_DEFAULT,
+                 batch_size=PARAM_DEFAULT,
+                 config_filepath=PARAM_DEFAULT,
+                 dataset_text_folder=PARAM_DEFAULT,
+                 debug=PARAM_DEFAULT,
+                 dropout_rate=PARAM_DEFAULT,
+                 gradient_clipping_value=PARAM_DEFAULT,
+                 learning_rate=PARAM_DEFAULT,
+                 maximum_number_of_epochs=PARAM_DEFAULT,
+                 optimizer=PARAM_DEFAULT,
+                 output_folder=PARAM_DEFAULT,
+                 train_model=PARAM_DEFAULT,
+                 max_seq_len=PARAM_DEFAULT
+                 ):
+
+        self.activation_function = activation_function
+        self.batch_size = batch_size
         self.config_filepath = config_filepath
         self.dataset_text_folder = dataset_text_folder
         self.debug = debug
@@ -41,53 +52,26 @@ class SequenceProcessingModel(object):
         self.crf = None
         self.ds = None
 
+        # DATA
         # load dataset
-        ds = Dataset(self.dataset_text_folder, max_seq_len=self.max_seq_len)
-        ds.load_dataset()
-        self.ds = ds
-
+        self.ds = Dataset(self.dataset_text_folder, max_seq_len=self.max_seq_len)
+        self.ds.load_dataset()
         # split data set into train/test partitions
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            ds.word_idx_sequence, ds.tag_idx_sequence, test_size=0.1)
-
-        # specifiy
-        self.model, self.crf = self._specify(ds.word_type_count, ds.tag_type_count)
-
-    def _specify(self, word_type_count, tag_type_count):
-        """
-        """
-        # build the model
-        input_ = Input(shape=(self.max_seq_len,))
-        # plus 1 because of '0' word.
-        model = Embedding(input_dim=word_type_count + 1, output_dim=20,
-                          input_length=self.max_seq_len, mask_zero=True)(input_)
-        model = Bidirectional(LSTM(units=50, return_sequences=True,
-                                   recurrent_dropout=0.1))(model)
-        model = TimeDistributed(Dense(50, activation='relu'))(model)
-
-        crf = CRF(tag_type_count)
-        out = crf(model)
-
-        model = Model(input_, out)
-
-        return model, crf
-
-    def _compile(self):
-        if self.optimizer == 'sgd':
-            optimizer_ = optimizers.SGD(lr=0.01)
-
-        self.model.compile(optimizer=optimizer_, loss=self.crf.loss_function,
-            metrics=[self.crf.accuracy])
-        self.model.summary()
+            self.ds.word_idx_sequence, self.ds.tag_idx_sequence, test_size=0.1)
+        # SPECIFY
+        # pass a dictionary of this the dataset and model objects attributes as
+        # argument to specify_
+        self.model, self.crf = specify_LSTM_CRF_({**vars(self.ds), **vars(self)})
+        # COMPILE
+        compile_LSTM_CRF_(vars(self), self.model, self.crf)
 
     def fit(self):
         """
         """
-        # compile
-        self._compile()
         # fit
         train_hist = self.model.fit(self.X_train, np.array(self.y_train),
-                                    batch_size=32, epochs=6,
+                                    batch_size=self.batch_size, epochs=6,
                                     validation_split=0.1, verbose=1)
 
         return pd.DataFrame(train_hist.history)
