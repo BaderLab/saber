@@ -3,8 +3,6 @@
 from utils_parameter_parsing import *
 from sequence_processing_model import SequenceProcessingModel
 
-
-
 # from dataset import Dataset
 # from specify import *
 

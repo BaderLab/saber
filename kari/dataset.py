@@ -6,8 +6,6 @@ import pandas as pd
 from keras.utils import to_categorical
 from keras.preprocessing.sequence import pad_sequences
 
-# TODO (John): _get_types is dropping quotation marks when getting word types,
-# why??
 # TODO (John): set max_seq_len empirically.
 
 # method naming conventions: https://stackoverflow.com/questions/8689964/why-do-some-functions-have-underscores-before-and-after-the-function-name#8689983

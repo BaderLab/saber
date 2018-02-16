@@ -8,3 +8,13 @@
 ### Requirements
 
 Requires `Python >= 3.4`. Requirements can be installed by calling `pip install -r requirements.txt`.
+
+### Usage
+
+All hyper-parameters are specified in a configuration file. The configuration file can be specified when running __Kari__
+
+```
+python main.py --config_filepath path/to/config.ini
+```
+
+If not specified, the default config file (`kari/config.ini`) is loaded.
