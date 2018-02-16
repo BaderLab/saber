@@ -32,6 +32,8 @@ def process_parameters(config, cli_arguments):
     parameters['dataset_text_folder'] = str(config['dataset']['dataset_text_folder'])
     parameters['output_folder'] = str(config['dataset']['output_folder'])
 
+    parameters['activation_function'] = str(config['hyperparameters']['activation_function'])
+    parameters['batch_size'] = int(config['hyperparameters']['batch_size'])
     parameters['dropout_rate'] = float(config['hyperparameters']['dropout_rate'])
     parameters['gradient_clipping_value'] = float(config['hyperparameters']['gradient_clipping_value'])
     parameters['learning_rate'] = float(config['hyperparameters']['learning_rate'])
@@ -59,6 +61,8 @@ def parse_arguments():
                         help = '''path to the .ini file containing the
                         parameters. Defaults to './config.ini''')
 
+    parser.add_argument('--activation_function', required=False, type=str, help='')
+    parser.add_argument('--batch_size', required=False, type=int, help='')
     # parser.add_argument('--character_embedding_dimension', default=argument_default_value, help='')
     # parser.add_argument('--character_lstm_hidden_state_dimension', default=argument_default_value, help='')
     # parser.add_argument('--check_for_digits_replaced_with_zeros', default=argument_default_value, help='')
