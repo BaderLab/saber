@@ -4,3 +4,7 @@
 # Kari
 
 **Kari** is a deep-learning based tool for **information extraction** in the biomedical domain.
+
+### Requirements
+
+Requires `Python >= 3.4`. Requirements can be installed by calling `pip install -r requirements.txt`.

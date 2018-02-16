@@ -1,13 +1,12 @@
 language: python
 
 python:
-  - "3.3"
   - "3.4"
   - "3.5"
   - "3.6"
 
 script:
-  - pytest
+  - PYTHONPATH=./kari pytest
 
 after_success:
   - coveralls
