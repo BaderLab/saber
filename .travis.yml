@@ -5,8 +5,17 @@ python:
   - "3.5"
   - "3.6"
 
+install:
+  - pip install -r requirements.txt
+  - pip install pytest-cov
+  - pip install coveralls
+
 script:
-  - PYTHONPATH=./kari pytest
+  - PYTHONPATH=./kari py.test
+
+branches:
+  only:
+   - master
 
 after_success:
   - coveralls
