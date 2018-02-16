@@ -1,5 +1,6 @@
 import pytest
-from kari.dataset import Dataset
+
+from dataset import Dataset
 
 # collect helpful articles here:
 # https://semaphoreci.com/community/tutorials/testing-python-applications-with-pytest
@@ -8,7 +9,7 @@ from kari.dataset import Dataset
 # TODO (johngiorgi): Update example with words 'null' and '"', as these
 # gave me a lot of trouble.
 
-# set of word types for dummy dataset
+# constants for dummy dataset to perform testing on
 DUMMY_WORD_TYPES = ["Human", "APC2", "maps", "to", "chromosome", ".",
 "19p13",  "and", "Opsonization", "generation", "of", "chemotactic",
 "activity", "functioned", "normally", "ENDPAD"]
@@ -17,11 +18,12 @@ DUMMY_SENTENCES = [[("Human", "O"), ("APC2", "O"), ("maps", "O"), ("to", "O"),
 ("chromosome", "O"), ("19p13", "O"), (".", "O")], [("Opsonization", "O"),
 ("and", "O"), ("generation", "O"), ("of", "O"), ("chemotactic", "O"),
 ("activity", "O"), ("functioned", "O"), ("normally", "O"), (".", "O")]]
+PATH_TO_DUMMY_DATASET = 'kari/test/dummy_dataset.tsv'
 
 @pytest.fixture
 def empty_dummy_dataset():
     """ Returns an empty 'dummy' Dataset instance."""
-    dataset = Dataset('kari/test/dummy_dataset.tsv', sep='\t')
+    dataset = Dataset(PATH_TO_DUMMY_DATASET, sep='\t')
 
     return dataset
 
@@ -33,7 +35,7 @@ def dummy_dataset():
 
     return dataset
 
-def test_attributes_after_initilization_of_class(empty_dummy_dataset):
+def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     """ Asserts instance attributes are initialized correctly when dataset is
     empty (i.e., load_dataset() method has not been called.)"""
     # attributes that are passed to __init__
