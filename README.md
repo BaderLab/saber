@@ -7,7 +7,7 @@
 
 ### Requirements
 
-Requires `Python >= 3.4`. Requirements can be installed by calling `pip install -r requirements.txt`.
+Requires `Python >= 3.5`. Requirements can be installed by calling `pip install -r requirements.txt`.
 
 ### Usage
 
