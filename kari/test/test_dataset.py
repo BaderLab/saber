@@ -18,7 +18,7 @@ DUMMY_SENTENCES = [[("Human", "O"), ("APC2", "O"), ("maps", "O"), ("to", "O"),
 ("chromosome", "O"), ("19p13", "O"), (".", "O")], [("Opsonization", "O"),
 ("and", "O"), ("generation", "O"), ("of", "O"), ("chemotactic", "O"),
 ("activity", "O"), ("functioned", "O"), ("normally", "O"), (".", "O")]]
-PATH_TO_DUMMY_DATASET = 'kari/test/dummy_dataset.tsv'
+PATH_TO_DUMMY_DATASET = 'kari/test/dummy_dataset'
 
 @pytest.fixture
 def empty_dummy_dataset():
@@ -30,7 +30,7 @@ def empty_dummy_dataset():
 @pytest.fixture
 def dummy_dataset():
     """ Returns a 'dummy' Dataset instance with two sentences."""
-    dataset = Dataset('kari/test/dummy_dataset.tsv', sep='\t')
+    dataset = Dataset(PATH_TO_DUMMY_DATASET, sep='\t')
     dataset.load_dataset()
 
     return dataset
@@ -40,6 +40,8 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     empty (i.e., load_dataset() method has not been called.)"""
     # attributes that are passed to __init__
     assert type(empty_dummy_dataset.dataset_filepath) == str
+    assert type(empty_dummy_dataset.trainset_filepath) == str
+    assert type(empty_dummy_dataset.testset_filepath) == str
     assert type(empty_dummy_dataset.sep) == str
     assert type(empty_dummy_dataset.header) == bool or int or list
     assert type(empty_dummy_dataset.names) == bool or list
@@ -52,9 +54,15 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     assert empty_dummy_dataset.tag_type_count == 0
     assert empty_dummy_dataset.word_type_to_index == {}
     assert empty_dummy_dataset.tag_type_to_index == {}
-    assert empty_dummy_dataset.sentences == []
-    assert empty_dummy_dataset.tag_idx_sequence == []
-    assert empty_dummy_dataset.word_idx_sequence == []
+
+    assert empty_dummy_dataset.train_dataframe == None
+    assert empty_dummy_dataset.test_dataframe == None
+    assert empty_dummy_dataset.train_sentences == []
+    assert empty_dummy_dataset.test_sentences == []
+    assert empty_dummy_dataset.train_word_idx_sequence == []
+    assert empty_dummy_dataset.test_word_idx_sequence == []
+    assert empty_dummy_dataset.train_tag_idx_sequence == []
+    assert empty_dummy_dataset.test_tag_idx_sequence == []
 
 def test_type_lists_after_dataset_loaded(dummy_dataset):
     """ Asserts that word_types and tag_types are updated as expected after
@@ -95,17 +103,11 @@ def test_sentences_after_dataset_loaded(dummy_dataset):
     """ Asserts that sentences are updated as expected after a call to
     load_dataset()."""
     # ensure we get the expected type after dataset is loaded
-    assert type(dummy_dataset.sentences) == list
+    assert type(dummy_dataset.train_sentences) == list
+    assert type(dummy_dataset.test_sentences) == list
     # ensure that sentences contain the expected values
-    assert dummy_dataset.sentences == DUMMY_SENTENCES
-
-def test_sentences_after_dataset_loaded(dummy_dataset):
-    """ Asserts that sentences are updated as expected after a call to
-    load_dataset()."""
-    # ensure we get the expected type after dataset is loaded
-    assert type(dummy_dataset.sentences) == list
-    # ensure that sentences contain the expected values
-    assert dummy_dataset.sentences == DUMMY_SENTENCES
+    assert dummy_dataset.train_sentences == DUMMY_SENTENCES
+    assert dummy_dataset.test_sentences == [[]]
 
 def test_type_idx_sequence_after_dataset_loaded(dummy_dataset):
     """ Asserts that word_idx_sequence and tag_idx_sequence are updated as
@@ -116,3 +118,4 @@ def test_type_idx_sequence_after_dataset_loaded(dummy_dataset):
     # ensure that type to index sequence is of expected length
     # assert len(dummy_dataset.word_idx_sequence) == len(set(DUMMY_WORD_TYPES))
     # assert len(dummy_dataset.tag_idx_sequence) == len(set(DUMMY_TAG_TYPES))
+    pass

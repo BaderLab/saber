@@ -1,6 +1,7 @@
+import os
 import time
+import glob
 import codecs
-import csv
 import pandas as pd
 
 from keras.utils import to_categorical
@@ -8,66 +9,114 @@ from keras.preprocessing.sequence import pad_sequences
 
 # TODO (John): set max_seq_len empirically.
 
+TRAIN_FILE_EXT = 'train.*'
+TEST_FILE_EXT = 'test.*'
+
 # method naming conventions: https://stackoverflow.com/questions/8689964/why-do-some-functions-have-underscores-before-and-after-the-function-name#8689983
 class Dataset(object):
     """ A class for handling data sets. """
     def __init__(self, dataset_filepath, sep='\t', names=['Word', 'Tag'],
                  header=None, max_seq_len=75):
-        self.dataset_filepath = dataset_filepath
-        self.sep = sep
-        self.names = names
-        self.header = header
-        self.max_seq_len = max_seq_len
-
-        self.raw_dataframe = None
-        self.word_types = []
-        self.tag_types = []
-        self.word_type_count = 0
-        self.tag_type_count = 0
-        self.word_type_to_index = {}
-        self.tag_type_to_index = {}
-        self.sentences = []
-        self.word_idx_sequence = []
-        self.tag_idx_sequence = []
+                 self.dataset_filepath = dataset_filepath
+                 self.trainset_filepath = glob.glob(os.path.join(dataset_filepath, TRAIN_FILE_EXT))[0]
+                 self.testset_filepath = glob.glob(os.path.join(dataset_filepath, TEST_FILE_EXT))[0]
+                 self.sep = sep
+                 self.names = names
+                 self.header = header
+                 self.max_seq_len = max_seq_len
+                 # shared by train/test
+                 self.raw_dataframe = None
+                 self.word_types = []
+                 self.tag_types = []
+                 self.word_type_count = 0
+                 self.tag_type_count = 0
+                 self.word_type_to_index = {}
+                 self.tag_type_to_index = {}
+                 # not shared by train/test
+                 self.train_dataframe = None
+                 self.test_dataframe = None
+                 self.train_sentences = []
+                 self.test_sentences = []
+                 self.train_word_idx_sequence = []
+                 self.test_word_idx_sequence = []
+                 self.train_tag_idx_sequence = []
+                 self.test_tag_idx_sequence = []
 
     def load_dataset(self):
-        """ Loads data set in CoNLL <?> format.
+        """ Coordinates loading of given data set at self.dataset_filepath.
 
-        For a given dataset in CoNLL <?> format at dataset_filepath, loads data
-        into a pandas dataframe and updates instance attributes.
+        For a given dataset in CoNLL format at dataset_filepath, cordinates
+        the loading of data into a pandas dataframe and updates instance
+        attributes. Expects self.dataset_filepath to be a directory containing
+        two files, train.* and test.*
         """
         start_time = time.time()
         print('Load dataset... ', end='', flush=True)
 
+        # load the entire dataset, then grab the train and test 'frames'
         self.raw_dataframe = self._load_dataset()
+        self.train_dataframe = self.raw_dataframe.loc['train']
+        self.test_dataframe = self.raw_dataframe.loc['test']
+
+        # train and test partitions share these attributes
         self.word_types, self.tag_types = self._get_types()
         self.word_type_count, self.tag_type_count = len(self.word_types), len(self.tag_types)
         self.word_type_to_index, self.tag_type_to_index = self._map_type_to_idx()
-        self.sentences = self._get_sentences(sep=self.sep)
-        self.word_idx_sequence = self._get_type_idx_sequence(self.word_type_to_index,
-                                                             self.sentences)
-        self.tag_idx_sequence = self._get_type_idx_sequence(self.tag_type_to_index,
-                                                            self.sentences,
-                                                            type_='tag')
-        self.tag_idx_sequence = [to_categorical(i, num_classes=self.tag_type_count)
-                                 for i in self.tag_idx_sequence]
+
+        # train/test partitions do NOT share these attributes
+
+        ## TRAIN
+        # get sentences
+        self.train_sentences = self._get_sentences(self.trainset_filepath, sep=self.sep)
+        # get type to idx sequences
+        self.train_word_idx_sequence = self._get_type_idx_sequence(self.train_sentences)
+        self.train_tag_idx_sequence = self._get_type_idx_sequence(self.train_sentences, type_='tag')
+        # convert tag idx sequences to categorical
+        self.train_tag_idx_sequence = self._tag_idx_sequence_to_categorical()
+
+        ## TEST
+        # get sentences
+        self.test_sentences = self._get_sentences(self.testset_filepath, sep=self.sep)
+        # get type to idx sequences
+        self.test_word_idx_sequence = self._get_type_idx_sequence(self.test_sentences)
+        self.test_tag_idx_sequence = self._get_type_idx_sequence(self.test_sentences, type_='tag')
+        # convert tag idx sequences to categorical
+        self.test_tag_idx_sequence = self._tag_idx_sequence_to_categorical(partition='test')
 
         elapsed_time = time.time() - start_time
         print('done ({0:.2f} seconds)'.format(elapsed_time))
 
     def _load_dataset(self):
-        dataset = pd.read_csv(self.dataset_filepath, header=self.header,
-                              sep=self.sep, names=self.names, encoding="utf-8",
-                              # forces pandas to ignore quotes such that we
-                              # can read in '"' word type.
-                              quoting = 3,
-                              # prevents pandas from interpreting 'null' as a
-                              # NA value.
-                              na_filter=False)
+        """ Loads data set given at self.dataset_filepath in pandas dataframe.
+
+        Loads a given data CoNLL format at dataset_filepath into a pandas
+        dataframe and updates instance. Expects self.dataset_filepath to be a
+        directory containing two files, train.* and test.*
+
+        Returns:
+            single merged pandas dataframe for train and test files.
+        """
+        training_set = pd.read_csv(self.trainset_filepath,
+                                   header=self.header, sep=self.sep,
+                                   names=self.names, encoding="utf-8",
+                                   # forces pandas to ignore quotes such that we
+                                   # can read in '"' word type.
+                                   quoting = 3,
+                                   # prevents pandas from interpreting 'null' as a
+                                   # NA value.
+                                   na_filter=False)
+
+        testing_set = pd.read_csv(self.testset_filepath,
+                                   header=self.header, sep=self.sep,
+                                   names=self.names, encoding="utf-8",
+                                   quoting = 3,
+                                   na_filter=False)
 
         # forward propogate last valid value to file NAs.
-        dataset = dataset.fillna(method='ffill')
-        return dataset
+        frames = [training_set, testing_set]
+        raw_dataset = pd.concat(frames, keys=['train', 'test'])
+        raw_dataset = raw_dataset.fillna(method='ffill')
+        return raw_dataset
 
     def _get_types(self):
         """ Updates attributes with word types, class types and their counts.
@@ -109,13 +158,21 @@ class Dataset(object):
         # pad accounts for idx of sequence pad
         return {e: i + pad for i, e in enumerate(sequence)}
 
-    def _get_sentences(self, sep='\t'):
-        """
+    def _get_sentences(self, partition_filepath, sep='\t'):
+        """ Returns sentences for csv/tsv file as a list lists of tuples.
+
+        Returns a list of lists of two-tuples for the csv/tsv at
+        partition_filepath, where the inner lists represent sentences, and the
+        tuples are ordered pairs of (words, tags).
+
+        Args:
+            partition_filepath: filepath to csv/tsv file for train/test set partition
+            sep: delimiter for csv/tsv file at filepath
         """
         master_sentence_acc = []
         indivdual_sentence_acc = []
 
-        with codecs.open(self.dataset_filepath, 'r', encoding='utf-8') as ds:
+        with codecs.open(partition_filepath, 'r', encoding='utf-8') as ds:
             for line in ds:
                 if line != '\n':
                     indivdual_sentence_acc.append(tuple(line.strip().split('\t')))
@@ -128,7 +185,7 @@ class Dataset(object):
 
         return master_sentence_acc
 
-    def _get_type_idx_sequence(self, type_to_idx, sentences, type_='word'):
+    def _get_type_idx_sequence(self, sentences_, type_='word'):
         """ Returns sequence of idicies corresponding to data set sentences.
 
         Given a dictionary of type:idx key, value pairs, returns the sequence
@@ -137,9 +194,9 @@ class Dataset(object):
 
         Args:
             types: a dictionary of type, idx key value pairs
-            sentences: a list of lists, where each list represents a sentence for
-                the Dataset instance and each sublist contains tuples of type
-                and tag.
+            sentences: a list of lists, where each list represents a sentence
+                for the Dataset instance and each sublist contains tuples of
+                type and tag.
 
         Returns:
             a list, containing a sequence of idx's corresponding to the type
@@ -150,16 +207,40 @@ class Dataset(object):
             types, and the last column contains the tag types.
         """
         # column_idx and pad are different for word types and tag types
+
         # word type
         column_idx = 0
         pad = 0
+        type_to_idx_ = self.word_type_to_index
         # tag type
         if type_ == 'tag':
             column_idx = -1
             pad = self.tag_type_to_index['O']
+            type_to_idx_ = self.tag_type_to_index
 
         # get sequence of idx's in the order they appear in sentences
-        type_sequence = [[type_to_idx[ty[column_idx]] for ty in s] for s in self.sentences]
+        type_sequence = [[type_to_idx_[ty[column_idx]] for ty in s] for s in sentences_]
         type_sequence = pad_sequences(maxlen=self.max_seq_len, sequences=type_sequence,
                                       padding='post', value=pad)
         return type_sequence
+
+    def _tag_idx_sequence_to_categorical(self, partition='train'):
+        """ Converts a class vector (integers) to n_class class matrix.
+
+        Converts a class vector (integers) to n_class class matrix. The
+        num_classes agument is determined by self.tag_type_count.
+
+        Args:
+            partition: which partition to be used, 'train' or 'test'
+
+        Returns:
+            n_class matrix representation of the input.
+        """
+        assert partition == 'train' or partition == 'test', '''keyword arg,
+        partition, must be either 'train' or 'test' '''
+
+        if partition == 'train':
+            return [to_categorical(i, num_classes=self.tag_type_count) for i in
+                    self.train_tag_idx_sequence]
+        return [to_categorical(i, num_classes=self.tag_type_count) for i in
+                self.test_tag_idx_sequence]

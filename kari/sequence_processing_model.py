@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.model_selection import train_test_split
+from sklearn.cross_validation import StratifiedKFold
 
 from dataset import Dataset
 from specify_model import specify_LSTM_CRF_
@@ -22,6 +23,7 @@ class SequenceProcessingModel(object):
                  debug=PARAM_DEFAULT,
                  dropout_rate=PARAM_DEFAULT,
                  gradient_clipping_value=PARAM_DEFAULT,
+                 k_folds=PARAM_DEFAULT,
                  learning_rate=PARAM_DEFAULT,
                  maximum_number_of_epochs=PARAM_DEFAULT,
                  optimizer=PARAM_DEFAULT,
@@ -30,6 +32,7 @@ class SequenceProcessingModel(object):
                  max_seq_len=PARAM_DEFAULT
                  ):
 
+        # hyperparameters of model
         self.activation_function = activation_function
         self.batch_size = batch_size
         self.config_filepath = config_filepath
@@ -37,28 +40,33 @@ class SequenceProcessingModel(object):
         self.debug = debug
         self.dropout_rate = dropout_rate
         self.gradient_clipping_value = gradient_clipping_value
+        self.k_folds = k_folds
         self.learning_rate = learning_rate
         self.maximum_number_of_epochs = maximum_number_of_epochs
         self.optimizer = optimizer
         self.output_folder = output_folder
         self.train_model = train_model
         self.max_seq_len = max_seq_len
-
-        self.X_train = None
-        self.X_test = None
-        self.y_train = None
-        self.y_test = None
+        # dataset tied to model
+        self.ds = None
+        self.X_train = []
+        self.X_test = []
+        self.y_train = []
+        self.y_test = []
+        # model itself
         self.model = None
         self.crf = None
-        self.ds = None
 
         # DATA
         # load dataset
         self.ds = Dataset(self.dataset_text_folder, max_seq_len=self.max_seq_len)
         self.ds.load_dataset()
         # split data set into train/test partitions
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            self.ds.word_idx_sequence, self.ds.tag_idx_sequence, test_size=0.1)
+        self.X_train, self.X_test, self.y_train, self.y_test = (
+            self.ds.train_word_idx_sequence,
+            self.ds.test_word_idx_sequence,
+            self.ds.train_tag_idx_sequence,
+            self.ds.test_tag_idx_sequence)
         # SPECIFY
         # pass a dictionary of this the dataset and model objects attributes as
         # argument to specify_
@@ -71,7 +79,8 @@ class SequenceProcessingModel(object):
         """
         # fit
         train_hist = self.model.fit(self.X_train, np.array(self.y_train),
-                                    batch_size=self.batch_size, epochs=6,
+                                    batch_size=self.batch_size,
+                                    epochs=self.maximum_number_of_epochs,
                                     validation_split=0.1, verbose=1)
 
         return pd.DataFrame(train_hist.history)
