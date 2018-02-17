@@ -1,9 +1,21 @@
 language: python
 
+os:
+  - linux
+  - osx
+
+matrix:
+  allow_failures:
+    - os: osx
+
 python:
   - "3.4"
   - "3.5"
   - "3.6"
+
+branches:
+  only:
+    - master
 
 install:
   - pip install -r requirements.txt
@@ -12,10 +24,6 @@ install:
 
 script:
   - PYTHONPATH=./kari py.test
-
-branches:
-  only:
-   - master
 
 after_success:
   - coveralls
