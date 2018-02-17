@@ -4,7 +4,7 @@ from utils_parameter_parsing import *
 from sequence_processing_model import SequenceProcessingModel
 
 PATH_TO_DUMMY_CONFIG = 'kari/test/dummy_config.ini'
-PATH_TO_DUMMY_DATASET = 'kari/test/dummy_dataset.tsv'
+PATH_TO_DUMMY_DATASET = 'kari/test/dummy_dataset'
 
 @pytest.fixture
 def default_model():
@@ -30,6 +30,7 @@ def test_attributes_after_initilization_of_model(default_model):
     assert type(default_model.debug) == bool
     assert type(default_model.dropout_rate) == float
     assert type(default_model.gradient_clipping_value) == float
+    assert type(default_model.k_folds) == int
     assert type(default_model.learning_rate) == float
     assert type(default_model.maximum_number_of_epochs) == int
     assert type(default_model.optimizer) == str
@@ -42,6 +43,7 @@ def test_attributes_after_initilization_of_model(default_model):
     assert default_model.debug == False
     assert default_model.dropout_rate == 0.5
     assert default_model.gradient_clipping_value == 5.0
+    assert default_model.k_folds == 5
     assert default_model.learning_rate == 0.005
     assert default_model.maximum_number_of_epochs == 10
     assert default_model.optimizer == 'sgd'
