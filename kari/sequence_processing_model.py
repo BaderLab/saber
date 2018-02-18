@@ -1,12 +1,10 @@
+import time
+
 import numpy as np
 import pandas as pd
 
-from sklearn.model_selection import train_test_split
-from sklearn.cross_validation import StratifiedKFold
-
 from dataset import Dataset
-from specify_model import specify_LSTM_CRF_
-from specify_model import compile_LSTM_CRF_
+from specify_model import *
 
 # TODO (johngiorgi): set max_seq_len based on empirical observations
 # TODO (johngiorgi): consider smarter default values for paramas
@@ -16,69 +14,79 @@ class SequenceProcessingModel(object):
     PARAM_DEFAULT = 'default_value_please_ignore_1YVBF48GBG98BGB8432G4874BF74BB'
 
     def __init__(self,
-                 activation_function = PARAM_DEFAULT,
+                 activation_function=PARAM_DEFAULT,
                  batch_size=PARAM_DEFAULT,
-                 config_filepath=PARAM_DEFAULT,
                  dataset_text_folder=PARAM_DEFAULT,
                  debug=PARAM_DEFAULT,
                  dropout_rate=PARAM_DEFAULT,
+                 freeze_token_embeddings=PARAM_DEFAULT,
                  gradient_clipping_value=PARAM_DEFAULT,
                  k_folds=PARAM_DEFAULT,
                  learning_rate=PARAM_DEFAULT,
                  maximum_number_of_epochs=PARAM_DEFAULT,
+                 model_name=PARAM_DEFAULT,
                  optimizer=PARAM_DEFAULT,
                  output_folder=PARAM_DEFAULT,
+                 token_pretrained_embedding_filepath=PARAM_DEFAULT,
                  train_model=PARAM_DEFAULT,
                  max_seq_len=PARAM_DEFAULT
                  ):
 
-        # hyperparameters of model
+        ## INITIALIZE MODEL ATTRIBUTES
+        # hyperparameters
         self.activation_function = activation_function
         self.batch_size = batch_size
-        self.config_filepath = config_filepath
         self.dataset_text_folder = dataset_text_folder
         self.debug = debug
         self.dropout_rate = dropout_rate
+        self.freeze_token_embeddings = freeze_token_embeddings
         self.gradient_clipping_value = gradient_clipping_value
         self.k_folds = k_folds
         self.learning_rate = learning_rate
         self.maximum_number_of_epochs = maximum_number_of_epochs
+        self.model_name = model_name
         self.optimizer = optimizer
         self.output_folder = output_folder
+        self.token_pretrained_embedding_filepath = token_pretrained_embedding_filepath
         self.train_model = train_model
         self.max_seq_len = max_seq_len
-        # dataset tied to model
+        # dataset tied to the model
         self.ds = None
         self.X_train = []
         self.X_test = []
         self.y_train = []
         self.y_test = []
-        # model itself
+        # embeddings
+        self.token_embedding_matrix = None
+        # model
         self.model = None
         self.crf = None
 
-        # DATA
-        # load dataset
+        # LOAD DATA
         self.ds = Dataset(self.dataset_text_folder, max_seq_len=self.max_seq_len)
         self.ds.load_dataset()
-        # split data set into train/test partitions
+        # get train/test partitions
         self.X_train, self.X_test, self.y_train, self.y_test = (
             self.ds.train_word_idx_sequence,
             self.ds.test_word_idx_sequence,
             self.ds.train_tag_idx_sequence,
             self.ds.test_tag_idx_sequence)
-        # SPECIFY
-        # pass a dictionary of this the dataset and model objects attributes as
-        # argument to specify_
-        self.model, self.crf = specify_LSTM_CRF_({**vars(self.ds), **vars(self)})
-        # COMPILE
-        compile_LSTM_CRF_(vars(self), self.model, self.crf)
+        # if pretrained token embeddings are provided, load them
+        if token_pretrained_embedding_filepath:
+            self._load_token_embeddings()
+
+        # SPECIFY A MODEL
+        if self.model_name == 'LSTM-CRF-NER':
+            # pass a dictionary of this the dataset and model objects attributes as
+            # argument to specify_
+            self.model, self.crf = specify_LSTM_CRF_({**vars(self.ds), **vars(self)})
+            compile_LSTM_CRF_(vars(self), self.model, self.crf)
 
     def fit(self):
         """
         """
         # fit
-        train_hist = self.model.fit(self.X_train, np.array(self.y_train),
+        train_hist = self.model.fit(self.X_train, self.y_train,
                                     batch_size=self.batch_size,
                                     epochs=self.maximum_number_of_epochs,
                                     validation_split=0.1, verbose=1)
@@ -95,40 +103,92 @@ class SequenceProcessingModel(object):
         '''
 
     def predict(self):
-        p = self.model.predict(np.array([self.X_test[10]]))
-        p = np.argmax(p, axis=-1)
-        true = np.argmax(self.y_test[10], -1)
+        """
+        """
+        # get predicted sequence, flatten into 1D array
+        pred_idx = self.model.predict(self.X_test).argmax(axis=-1)
+        pred_idx = np.asarray(pred_idx).ravel()
+        # get gold sequence, flatten into 1D array
+        gold_idx = self.y_test.argmax(axis=-1)
+        gold_idx = np.asarray(gold_idx).ravel()
 
-        print('\n---- Result of BiLSTM-CRF ----\n')
+        # get indices for all labels that are not the 'null' label, 'O'.
+        labels_ = [(k, v)[1] for k, v in self.ds.tag_type_to_index.items() if k != 'O']
 
-        for w, t, pred in zip(self.X_test[10], true, p[0]):
-            if w != 0:
-                print("{:15}: {:5} {}".format(self.ds.word_types[w-1], self.ds.tag_types[t], self.ds.tag_types[pred]))
+        '''
+        print(precision_recall_fscore_support(gold_idx, pred_idx,
+                                              # we don't want metrics for 'O' tags
+                                              labels=labels_,
+                                              average='macro'))
+        '''
+        print(np.count_nonzero((pred_idx == gold_idx)) / len(pred_idx))
+
+        return pred_idx, gold_idx, labels_
+
+    def _load_token_embeddings(self):
+        start_time = time.time()
+        print('Loading embeddings... ', end='', flush=True)
+
+        # prepare the embedding indicies
+        token_embeddings_index, token_embedding_dimension = self._prepare_token_embedding_layer()
+        print('found %s word vectors of dimension %s.' % (len(token_embeddings_index), token_embedding_dimension))
+        # fill up the embedding matrix, update attribute
+        embedding_matrix = self._prepare_token_embedding_matrix(token_embeddings_index, token_embedding_dimension)
+        self.token_embedding_matrix = embedding_matrix
+
+        elapsed_time = time.time() - start_time
+        print('Done ({0:.2f} seconds)'.format(elapsed_time))
+
+        return
+
+    def _prepare_token_embedding_layer(self):
+        """
+        """
+        token_embeddings_index = {}
+        token_embedding_file_lines = []
+        token_embedding_dimensions = 0
+
+        with open(self.token_pretrained_embedding_filepath, 'r') as tpe:
+            token_embedding_file_lines = tpe.readlines()
+
+        for emb in token_embedding_file_lines:
+            values = emb.split()
+
+            word = values[0] # get words
+            coefs = np.asarray(values[1:], dtype='float32') # get emb vectos
+
+            # get size of token embedding dimensions
+            if token_embedding_dimensions == 0:
+                token_embedding_dimensions = len(coefs)
+            # update our embedding index
+            token_embeddings_index[word] = coefs
+
+        return token_embeddings_index, token_embedding_dimensions
+
+    def _prepare_token_embedding_matrix(self,
+                                        token_embeddings_index,
+                                        token_embedding_dimensions):
+        """
+        """
+        # initialize the embeddings matrix
+        token_embeddings_matrix = np.zeros((len(self.ds.word_type_to_index) + 1,
+                                            token_embedding_dimensions))
+
+        # lookup embeddings for every word in the dataset
+        for word, i in self.ds.word_type_to_index.items():
+            token_embeddings_vector = token_embeddings_index.get(word)
+            if token_embeddings_vector is not None:
+                # words not found in embedding index will be all-zeros.
+                token_embeddings_matrix[i] = token_embeddings_vector
+
+        return token_embeddings_matrix
+
+        # precision, recall, fscore, support = score(gold_idx, pred_idx)
+
+        # print('precision: {}'.format(precision))
+        # print('recall: {}'.format(recall))
+        # print('fscore: {}'.format(fscore))
+        # print('support: {}'.format(support))
 
 
-        # self.classification_report(test_y_true, test_y_pred, self.tag_types)
-
-    '''
-    def classification_report(y_true, y_pred, labels):
-        """Similar to the one in sklearn.metrics, reports per classs recall, precision and F1 score"""
-        y_true = numpy.asarray(y_true).ravel()
-        y_pred = numpy.asarray(y_pred).ravel()
-        corrects = Counter(yt for yt, yp in zip(y_true, y_pred) if yt == yp)
-        y_true_counts = Counter(y_true)
-        y_pred_counts = Counter(y_pred)
-        report = ((lab,  # label
-                   corrects[i] / max(1, y_true_counts[i]),  # recall
-                   corrects[i] / max(1, y_pred_counts[i]),  # precision
-                   y_true_counts[i]  # support
-                   ) for i, lab in enumerate(labels))
-        report = [(l, r, p, 2 * r * p / max(1e-9, r + p), s) for l, r, p, s in report]
-
-        print('{:<15}{:>10}{:>10}{:>10}{:>10}\n'.format('', 'recall', 'precision', 'f1-score', 'support'))
-        formatter = '{:<15}{:>10.2f}{:>10.2f}{:>10.2f}{:>10d}'.format
-        for r in report:
-            print(formatter(*r))
-        print('')
-        report2 = zip(*[(r * s, p * s, f1 * s) for l, r, p, f1, s in report])
-        N = len(y_true)
-        print(formatter('avg / total', sum(report2[0]) / N, sum(report2[1]) / N, sum(report2[2]) / N, N) + '\n')
-    '''
+        # self.classification_report(pred_idx, gold_idx, gold_lab)
