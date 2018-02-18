@@ -36,7 +36,7 @@ def process_parameters(config, cli_arguments):
     # data
     parameters['dataset_text_folder'] = str(config['data']['dataset_text_folder'])
     parameters['output_folder'] = str(config['data']['output_folder'])
-    parameters['token_pretrained_embedding_filepath'] = bool('True' == config['data']['token_pretrained_embedding_filepath'])
+    parameters['token_pretrained_embedding_filepath'] = str(config['data']['token_pretrained_embedding_filepath'])
     # training
     parameters['optimizer'] = str(config['training']['optimizer'])
     parameters['activation_function'] = str(config['training']['activation_function'])
