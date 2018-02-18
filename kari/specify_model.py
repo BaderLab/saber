@@ -9,13 +9,10 @@ from keras.layers import Dropout
 from keras.layers import Bidirectional
 from keras_contrib.layers import CRF
 
-# there is a bunch of preprocessing steps I need to perform.
-# 1: I need to append a "sentence number" to each "sentence group" (not entirely sure if this is necc.)
-# 2: need to get POS tags (also not necc. but would be good to do)
+# TODO (johngiorgi) set up parameter for embedding output dimension
 
 def specify_LSTM_CRF_(model_specifications):
-    """
-    """
+    """ LSTM-CRF for NER. """
     ## SPECIFY
     # Grab the specs we need to build the model. Keys correspond to names of
     # attributes of Dataset and SequenceProcessingModel classes.
@@ -25,15 +22,33 @@ def specify_LSTM_CRF_(model_specifications):
     activation_function = model_specifications['activation_function']
     dropout_rate = model_specifications['dropout_rate']
 
+    token_embedding_matrix = model_specifications['token_embedding_matrix']
+    freeze_token_embeddings = model_specifications['freeze_token_embeddings']
+
     ## BUILD
     # build the model
     input_ = Input(shape=(max_seq_len,))
-    # plus 1 because of '0' word.
-    model = Embedding(input_dim=word_type_count + 1, output_dim=20,
-                      input_length=max_seq_len, mask_zero=True)(input_)
-    model = Bidirectional(LSTM(units=50, return_sequences=True,
+
+    # if token_embedding_matrix is not None, then pretrained token embeddings
+    # were specified, so we build the embedding layer with them. Otherwise,
+    # initialize randomly.
+    if token_embedding_matrix is not None:
+        # plus 1 because of '0' word.
+        model = Embedding(input_dim=word_type_count + 1,
+                          output_dim=oken_embedding_matrix.shape[1],
+                          weights=[token_embedding_matrix],
+                          input_length=max_seq_len,
+                          mask_zero=True,
+                          trainable=freeze_token_embeddings)(input_)
+    else:
+        model = Embedding(input_dim=word_type_count + 1,
+                          output_dim=100,
+                          input_length=max_seq_len,
+                          mask_zero=True)(input_)
+
+    model = Bidirectional(LSTM(units=100, return_sequences=True,
                                recurrent_dropout=dropout_rate))(model)
-    model = TimeDistributed(Dense(50, activation=activation_function))(model)
+    model = TimeDistributed(Dense(100, activation=activation_function))(model)
 
     crf = CRF(tag_type_count)
     out = crf(model)
