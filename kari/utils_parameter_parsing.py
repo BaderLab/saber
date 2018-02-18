@@ -4,7 +4,7 @@ import argparse
 import configparser
 
 def config_parser(config_filepath):
-    """ Returns a parsed config file object
+    """ Returns a parsed config file object.
 
     Args:
         config_filepath: filepath to .ini config file
@@ -16,35 +16,48 @@ def config_parser(config_filepath):
 def process_parameters(config, cli_arguments):
     """ Load parameters from ini file if specificed.
 
-    Loads parameters from the ini file if specified, take into account any
-    command line argument, and ensure that each parameter is cast to the correct
-    type. Command line arguments take precedence over parameters specified in
-    the parameter file.
+    Loads parameters from the ini file if specified, taking into account any
+    command line arguments, and ensures that each parameter is cast to the
+    correct type. Command line arguments take precedence over parameters
+    specified in the parameter file.
 
     Args:
         parameters_filepath: path to ini file containing the parameters
+
+    Returns:
+        parameters, a dictionary of parameters (keys) and their values
     """
     parameters = {}
 
-    parameters['debug'] = bool('True' == config['settings']['debug'])
-    parameters['train_model'] = bool(config['settings']['train_model'])
+    ## PARSE CONFIG
+    # mode
+    parameters['model_name'] = str(config['mode']['model_name'])
+    parameters['train_model'] = bool('True' == config['mode']['train_model'])
+    # data
+    parameters['dataset_text_folder'] = str(config['data']['dataset_text_folder'])
+    parameters['output_folder'] = str(config['data']['output_folder'])
+    parameters['token_pretrained_embedding_filepath'] = bool('True' == config['data']['token_pretrained_embedding_filepath'])
+    # training
+    parameters['optimizer'] = str(config['training']['optimizer'])
+    parameters['activation_function'] = str(config['training']['activation_function'])
+    parameters['learning_rate'] = float(config['training']['learning_rate'])
+    parameters['gradient_clipping_value'] = float(config['training']['gradient_clipping_value'])
+    parameters['dropout_rate'] = float(config['training']['dropout_rate'])
+    parameters['batch_size'] = int(config['training']['batch_size'])
+    parameters['k_folds'] = int(config['training']['k_folds'])
+    parameters['maximum_number_of_epochs'] = int(config['training']['maximum_number_of_epochs'])
+    parameters['max_seq_len'] = int(config['training']['max_seq_len'])
+    # advanced
+    parameters['debug'] = bool('True' == config['advanced']['debug'])
+    parameters['freeze_token_embeddings'] = bool('True' == config['advanced']['freeze_token_embeddings'])
 
-    parameters['dataset_text_folder'] = str(config['dataset']['dataset_text_folder'])
-    parameters['output_folder'] = str(config['dataset']['output_folder'])
-
-    parameters['activation_function'] = str(config['hyperparameters']['activation_function'])
-    parameters['batch_size'] = int(config['hyperparameters']['batch_size'])
-    parameters['dropout_rate'] = float(config['hyperparameters']['dropout_rate'])
-    parameters['gradient_clipping_value'] = float(config['hyperparameters']['gradient_clipping_value'])
-    parameters['k_folds'] = int(config['hyperparameters']['k_folds'])
-    parameters['learning_rate'] = float(config['hyperparameters']['learning_rate'])
-    parameters['maximum_number_of_epochs'] = int(config['hyperparameters']['maximum_number_of_epochs'])
-    parameters['optimizer'] = str(config['hyperparameters']['optimizer'])
-    parameters['max_seq_len'] = int(config['hyperparameters']['max_seq_len'])
-
+    ## PARSE CLI ARGS AND OVERRIDE CONFIG
     for key, value in cli_arguments.items():
         if value is not None:
             parameters[key] = value
+
+    # not needed downsteam of here.
+    if 'config_filepath' in parameters: del parameters['config_filepath']
 
     return parameters
 
@@ -71,7 +84,7 @@ def parse_arguments():
     parser.add_argument('--dataset_text_folder', required=False, type=str, help='')
     parser.add_argument('--debug', required=False, type=bool, help='')
     parser.add_argument('--dropout_rate', required=False, type=float, help='')
-    # parser.add_argument('--freeze_token_embeddings',   default=argument_default_value, help='')
+    parser.add_argument('--freeze_token_embeddings', required=False, type=bool, help='')
     parser.add_argument('--gradient_clipping_value', required=False, type=float, help='')
     parser.add_argument('--k_folds', required=False, type=int, help='')
     parser.add_argument('--learning_rate', required=False, type=float, help='')
@@ -79,6 +92,7 @@ def parse_arguments():
     # parser.add_argument('--load_all_pretrained_token_embeddings',   default=argument_default_value, help='')
     # parser.add_argument('--main_evaluation_mode',   default=argument_default_value, help='')
     parser.add_argument('--maximum_number_of_epochs', required=False, type=int, help='')
+    parser.add_argument('--model_name', required=False, type=str, help='')
     # parser.add_argument('--number_of_cpu_threads',   default=argument_default_value, help='')
     # parser.add_argument('--number_of_gpus',   default=argument_default_value, help='')
     parser.add_argument('--optimizer', required=False, type=str, help='')
@@ -97,7 +111,7 @@ def parse_arguments():
     # parser.add_argument('--tagging_format', default=argument_default_value, help='')
     # parser.add_argument('--token_embedding_dimension', default=argument_default_value, help='')
     # parser.add_argument('--token_lstm_hidden_state_dimension', default=argument_default_value, help='')
-    # parser.add_argument('--token_pretrained_embedding_filepath', default=argument_default_value, help='')
+    parser.add_argument('--token_pretrained_embedding_filepath', required=False, type=str, help='')
     # parser.add_argument('--tokenizer', default=argument_default_value, help='')
     parser.add_argument('--train_model', required=False, type=bool, help='')
     parser.add_argument('--max_seq_len', required=False, type=int, help='')
