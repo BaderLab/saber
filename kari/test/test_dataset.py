@@ -1,4 +1,5 @@
 import pytest
+import numpy
 
 from dataset import Dataset
 
@@ -10,14 +11,21 @@ from dataset import Dataset
 # gave me a lot of trouble.
 
 # constants for dummy dataset to perform testing on
+# for the purposes of testing, test.tsv is EMPTY
 DUMMY_WORD_TYPES = ["Human", "APC2", "maps", "to", "chromosome", ".",
 "19p13",  "and", "Opsonization", "generation", "of", "chemotactic",
-"activity", "functioned", "normally", "ENDPAD"]
-DUMMY_TAG_TYPES = ["O"]
-DUMMY_SENTENCES = [[("Human", "O"), ("APC2", "O"), ("maps", "O"), ("to", "O"),
+"activity", "functioned", "normally", "Constitutional", "RB1", "-", "gene",
+"mutations", "in", "patients", "with", "isolated", "unilateral", "retinoblastoma",
+"ENDPAD"]
+DUMMY_TAG_TYPES = ["O", "B-Disease", "E-Disease"]
+DUMMY_TRAIN_SENT = [[("Human", "O"), ("APC2", "O"), ("maps", "O"), ("to", "O"),
 ("chromosome", "O"), ("19p13", "O"), (".", "O")], [("Opsonization", "O"),
 ("and", "O"), ("generation", "O"), ("of", "O"), ("chemotactic", "O"),
 ("activity", "O"), ("functioned", "O"), ("normally", "O"), (".", "O")]]
+DUMMY_TEST_SENT = [[("Constitutional", "O"), ("RB1", "O"), ("-", "O"), ("gene", "O"),
+("mutations", "O"), ("in", "O"), ("patients", "O"), ("with", "O"), ("isolated", "O"),
+("unilateral", "B-Disease"), ("retinoblastoma", "E-Disease"), (".", "O")]]
+
 PATH_TO_DUMMY_DATASET = 'kari/test/dummy_dataset'
 
 @pytest.fixture
@@ -71,6 +79,7 @@ def test_type_lists_after_dataset_loaded(dummy_dataset):
     assert type(dummy_dataset.word_types) == list
     assert type(dummy_dataset.tag_types) == list
     # ensure our word types are updated as expected, based on the dummy_dataset
+    # conver to set before comparision so order is irrelevant
     assert set(dummy_dataset.word_types) == set(DUMMY_WORD_TYPES)
     assert set(dummy_dataset.tag_types) == set(DUMMY_TAG_TYPES)
 
@@ -106,16 +115,30 @@ def test_sentences_after_dataset_loaded(dummy_dataset):
     assert type(dummy_dataset.train_sentences) == list
     assert type(dummy_dataset.test_sentences) == list
     # ensure that sentences contain the expected values
-    assert dummy_dataset.train_sentences == DUMMY_SENTENCES
-    assert dummy_dataset.test_sentences == [[]]
+    assert dummy_dataset.train_sentences == DUMMY_TRAIN_SENT
+    assert dummy_dataset.test_sentences == DUMMY_TEST_SENT
 
 def test_type_idx_sequence_after_dataset_loaded(dummy_dataset):
     """ Asserts that word_idx_sequence and tag_idx_sequence are updated as
     expected after a call to load_dataset()."""
     # ensure we get the expected type after dataset is loaded
-    # assert type(dummy_dataset.word_idx_sequence) == list
-    # assert type(dummy_dataset.tag_idx_sequence) == list
-    # ensure that type to index sequence is of expected length
-    # assert len(dummy_dataset.word_idx_sequence) == len(set(DUMMY_WORD_TYPES))
-    # assert len(dummy_dataset.tag_idx_sequence) == len(set(DUMMY_TAG_TYPES))
-    pass
+    # train
+    assert type(dummy_dataset.train_word_idx_sequence) == numpy.ndarray
+    assert type(dummy_dataset.train_tag_idx_sequence) == numpy.ndarray
+    # test
+    assert type(dummy_dataset.test_word_idx_sequence) == numpy.ndarray
+    assert type(dummy_dataset.test_tag_idx_sequence) == numpy.ndarray
+
+    # ensure that sentences contain the expected values
+    # train
+    assert dummy_dataset.train_word_idx_sequence.shape == (len(DUMMY_TRAIN_SENT),
+                                                           dummy_dataset.max_seq_len)
+    assert dummy_dataset.train_tag_idx_sequence.shape == (len(DUMMY_TRAIN_SENT),
+                                                          dummy_dataset.max_seq_len,
+                                                          len(DUMMY_TAG_TYPES))
+    # test
+    assert dummy_dataset.test_word_idx_sequence.shape == (len(DUMMY_TEST_SENT),
+                                                           dummy_dataset.max_seq_len)
+    assert dummy_dataset.test_tag_idx_sequence.shape == (len(DUMMY_TEST_SENT),
+                                                          dummy_dataset.max_seq_len,
+                                                          len(DUMMY_TAG_TYPES))

@@ -1,14 +1,5 @@
-# import pandas as pd
-# import numpy as np
 from utils_parameter_parsing import *
 from sequence_processing_model import SequenceProcessingModel
-
-# from dataset import Dataset
-# from specify import *
-
-# from keras_contrib.layers import CRF
-# from keras.models import Model, Input
-# from sklearn.model_selection import train_test_split
 
 # TODO (johngiorgi): do something about paths as arguments - normalize?
 
