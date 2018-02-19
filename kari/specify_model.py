@@ -35,11 +35,11 @@ def specify_LSTM_CRF_(model_specifications):
     if token_embedding_matrix is not None:
         # plus 1 because of '0' word.
         model = Embedding(input_dim=word_type_count + 1,
-                          output_dim=oken_embedding_matrix.shape[1],
+                          output_dim=token_embedding_matrix.shape[1],
                           weights=[token_embedding_matrix],
                           input_length=max_seq_len,
                           mask_zero=True,
-                          trainable=freeze_token_embeddings)(input_)
+                          trainable=(not freeze_token_embeddings))(input_)
     else:
         model = Embedding(input_dim=word_type_count + 1,
                           output_dim=100,

@@ -72,7 +72,7 @@ class SequenceProcessingModel(object):
             self.ds.train_tag_idx_sequence,
             self.ds.test_tag_idx_sequence)
         # if pretrained token embeddings are provided, load them
-        if token_pretrained_embedding_filepath:
+        if len(token_pretrained_embedding_filepath) > 0:
             self._load_token_embeddings()
 
         # SPECIFY A MODEL
@@ -142,14 +142,21 @@ class SequenceProcessingModel(object):
         return
 
     def _prepare_token_embedding_layer(self):
-        """
+        """ Creates an embedding index using pretrained token embeddings.
+
+        For the models given pretrained token embeddings, creates and returns a
+        dictionary mapping words to known embeddings.
+
+        Returns:
+            token_embeddings_index: mapping of words to pre-trained token embeddings
+            token_embedding_dimensions: the dimension of the pre-trained token embeddings
         """
         token_embeddings_index = {}
         token_embedding_file_lines = []
         token_embedding_dimensions = 0
 
-        with open(self.token_pretrained_embedding_filepath, 'r') as tpe:
-            token_embedding_file_lines = tpe.readlines()
+        with open(self.token_pretrained_embedding_filepath, 'r') as pte:
+            token_embedding_file_lines = pte.readlines()
 
         for emb in token_embedding_file_lines:
             values = emb.split()
@@ -168,7 +175,17 @@ class SequenceProcessingModel(object):
     def _prepare_token_embedding_matrix(self,
                                         token_embeddings_index,
                                         token_embedding_dimensions):
-        """
+        """ Creates an embedding matrix using pretrained token embeddings.
+
+        For the models word to idx mappings, and word to pre-trained token
+        embeddings, creates a matrix which maps all words in the models dataset
+        to a pre-trained token embedding. If the token embedding does not exist
+        in the pre-trained token embeddings file, the word will be mapped to
+        an embedding of all zeros.
+
+        Returns:
+            token_embeddings_matrix: a matrix whos ith row corresponds to the
+            token embedding for the ith word in the models word to idx mapping.
         """
         # initialize the embeddings matrix
         token_embeddings_matrix = np.zeros((len(self.ds.word_type_to_index) + 1,
@@ -182,13 +199,3 @@ class SequenceProcessingModel(object):
                 token_embeddings_matrix[i] = token_embeddings_vector
 
         return token_embeddings_matrix
-
-        # precision, recall, fscore, support = score(gold_idx, pred_idx)
-
-        # print('precision: {}'.format(precision))
-        # print('recall: {}'.format(recall))
-        # print('fscore: {}'.format(fscore))
-        # print('support: {}'.format(support))
-
-
-        # self.classification_report(pred_idx, gold_idx, gold_lab)

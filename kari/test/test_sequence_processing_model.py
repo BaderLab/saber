@@ -41,7 +41,7 @@ def test_attributes_after_initilization_of_model(default_model):
     assert type(default_model.model_name) == str
     assert type(default_model.optimizer) == str
     assert type(default_model.output_folder) == str
-    assert type(default_model.token_pretrained_embedding_filepath) == bool
+    assert type(default_model.token_pretrained_embedding_filepath) == str
     assert type(default_model.train_model) == bool
     assert type(default_model.max_seq_len) == int
     # check value
@@ -58,7 +58,7 @@ def test_attributes_after_initilization_of_model(default_model):
     assert default_model.model_name == 'LSTM-CRF-NER'
     assert default_model.optimizer == 'sgd'
     assert default_model.output_folder == '../output'
-    assert default_model.token_pretrained_embedding_filepath == False
+    assert default_model.token_pretrained_embedding_filepath == ''
     assert default_model.train_model == True
     assert default_model.max_seq_len == 50
 
