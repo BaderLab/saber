@@ -19,6 +19,8 @@ class Dataset(object):
     def __init__(self, dataset_filepath, sep='\t', names=['Word', 'Tag'],
                  header=None, max_seq_len=50):
                  self.dataset_filepath = dataset_filepath
+                 # search for any files in the dataset filepath ending with
+                 # TRAIN_FILE_EXT or TEST_FILE_EXT
                  self.trainset_filepath = glob.glob(os.path.join(dataset_filepath, TRAIN_FILE_EXT))[0]
                  self.testset_filepath = glob.glob(os.path.join(dataset_filepath, TEST_FILE_EXT))[0]
                  self.sep = sep
@@ -90,7 +92,7 @@ class Dataset(object):
     def _load_dataset(self):
         """ Loads data set given at self.dataset_filepath in pandas dataframe.
 
-        Loads a given data CoNLL format at dataset_filepath into a pandas
+        Loads a given dataset in CoNLL format at dataset_filepath into a pandas
         dataframe and updates instance. Expects self.dataset_filepath to be a
         directory containing two files, train.* and test.*
 
@@ -103,15 +105,14 @@ class Dataset(object):
                                    # forces pandas to ignore quotes such that we
                                    # can read in '"' word type.
                                    quoting = 3,
-                                   # prevents pandas from interpreting 'null' as a
-                                   # NA value.
+                                   # prevents pandas from interpreting 'null' as
+                                   # a NA value.
                                    na_filter=False)
 
         testing_set = pd.read_csv(self.testset_filepath,
                                    header=self.header, sep=self.sep,
                                    names=self.names, encoding="utf-8",
-                                   quoting = 3,
-                                   na_filter=False)
+                                   quoting = 3, na_filter=False)
 
         # concatenate dataframes vertically with keys
         frames = [training_set, testing_set]
@@ -239,6 +240,5 @@ class Dataset(object):
         # convert to one-hot encoding
         one_hots = [to_categorical(seq, self.tag_type_count) for seq in idx_sequence]
         one_hots = np.array(one_hots)
-        print()
         # one_hots = np.squeeze(one_hots, axis=2)
         return one_hots

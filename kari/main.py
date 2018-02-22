@@ -19,9 +19,10 @@ def main():
     parameters = process_parameters(config, cli_arguments)
 
     # https://www.saltycrane.com/blog/2008/01/how-to-use-args-and-kwargs-in-python/
-    sequence_processing_model = SequenceProcessingModel(**parameters)
-    sequence_processing_model.fit()
-    sequence_processing_model.predict()
+    sequence_processor = SequenceProcessingModel(**parameters)
+    sequence_processor.load_dataset()
+    sequence_processer.specify_model()
+    sequence_processer.fit()
 
 if __name__ == '__main__':
     main()
