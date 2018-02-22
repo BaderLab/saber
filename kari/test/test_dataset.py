@@ -26,7 +26,7 @@ DUMMY_TEST_SENT = [[("Constitutional", "O"), ("RB1", "O"), ("-", "O"), ("gene", 
 ("mutations", "O"), ("in", "O"), ("patients", "O"), ("with", "O"), ("isolated", "O"),
 ("unilateral", "B-Disease"), ("retinoblastoma", "E-Disease"), (".", "O")]]
 
-PATH_TO_DUMMY_DATASET = 'kari/test/dummy_dataset'
+PATH_TO_DUMMY_DATASET = 'kari/test/resources/dummy_dataset'
 
 @pytest.fixture
 def empty_dummy_dataset():
