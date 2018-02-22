@@ -3,17 +3,21 @@ import time
 
 import numpy as np
 import pandas as pd
+
+from keras.models import load_model
 from keras.callbacks import ModelCheckpoint
 
 from dataset import Dataset
-from specify_model import *
-from utils import make_dir
+from utils_generic import make_dir
+from specify_model import SimpleLSTMCRF
+
 
 # TODO (johngiorgi): set max_seq_len based on empirical observations
 # TODO (johngiorgi): consider smarter default values for paramas
 # TODO (johngiorgi): make sure this process is shuffling the data
 # TODO (johngiorgi): make model checkpointing a config param
 # TODO (johngiorgi): make a debug mode that doesnt load token embeddings and loads only some lines of dataset
+# TODO (johngiorgi): abstract away all dataset details as single object
 
 class SequenceProcessingModel(object):
     PARAM_DEFAULT = 'default_value_please_ignore_1YVBF48GBG98BGB8432G4874BF74BB'
@@ -28,10 +32,12 @@ class SequenceProcessingModel(object):
                  gradient_clipping_value=PARAM_DEFAULT,
                  k_folds=PARAM_DEFAULT,
                  learning_rate=PARAM_DEFAULT,
+                 load_pretrained_model=PARAM_DEFAULT,
                  maximum_number_of_epochs=PARAM_DEFAULT,
                  model_name=PARAM_DEFAULT,
                  optimizer=PARAM_DEFAULT,
                  output_folder=PARAM_DEFAULT,
+                 pretrained_model_weights=PARAM_DEFAULT,
                  token_pretrained_embedding_filepath=PARAM_DEFAULT,
                  train_model=PARAM_DEFAULT,
                  max_seq_len=PARAM_DEFAULT
@@ -48,10 +54,12 @@ class SequenceProcessingModel(object):
         self.gradient_clipping_value = gradient_clipping_value
         self.k_folds = k_folds
         self.learning_rate = learning_rate
+        self.load_pretrained_model = load_pretrained_model
         self.maximum_number_of_epochs = maximum_number_of_epochs
         self.model_name = model_name
         self.optimizer = optimizer
         self.output_folder = output_folder
+        self.pretrained_model_weights = pretrained_model_weights
         self.token_pretrained_embedding_filepath = token_pretrained_embedding_filepath
         self.train_model = train_model
         self.max_seq_len = max_seq_len
@@ -65,9 +73,20 @@ class SequenceProcessingModel(object):
         self.token_embedding_matrix = None
         # model
         self.model = None
-        self.crf = None
 
-        # LOAD DATA
+    def load_pretrained_model(self, pretrained_model_filepath):
+        """
+        """
+        self.model = load_model(pretrained_model_filepath)
+
+    def load_dataset(self):
+        """ Coordinates the loading of a dataset.
+
+        Coordinates the loading of a dataset by creating a Dataset object.
+        Additionaly, if self.token_pretrained_embedding_filepath is provided,
+        loads the token embeddings.
+        """
+        # create and load Dataset object
         self.ds = Dataset(self.dataset_text_folder, max_seq_len=self.max_seq_len)
         self.ds.load_dataset()
         # get train/test partitions
@@ -77,18 +96,28 @@ class SequenceProcessingModel(object):
             self.ds.train_tag_idx_sequence,
             self.ds.test_tag_idx_sequence)
         # if pretrained token embeddings are provided, load them
-        if len(token_pretrained_embedding_filepath) > 0:
+        if len(self.token_pretrained_embedding_filepath) > 0:
             self._load_token_embeddings()
 
-        # SPECIFY A MODEL
+    def specify_model(self):
+        """
+        """
+        # create a dictionary of the Dataset and SequenceProcessingModel
+        # objects attributes
+        model_specifications = {**vars(self.ds), **vars(self)}
+
         if self.model_name == 'LSTM-CRF-NER':
-            # pass a dictionary of this the dataset and model objects attributes as
-            # argument to specify_
-            self.model, self.crf = specify_LSTM_CRF({**vars(self.ds), **vars(self)})
-            compile_model(model_specifications = vars(self),
-                          model = self.model,
-                          loss_function = self.crf.loss_function,
-                          metrics = self.crf.accuracy)
+            print('Building the simple LSTM-CRF model for NER...', end='', flush=True)
+            # create, specify and compile the model
+            model_ = SimpleLSTMCRF(model_specifications)
+
+        # specify and compile the chosen model
+        model_.specify_()
+        model_.compile_()
+        # update this objects model attribute with the compiled Keras model
+        self.model = model_.model
+
+        print('Done', flush=True)
 
     def fit(self):
         """ Fit the specified model.
@@ -199,11 +228,11 @@ class SequenceProcessingModel(object):
         an embedding of all zeros.
 
         Returns:
-            token_embeddings_matrix: a matrix whos ith row corresponds to the
+            token_embedding_matrix: a matrix whos ith row corresponds to the
             token embedding for the ith word in the models word to idx mapping.
         """
         # initialize the embeddings matrix
-        token_embeddings_matrix = np.zeros((len(self.ds.word_type_to_index) + 1,
+        token_embedding_matrix = np.zeros((len(self.ds.word_type_to_index) + 1,
                                             token_embedding_dimensions))
 
         # lookup embeddings for every word in the dataset
@@ -211,9 +240,9 @@ class SequenceProcessingModel(object):
             token_embeddings_vector = token_embeddings_index.get(word)
             if token_embeddings_vector is not None:
                 # words not found in embedding index will be all-zeros.
-                token_embeddings_matrix[i] = token_embeddings_vector
+                token_embedding_matrix[i] = token_embeddings_vector
 
-        return token_embeddings_matrix
+        return token_embedding_matrix
 
     def _setup_model_checkpointing(self):
         """ Sets up per epoch model checkpointing.

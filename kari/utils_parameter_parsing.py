@@ -33,9 +33,11 @@ def process_parameters(config, cli_arguments):
     # mode
     parameters['model_name'] = str(config['mode']['model_name'])
     parameters['train_model'] = bool('True' == config['mode']['train_model'])
+    parameters['load_pretrained_model'] = bool('True' == config['mode']['load_pretrained_model'])
     # data
     parameters['dataset_text_folder'] = str(config['data']['dataset_text_folder'])
     parameters['output_folder'] = str(config['data']['output_folder'])
+    parameters['pretrained_model_weights'] = str(config['data']['pretrained_model_weights'])
     parameters['token_pretrained_embedding_filepath'] = str(config['data']['token_pretrained_embedding_filepath'])
     # training
     parameters['optimizer'] = str(config['training']['optimizer'])
@@ -88,6 +90,7 @@ def parse_arguments():
     parser.add_argument('--gradient_clipping_value', required=False, type=float, help='')
     parser.add_argument('--k_folds', required=False, type=int, help='')
     parser.add_argument('--learning_rate', required=False, type=float, help='')
+    parser.add_argument('--load_pretrained_model', required=False, type=bool, help='')
     # parser.add_argument('--load_only_pretrained_token_embeddings',   default=argument_default_value, help='')
     # parser.add_argument('--load_all_pretrained_token_embeddings',   default=argument_default_value, help='')
     # parser.add_argument('--main_evaluation_mode',   default=argument_default_value, help='')
@@ -99,7 +102,7 @@ def parse_arguments():
     parser.add_argument('--output_folder', required=False, type=str, help='')
     # parser.add_argument('--patience', default=argument_default_value, help='')
     # parser.add_argument('--plot_format', default=argument_default_value, help='')
-    # parser.add_argument('--pretrained_model_folder', default=argument_default_value, help='')
+    parser.add_argument('--pretrained_model_weights', required=False, type=str, help='')
     # parser.add_argument('--reload_character_embeddings', default=argument_default_value, help='')
     # parser.add_argument('--reload_character_lstm', default=argument_default_value, help='')
     # parser.add_argument('--reload_crf', default=argument_default_value, help='')
