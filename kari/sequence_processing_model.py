@@ -1,14 +1,19 @@
+import os
 import time
 
 import numpy as np
 import pandas as pd
+from keras.callbacks import ModelCheckpoint
 
 from dataset import Dataset
 from specify_model import *
+from utils import make_dir
 
 # TODO (johngiorgi): set max_seq_len based on empirical observations
 # TODO (johngiorgi): consider smarter default values for paramas
 # TODO (johngiorgi): make sure this process is shuffling the data
+# TODO (johngiorgi): make model checkpointing a config param
+# TODO (johngiorgi): make a debug mode that doesnt load token embeddings and loads only some lines of dataset
 
 class SequenceProcessingModel(object):
     PARAM_DEFAULT = 'default_value_please_ignore_1YVBF48GBG98BGB8432G4874BF74BB'
@@ -79,28 +84,34 @@ class SequenceProcessingModel(object):
         if self.model_name == 'LSTM-CRF-NER':
             # pass a dictionary of this the dataset and model objects attributes as
             # argument to specify_
-            self.model, self.crf = specify_LSTM_CRF_({**vars(self.ds), **vars(self)})
-            compile_LSTM_CRF_(vars(self), self.model, self.crf)
+            self.model, self.crf = specify_LSTM_CRF({**vars(self.ds), **vars(self)})
+            compile_model(model_specifications = vars(self),
+                          model = self.model,
+                          loss_function = self.crf.loss_function,
+                          metrics = self.crf.accuracy)
 
     def fit(self):
+        """ Fit the specified model.
+
+        For the given model (self.model), sets up per epoch checkpointing
+        and fits the model.
+
+        Returns:
+            train_hist, the history of the model training as a pandas
+            dataframe.
         """
-        """
+        # setup model checkpointing
+        checkpointer = self._setup_model_checkpointing()
         # fit
-        train_hist = self.model.fit(self.X_train, self.y_train,
-                                    batch_size=self.batch_size,
-                                    epochs=self.maximum_number_of_epochs,
-                                    validation_split=0.1, verbose=1)
+        train_history = self.model.fit(self.X_train, self.y_train,
+                                       batch_size=self.batch_size,
+                                       epochs=self.maximum_number_of_epochs,
+                                       validation_split=0.1,
+                                       callbacks = [checkpointer],
+                                       verbose=1)
+        train_history = pd.DataFrame(train_history)
 
-        return pd.DataFrame(train_hist.history)
-
-        '''
-        import matplotlib.pyplot as plt
-        plt.style.use("ggplot")
-        plt.figure(figsize=(12,12))
-        plt.plot(hist["acc"])
-        plt.plot(hist["val_acc"])
-        plt.show()
-        '''
+        return train_history
 
     def predict(self):
         """
@@ -121,11 +132,17 @@ class SequenceProcessingModel(object):
                                               labels=labels_,
                                               average='macro'))
         '''
-        print(np.count_nonzero((pred_idx == gold_idx)) / len(pred_idx))
 
         return pred_idx, gold_idx, labels_
 
     def _load_token_embeddings(self):
+        """ Coordinates the loading of pre-trained token embeddings.
+
+        Coordinates the loading of pre-trained token embeddings by reading in
+        the file containing the token embeddings and created an embedding matrix
+        whos ith row corresponds to the token embedding for the ith word in the
+        models word to idx mapping.
+        """
         start_time = time.time()
         print('Loading embeddings... ', end='', flush=True)
 
@@ -138,8 +155,6 @@ class SequenceProcessingModel(object):
 
         elapsed_time = time.time() - start_time
         print('Done ({0:.2f} seconds)'.format(elapsed_time))
-
-        return
 
     def _prepare_token_embedding_layer(self):
         """ Creates an embedding index using pretrained token embeddings.
@@ -199,3 +214,24 @@ class SequenceProcessingModel(object):
                 token_embeddings_matrix[i] = token_embeddings_vector
 
         return token_embeddings_matrix
+
+    def _setup_model_checkpointing(self):
+        """ Sets up per epoch model checkpointing.
+
+        Sets up model checkpointing by:
+            1) creating the output_folder if it does not already exists
+            2) creating the checkpointing CallBack Keras object
+
+        Returns:
+            checkpointer: a Keras CallBack object for per epoch model
+            checkpointing
+        """
+        # create output directory if it does not exist
+        make_dir(self.output_folder)
+        # create path to output folder
+        output_folder_ = os.path.join(self.output_folder,
+                                      'model_checkpoint.{epoch:02d}-{val_loss:.2f}.hdf5')
+        # set up model checkpointing
+        checkpointer = ModelCheckpoint(filepath=output_folder_)
+
+        return checkpointer
