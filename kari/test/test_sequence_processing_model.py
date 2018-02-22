@@ -4,80 +4,109 @@ import pytest
 from utils_parameter_parsing import *
 from sequence_processing_model import SequenceProcessingModel
 
-PATH_TO_DUMMY_CONFIG = 'kari/test/dummy_config.ini'
-PATH_TO_DUMMY_DATASET = 'kari/test/dummy_dataset'
+PATH_TO_DUMMY_CONFIG = 'kari/test/resources/dummy_config.ini'
+PATH_TO_DUMMY_DATASET = 'kari/test/resources/dummy_dataset'
+PATH_TO_DUMMY_TOKEN_EMBEDDINGS = 'kari/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt'
 DUMMY_TRAIN_SENT_NUM = 2
 DUMMY_TEST_SENT_NUM = 1
+# embedding matrix shape is num word types x dimension of embeddings
+DUMMY_EMBEDDINGS_MATRIX_SHAPE = (28, 2)
 
 @pytest.fixture
-def default_model():
+def model_without_dataset():
     """ Returns an instance of SequenceProcessingModel initialized with the
-    default configuration file. """
+    default configuration file and no loaded dataset"""
+    config = config_parser(PATH_TO_DUMMY_CONFIG) # parse config.ini
+    # create a dictionary to serve as cli arguments
+    cli_arguments = {}
+    # resolve parameters, cast to correct types
+    parameters = process_parameters(config, cli_arguments)
 
+    model_without_dataset = SequenceProcessingModel(**parameters)
+
+    return model_without_dataset
+
+@pytest.fixture
+def model_with_dataset():
+    """ Returns an instance of SequenceProcessingModel initialized with the
+    default configuration file and a loaded dataset """
     config = config_parser(PATH_TO_DUMMY_CONFIG) # parse config.ini
     # create a dictionary to serve as cli arguments
     cli_arguments = {'dataset_text_folder': PATH_TO_DUMMY_DATASET}
     # resolve parameters, cast to correct types
     parameters = process_parameters(config, cli_arguments)
 
-    default_model = SequenceProcessingModel(**parameters)
+    model_with_dataset = SequenceProcessingModel(**parameters)
+    model_with_dataset.load_dataset()
 
-    return default_model
+    return model_with_dataset
 
-def test_attributes_after_initilization_of_model(default_model):
+def test_attributes_after_initilization_of_model(model_without_dataset):
     """ Asserts instance attributes are initialized correctly when sequence
-    model is initialized. """
+    model is initialized (and before dataset is loaded)."""
     # check type
-    assert type(default_model.activation_function) == str
-    assert type(default_model.batch_size) == int
-    assert type(default_model.dataset_text_folder) == str
-    assert type(default_model.debug) == bool
-    assert type(default_model.dropout_rate) == float
-    assert type(default_model.freeze_token_embeddings) == bool
-    assert type(default_model.gradient_clipping_value) == float
-    assert type(default_model.k_folds) == int
-    assert type(default_model.learning_rate) == float
-    assert type(default_model.maximum_number_of_epochs) == int
-    assert type(default_model.model_name) == str
-    assert type(default_model.optimizer) == str
-    assert type(default_model.output_folder) == str
-    assert type(default_model.token_pretrained_embedding_filepath) == str
-    assert type(default_model.train_model) == bool
-    assert type(default_model.max_seq_len) == int
+    assert type(model_without_dataset.activation_function) == str
+    assert type(model_without_dataset.batch_size) == int
+    assert type(model_without_dataset.dataset_text_folder) == str
+    assert type(model_without_dataset.debug) == bool
+    assert type(model_without_dataset.dropout_rate) == float
+    assert type(model_without_dataset.freeze_token_embeddings) == bool
+    assert type(model_without_dataset.gradient_clipping_value) == float
+    assert type(model_without_dataset.k_folds) == int
+    assert type(model_without_dataset.learning_rate) == float
+    assert type(model_without_dataset.load_pretrained_model) == bool
+    assert type(model_without_dataset.maximum_number_of_epochs) == int
+    assert type(model_without_dataset.model_name) == str
+    assert type(model_without_dataset.optimizer) == str
+    assert type(model_without_dataset.output_folder) == str
+    assert type(model_without_dataset.pretrained_model_weights) == str
+    assert type(model_without_dataset.token_pretrained_embedding_filepath) == str
+    assert type(model_without_dataset.train_model) == bool
+    assert type(model_without_dataset.max_seq_len) == int
     # check value
-    assert default_model.activation_function == 'relu'
-    assert default_model.batch_size == 1
-    assert default_model.dataset_text_folder == PATH_TO_DUMMY_DATASET
-    assert default_model.debug == False
-    assert default_model.dropout_rate == 0.1
-    assert default_model.freeze_token_embeddings == True
-    assert default_model.gradient_clipping_value == 0.0
-    assert default_model.k_folds == 5
-    assert default_model.learning_rate == 0.01
-    assert default_model.maximum_number_of_epochs == 10
-    assert default_model.model_name == 'LSTM-CRF-NER'
-    assert default_model.optimizer == 'sgd'
-    assert default_model.output_folder == '../output'
-    assert default_model.token_pretrained_embedding_filepath == ''
-    assert default_model.train_model == True
-    assert default_model.max_seq_len == 50
+    assert model_without_dataset.activation_function == 'relu'
+    assert model_without_dataset.batch_size == 1
+    assert model_without_dataset.dataset_text_folder == PATH_TO_DUMMY_DATASET
+    assert model_without_dataset.debug == False
+    assert model_without_dataset.dropout_rate == 0.1
+    assert model_without_dataset.freeze_token_embeddings == True
+    assert model_without_dataset.gradient_clipping_value == 0.0
+    assert model_without_dataset.k_folds == 5
+    assert model_without_dataset.learning_rate == 0.01
+    assert model_without_dataset.load_pretrained_model == False
+    assert model_without_dataset.maximum_number_of_epochs == 10
+    assert model_without_dataset.model_name == 'LSTM-CRF-NER'
+    assert model_without_dataset.optimizer == 'sgd'
+    assert model_without_dataset.output_folder == '../output'
+    assert model_without_dataset.pretrained_model_weights == ''
+    assert model_without_dataset.token_pretrained_embedding_filepath == PATH_TO_DUMMY_TOKEN_EMBEDDINGS
+    assert model_without_dataset.train_model == True
+    assert model_without_dataset.max_seq_len == 50
 
-def test_X_input_sequences_after_initilization_of_model(default_model):
+def test_X_input_sequences_after_loading_dataset(model_with_dataset):
     """ Asserts X (input) data partition attribute is initialized correctly when
-    sequence model is initialized. """
-    assert type(default_model.X_train) == numpy.ndarray
-    assert type(default_model.X_test) == numpy.ndarray
+    sequence model is initialized (and after dataset is loaded). """
+    assert type(model_with_dataset.X_train) == numpy.ndarray
+    assert type(model_with_dataset.X_test) == numpy.ndarray
 
-    assert default_model.X_train.shape == (DUMMY_TRAIN_SENT_NUM, default_model.max_seq_len)
-    assert default_model.X_test.shape == (DUMMY_TEST_SENT_NUM, default_model.max_seq_len)
+    assert model_with_dataset.X_train.shape == (DUMMY_TRAIN_SENT_NUM, model_with_dataset.max_seq_len)
+    assert model_with_dataset.X_test.shape == (DUMMY_TEST_SENT_NUM, model_with_dataset.max_seq_len)
 
-def test_y_output_sequences_after_initilization_of_model(default_model):
+def test_y_output_sequences_after_loading_dataset(model_with_dataset):
     """ Asserts y (labels) data partition attribute is initialized correctly when
-    sequence model is initialized. """
-    assert type(default_model.y_train) == numpy.ndarray
-    assert type(default_model.y_test) == numpy.ndarray
+    sequence model is initialized (and after dataset is loaded). """
+    assert type(model_with_dataset.y_train) == numpy.ndarray
+    assert type(model_with_dataset.y_test) == numpy.ndarray
+    # check value
+    assert model_with_dataset.y_train.shape == (DUMMY_TRAIN_SENT_NUM,
+        model_with_dataset.max_seq_len, model_with_dataset.ds.tag_type_count)
+    assert model_with_dataset.y_test.shape == (DUMMY_TEST_SENT_NUM,
+        model_with_dataset.max_seq_len, model_with_dataset.ds.tag_type_count)
 
-    assert default_model.y_train.shape == (DUMMY_TRAIN_SENT_NUM,
-        default_model.max_seq_len, default_model.ds.tag_type_count)
-    assert default_model.y_test.shape == (DUMMY_TEST_SENT_NUM,
-        default_model.max_seq_len, default_model.ds.tag_type_count)
+def test_word_embeddings_after_loading_dataset(model_with_dataset):
+    """ Asserts that pretained token embeddings are loaded correctly when
+    sequence model is initialized (and after dataset is loaded). """
+    # check type
+    assert type(model_with_dataset.token_embedding_matrix) == numpy.ndarray
+    # check value
+    assert model_with_dataset.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
