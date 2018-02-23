@@ -8,9 +8,12 @@ from keras.models import load_model
 from keras.callbacks import ModelCheckpoint
 
 from dataset import Dataset
-from utils_generic import make_dir
+from metrics import Metrics
 from specify_model import SimpleLSTMCRF
+from utils_generic import make_dir
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+print('Kari version: {0}'.format('0.1-dev'))
 
 # TODO (johngiorgi): set max_seq_len based on empirical observations
 # TODO (johngiorgi): consider smarter default values for paramas
@@ -74,7 +77,7 @@ class SequenceProcessingModel(object):
         # model
         self.model = None
 
-    def load_pretrained_model(self, pretrained_model_filepath):
+    def load_pretrained_model_(self, pretrained_model_filepath):
         """
         """
         self.model = load_model(pretrained_model_filepath)
@@ -131,38 +134,42 @@ class SequenceProcessingModel(object):
         """
         # setup model checkpointing
         checkpointer = self._setup_model_checkpointing()
+        # create Callback object for per epoch prec/recall/f1/support metrics
+        metrics = Metrics(self.X_train, self.y_train, self.ds.tag_type_to_index)
         # fit
         train_history = self.model.fit(self.X_train, self.y_train,
                                        batch_size=self.batch_size,
                                        epochs=self.maximum_number_of_epochs,
                                        validation_split=0.1,
-                                       callbacks = [checkpointer],
+                                       callbacks = [checkpointer, metrics],
                                        verbose=1)
-        train_history = pd.DataFrame(train_history)
+        train_history = pd.DataFrame(train_history.history)
 
         return train_history
 
     def predict(self):
+        """ Performs prediction for a given model and returns results.
+
+        Performs prediction for the current model (self.model), and returns
+        a 2-tuple contain 1D array-like objects containing the true (gold)
+        labels and the predicted labels, where labels are integers corresponding
+        to the sequence tags as per self.ds.tag_type_to_index.
+
+        Returns:
+            y_true: 1D array like object containing the gold label sequence
+            y_pred: 1D array like object containing the predicted sequence
         """
-        """
-        # get predicted sequence, flatten into 1D array
-        pred_idx = self.model.predict(self.X_test).argmax(axis=-1)
-        pred_idx = np.asarray(pred_idx).ravel()
         # get gold sequence, flatten into 1D array
-        gold_idx = self.y_test.argmax(axis=-1)
-        gold_idx = np.asarray(gold_idx).ravel()
+        y_true = self.y_test.argmax(axis=-1)
+        y_true = np.asarray(gold_idx).ravel()
+        # get predicted sequence, flatten into 1D array
+        y_pred = self.model.predict(self.X_test).argmax(axis=-1)
+        y_pred = np.asarray(pred_idx).ravel()
 
         # get indices for all labels that are not the 'null' label, 'O'.
-        labels_ = [(k, v)[1] for k, v in self.ds.tag_type_to_index.items() if k != 'O']
+        # labels_ = [(k, v)[1] for k, v in self.ds.tag_type_to_index.items() if k != 'O']
 
-        '''
-        print(precision_recall_fscore_support(gold_idx, pred_idx,
-                                              # we don't want metrics for 'O' tags
-                                              labels=labels_,
-                                              average='macro'))
-        '''
-
-        return pred_idx, gold_idx, labels_
+        return y_true, y_pred
 
     def _load_token_embeddings(self):
         """ Coordinates the loading of pre-trained token embeddings.
@@ -176,14 +183,15 @@ class SequenceProcessingModel(object):
         print('Loading embeddings... ', end='', flush=True)
 
         # prepare the embedding indicies
-        token_embeddings_index, token_embedding_dimension = self._prepare_token_embedding_layer()
-        print('found %s word vectors of dimension %s.' % (len(token_embeddings_index), token_embedding_dimension))
+        token_embeddings_index = self._prepare_token_embedding_layer()
+        token_embedding_dimension = len(list(token_embeddings_index.values())[0])
         # fill up the embedding matrix, update attribute
         embedding_matrix = self._prepare_token_embedding_matrix(token_embeddings_index, token_embedding_dimension)
         self.token_embedding_matrix = embedding_matrix
 
         elapsed_time = time.time() - start_time
         print('Done ({0:.2f} seconds)'.format(elapsed_time))
+        print('Found {} word vectors of dimension {}'.format(len(token_embeddings_index), token_embedding_dimension))
 
     def _prepare_token_embedding_layer(self):
         """ Creates an embedding index using pretrained token embeddings.
@@ -193,11 +201,9 @@ class SequenceProcessingModel(object):
 
         Returns:
             token_embeddings_index: mapping of words to pre-trained token embeddings
-            token_embedding_dimensions: the dimension of the pre-trained token embeddings
         """
         token_embeddings_index = {}
         token_embedding_file_lines = []
-        token_embedding_dimensions = 0
 
         with open(self.token_pretrained_embedding_filepath, 'r') as pte:
             token_embedding_file_lines = pte.readlines()
@@ -208,13 +214,10 @@ class SequenceProcessingModel(object):
             word = values[0] # get words
             coefs = np.asarray(values[1:], dtype='float32') # get emb vectos
 
-            # get size of token embedding dimensions
-            if token_embedding_dimensions == 0:
-                token_embedding_dimensions = len(coefs)
             # update our embedding index
             token_embeddings_index[word] = coefs
 
-        return token_embeddings_index, token_embedding_dimensions
+        return token_embeddings_index
 
     def _prepare_token_embedding_matrix(self,
                                         token_embeddings_index,
