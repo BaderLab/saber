@@ -18,34 +18,45 @@ class Dataset(object):
     """ A class for handling data sets. """
     def __init__(self, dataset_filepath, sep='\t', names=['Word', 'Tag'],
                  header=None, max_seq_len=50):
-                 self.dataset_filepath = dataset_filepath
-                 # search for any files in the dataset filepath ending with
-                 # TRAIN_FILE_EXT or TEST_FILE_EXT
-                 self.trainset_filepath = glob.glob(os.path.join(dataset_filepath, TRAIN_FILE_EXT))[0]
-                 self.testset_filepath = glob.glob(os.path.join(dataset_filepath, TEST_FILE_EXT))[0]
-                 self.sep = sep
-                 self.names = names
-                 self.header = header
-                 self.max_seq_len = max_seq_len
-                 # shared by train/test
-                 self.raw_dataframe = None
-                 self.word_types = []
-                 self.tag_types = []
-                 self.word_type_count = 0
-                 self.tag_type_count = 0
-                 self.word_type_to_index = {}
-                 self.tag_type_to_index = {}
-                 # not shared by train/test
-                 self.train_dataframe = None
-                 self.test_dataframe = None
-                 self.train_sentences = []
-                 self.test_sentences = []
-                 self.train_word_idx_sequence = []
-                 self.test_word_idx_sequence = []
-                 self.train_tag_idx_sequence = []
-                 self.test_tag_idx_sequence = []
+        self.dataset_filepath = dataset_filepath
+        # search for any files in the dataset filepath ending with
+        # TRAIN_FILE_EXT or TEST_FILE_EXT
+        self.trainset_filepath = glob.glob(os.path.join(dataset_filepath, TRAIN_FILE_EXT))[0]
+        self.testset_filepath = glob.glob(os.path.join(dataset_filepath, TEST_FILE_EXT))[0]
+        self.sep = sep
+        self.names = names
+        self.header = header
+        self.max_seq_len = max_seq_len
+        # shared by train/test
+        self.raw_dataframe = None
+        self.word_types = []
+        self.tag_types = []
+        self.word_type_count = 0
+        self.tag_type_count = 0
+        self.word_type_to_idx = {}
+        self.tag_type_to_idx = {}
+        # not shared by train/test
+        self.train_dataframe = None
+        self.test_dataframe = None
+        self.train_sentences = []
+        self.test_sentences = []
+        self.train_word_idx_sequence = []
+        self.test_word_idx_sequence = []
+        self.train_tag_idx_sequence = []
+        self.test_tag_idx_sequence = []
 
-    def load_dataset(self):
+        # on object construction, we read the dataset files and get word/tag
+        # types, this is helpful for creating compound datasets
+
+        # load dataset file, then grab the train and test 'frames'
+        self.raw_dataframe = self._load_dataset()
+        self.train_dataframe = self.raw_dataframe.loc['train']
+        self.test_dataframe = self.raw_dataframe.loc['test']
+        # get types and type counts
+        self.word_types, self.tag_types = self._get_types()
+        self.word_type_count, self.tag_type_count = len(self.word_types), len(self.tag_types)
+
+    def load_dataset(self, shared_word_type_to_idx=None):
         """ Coordinates loading of given data set at self.dataset_filepath.
 
         For a given dataset in CoNLL format at dataset_filepath, cordinates
@@ -53,20 +64,13 @@ class Dataset(object):
         attributes. Expects self.dataset_filepath to be a directory containing
         two files, train.* and test.*
         """
-        start_time = time.time()
-        print('Loading dataset... ', end='', flush=True)
+        # generate type to index mappings
+        self.word_type_to_idx, self.tag_type_to_idx = self._map_type_to_idx()
 
-        # load the entire dataset, then grab the train and test 'frames'
-        self.raw_dataframe = self._load_dataset()
-        self.train_dataframe = self.raw_dataframe.loc['train']
-        self.test_dataframe = self.raw_dataframe.loc['test']
-
-        # train and test partitions share these attributes
-        self.word_types, self.tag_types = self._get_types()
-        self.word_type_count, self.tag_type_count = len(self.word_types), len(self.tag_types)
-        self.word_type_to_index, self.tag_type_to_index = self._map_type_to_idx()
-
-        # train/test partitions do NOT share these attributes
+        # if shared_by_compound is passed into function call, then this is a
+        # compound dataset (word_type_to_idx is shared across datasets)
+        if shared_word_type_to_idx is not None:
+            self.word_type_to_idx = shared_word_type_to_idx
 
         ## TRAIN
         # get sentences
@@ -76,7 +80,6 @@ class Dataset(object):
         self.train_tag_idx_sequence = self._get_type_idx_sequence(self.train_sentences, type_='tag')
         # convert tag idx sequences to categorical
         self.train_tag_idx_sequence = self._tag_idx_sequence_to_categorical(self.train_tag_idx_sequence)
-
         ## TEST
         # get sentences
         self.test_sentences = self._get_sentences(self.testset_filepath, sep=self.sep)
@@ -85,9 +88,6 @@ class Dataset(object):
         self.test_tag_idx_sequence = self._get_type_idx_sequence(self.test_sentences, type_='tag')
         # convert tag idx sequences to categorical
         self.test_tag_idx_sequence = self._tag_idx_sequence_to_categorical(self.test_tag_idx_sequence)
-
-        elapsed_time = time.time() - start_time
-        print('Done ({0:.2f} seconds)'.format(elapsed_time))
 
     def _load_dataset(self):
         """ Loads data set given at self.dataset_filepath in pandas dataframe.
@@ -143,17 +143,31 @@ class Dataset(object):
         Updates the attributes of a Dataset object instance with dictionaries
         mapping each word type and each tag type to a unique index.
         """
-        tag_type_to_index = self._sequence_2_idx(self.tag_types)
+        tag_type_to_idx = self._sequence_2_idx(self.tag_types)
         # pad of 1 accounts for the sequence pad (of 0) down the pipeline
-        word_type_to_index = self._sequence_2_idx(self.word_types, pad=1)
+        word_type_to_idx = self._sequence_2_idx(self.word_types, pad=1)
 
-        return word_type_to_index, tag_type_to_index
+        return word_type_to_idx, tag_type_to_idx
 
     def _sequence_2_idx(self, sequence, pad=0):
         """ Returns a dictionary of element:idx pairs for each element in sequence.
 
         Given a list, returns a dictionary of length len(sequence) + pad where
         the keys are elements of sequence and the values are unique integers.
+
+        Args:
+            sequence: a list of sequence data.
+        """
+        # pad accounts for idx of sequence pad
+        return {e: i + pad for i, e in enumerate(sequence)}
+
+    @staticmethod
+    def sequence_2_idx(sequence, pad=0):
+        """ Returns a dictionary of element:idx pairs for each element in sequence.
+
+        A class method that, when given a list, returns a dictionary of length
+        len(sequence) + pad where the keys are elements of sequence and the
+        values are unique integers.
 
         Args:
             sequence: a list of sequence data.
@@ -214,12 +228,12 @@ class Dataset(object):
         # word type
         column_idx = 0
         pad = 0
-        type_to_idx_ = self.word_type_to_index
+        type_to_idx_ = self.word_type_to_idx
         # tag type
         if type_ == 'tag':
             column_idx = -1
-            pad = self.tag_type_to_index['O']
-            type_to_idx_ = self.tag_type_to_index
+            pad = self.tag_type_to_idx['O']
+            type_to_idx_ = self.tag_type_to_idx
 
         # get sequence of idx's in the order they appear in sentences
         type_sequence = [[type_to_idx_[ty[column_idx]] for ty in s] for s in sentences_]
@@ -232,7 +246,7 @@ class Dataset(object):
         """ Converts a class vector (integers) to n_class class matrix.
 
         Converts a class vector (integers) to n_class class matrix. The
-        num_classes agument is determined by self.tag_type_count.
+        num_classes argument is determined by self.tag_type_count.
 
         Returns:
             n_class matrix representation of the input.

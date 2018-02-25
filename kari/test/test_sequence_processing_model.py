@@ -29,7 +29,7 @@ def model_without_dataset():
 @pytest.fixture
 def model_with_dataset():
     """ Returns an instance of SequenceProcessingModel initialized with the
-    default configuration file and a loaded dataset """
+    default configuration file and a single loaded dataset """
     config = config_parser(PATH_TO_DUMMY_CONFIG) # parse config.ini
     # create a dictionary to serve as cli arguments
     cli_arguments = {'dataset_text_folder': PATH_TO_DUMMY_DATASET}
@@ -47,7 +47,7 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
     # check type
     assert type(model_without_dataset.activation_function) == str
     assert type(model_without_dataset.batch_size) == int
-    assert type(model_without_dataset.dataset_text_folder) == str
+    assert type(model_without_dataset.dataset_text_folder) == list
     assert type(model_without_dataset.debug) == bool
     assert type(model_without_dataset.dropout_rate) == float
     assert type(model_without_dataset.freeze_token_embeddings) == bool
@@ -66,7 +66,7 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
     # check value
     assert model_without_dataset.activation_function == 'relu'
     assert model_without_dataset.batch_size == 1
-    assert model_without_dataset.dataset_text_folder == PATH_TO_DUMMY_DATASET
+    assert model_without_dataset.dataset_text_folder[0] == PATH_TO_DUMMY_DATASET
     assert model_without_dataset.debug == False
     assert model_without_dataset.dropout_rate == 0.1
     assert model_without_dataset.freeze_token_embeddings == True
@@ -86,22 +86,22 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
 def test_X_input_sequences_after_loading_dataset(model_with_dataset):
     """ Asserts X (input) data partition attribute is initialized correctly when
     sequence model is initialized (and after dataset is loaded). """
-    assert type(model_with_dataset.X_train) == numpy.ndarray
-    assert type(model_with_dataset.X_test) == numpy.ndarray
+    assert type(model_with_dataset.ds[0].train_word_idx_sequence) == numpy.ndarray
+    assert type(model_with_dataset.ds[0].test_word_idx_sequence) == numpy.ndarray
 
-    assert model_with_dataset.X_train.shape == (DUMMY_TRAIN_SENT_NUM, model_with_dataset.max_seq_len)
-    assert model_with_dataset.X_test.shape == (DUMMY_TEST_SENT_NUM, model_with_dataset.max_seq_len)
+    assert model_with_dataset.ds[0].train_word_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM, model_with_dataset.max_seq_len)
+    assert model_with_dataset.ds[0].test_word_idx_sequence.shape == (DUMMY_TEST_SENT_NUM, model_with_dataset.max_seq_len)
 
 def test_y_output_sequences_after_loading_dataset(model_with_dataset):
     """ Asserts y (labels) data partition attribute is initialized correctly when
     sequence model is initialized (and after dataset is loaded). """
-    assert type(model_with_dataset.y_train) == numpy.ndarray
-    assert type(model_with_dataset.y_test) == numpy.ndarray
+    assert type(model_with_dataset.ds[0].train_tag_idx_sequence) == numpy.ndarray
+    assert type(model_with_dataset.ds[0].test_tag_idx_sequence) == numpy.ndarray
     # check value
-    assert model_with_dataset.y_train.shape == (DUMMY_TRAIN_SENT_NUM,
-        model_with_dataset.max_seq_len, model_with_dataset.ds.tag_type_count)
-    assert model_with_dataset.y_test.shape == (DUMMY_TEST_SENT_NUM,
-        model_with_dataset.max_seq_len, model_with_dataset.ds.tag_type_count)
+    assert model_with_dataset.ds[0].train_tag_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
+        model_with_dataset.max_seq_len, model_with_dataset.ds[0].tag_type_count)
+    assert model_with_dataset.ds[0].test_tag_idx_sequence.shape == (DUMMY_TEST_SENT_NUM,
+        model_with_dataset.max_seq_len, model_with_dataset.ds[0].tag_type_count)
 
 def test_word_embeddings_after_loading_dataset(model_with_dataset):
     """ Asserts that pretained token embeddings are loaded correctly when
