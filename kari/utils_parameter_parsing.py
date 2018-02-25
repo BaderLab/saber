@@ -1,7 +1,9 @@
-from __future__ import print_function
 import os
 import argparse
 import configparser
+
+# TODO: (johngiorgi): use the supported datatypes functions for bools: https://docs.python.org/3.6/library/configparser.html#supported-datatypes
+# TODO: (johngiorgi): is there a better way to specify multiple filepaths
 
 def config_parser(config_filepath):
     """ Returns a parsed config file object.
@@ -35,6 +37,8 @@ def process_parameters(config, cli_arguments):
     parameters['train_model'] = bool('True' == config['mode']['train_model'])
     parameters['load_pretrained_model'] = bool('True' == config['mode']['load_pretrained_model'])
     # data
+    # this parameter is a little different, can specify multiple values by
+    # seperating with a ','
     parameters['dataset_text_folder'] = str(config['data']['dataset_text_folder'])
     parameters['output_folder'] = str(config['data']['output_folder'])
     parameters['pretrained_model_weights'] = str(config['data']['pretrained_model_weights'])
@@ -58,8 +62,11 @@ def process_parameters(config, cli_arguments):
         if value is not None:
             parameters[key] = value
 
+    ## POST PROCESSING
     # not needed downsteam of here.
     if 'config_filepath' in parameters: del parameters['config_filepath']
+    # we want dataset_text_folder to be a list of strings.
+    parameters['dataset_text_folder'] = list(str(parameters['dataset_text_folder']).strip().replace(" ", "").split(','))
 
     return parameters
 

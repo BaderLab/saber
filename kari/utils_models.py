@@ -2,7 +2,7 @@ from keras import optimizers
 
 """ A collection of model helper/utility functions. """
 
-def compile_model(learning_rate, optimizer, model, loss_function, metrics):
+def compile_model(learning_rate, model, optimizer, loss_function, metrics):
     """ Compiles a model specified with Keras.
 
     Args:

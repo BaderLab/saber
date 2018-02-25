@@ -21,8 +21,8 @@ def main():
     # https://www.saltycrane.com/blog/2008/01/how-to-use-args-and-kwargs-in-python/
     sequence_processor = SequenceProcessingModel(**parameters)
     sequence_processor.load_dataset()
-    sequence_processer.specify_model()
-    sequence_processer.fit()
+    sequence_processor.specify_model()
+    sequence_processor.fit()
 
 if __name__ == '__main__':
     main()
