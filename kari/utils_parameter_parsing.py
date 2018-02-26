@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 import configparser
 
@@ -15,7 +16,7 @@ def config_parser(config_filepath):
     config.read(config_filepath)
     return config
 
-def process_parameters(config, cli_arguments):
+def process_parameters(config, cli_arguments={}):
     """ Load parameters from ini file if specificed.
 
     Loads parameters from the ini file if specified, taking into account any
@@ -42,6 +43,7 @@ def process_parameters(config, cli_arguments):
     parameters['dataset_text_folder'] = str(config['data']['dataset_text_folder'])
     parameters['output_folder'] = str(config['data']['output_folder'])
     parameters['pretrained_model_weights'] = str(config['data']['pretrained_model_weights'])
+    parameters['token_embedding_dimension'] = int(config['data']['token_embedding_dimension'])
     parameters['token_pretrained_embedding_filepath'] = str(config['data']['token_pretrained_embedding_filepath'])
     # training
     parameters['optimizer'] = str(config['training']['optimizer'])
@@ -119,7 +121,7 @@ def parse_arguments():
     # parser.add_argument('--remap_unknown_tokens_to_unk', default=argument_default_value, help='')
     # parser.add_argument('--spacylanguage', default=argument_default_value, help='')
     # parser.add_argument('--tagging_format', default=argument_default_value, help='')
-    # parser.add_argument('--token_embedding_dimension', default=argument_default_value, help='')
+    parser.add_argument('--token_embedding_dimension', default=argument_default_value, help='')
     # parser.add_argument('--token_lstm_hidden_state_dimension', default=argument_default_value, help='')
     parser.add_argument('--token_pretrained_embedding_filepath', required=False, type=str, help='')
     # parser.add_argument('--tokenizer', default=argument_default_value, help='')
