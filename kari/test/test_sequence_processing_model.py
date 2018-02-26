@@ -4,6 +4,10 @@ import pytest
 from utils_parameter_parsing import *
 from sequence_processing_model import SequenceProcessingModel
 
+# TODO (johngiorgi): more tests need to be written, especially pertaining
+# to the model.
+
+# constants for dummy dataset/config/word embeddings to perform testing on
 PATH_TO_DUMMY_CONFIG = 'kari/test/resources/dummy_config.ini'
 PATH_TO_DUMMY_DATASET = 'kari/test/resources/dummy_dataset'
 PATH_TO_DUMMY_TOKEN_EMBEDDINGS = 'kari/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt'
@@ -13,57 +17,60 @@ DUMMY_TEST_SENT_NUM = 1
 DUMMY_EMBEDDINGS_MATRIX_SHAPE = (28, 2)
 
 @pytest.fixture
-def model_without_dataset():
+def dummy_config():
+    """ Returns an instance of a configparser object after parsing the dummy
+    config file. """
+    # parse the dummy config
+    dummy_config = config_parser(PATH_TO_DUMMY_CONFIG)
+
+    return dummy_config
+
+@pytest.fixture
+def model_without_dataset(dummy_config):
     """ Returns an instance of SequenceProcessingModel initialized with the
-    default configuration file and no loaded dataset"""
-    config = config_parser(PATH_TO_DUMMY_CONFIG) # parse config.ini
-    # create a dictionary to serve as cli arguments
-    cli_arguments = {}
+    default configuration file and no loaded dataset. """
     # resolve parameters, cast to correct types
-    parameters = process_parameters(config, cli_arguments)
+    parameters = process_parameters(dummy_config)
 
     model_without_dataset = SequenceProcessingModel(**parameters)
 
     return model_without_dataset
 
 @pytest.fixture
-def model_with_dataset():
+def model_with_single_dataset(dummy_config):
     """ Returns an instance of SequenceProcessingModel initialized with the
-    default configuration file and a single loaded dataset """
-    config = config_parser(PATH_TO_DUMMY_CONFIG) # parse config.ini
+    default configuration file and a single loaded dataset. """
     # create a dictionary to serve as cli arguments
     cli_arguments = {'dataset_text_folder': PATH_TO_DUMMY_DATASET}
     # resolve parameters, cast to correct types
-    parameters = process_parameters(config, cli_arguments)
+    parameters = process_parameters(dummy_config, cli_arguments)
 
-    model_with_dataset = SequenceProcessingModel(**parameters)
-    model_with_dataset.load_dataset()
+    model_with_single_dataset = SequenceProcessingModel(**parameters)
+    model_with_single_dataset.load_dataset()
 
-    return model_with_dataset
+    return model_with_single_dataset
+
+@pytest.fixture
+def model_with_compound_dataset(dummy_config):
+    """ Returns an instance of SequenceProcessingModel initialized with the
+    default configuration file and a compound loaded dataset. The compound
+    dataset is just two copies of the dataset, this makes writing tests
+    much simpler. """
+    # create a dictionary to serve as cli arguments
+    compound_dataset = PATH_TO_DUMMY_DATASET + ',' + PATH_TO_DUMMY_DATASET
+    cli_arguments = {'dataset_text_folder': compound_dataset}
+    # resolve parameters, cast to correct types
+    parameters = process_parameters(dummy_config, cli_arguments)
+
+    model_with_compound_dataset = SequenceProcessingModel(**parameters)
+    model_with_compound_dataset.load_dataset()
+
+    return model_with_compound_dataset
 
 def test_attributes_after_initilization_of_model(model_without_dataset):
     """ Asserts instance attributes are initialized correctly when sequence
     model is initialized (and before dataset is loaded)."""
-    # check type
-    assert type(model_without_dataset.activation_function) == str
-    assert type(model_without_dataset.batch_size) == int
-    assert type(model_without_dataset.dataset_text_folder) == list
-    assert type(model_without_dataset.debug) == bool
-    assert type(model_without_dataset.dropout_rate) == float
-    assert type(model_without_dataset.freeze_token_embeddings) == bool
-    assert type(model_without_dataset.gradient_clipping_value) == float
-    assert type(model_without_dataset.k_folds) == int
-    assert type(model_without_dataset.learning_rate) == float
-    assert type(model_without_dataset.load_pretrained_model) == bool
-    assert type(model_without_dataset.maximum_number_of_epochs) == int
-    assert type(model_without_dataset.model_name) == str
-    assert type(model_without_dataset.optimizer) == str
-    assert type(model_without_dataset.output_folder) == str
-    assert type(model_without_dataset.pretrained_model_weights) == str
-    assert type(model_without_dataset.token_pretrained_embedding_filepath) == str
-    assert type(model_without_dataset.train_model) == bool
-    assert type(model_without_dataset.max_seq_len) == int
-    # check value
+    # check value/type
     assert model_without_dataset.activation_function == 'relu'
     assert model_without_dataset.batch_size == 1
     assert model_without_dataset.dataset_text_folder[0] == PATH_TO_DUMMY_DATASET
@@ -79,34 +86,115 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
     assert model_without_dataset.optimizer == 'sgd'
     assert model_without_dataset.output_folder == '../output'
     assert model_without_dataset.pretrained_model_weights == ''
+    assert model_without_dataset.token_embedding_dimension == 200
     assert model_without_dataset.token_pretrained_embedding_filepath == PATH_TO_DUMMY_TOKEN_EMBEDDINGS
     assert model_without_dataset.train_model == True
     assert model_without_dataset.max_seq_len == 50
 
-def test_X_input_sequences_after_loading_dataset(model_with_dataset):
+    assert model_without_dataset.ds == []
+    assert model_without_dataset.token_embedding_matrix == None
+    assert model_without_dataset.model == []
+
+def test_X_input_sequences_after_loading_single_dataset(model_with_single_dataset):
     """ Asserts X (input) data partition attribute is initialized correctly when
-    sequence model is initialized (and after dataset is loaded). """
-    assert type(model_with_dataset.ds[0].train_word_idx_sequence) == numpy.ndarray
-    assert type(model_with_dataset.ds[0].test_word_idx_sequence) == numpy.ndarray
-
-    assert model_with_dataset.ds[0].train_word_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM, model_with_dataset.max_seq_len)
-    assert model_with_dataset.ds[0].test_word_idx_sequence.shape == (DUMMY_TEST_SENT_NUM, model_with_dataset.max_seq_len)
-
-def test_y_output_sequences_after_loading_dataset(model_with_dataset):
-    """ Asserts y (labels) data partition attribute is initialized correctly when
-    sequence model is initialized (and after dataset is loaded). """
-    assert type(model_with_dataset.ds[0].train_tag_idx_sequence) == numpy.ndarray
-    assert type(model_with_dataset.ds[0].test_tag_idx_sequence) == numpy.ndarray
-    # check value
-    assert model_with_dataset.ds[0].train_tag_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
-        model_with_dataset.max_seq_len, model_with_dataset.ds[0].tag_type_count)
-    assert model_with_dataset.ds[0].test_tag_idx_sequence.shape == (DUMMY_TEST_SENT_NUM,
-        model_with_dataset.max_seq_len, model_with_dataset.ds[0].tag_type_count)
-
-def test_word_embeddings_after_loading_dataset(model_with_dataset):
-    """ Asserts that pretained token embeddings are loaded correctly when
-    sequence model is initialized (and after dataset is loaded). """
+    sequence model is initialized (and after dataset is loaded) for single
+    datasets. """
+    # shortens assert statments
+    ds = model_with_single_dataset.ds[0]
+    model = model_with_single_dataset
     # check type
-    assert type(model_with_dataset.token_embedding_matrix) == numpy.ndarray
+    assert type(ds.train_word_idx_sequence) == numpy.ndarray
+    assert type(ds.test_word_idx_sequence) == numpy.ndarray
+    # check shape
+    assert ds.train_word_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM, model.max_seq_len)
+    assert ds.test_word_idx_sequence.shape == (DUMMY_TEST_SENT_NUM, model.max_seq_len)
+
+def test_y_output_sequences_after_loading_single_dataset(model_with_single_dataset):
+    """ Asserts y (labels) data partition attribute is initialized correctly when
+    sequence model is initialized (and after dataset is loaded) for single
+    datasets. """
+    # shortens assert statments
+    ds = model_with_single_dataset.ds[0]
+    model = model_with_single_dataset
+    # check type
+    assert type(ds.train_tag_idx_sequence) == numpy.ndarray
+    assert type(ds.test_tag_idx_sequence) == numpy.ndarray
     # check value
-    assert model_with_dataset.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
+    assert ds.train_tag_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
+        ds.max_seq_len, ds.tag_type_count)
+    assert ds.test_tag_idx_sequence.shape == (DUMMY_TEST_SENT_NUM,
+        ds.max_seq_len, ds.tag_type_count)
+
+def test_word_embeddings_after_loading_single_dataset(model_with_single_dataset):
+    """ Asserts that pretained token embeddings are loaded correctly when
+    sequence model is initialized (and after dataset is loaded) for single
+    datasets. """
+    # shortens assert statments
+    model = model_with_single_dataset
+    # check type
+    assert type(model.token_embedding_matrix) == numpy.ndarray
+    # check value
+    assert model.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
+
+def test_agreement_between_model_and_single_dataset(model_with_single_dataset):
+    """ Asserts that the attributes common to SequenceProcessingModel and
+    Dataset are the same for single datasets.
+    """
+    # shortens assert statments
+    ds = model_with_single_dataset.ds[0]
+    model = model_with_single_dataset
+
+    assert model.dataset_text_folder[0] == ds.dataset_text_folder
+    assert model.max_seq_len == ds.max_seq_len
+
+def test_X_input_sequences_after_loading_compound_dataset(model_with_compound_dataset):
+    """ Asserts X (input) data partition attribute is initialized correctly when
+    sequence model is initialized (and after dataset is loaded) for compound
+    datasets. """
+    # for testing purposes, the datasets are identical so we can simply peform
+    # the same checks for each in a loop
+    for ds in model_with_compound_dataset.ds:
+        # check type
+        assert type(ds.train_word_idx_sequence) == numpy.ndarray
+        assert type(ds.test_word_idx_sequence) == numpy.ndarray
+        # check shape
+        assert ds.train_word_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM, ds.max_seq_len)
+        assert ds.test_word_idx_sequence.shape == (DUMMY_TEST_SENT_NUM, ds.max_seq_len)
+
+def test_y_output_sequences_after_loading_compound_dataset(model_with_compound_dataset):
+    """ Asserts y (labels) data partition attribute is initialized correctly when
+    sequence model is initialized (and after dataset is loaded) for compound
+    datasets. """
+    # for testing purposes, the datasets are identical so we can simply peform
+    # the same checks for each in a loop
+    for ds in model_with_compound_dataset.ds:
+        assert type(ds.train_tag_idx_sequence) == numpy.ndarray
+        assert type(ds.test_tag_idx_sequence) == numpy.ndarray
+        # check value
+        assert ds.train_tag_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
+            ds.max_seq_len, ds.tag_type_count)
+        assert ds.test_tag_idx_sequence.shape == (DUMMY_TEST_SENT_NUM,
+            ds.max_seq_len, ds.tag_type_count)
+
+def test_word_embeddings_after_loading_compound_dataset(model_with_compound_dataset):
+    """ Asserts that pretained token embeddings are loaded correctly when
+    sequence model is initialized (and after dataset is loaded) for compound
+    datasets """
+    # shortens assert statments
+    model = model_with_compound_dataset
+    # check type
+    assert type(model.token_embedding_matrix) == numpy.ndarray
+    # check value
+    assert model.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
+
+def test_agreement_between_model_and_compound_dataset(model_with_compound_dataset):
+    """ Asserts that the attributes common to SequenceProcessingModel and
+    Dataset are the same for compound datasets.
+    """
+    # shortens assert statments
+    model = model_with_compound_dataset
+    # for testing purposes, the datasets are identical so we can simply peform
+    # the same checks for each in a loop
+    for i, ds in enumerate(model.ds):
+        assert model.dataset_text_folder[i] == ds.dataset_text_folder
+        assert model.max_seq_len == ds.max_seq_len

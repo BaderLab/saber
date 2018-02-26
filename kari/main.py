@@ -2,6 +2,7 @@ from utils_parameter_parsing import *
 from sequence_processing_model import SequenceProcessingModel
 
 # TODO (johngiorgi): do something about paths as arguments - normalize?
+# https://www.saltycrane.com/blog/2008/01/how-to-use-args-and-kwargs-in-python/
 
 '''
 # Notes
@@ -18,7 +19,6 @@ def main():
     # resolve parameters, cast to correct types
     parameters = process_parameters(config, cli_arguments)
 
-    # https://www.saltycrane.com/blog/2008/01/how-to-use-args-and-kwargs-in-python/
     sequence_processor = SequenceProcessingModel(**parameters)
     sequence_processor.load_dataset()
     sequence_processor.specify_model()
