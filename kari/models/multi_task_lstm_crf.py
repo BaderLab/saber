@@ -10,9 +10,13 @@ from keras.layers import Bidirectional
 from keras_contrib.layers.crf import CRF
 
 from utils_models import compile_model
+from metrics import Metrics
 
 # https://stackoverflow.com/questions/48615003/multi-task-learning-in-keras
 # https://machinelearningmastery.com/keras-functional-api-deep-learning/
+
+# TODO (johngiorgi): not clear if I need to clear non-shared layers when
+# building the model
 
 class MultiTaskLSTMCRF(object):
     """ Implements a MT biLSTM-CRF for NER and TWI using Keras. """
@@ -20,31 +24,36 @@ class MultiTaskLSTMCRF(object):
     def __init__(self, model_specifications):
         # Grab the specs we need to build the model. Keys correspond to names of
         # attributes of Dataset and SequenceProcessingModel classes.
-        self.max_seq_len = model_specifications['max_seq_len']
         self.activation_function = model_specifications['activation_function']
         self.batch_size = model_specifications['batch_size']
         self.dropout_rate = model_specifications['dropout_rate']
-        self.maximum_number_of_epochs = model_specifications['maximum_number_of_epochs']
-        self.num_of_ds = len(model_specifications['dataset_text_folder'])
-        self.token_embedding_matrix = model_specifications['token_embedding_matrix']
         self.freeze_token_embeddings = model_specifications['freeze_token_embeddings']
+        self.gradient_clipping_value = model_specifications['gradient_clipping_value']
         self.learning_rate = model_specifications['learning_rate']
+        self.maximum_number_of_epochs = model_specifications['maximum_number_of_epochs']
         self.optimizer = model_specifications['optimizer']
+        self.token_embedding_matrix = model_specifications['token_embedding_matrix']
+        self.token_embedding_dimension = model_specifications['token_embedding_dimension']
+        self.max_seq_len = model_specifications['max_seq_len']
 
-        # model(s) tied to this instance
+        # dataset(s) tied to this instance
         self.ds = model_specifications['ds']
+        # model(s) tied to this instance
         self.model = []
         self.crf = []
 
     def specify_(self):
-        """ Specifies a multi-task bidirectional LSTM-CRF using Keras.
+        """ Specifies a multi-task bidirectional LSTM-CRF for sequence tagging
+        using Keras.
 
-        Implements a hybrid long short-term memory network-condition random field
-        (LSTM-CRF) multi-task model.
+        Implements a hybrid long short-term memory network-condition random
+        field (LSTM-CRF) multi-task model for sequence tagging.
 
         Returns:
-            model: a keras model, excluding including crf layer
-            crf: a crf layer implemented in keras.contrib
+            model: a list of keras models, sharing (excluding crf layer) sharing
+                   some number of layers.
+            crf: a list of task-specific crf layers implemented using
+                 keras.contrib, one for each model.
         """
         ## TOKEN EMBEDDING LAYER
         # if specified, load pre-trained token embeddings otherwise initialize
@@ -62,21 +71,20 @@ class MultiTaskLSTMCRF(object):
         else:
             shared_token_emb = Embedding(
                 input_dim=len(self.ds[0].word_type_to_idx) + 1,
-                output_dim=100,
+                output_dim=self.token_embedding_dimension,
                 input_length=self.max_seq_len,
                 mask_zero=True)
-
         ## TOKEN BILSTM LAYER
         shared_token_bisltm = Bidirectional(LSTM(
             units=100,
             return_sequences=True,
             recurrent_dropout=self.dropout_rate))
-
         ## FULLY CONNECTED LAYER
         shared_dense = TimeDistributed(Dense(
             units=100,
             activation=self.activation_function))
 
+        # specify model, taking into account the shared layers
         for ds in self.ds:
             input_layer = Input(shape=(self.max_seq_len,))
             model = shared_token_emb(input_layer)
@@ -85,9 +93,11 @@ class MultiTaskLSTMCRF(object):
             crf = CRF(ds.tag_type_count)
             output_layer = crf(model)
 
+            # fully specified model
             self.model.append(Model(inputs=input_layer, outputs=output_layer))
             self.crf.append(crf)
 
+            # clear all non-shared layers
             input_layer = None
             model = None
             crf = None
@@ -96,7 +106,8 @@ class MultiTaskLSTMCRF(object):
         return self.model
 
     def compile_(self):
-        """ Compiles a multi-task biLSTM-CRF for NER using Keras. """
+        """ Compiles a bidirectional multi-task LSTM-CRF for for sequence
+        tagging using Keras. """
         for model, crf in zip(self.model, self.crf):
             compile_model(model=model,
                           learning_rate=self.learning_rate,
@@ -104,29 +115,24 @@ class MultiTaskLSTMCRF(object):
                           loss_function=crf.loss_function,
                           metrics=crf.accuracy)
 
-    def fit_(self, dataset):
-
-        '''
-        self.model[0].fit(x=dataset[0].train_word_idx_sequence,
-                          y=dataset[0].train_tag_idx_sequence,
-                          batch_size=self.batch_size,
-                          epochs=1,
-                          validation_split=0.1,
-                          verbose=1)
-        '''
-
-
+    def fit_(self, checkpointer):
+        """ Fits a bidirectional multi-task LSTM-CRF for for sequence tagging
+        using Keras. """
         for epoch in range(self.maximum_number_of_epochs):
             for ds, model in zip(self.ds, self.model):
-                model.fit(x=ds.train_word_idx_sequence,
-                          y=ds.train_tag_idx_sequence,
+                X_train = ds.train_word_idx_sequence
+                y_train = ds.train_tag_idx_sequence
+                tag_type_to_idx = ds.tag_type_to_idx
+
+                model.fit(x=X_train,
+                          y=y_train,
                           batch_size=self.batch_size,
                           epochs=1,
-                          initial_epoch=epoch
+                          callbacks=[checkpointer, Metrics(X_train,
+                                                           y_train,
+                                                           tag_type_to_idx)],
                           validation_split=0.1,
                           verbose=1)
-
-
 
 
         '''
@@ -156,27 +162,3 @@ class MultiTaskLSTMCRF(object):
 
         return train_history
         '''
-
-    def _specify_shared_model(self, shared_layers):
-        """ A helper function for specify the model architecture.
-
-        Because of how models with shared layers are created in Keras, this
-        function is neccecary to properly share some layers. Input and
-        output layers are specified in this method, but the shared layers
-        are passed in as argument.
-
-        Returns:
-            input_: a new input layer of shape self.max_seq_len, None
-            output_: a new output
-            crf: a crf layer object from Keras contrib
-        """
-        # the input layer must be of fixed length because of the CRF output layer
-
-        input_layer = shared_layers['input_layer']
-        shared_token_emb = shared_layers['shared_token_emb'](input_layer)
-        shared_token_bisltm = shared_layers['shared_token_bisltm'](shared_token_emb)
-        shared_dense = shared_layers['shared_dense'](shared_token_bisltm)
-        crf = CRF(self.tag_type_count)
-        output_ = crf(shared_dense)
-
-        return output_, crf

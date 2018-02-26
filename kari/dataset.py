@@ -16,13 +16,13 @@ TEST_FILE_EXT = 'test.*'
 # method naming conventions: https://stackoverflow.com/questions/8689964/why-do-some-functions-have-underscores-before-and-after-the-function-name#8689983
 class Dataset(object):
     """ A class for handling data sets. """
-    def __init__(self, dataset_filepath, sep='\t', names=['Word', 'Tag'],
+    def __init__(self, dataset_text_folder, sep='\t', names=['Word', 'Tag'],
                  header=None, max_seq_len=50):
-        self.dataset_filepath = dataset_filepath
+        self.dataset_text_folder = dataset_text_folder
         # search for any files in the dataset filepath ending with
         # TRAIN_FILE_EXT or TEST_FILE_EXT
-        self.trainset_filepath = glob.glob(os.path.join(dataset_filepath, TRAIN_FILE_EXT))[0]
-        self.testset_filepath = glob.glob(os.path.join(dataset_filepath, TEST_FILE_EXT))[0]
+        self.trainset_filepath = glob.glob(os.path.join(dataset_text_folder, TRAIN_FILE_EXT))[0]
+        self.testset_filepath = glob.glob(os.path.join(dataset_text_folder, TEST_FILE_EXT))[0]
         self.sep = sep
         self.names = names
         self.header = header
@@ -57,11 +57,11 @@ class Dataset(object):
         self.word_type_count, self.tag_type_count = len(self.word_types), len(self.tag_types)
 
     def load_dataset(self, shared_word_type_to_idx=None):
-        """ Coordinates loading of given data set at self.dataset_filepath.
+        """ Coordinates loading of given data set at self.dataset_text_folder.
 
-        For a given dataset in CoNLL format at dataset_filepath, cordinates
+        For a given dataset in CoNLL format at dataset_text_folder, cordinates
         the loading of data into a pandas dataframe and updates instance
-        attributes. Expects self.dataset_filepath to be a directory containing
+        attributes. Expects self.dataset_text_folder to be a directory containing
         two files, train.* and test.*
         """
         # generate type to index mappings
@@ -90,10 +90,10 @@ class Dataset(object):
         self.test_tag_idx_sequence = self._tag_idx_sequence_to_categorical(self.test_tag_idx_sequence)
 
     def _load_dataset(self):
-        """ Loads data set given at self.dataset_filepath in pandas dataframe.
+        """ Loads data set given at self.dataset_text_folder in pandas dataframe.
 
-        Loads a given dataset in CoNLL format at dataset_filepath into a pandas
-        dataframe and updates instance. Expects self.dataset_filepath to be a
+        Loads a given dataset in CoNLL format at dataset_text_folder into a pandas
+        dataframe and updates instance. Expects self.dataset_text_folder to be a
         directory containing two files, train.* and test.*
 
         Returns:
