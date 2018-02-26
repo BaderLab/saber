@@ -27,7 +27,6 @@ DUMMY_TRAIN_SENT = [[("Human", "O"), ("APC2", "O"), ("maps", "O"), ("to", "O"),
 DUMMY_TEST_SENT = [[("Constitutional", "O"), ("RB1", "O"), ("-", "O"), ("gene", "O"),
 ("mutations", "O"), ("in", "O"), ("patients", "O"), ("with", "O"), ("isolated", "O"),
 ("unilateral", "B-Disease"), ("retinoblastoma", "E-Disease"), (".", "O")]]
-
 PATH_TO_DUMMY_DATASET = 'kari/test/resources/dummy_dataset'
 
 @pytest.fixture
@@ -49,7 +48,7 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     """ Asserts instance attributes are initialized correctly when dataset is
     empty (i.e., load_dataset() method has not been called.)"""
     # attributes that are passed to __init__
-    assert type(empty_dummy_dataset.dataset_filepath) == str
+    assert type(empty_dummy_dataset.dataset_text_folder) == str
     assert type(empty_dummy_dataset.trainset_filepath) == str
     assert type(empty_dummy_dataset.testset_filepath) == str
     assert type(empty_dummy_dataset.sep) == str
