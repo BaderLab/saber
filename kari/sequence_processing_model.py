@@ -40,6 +40,7 @@ class SequenceProcessingModel(object):
                  output_folder=PARAM_DEFAULT,
                  pretrained_model_weights=PARAM_DEFAULT,
                  token_pretrained_embedding_filepath=PARAM_DEFAULT,
+                 token_embedding_dimension=PARAM_DEFAULT,
                  train_model=PARAM_DEFAULT,
                  max_seq_len=PARAM_DEFAULT
                  ):
@@ -61,6 +62,7 @@ class SequenceProcessingModel(object):
         self.optimizer = optimizer
         self.output_folder = output_folder
         self.pretrained_model_weights = pretrained_model_weights
+        self.token_embedding_dimension = token_embedding_dimension
         self.token_pretrained_embedding_filepath = token_pretrained_embedding_filepath
         self.train_model = train_model
         self.max_seq_len = max_seq_len
@@ -68,8 +70,8 @@ class SequenceProcessingModel(object):
         self.ds = []
         # embeddings tied to this instance
         self.token_embedding_matrix = None
-        # Keras model object tied to this instance
-        self.model = None
+        # Keras model object(s) tied to this instance
+        self.model = []
 
     def load_pretrained_model_(self, pretrained_model_filepath):
         """
@@ -80,7 +82,7 @@ class SequenceProcessingModel(object):
         """ Coordinates the loading of a dataset.
 
         Coordinates the loading of a dataset by creating a one or more Dataset
-        objects (one for each filepath in self.dataset_filepath). Additionaly,
+        objects (one for each filepath in self.dataset_text_folder). Additionaly,
         if self.token_pretrained_embedding_filepath is provided, loads the token
         embeddings.
         """
@@ -113,7 +115,7 @@ class SequenceProcessingModel(object):
         model_specifications = vars(self)
 
         # setup the chosen model
-        if self.model_name == 'LSTM-CRF-NER':
+        if self.model_name == 'LSTM-CRF':
             print('Building the simple LSTM-CRF model for NER...', end='', flush=True)
             from models.simple_lstm_crf_ner import SimpleLSTMCRF
             model_ = SimpleLSTMCRF(model_specifications=model_specifications)
@@ -140,10 +142,12 @@ class SequenceProcessingModel(object):
             train_hist, the history of the model training as a pandas
             dataframe.
         """
-        train_history = self.model.fit_(self.ds)
-        '''
         # create a Callback object for model checkpointing
         checkpointer = self._setup_model_checkpointing()
+        # fit
+        train_history = self.model.fit_(checkpointer=checkpointer)
+        '''
+
         # create Callback object for per epoch prec/recall/f1/support metrics
         metrics = Metrics(self.X_train, self.y_train, self.ds.word_type_to_idx)
         # fit
@@ -205,7 +209,7 @@ class SequenceProcessingModel(object):
         Loads such a dataset for each dataset at self.dataset_text_folder[0].
 
         Returns:
-            a list containing multipl compound dataset objects
+            a list containing multiple compound dataset objects
         """
         # accumulator for datasets
         ds_acc = []
@@ -228,6 +232,27 @@ class SequenceProcessingModel(object):
             ds.load_dataset(shared_word_type_to_idx=shared_word_type_to_idx)
 
         return ds_acc
+
+    def _setup_model_checkpointing(self):
+        """ Sets up per epoch model checkpointing.
+
+        Sets up model checkpointing by:
+            1) creating the output_folder if it does not already exists
+            2) creating the checkpointing CallBack Keras object
+
+        Returns:
+            checkpointer: a Keras CallBack object for per epoch model
+            checkpointing
+        """
+        # create output directory if it does not exist
+        make_dir(self.output_folder)
+        # create path to output folder
+        output_folder_ = os.path.join(self.output_folder,
+                                      'model_checkpoint.{epoch:02d}-{val_loss:.2f}.hdf5')
+        # set up model checkpointing
+        checkpointer = ModelCheckpoint(filepath=output_folder_)
+
+        return checkpointer
 
     def _load_token_embeddings(self):
         """ Coordinates the loading of pre-trained token embeddings.
@@ -304,24 +329,3 @@ class SequenceProcessingModel(object):
                 token_embedding_matrix[i] = token_embeddings_vector
 
         return token_embedding_matrix
-
-    def _setup_model_checkpointing(self):
-        """ Sets up per epoch model checkpointing.
-
-        Sets up model checkpointing by:
-            1) creating the output_folder if it does not already exists
-            2) creating the checkpointing CallBack Keras object
-
-        Returns:
-            checkpointer: a Keras CallBack object for per epoch model
-            checkpointing
-        """
-        # create output directory if it does not exist
-        make_dir(self.output_folder)
-        # create path to output folder
-        output_folder_ = os.path.join(self.output_folder,
-                                      'model_checkpoint.{epoch:02d}-{val_loss:.2f}.hdf5')
-        # set up model checkpointing
-        checkpointer = ModelCheckpoint(filepath=output_folder_)
-
-        return checkpointer
