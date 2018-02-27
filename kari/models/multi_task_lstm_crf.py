@@ -9,6 +9,8 @@ from keras.layers import Dropout
 from keras.layers import Bidirectional
 from keras_contrib.layers.crf import CRF
 
+from sklearn.model_selection import train_test_split
+
 from utils_models import compile_model
 from metrics import Metrics
 
@@ -17,6 +19,9 @@ from metrics import Metrics
 
 # TODO (johngiorgi): not clear if I need to clear non-shared layers when
 # building the model
+
+# TODO (johngiorgi): read up on train_test_split, do I want to shuffle?
+# Do I want to stratify? look at the intro ch in my deep learning book
 
 class MultiTaskLSTMCRF(object):
     """ Implements a MT biLSTM-CRF for NER and TWI using Keras. """
@@ -29,6 +34,7 @@ class MultiTaskLSTMCRF(object):
         self.dropout_rate = model_specifications['dropout_rate']
         self.freeze_token_embeddings = model_specifications['freeze_token_embeddings']
         self.gradient_clipping_value = model_specifications['gradient_clipping_value']
+        self.k_folds = model_specifications['k_folds']
         self.learning_rate = model_specifications['learning_rate']
         self.maximum_number_of_epochs = model_specifications['maximum_number_of_epochs']
         self.optimizer = model_specifications['optimizer']
@@ -118,20 +124,50 @@ class MultiTaskLSTMCRF(object):
     def fit_(self, checkpointer):
         """ Fits a bidirectional multi-task LSTM-CRF for for sequence tagging
         using Keras. """
+        # get indices of a k fold split training set
+        # for each fold in this split
+        # for each epoch in global epochs
+        # for each dataset and model
+        # fit the model, compute metrics for train/valid sets
+        # get average performance scores for this fold
+        # empty the model
+        # specify and compile again
+        # repeate
+
+        # kf = Kfold(n_splits=self.k_folds, random_state=42)
+
+
+
+
+        # get all the relevant
+        folds = {}
+        data_splits = []
+        for ds in self.ds:
+            X = ds.train_word_idx_sequence
+            y = ds.train_tag_idx_sequence
+            for train_idx, valid_idx in kf.split(ds.train_word_idx_sequence):
+                data_splits.append({'X_train':X[train_idx],
+                                    'X_valid':X[valid_idx],
+                                    'y_train':y[train_idx],
+                                    'y_valid':y[valid_idx]})
+
         for epoch in range(self.maximum_number_of_epochs):
-            for ds, model in zip(self.ds, self.model):
-                X_train = ds.train_word_idx_sequence
-                y_train = ds.train_tag_idx_sequence
+            for i, (ds, model) in enumerate(zip(self.ds, self.model)):
+                # grab the relevant data
+                X_train = data_splits[i][0]
+                X_valid = data_splits[i][1]
+                y_train = data_splits[i][2]
+                y_valid = data_splits[i][3]
                 tag_type_to_idx = ds.tag_type_to_idx
 
                 model.fit(x=X_train,
                           y=y_train,
                           batch_size=self.batch_size,
                           epochs=1,
-                          callbacks=[checkpointer, Metrics(X_train,
-                                                           y_train,
+                          callbacks=[checkpointer, Metrics(X_valid,
+                                                           y_valid,
                                                            tag_type_to_idx)],
-                          validation_split=0.1,
+                          validation_data=[X_valid, y_valid],
                           verbose=1)
 
 
@@ -162,3 +198,8 @@ class MultiTaskLSTMCRF(object):
 
         return train_history
         '''
+
+        def _get_train_valid_indices(self):
+            """
+            """
+            kf = Kfold(n_splits=self.k_folds, random_state=42)
