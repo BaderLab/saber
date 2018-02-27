@@ -10,6 +10,8 @@ from keras.layers import Bidirectional
 from keras_contrib.layers.crf import CRF
 
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
+
 
 from utils_models import compile_model
 from metrics import Metrics
@@ -133,73 +135,41 @@ class MultiTaskLSTMCRF(object):
         # empty the model
         # specify and compile again
         # repeate
+        train_valid_indices = self._get_train_valid_indices()
 
-        # kf = Kfold(n_splits=self.k_folds, random_state=42)
+        for fold in range(self.k_folds):
+            for epoch in range(self.maximum_number_of_epochs):
+                for ds, model in zip(self.ds, self.model):
+                    X = ds.train_word_idx_sequence
+                    y = ds.train_tag_idx_sequence
+                    # train_valid_indices[fold] is a two-tuple, where index
+                    # 0 contains the train indicies and index 1 the valid
+                    # indicies
+                    X_train = X[train_valid_indices[fold][0]]
+                    X_valid = X[train_valid_indices[fold][1]]
+                    y_train = y[train_valid_indices[fold][0]]
+                    y_valid = y[train_valid_indices[fold][1]]
 
+                    model.fit(x=X_train,
+                              y=y_train,
+                              batch_size=self.batch_size,
+                              epochs=1,
+                              callbacks=[checkpointer, Metrics(X_valid,
+                                                               y_valid,
+                                                               ds.tag_type_to_idx)],
+                              validation_data=[X_valid, y_valid],
+                              verbose=1)
 
+    def _get_train_valid_indices(self):
+        """
+        """
+        # acc
+        train_valid_indices = []
+        # Sklearn KFold object
+        kf = KFold(n_splits=self.k_folds, random_state=42)
 
-
-        # get all the relevant
-        folds = {}
-        data_splits = []
         for ds in self.ds:
-            X = ds.train_word_idx_sequence
-            y = ds.train_tag_idx_sequence
             for train_idx, valid_idx in kf.split(ds.train_word_idx_sequence):
-                data_splits.append({'X_train':X[train_idx],
-                                    'X_valid':X[valid_idx],
-                                    'y_train':y[train_idx],
-                                    'y_valid':y[valid_idx]})
+                train_valid_indices.append((train_idx, valid_idx))
 
-        for epoch in range(self.maximum_number_of_epochs):
-            for i, (ds, model) in enumerate(zip(self.ds, self.model)):
-                # grab the relevant data
-                X_train = data_splits[i][0]
-                X_valid = data_splits[i][1]
-                y_train = data_splits[i][2]
-                y_valid = data_splits[i][3]
-                tag_type_to_idx = ds.tag_type_to_idx
-
-                model.fit(x=X_train,
-                          y=y_train,
-                          batch_size=self.batch_size,
-                          epochs=1,
-                          callbacks=[checkpointer, Metrics(X_valid,
-                                                           y_valid,
-                                                           tag_type_to_idx)],
-                          validation_data=[X_valid, y_valid],
-                          verbose=1)
-
-
-        '''
-
-        X_train_1 = dataset[0].train_word_idx_sequence
-        X_train_2 = dataset[1].train_word_idx_sequence
-
-        y_train_1 = dataset[0].train_tag_idx_sequence
-        y_train_2 = dataset[1].train_tag_idx_sequence
-
-        # check that input/label shapes make sense
-        assert X_train_1.shape[0] == y_train_1.shape[0]
-        assert X_train_1.shape[1] == y_train_1.shape[1]
-
-        assert X_train_2.shape[0] == y_train_2.shape[0]
-        assert X_train_2.shape[1] == y_train_2.shape[1]
-
-        assert y_train_1.shape[-1] == y_train_2.shape[-1]
-
-
-        train_history = self.model.fit(x=X_train_1,
-                                       y=[y_train_1, y_train_2],
-                                       batch_size=self.batch_size,
-                                       epochs=self.maximum_number_of_epochs,
-                                       validation_split=0.1,
-                                       verbose=1)
-
-        return train_history
-        '''
-
-        def _get_train_valid_indices(self):
-            """
-            """
-            kf = Kfold(n_splits=self.k_folds, random_state=42)
+        return train_valid_indices
