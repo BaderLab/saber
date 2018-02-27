@@ -10,7 +10,7 @@ from keras.layers import Bidirectional
 from keras_contrib.layers.crf import CRF
 
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import KFold
 
 from utils_models import compile_model
 from metrics import Metrics
@@ -173,11 +173,11 @@ class MultiTaskLSTMCRF(object):
         # acc
         compound_train_valid_indices = []
         # Sklearn KFold object
-        skf = StratifiedKFold(n_splits=self.k_folds, random_state=42)
+        kf = KFold(n_splits=self.k_folds, random_state=42)
 
         for ds in self.ds:
             dataset_train_valid_indices = []
-            for train_idx, valid_idx in skf.split(ds.train_word_idx_sequence):
+            for train_idx, valid_idx in kf.split(ds.train_word_idx_sequence):
                 dataset_train_valid_indices.append((train_idx, valid_idx))
             compound_train_valid_indices.append(dataset_train_valid_indices)
 
