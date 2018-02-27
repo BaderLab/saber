@@ -10,8 +10,7 @@ from keras.layers import Bidirectional
 from keras_contrib.layers.crf import CRF
 
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import KFold
-
+from sklearn.model_selection import StratifiedKFold
 
 from utils_models import compile_model
 from metrics import Metrics
@@ -21,9 +20,10 @@ from metrics import Metrics
 
 # TODO (johngiorgi): not clear if I need to clear non-shared layers when
 # building the model
-
 # TODO (johngiorgi): read up on train_test_split, do I want to shuffle?
 # Do I want to stratify? look at the intro ch in my deep learning book
+# TODO (johngiorgi): the way I get train/test partitions is likely copying
+# huge lists
 
 class MultiTaskLSTMCRF(object):
     """ Implements a MT biLSTM-CRF for NER and TWI using Keras. """
@@ -139,37 +139,46 @@ class MultiTaskLSTMCRF(object):
 
         for fold in range(self.k_folds):
             for epoch in range(self.maximum_number_of_epochs):
-                for ds, model in zip(self.ds, self.model):
+                for i, (ds, model) in enumerate(zip(self.ds, self.model)):
                     X = ds.train_word_idx_sequence
                     y = ds.train_tag_idx_sequence
-                    # train_valid_indices[fold] is a two-tuple, where index
+                    # train_valid_indices[i][fold] is a two-tuple, where index
                     # 0 contains the train indicies and index 1 the valid
                     # indicies
-                    X_train = X[train_valid_indices[fold][0]]
-                    X_valid = X[train_valid_indices[fold][1]]
-                    y_train = y[train_valid_indices[fold][0]]
-                    y_valid = y[train_valid_indices[fold][1]]
+                    X_train = X[train_valid_indices[i][fold][0]]
+                    X_valid = X[train_valid_indices[i][fold][1]]
+                    y_train = y[train_valid_indices[i][fold][0]]
+                    y_valid = y[train_valid_indices[i][fold][1]]
 
                     model.fit(x=X_train,
                               y=y_train,
                               batch_size=self.batch_size,
                               epochs=1,
-                              callbacks=[checkpointer, Metrics(X_valid,
-                                                               y_valid,
-                                                               ds.tag_type_to_idx)],
+                              callbacks=[
+                                checkpointer,
+                                Metrics(X_valid, y_valid, ds.tag_type_to_idx)],
                               validation_data=[X_valid, y_valid],
                               verbose=1)
 
     def _get_train_valid_indices(self):
         """
+        Get train and valid indicies for all k folds for all datasets.
+
+        For all datatsets self.ds, gets stratified k-folds train and valid
+        indicies (number of k_folds specified by self.k_folds). Returns a list
+        of list of tuples, where the outer list is of length len(self.ds),
+        the inner list is of length len(self.k_folds) and contains two-tuples
+        corresponding to train indicies and valid indicies respectively.
         """
         # acc
-        train_valid_indices = []
+        compound_train_valid_indices = []
         # Sklearn KFold object
-        kf = KFold(n_splits=self.k_folds, random_state=42)
+        skf = StratifiedKFold(n_splits=self.k_folds, random_state=42)
 
         for ds in self.ds:
-            for train_idx, valid_idx in kf.split(ds.train_word_idx_sequence):
-                train_valid_indices.append((train_idx, valid_idx))
+            dataset_train_valid_indices = []
+            for train_idx, valid_idx in skf.split(ds.train_word_idx_sequence):
+                dataset_train_valid_indices.append((train_idx, valid_idx))
+            compound_train_valid_indices.append(dataset_train_valid_indices)
 
-        return train_valid_indices
+        return compound_train_valid_indices
