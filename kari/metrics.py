@@ -12,9 +12,11 @@ from sklearn.metrics import precision_recall_fscore_support
 # this
 
 class Metrics(Callback):
-    def __init__(self, X_train, y_train, tag_type_to_index):
+    def __init__(self, X_train, X_valid, y_train, y_valid, tag_type_to_index):
         self.X_train = X_train
+        self.X_valid = X_valid
         self.y_train = y_train
+        self.y_valid = y_valid
         self.tag_type_to_index = tag_type_to_index
 
     def on_train_begin(self, logs={}):
@@ -38,9 +40,21 @@ class Metrics(Callback):
         # compute performance metrics
         train_scores = self._get_train_scores(y_true_train, y_pred_train)
         # pretty print a table of performance metrics
-        self._pretty_print_train_scores(train_scores)
-
+        self._pretty_print_performance_scores(train_scores)
+        # updates per epoch metric accumulators
+        self.train_precision_per_epoch.append(train_scores[0])
+        self.train_recall_per_epoch.append(train_scores[1])
+        self.train_f1_per_epoch.append(train_scores[2])
         ## VALID
+        y_true_valid, y_pred_valid = self._get_true_and_pred(self.X_valid, self.y_valid)
+
+        valid_scores = self._get_train_scores(y_true_valid, y_pred_valid)
+
+        self._pretty_print_performance_scores(valid_scores, title='valid')
+
+        self.valid_precision_per_epoch.append(valid_scores[0])
+        self.valid_recall_per_epoch.append(valid_scores[1])
+        self.valid_f1_per_epoch.append(valid_scores[2])
 
     def _get_true_and_pred(self, X, y):
         """ Get y_true and y_pred for given input data (X) and labels (y)
@@ -94,7 +108,7 @@ class Metrics(Callback):
                                                average=None,
                                                warn_for=supress)
 
-    def _pretty_print_train_scores(self, train_scores):
+    def _pretty_print_performance_scores(self, performance_scores, title='train'):
         """ Prints a table of performance scores.
 
         Given the output of a call to
@@ -102,31 +116,48 @@ class Metrics(Callback):
         performance metrics, for each class in self.tag_type_to_index
 
         Args:
-            train_scores: output of a call to
+            performance_scores: output of a call to
                           sklearn.metrics.precision_recall_fscore_support for
                           one or more classes
         """
         # collect table dimensions
-        col_width = 8
-        dist_to_first_col = 13
-        dist_to_sec_col = 31
-        dist_to_third_col = 46
-        dist_to_fourth_col = 57
+        col_width = 6
         col_space = ' ' * col_width
-        tab_width = 70
+        tab_width = 60
         light_line = '-' * tab_width
         heavy_line = '=' * tab_width
-        # print header
+
+        ## HEADER
         print()
         print()
-        header = '{l}\nLabel{s}Precision{s}Recall{s}F1{s}Support\n{h}'.format(
-            s=col_space, l=light_line, h=heavy_line)
+
+        title = '{col}{}{col}'.format(title.upper(), col=' '*((tab_width-len(title))//2))
+        header = 'Label{col}Precision{col}Recall{col}F1{col}Support'.format(col=col_space)
+
+        print(heavy_line)
+        print(title)
+        print(light_line)
         print(header)
-        # print table
+        print(heavy_line)
+        ## BODY
         for k, v in self.tag_type_to_index.items():
-            print(k, end=' ' * (dist_to_first_col - len(k)))
-            print('{0:.2f}'.format(train_scores[0][v]), end=' ' * (dist_to_first_col - 4))
-            print('{0:.2f}'.format(train_scores[1][v]), end=' ' * (dist_to_first_col - 4))
-            print('{0:.2f}'.format(train_scores[2][v]), end=' ' * (dist_to_first_col - 4))
-            print('{}'.format(int(train_scores[3][v])))
+            # specify an entire row
+            row = '{lab}{col}{0:.2f}{col}{0:.2f}{col}{0:.2f}{col}{0:.2f}'.format(
+                performance_scores[0][v],
+                performance_scores[1][v],
+                performance_scores[2][v],
+                int(performance_scores[3][v]),
+                lab=k,
+                col=col_space)
+
+            print(row)
+
+        print(light_line)
+        ## FOOTER
+        # get average scores for each label
+        avg_score_per_label = [np.mean(metric) for metric in performance_scores]
+        print('AVERAGE{col}{0:.2f}{col}{0:.2f}{col}{0:.2f}'.format(avg_score_per_label[0],
+                                                                   avg_score_per_label[1],
+                                                                   avg_score_per_label[2],
+                                                                   col=col_space))
         print(heavy_line)
