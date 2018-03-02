@@ -128,8 +128,7 @@ class MultiTaskLSTMCRF(object):
             compile_model(model=model,
                           learning_rate=self.learning_rate,
                           optimizer=self.optimizer,
-                          loss_function=crf.loss_function,
-                          metrics=crf.accuracy)
+                          loss_function=crf.loss_function)
 
     def fit_(self, checkpointer):
         """ Fits a bidirectional multi-task LSTM-CRF for for sequence tagging
@@ -200,7 +199,6 @@ class MultiTaskLSTMCRF(object):
             data_partition.append((X_train, X_valid, y_train, y_valid))
 
         return data_partition
-
 
     def _create_metrics(self, data_partitions):
         """
