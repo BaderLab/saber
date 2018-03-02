@@ -9,7 +9,7 @@ on	O
 vascular	B-Gene_or_gene_product
 endothelial	I-Gene_or_gene_product
 growth	I-Gene_or_gene_product
-factor  E-Gene_or_gene_product
+factor	E-Gene_or_gene_product
 .	O
 
 A	O
