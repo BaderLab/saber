@@ -121,7 +121,7 @@ def parse_arguments():
     # parser.add_argument('--remap_unknown_tokens_to_unk', default=argument_default_value, help='')
     # parser.add_argument('--spacylanguage', default=argument_default_value, help='')
     # parser.add_argument('--tagging_format', default=argument_default_value, help='')
-    parser.add_argument('--token_embedding_dimension', default=argument_default_value, help='')
+    parser.add_argument('--token_embedding_dimension', required=False, type=int, help='')
     # parser.add_argument('--token_lstm_hidden_state_dimension', default=argument_default_value, help='')
     parser.add_argument('--token_pretrained_embedding_filepath', required=False, type=str, help='')
     # parser.add_argument('--tokenizer', default=argument_default_value, help='')
