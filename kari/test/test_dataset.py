@@ -14,19 +14,16 @@ from dataset import Dataset
 
 # constants for dummy dataset to perform testing on
 # for the purposes of testing, test.tsv is EMPTY
-DUMMY_WORD_TYPES = ["Human", "APC2", "maps", "to", "chromosome", ".",
-"19p13",  "and", "Opsonization", "generation", "of", "chemotactic",
-"activity", "functioned", "normally", "Constitutional", "RB1", "-", "gene",
-"mutations", "in", "patients", "with", "isolated", "unilateral", "retinoblastoma",
-"ENDPAD"]
-DUMMY_TAG_TYPES = ["O", "B-Disease", "E-Disease"]
+DUMMY_WORD_TYPES = ["Human", "APC2", "maps", "to", "chromosome", "19p13",
+".", "The", "absence", "of", "functional", "C7", "activity", "could", "not", "be",
+"accounted", "for", "on", "the", "basis", "an", "inhibitor", "ENDPAD"]
+DUMMY_TAG_TYPES = ["O", "B-Disease", "I-Disease", "E-Disease"]
 DUMMY_TRAIN_SENT = [[("Human", "O"), ("APC2", "O"), ("maps", "O"), ("to", "O"),
-("chromosome", "O"), ("19p13", "O"), (".", "O")], [("Opsonization", "O"),
-("and", "O"), ("generation", "O"), ("of", "O"), ("chemotactic", "O"),
-("activity", "O"), ("functioned", "O"), ("normally", "O"), (".", "O")]]
-DUMMY_TEST_SENT = [[("Constitutional", "O"), ("RB1", "O"), ("-", "O"), ("gene", "O"),
-("mutations", "O"), ("in", "O"), ("patients", "O"), ("with", "O"), ("isolated", "O"),
-("unilateral", "B-Disease"), ("retinoblastoma", "E-Disease"), (".", "O")]]
+("chromosome", "O"), ("19p13", "O"), (".", "O")], [("The", "O"),
+("absence", "B-Disease"), ("of", "I-Disease"), ("functional", "I-Disease"), ("C7", "E-Disease"),
+("activity", "O"), ("could", "O"), ("not", "O"), ("be", "O"), ("accounted", "O"),
+("for", "O"), ("on", "O"), ("the", "O"), ("basis", "O"), ("of", "O"),
+("an", "O"), ("inhibitor", "O"), (".", "O")]]
 PATH_TO_DUMMY_DATASET = 'kari/test/resources/dummy_dataset'
 
 @pytest.fixture
@@ -48,9 +45,9 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     """ Asserts instance attributes are initialized correctly when dataset is
     empty (i.e., load_dataset() method has not been called.)"""
     # attributes that are passed to __init__
-    assert type(empty_dummy_dataset.dataset_text_folder) == str
+    assert type(empty_dummy_dataset.dataset_folder) == str
     assert type(empty_dummy_dataset.trainset_filepath) == str
-    assert type(empty_dummy_dataset.testset_filepath) == str
+    # assert type(empty_dummy_dataset.testset_filepath) == str
     assert type(empty_dummy_dataset.sep) == str
     assert type(empty_dummy_dataset.header) == bool or int or list
     assert type(empty_dummy_dataset.names) == bool or list
@@ -62,8 +59,8 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     assert type(empty_dummy_dataset.tag_types) == list
     assert type(empty_dummy_dataset.word_type_count) == int
     assert type(empty_dummy_dataset.tag_type_count) == int
-    assert type(empty_dummy_dataset.train_dataframe) == pandas.DataFrame
-    assert type(empty_dummy_dataset.test_dataframe) == pandas.DataFrame
+    # assert type(empty_dummy_dataset.train_dataframe) == pandas.DataFrame
+    # assert type(empty_dummy_dataset.test_dataframe) == pandas.DataFrame
     # ensure we get the expected values
     assert set(empty_dummy_dataset.word_types) == set(DUMMY_WORD_TYPES)
     assert set(empty_dummy_dataset.tag_types) == set(DUMMY_TAG_TYPES)
@@ -72,11 +69,11 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     assert empty_dummy_dataset.word_type_to_idx == {}
     assert empty_dummy_dataset.tag_type_to_idx == {}
     assert empty_dummy_dataset.train_sentences == []
-    assert empty_dummy_dataset.test_sentences == []
     assert empty_dummy_dataset.train_word_idx_sequence == []
-    assert empty_dummy_dataset.test_word_idx_sequence == []
     assert empty_dummy_dataset.train_tag_idx_sequence == []
-    assert empty_dummy_dataset.test_tag_idx_sequence == []
+    # assert empty_dummy_dataset.test_sentences == []
+    # assert empty_dummy_dataset.test_word_idx_sequence == []
+    # assert empty_dummy_dataset.test_tag_idx_sequence == []
 
 def test_type_to_idx_after_dataset_loaded(dummy_dataset):
     """ Asserts that word_type_to_idx and tag_type_to_idx are updated as
@@ -98,10 +95,10 @@ def test_sentences_after_dataset_loaded(dummy_dataset):
     load_dataset()."""
     # ensure we get the expected type after dataset is loaded
     assert type(dummy_dataset.train_sentences) == list
-    assert type(dummy_dataset.test_sentences) == list
+    # assert type(dummy_dataset.test_sentences) == list
     # ensure that sentences contain the expected values
     assert dummy_dataset.train_sentences == DUMMY_TRAIN_SENT
-    assert dummy_dataset.test_sentences == DUMMY_TEST_SENT
+    # assert dummy_dataset.test_sentences == DUMMY_TEST_SENT
 
 def test_type_idx_sequence_after_dataset_loaded(dummy_dataset):
     """ Asserts that word_idx_sequence and tag_idx_sequence are updated as
@@ -111,8 +108,8 @@ def test_type_idx_sequence_after_dataset_loaded(dummy_dataset):
     assert type(dummy_dataset.train_word_idx_sequence) == numpy.ndarray
     assert type(dummy_dataset.train_tag_idx_sequence) == numpy.ndarray
     # test
-    assert type(dummy_dataset.test_word_idx_sequence) == numpy.ndarray
-    assert type(dummy_dataset.test_tag_idx_sequence) == numpy.ndarray
+    # assert type(dummy_dataset.test_word_idx_sequence) == numpy.ndarray
+    # assert type(dummy_dataset.test_tag_idx_sequence) == numpy.ndarray
 
     # ensure that sentences contain the expected values
     # train
@@ -122,8 +119,8 @@ def test_type_idx_sequence_after_dataset_loaded(dummy_dataset):
                                                           dummy_dataset.max_seq_len,
                                                           len(DUMMY_TAG_TYPES))
     # test
-    assert dummy_dataset.test_word_idx_sequence.shape == (len(DUMMY_TEST_SENT),
-                                                           dummy_dataset.max_seq_len)
-    assert dummy_dataset.test_tag_idx_sequence.shape == (len(DUMMY_TEST_SENT),
-                                                          dummy_dataset.max_seq_len,
-                                                          len(DUMMY_TAG_TYPES))
+    # assert dummy_dataset.test_word_idx_sequence.shape == (len(DUMMY_TEST_SENT),
+    #                                                       dummy_dataset.max_seq_len)
+    # assert dummy_dataset.test_tag_idx_sequence.shape == (len(DUMMY_TEST_SENT),
+    #                                                      dummy_dataset.max_seq_len,
+    #                                                      len(DUMMY_TAG_TYPES))

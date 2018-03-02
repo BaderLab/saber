@@ -40,7 +40,7 @@ def process_parameters(config, cli_arguments={}):
     # data
     # this parameter is a little different, can specify multiple values by
     # seperating with a ','
-    parameters['dataset_text_folder'] = str(config['data']['dataset_text_folder'])
+    parameters['dataset_folder'] = str(config['data']['dataset_folder'])
     parameters['output_folder'] = str(config['data']['output_folder'])
     parameters['pretrained_model_weights'] = str(config['data']['pretrained_model_weights'])
     parameters['token_embedding_dimension'] = int(config['data']['token_embedding_dimension'])
@@ -67,8 +67,8 @@ def process_parameters(config, cli_arguments={}):
     ## POST PROCESSING
     # not needed downsteam of here.
     if 'config_filepath' in parameters: del parameters['config_filepath']
-    # we want dataset_text_folder to be a list of strings.
-    parameters['dataset_text_folder'] = list(str(parameters['dataset_text_folder']).strip().replace(" ", "").split(','))
+    # we want dataset_folder to be a list of strings.
+    parameters['dataset_folder'] = list(str(parameters['dataset_folder']).strip().replace(" ", "").split(','))
 
     return parameters
 
@@ -92,7 +92,7 @@ def parse_arguments():
     # parser.add_argument('--character_lstm_hidden_state_dimension', default=argument_default_value, help='')
     # parser.add_argument('--check_for_digits_replaced_with_zeros', default=argument_default_value, help='')
     # parser.add_argument('--check_for_lowercase', default=argument_default_value, help='')
-    parser.add_argument('--dataset_text_folder', required=False, type=str, help='')
+    parser.add_argument('--dataset_folder', required=False, type=str, help='')
     parser.add_argument('--debug', required=False, type=bool, help='')
     parser.add_argument('--dropout_rate', required=False, type=float, help='')
     parser.add_argument('--freeze_token_embeddings', required=False, type=bool, help='')

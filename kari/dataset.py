@@ -11,18 +11,18 @@ from keras.preprocessing.sequence import pad_sequences
 # TODO (John): set max_seq_len empirically.
 
 TRAIN_FILE_EXT = 'train.*'
-TEST_FILE_EXT = 'test.*'
+# TEST_FILE_EXT = 'test.*'
 
 # method naming conventions: https://stackoverflow.com/questions/8689964/why-do-some-functions-have-underscores-before-and-after-the-function-name#8689983
 class Dataset(object):
     """ A class for handling data sets. """
-    def __init__(self, dataset_text_folder, sep='\t', names=['Word', 'Tag'],
+    def __init__(self, dataset_folder, sep='\t', names=['Word', 'Tag'],
                  header=None, max_seq_len=50):
-        self.dataset_text_folder = dataset_text_folder
+        self.dataset_folder = dataset_folder
         # search for any files in the dataset filepath ending with
         # TRAIN_FILE_EXT or TEST_FILE_EXT
-        self.trainset_filepath = glob.glob(os.path.join(dataset_text_folder, TRAIN_FILE_EXT))[0]
-        self.testset_filepath = glob.glob(os.path.join(dataset_text_folder, TEST_FILE_EXT))[0]
+        self.trainset_filepath = glob.glob(os.path.join(dataset_folder, TRAIN_FILE_EXT))[0]
+        # self.testset_filepath = glob.glob(os.path.join(dataset_folder, TEST_FILE_EXT))[0]
         self.sep = sep
         self.names = names
         self.header = header
@@ -36,32 +36,32 @@ class Dataset(object):
         self.word_type_to_idx = {}
         self.tag_type_to_idx = {}
         # not shared by train/test
-        self.train_dataframe = None
-        self.test_dataframe = None
+        # self.train_dataframe = None
+        # self.test_dataframe = None
         self.train_sentences = []
-        self.test_sentences = []
+        # self.test_sentences = []
         self.train_word_idx_sequence = []
-        self.test_word_idx_sequence = []
+        # self.test_word_idx_sequence = []
         self.train_tag_idx_sequence = []
-        self.test_tag_idx_sequence = []
+        # self.test_tag_idx_sequence = []
 
         # on object construction, we read the dataset files and get word/tag
         # types, this is helpful for creating compound datasets
 
         # load dataset file, then grab the train and test 'frames'
         self.raw_dataframe = self._load_dataset()
-        self.train_dataframe = self.raw_dataframe.loc['train']
-        self.test_dataframe = self.raw_dataframe.loc['test']
+        # self.train_dataframe = self.raw_dataframe.loc['train']
+        # self.test_dataframe = self.raw_dataframe.loc['test']
         # get types and type counts
         self.word_types, self.tag_types = self._get_types()
         self.word_type_count, self.tag_type_count = len(self.word_types), len(self.tag_types)
 
     def load_dataset(self, shared_word_type_to_idx=None):
-        """ Coordinates loading of given data set at self.dataset_text_folder.
+        """ Coordinates loading of given data set at self.dataset_folder.
 
-        For a given dataset in CoNLL format at dataset_text_folder, cordinates
+        For a given dataset in CoNLL format at dataset_folder, cordinates
         the loading of data into a pandas dataframe and updates instance
-        attributes. Expects self.dataset_text_folder to be a directory containing
+        attributes. Expects self.dataset_folder to be a directory containing
         two files, train.* and test.*
         """
         # generate type to index mappings
@@ -82,41 +82,41 @@ class Dataset(object):
         self.train_tag_idx_sequence = self._tag_idx_sequence_to_categorical(self.train_tag_idx_sequence)
         ## TEST
         # get sentences
-        self.test_sentences = self._get_sentences(self.testset_filepath, sep=self.sep)
+        # self.test_sentences = self._get_sentences(self.testset_filepath, sep=self.sep)
         # get type to idx sequences
-        self.test_word_idx_sequence = self._get_type_idx_sequence(self.test_sentences)
-        self.test_tag_idx_sequence = self._get_type_idx_sequence(self.test_sentences, type_='tag')
+        # self.test_word_idx_sequence = self._get_type_idx_sequence(self.test_sentences)
+        # self.test_tag_idx_sequence = self._get_type_idx_sequence(self.test_sentences, type_='tag')
         # convert tag idx sequences to categorical
-        self.test_tag_idx_sequence = self._tag_idx_sequence_to_categorical(self.test_tag_idx_sequence)
+        # self.test_tag_idx_sequence = self._tag_idx_sequence_to_categorical(self.test_tag_idx_sequence)
 
     def _load_dataset(self):
-        """ Loads data set given at self.dataset_text_folder in pandas dataframe.
+        """ Loads data set given at self.dataset_folder in pandas dataframe.
 
-        Loads a given dataset in CoNLL format at dataset_text_folder into a pandas
-        dataframe and updates instance. Expects self.dataset_text_folder to be a
+        Loads a given dataset in CoNLL format at dataset_folder into a pandas
+        dataframe and updates instance. Expects self.dataset_folder to be a
         directory containing two files, train.* and test.*
 
         Returns:
             single merged pandas dataframe for train and test files.
         """
-        training_set = pd.read_csv(self.trainset_filepath,
-                                   header=self.header, sep=self.sep,
-                                   names=self.names, encoding="utf-8",
-                                   # forces pandas to ignore quotes such that we
-                                   # can read in '"' word type.
-                                   quoting = 3,
-                                   # prevents pandas from interpreting 'null' as
-                                   # a NA value.
-                                   na_filter=False)
+        raw_dataset = pd.read_csv(self.trainset_filepath,
+                                  header=self.header, sep=self.sep,
+                                  names=self.names, encoding="utf-8",
+                                  # forces pandas to ignore quotes such that we
+                                  # can read in '"' word type.
+                                  quoting = 3,
+                                  # prevents pandas from interpreting 'null' as
+                                  # a NA value.
+                                  na_filter=False)
 
-        testing_set = pd.read_csv(self.testset_filepath,
-                                   header=self.header, sep=self.sep,
-                                   names=self.names, encoding="utf-8",
-                                   quoting = 3, na_filter=False)
+        # testing_set = pd.read_csv(self.testset_filepath,
+        #                           header=self.header, sep=self.sep,
+        #                           names=self.names, encoding="utf-8",
+        #                           quoting = 3, na_filter=False)
 
         # concatenate dataframes vertically with keys
-        frames = [training_set, testing_set]
-        raw_dataset = pd.concat(frames, keys=['train', 'test'])
+        # frames = [training_set, testing_set]
+        # raw_dataset = pd.concat(frames, keys=['train', 'test'])
         # forward propogate last valid value to file NAs.
         raw_dataset = raw_dataset.fillna(method='ffill')
         return raw_dataset
