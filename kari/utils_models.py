@@ -2,7 +2,7 @@ from keras import optimizers
 
 """ A collection of model helper/utility functions. """
 
-def compile_model(learning_rate, model, optimizer, loss_function, metrics):
+def compile_model(learning_rate, model, optimizer, loss_function, metrics=None):
     """ Compiles a model specified with Keras.
 
     Args:
@@ -20,5 +20,5 @@ def compile_model(learning_rate, model, optimizer, loss_function, metrics):
     elif optimizer == 'RMSprop':
         optimizer_ = optimizers.RMSprop(lr=learning_rate)
 
-    model.compile(optimizer=optimizer_, loss=loss_function, metrics=[metrics])
+    model.compile(optimizer=optimizer_, loss=loss_function, metrics=metrics)
     model.summary()
