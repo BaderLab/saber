@@ -19,6 +19,7 @@ print('Kari version: {0}'.format('0.1-dev'))
 # TODO (johngiorgi): make model checkpointing a config param
 # TODO (johngiorgi): make a debug mode that doesnt load token embeddings and loads only some lines of dataset
 # TODO (johngiorgi): abstract away all dataset details as single object
+# TODO (johngiorgi): consider introduction a new function, create_model()
 
 class SequenceProcessingModel(object):
     PARAM_DEFAULT = 'default_value_please_ignore_1YVBF48GBG98BGB8432G4874BF74BB'
@@ -26,7 +27,7 @@ class SequenceProcessingModel(object):
     def __init__(self,
                  activation_function=PARAM_DEFAULT,
                  batch_size=PARAM_DEFAULT,
-                 dataset_text_folder=PARAM_DEFAULT,
+                 dataset_folder=PARAM_DEFAULT,
                  debug=PARAM_DEFAULT,
                  dropout_rate=PARAM_DEFAULT,
                  freeze_token_embeddings=PARAM_DEFAULT,
@@ -49,7 +50,7 @@ class SequenceProcessingModel(object):
         # hyperparameters
         self.activation_function = activation_function
         self.batch_size = batch_size
-        self.dataset_text_folder = dataset_text_folder
+        self.dataset_folder = dataset_folder
         self.debug = debug
         self.dropout_rate = dropout_rate
         self.freeze_token_embeddings = freeze_token_embeddings
@@ -82,18 +83,18 @@ class SequenceProcessingModel(object):
         """ Coordinates the loading of a dataset.
 
         Coordinates the loading of a dataset by creating a one or more Dataset
-        objects (one for each filepath in self.dataset_text_folder). Additionaly,
+        objects (one for each filepath in self.dataset_folder). Additionaly,
         if self.token_pretrained_embedding_filepath is provided, loads the token
         embeddings.
         """
-        assert len(self.dataset_text_folder) > 0, '''You must provide at
-        least one dataset via the dataset_text_folder parameter'''
+        assert len(self.dataset_folder) > 0, '''You must provide at
+        least one dataset via the dataset_folder parameter'''
 
         start_time = time.time()
         # Datasets may be 'single' or 'compound' (more than one), loading
         # differs slightly. Consider a dataset single if there is only one
-        # filepath in self.dataset_text_folder and compound otherwise.
-        if len(self.dataset_text_folder) == 1:
+        # filepath in self.dataset_folder and compound otherwise.
+        if len(self.dataset_folder) == 1:
             print('Loading (single) dataset... ', end='', flush=True)
             self.ds = self._load_single_dataset()
         else:
@@ -191,12 +192,12 @@ class SequenceProcessingModel(object):
         """ Loads a single dataset.
 
         Creates and loads a single dataset object for a dataset at
-        self.dataset_text_folder[0].
+        self.dataset_folder[0].
 
         Returns:
             a list containing a single dataset object
         """
-        ds = Dataset(self.dataset_text_folder[0], max_seq_len=self.max_seq_len)
+        ds = Dataset(self.dataset_folder[0], max_seq_len=self.max_seq_len)
         ds.load_dataset()
 
         return [ds]
@@ -206,7 +207,7 @@ class SequenceProcessingModel(object):
 
         Creates and loads multiple, 'compound' datasets. Compound datasets
         share multiple attributes (such as word/tag type to index mappings).
-        Loads such a dataset for each dataset at self.dataset_text_folder[0].
+        Loads such a dataset for each dataset at self.dataset_folder[0].
 
         Returns:
             a list containing multiple compound dataset objects
@@ -214,7 +215,7 @@ class SequenceProcessingModel(object):
         # accumulator for datasets
         ds_acc = []
 
-        for ds_filepath in self.dataset_text_folder:
+        for ds_filepath in self.dataset_folder:
             ds_acc.append(Dataset(ds_filepath, max_seq_len=self.max_seq_len))
 
         # get combined set of word types from all datasets

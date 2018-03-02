@@ -14,7 +14,7 @@ PATH_TO_DUMMY_TOKEN_EMBEDDINGS = 'kari/test/resources/dummy_word_embeddings/dumm
 DUMMY_TRAIN_SENT_NUM = 2
 DUMMY_TEST_SENT_NUM = 1
 # embedding matrix shape is num word types x dimension of embeddings
-DUMMY_EMBEDDINGS_MATRIX_SHAPE = (28, 2)
+DUMMY_EMBEDDINGS_MATRIX_SHAPE = (25, 2)
 
 @pytest.fixture
 def dummy_config():
@@ -41,7 +41,7 @@ def model_with_single_dataset(dummy_config):
     """ Returns an instance of SequenceProcessingModel initialized with the
     default configuration file and a single loaded dataset. """
     # create a dictionary to serve as cli arguments
-    cli_arguments = {'dataset_text_folder': PATH_TO_DUMMY_DATASET}
+    cli_arguments = {'dataset_folder': PATH_TO_DUMMY_DATASET}
     # resolve parameters, cast to correct types
     parameters = process_parameters(dummy_config, cli_arguments)
 
@@ -58,7 +58,7 @@ def model_with_compound_dataset(dummy_config):
     much simpler. """
     # create a dictionary to serve as cli arguments
     compound_dataset = PATH_TO_DUMMY_DATASET + ',' + PATH_TO_DUMMY_DATASET
-    cli_arguments = {'dataset_text_folder': compound_dataset}
+    cli_arguments = {'dataset_folder': compound_dataset}
     # resolve parameters, cast to correct types
     parameters = process_parameters(dummy_config, cli_arguments)
 
@@ -73,7 +73,7 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
     # check value/type
     assert model_without_dataset.activation_function == 'relu'
     assert model_without_dataset.batch_size == 1
-    assert model_without_dataset.dataset_text_folder[0] == PATH_TO_DUMMY_DATASET
+    assert model_without_dataset.dataset_folder[0] == PATH_TO_DUMMY_DATASET
     assert model_without_dataset.debug == False
     assert model_without_dataset.dropout_rate == 0.1
     assert model_without_dataset.freeze_token_embeddings == True
@@ -104,10 +104,10 @@ def test_X_input_sequences_after_loading_single_dataset(model_with_single_datase
     model = model_with_single_dataset
     # check type
     assert type(ds.train_word_idx_sequence) == numpy.ndarray
-    assert type(ds.test_word_idx_sequence) == numpy.ndarray
+    # assert type(ds.test_word_idx_sequence) == numpy.ndarray
     # check shape
     assert ds.train_word_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM, model.max_seq_len)
-    assert ds.test_word_idx_sequence.shape == (DUMMY_TEST_SENT_NUM, model.max_seq_len)
+    # assert ds.test_word_idx_sequence.shape == (DUMMY_TEST_SENT_NUM, model.max_seq_len)
 
 def test_y_output_sequences_after_loading_single_dataset(model_with_single_dataset):
     """ Asserts y (labels) data partition attribute is initialized correctly when
@@ -118,12 +118,12 @@ def test_y_output_sequences_after_loading_single_dataset(model_with_single_datas
     model = model_with_single_dataset
     # check type
     assert type(ds.train_tag_idx_sequence) == numpy.ndarray
-    assert type(ds.test_tag_idx_sequence) == numpy.ndarray
+    # assert type(ds.test_tag_idx_sequence) == numpy.ndarray
     # check value
     assert ds.train_tag_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
         ds.max_seq_len, ds.tag_type_count)
-    assert ds.test_tag_idx_sequence.shape == (DUMMY_TEST_SENT_NUM,
-        ds.max_seq_len, ds.tag_type_count)
+    # assert ds.test_tag_idx_sequence.shape == (DUMMY_TEST_SENT_NUM,
+    #    ds.max_seq_len, ds.tag_type_count)
 
 def test_word_embeddings_after_loading_single_dataset(model_with_single_dataset):
     """ Asserts that pretained token embeddings are loaded correctly when
@@ -144,7 +144,7 @@ def test_agreement_between_model_and_single_dataset(model_with_single_dataset):
     ds = model_with_single_dataset.ds[0]
     model = model_with_single_dataset
 
-    assert model.dataset_text_folder[0] == ds.dataset_text_folder
+    assert model.dataset_folder[0] == ds.dataset_folder
     assert model.max_seq_len == ds.max_seq_len
 
 def test_X_input_sequences_after_loading_compound_dataset(model_with_compound_dataset):
@@ -156,10 +156,10 @@ def test_X_input_sequences_after_loading_compound_dataset(model_with_compound_da
     for ds in model_with_compound_dataset.ds:
         # check type
         assert type(ds.train_word_idx_sequence) == numpy.ndarray
-        assert type(ds.test_word_idx_sequence) == numpy.ndarray
+        # assert type(ds.test_word_idx_sequence) == numpy.ndarray
         # check shape
         assert ds.train_word_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM, ds.max_seq_len)
-        assert ds.test_word_idx_sequence.shape == (DUMMY_TEST_SENT_NUM, ds.max_seq_len)
+        # assert ds.test_word_idx_sequence.shape == (DUMMY_TEST_SENT_NUM, ds.max_seq_len)
 
 def test_y_output_sequences_after_loading_compound_dataset(model_with_compound_dataset):
     """ Asserts y (labels) data partition attribute is initialized correctly when
@@ -169,12 +169,12 @@ def test_y_output_sequences_after_loading_compound_dataset(model_with_compound_d
     # the same checks for each in a loop
     for ds in model_with_compound_dataset.ds:
         assert type(ds.train_tag_idx_sequence) == numpy.ndarray
-        assert type(ds.test_tag_idx_sequence) == numpy.ndarray
+        # assert type(ds.test_tag_idx_sequence) == numpy.ndarray
         # check value
         assert ds.train_tag_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
             ds.max_seq_len, ds.tag_type_count)
-        assert ds.test_tag_idx_sequence.shape == (DUMMY_TEST_SENT_NUM,
-            ds.max_seq_len, ds.tag_type_count)
+        # assert ds.test_tag_idx_sequence.shape == (DUMMY_TEST_SENT_NUM,
+        #    ds.max_seq_len, ds.tag_type_count)
 
 def test_word_embeddings_after_loading_compound_dataset(model_with_compound_dataset):
     """ Asserts that pretained token embeddings are loaded correctly when
@@ -196,5 +196,5 @@ def test_agreement_between_model_and_compound_dataset(model_with_compound_datase
     # for testing purposes, the datasets are identical so we can simply peform
     # the same checks for each in a loop
     for i, ds in enumerate(model.ds):
-        assert model.dataset_text_folder[i] == ds.dataset_text_folder
+        assert model.dataset_folder[i] == ds.dataset_folder
         assert model.max_seq_len == ds.max_seq_len

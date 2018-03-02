@@ -7,7 +7,8 @@ from sklearn.metrics import precision_recall_fscore_support
 # https://keras.io/metrics/
 # https://keunwoochoi.wordpress.com/2016/07/16/keras-callbacks/
 
-# TODO (johngiorgi): clean up the print function
+# TODO (johngiorgi): there is some hard coded ugliness going on in print_table,
+# fix this.
 # TODO (johngiorgi): this is likely copying big lists, find a way to get around
 # this
 
@@ -123,6 +124,11 @@ class Metrics(Callback):
         # collect table dimensions
         col_width = 6
         col_space = ' ' * col_width
+        col_width_1 = len('Label') + col_width
+        col_width_2 = col_width_1 + len('Precision') + col_width
+        col_width_3 = col_width_2 + len('Recall') + col_width
+        col_width_4 = col_width_3 + len('F1') + col_width
+
         tab_width = 60
         light_line = '-' * tab_width
         heavy_line = '=' * tab_width
@@ -130,34 +136,39 @@ class Metrics(Callback):
         ## HEADER
         print()
         print()
-
-        title = '{col}{}{col}'.format(title.upper(), col=' '*((tab_width-len(title))//2))
+        title = '{col}{t}{col}'.format(t=title.upper(),
+                                       col=' '*((tab_width-len(title))//2))
         header = 'Label{col}Precision{col}Recall{col}F1{col}Support'.format(col=col_space)
-
         print(heavy_line)
         print(title)
         print(light_line)
         print(header)
+
         print(heavy_line)
         ## BODY
         for k, v in self.tag_type_to_index.items():
             # specify an entire row
-            row = '{lab}{col}{0:.2f}{col}{0:.2f}{col}{0:.2f}{col}{0:.2f}'.format(
-                performance_scores[0][v],
-                performance_scores[1][v],
-                performance_scores[2][v],
-                int(performance_scores[3][v]),
+            row = '{lab}{col1}{p:.2f}{col2}{r:.2f}{col3}{f1:.2f}{col4}{s}'.format(
+                p=performance_scores[0][v],
+                r=performance_scores[1][v],
+                f1=performance_scores[2][v],
+                s=int(performance_scores[3][v]),
                 lab=k,
-                col=col_space)
-
+                col1=' ' * (col_width_1 - len(k) + len('Precision')//3 - 1),
+                col2=' ' * (col_width_2 - col_width_1 - len('Precision')//3 - 1),
+                col3=' ' * (col_width_3 - col_width_2 - len('Precision')//3 - 1),
+                col4=' ' * (col_width_4 - col_width_3 - len('Precision')//3 - 1))
             print(row)
-
         print(light_line)
+
         ## FOOTER
         # get average scores for each label
         avg_score_per_label = [np.mean(metric) for metric in performance_scores]
-        print('AVERAGE{col}{0:.2f}{col}{0:.2f}{col}{0:.2f}'.format(avg_score_per_label[0],
-                                                                   avg_score_per_label[1],
-                                                                   avg_score_per_label[2],
-                                                                   col=col_space))
+        print('AVERAGE{col1}{0:.2f}{col2}{0:.2f}{col3}{0:.2f}'.format(
+            avg_score_per_label[0],
+            avg_score_per_label[1],
+            avg_score_per_label[2],
+            col1=' ' * (col_width_1 - len('AVERAGE') + len('Precision')//3 - 1),
+            col2=' ' * (col_width_2 - col_width_1 - len('Precision')//3 - 1),
+            col3=' ' * (col_width_3 - col_width_2 - len('Precision')//3 - 1)))
         print(heavy_line)
