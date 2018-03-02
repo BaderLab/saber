@@ -12,6 +12,10 @@ from sklearn.metrics import precision_recall_fscore_support
 # TODO (johngiorgi): this is likely copying big lists, find a way to get around
 # this
 
+
+# For all keys in train/valid scores, group the values based on shared class
+#
+
 class Metrics(Callback):
     def __init__(self, X_train, X_valid, y_train, y_valid, tag_type_to_index):
         self.X_train = X_train
@@ -39,7 +43,7 @@ class Metrics(Callback):
         # get predictions and gold labels
         y_true_train, y_pred_train = self._get_true_and_pred(self.X_train, self.y_train)
         # compute performance metrics
-        train_scores = self._get_train_scores(y_true_train, y_pred_train)
+        train_scores = self._get_performance_scores(y_true_train, y_pred_train)
         # pretty print a table of performance metrics
         self._pretty_print_performance_scores(train_scores)
         # updates per epoch metric accumulators
@@ -49,7 +53,7 @@ class Metrics(Callback):
         ## VALID
         y_true_valid, y_pred_valid = self._get_true_and_pred(self.X_valid, self.y_valid)
 
-        valid_scores = self._get_train_scores(y_true_valid, y_pred_valid)
+        valid_scores = self._get_performance_scores(y_true_valid, y_pred_valid)
 
         self._pretty_print_performance_scores(valid_scores, title='valid')
 
@@ -82,7 +86,7 @@ class Metrics(Callback):
 
         return y_true, y_pred
 
-    def _get_train_scores(self, y_true, y_pred):
+    def _get_performance_scores(self, y_true, y_pred):
         """ Compute precision, recall, F1 and support for given data.
 
         For given gold (y_true) and predicted (y_pred) labels, computes
@@ -109,6 +113,20 @@ class Metrics(Callback):
                                                average=None,
                                                warn_for=supress)
 
+    '''
+    def _extract_combined_scores(self, performance_scores):
+        """
+        """
+        class_groups = list(set([k.split('-')[0] for k in performance_scores.keys()]))
+        for class_ in class_groups:
+            for k in performance_scores.keys():
+                if class_ == k.split('-')[1]
+
+        # get indices for all labels that are not the 'null' label, 'O'.
+        # labels_ = [(k, v)[1] for k, v in self.ds.word_type_to_idx.items() if k != 'O']
+    '''
+
+
     def _pretty_print_performance_scores(self, performance_scores, title='train'):
         """ Prints a table of performance scores.
 
@@ -122,14 +140,14 @@ class Metrics(Callback):
                           one or more classes
         """
         # collect table dimensions
-        col_width = 6
+        col_width = 20
         col_space = ' ' * col_width
         col_width_1 = len('Label') + col_width
         col_width_2 = col_width_1 + len('Precision') + col_width
         col_width_3 = col_width_2 + len('Recall') + col_width
         col_width_4 = col_width_3 + len('F1') + col_width
 
-        tab_width = 60
+        tab_width = 120
         light_line = '-' * tab_width
         heavy_line = '=' * tab_width
 
