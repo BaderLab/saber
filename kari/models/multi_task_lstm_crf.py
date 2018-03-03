@@ -7,6 +7,7 @@ from keras.layers import Dense
 from keras.layers import TimeDistributed
 from keras.layers import Dropout
 from keras.layers import Bidirectional
+# from keras.layers import Concatenate
 from keras_contrib.layers.crf import CRF
 
 from sklearn.model_selection import KFold
@@ -71,6 +72,12 @@ class MultiTaskLSTMCRF(object):
             crf: a list of task-specific crf layers implemented using
                  keras.contrib, one for each model.
         """
+        ## CHAR EMBEDDING LAYER
+        shared_char_emb = Embedding(
+            input_dim=(len(self.ds[0].char_type_to_idx)),
+            output_dim=25,
+            mask_zero=True
+        )
         ## TOKEN EMBEDDING LAYER
         # if specified, load pre-trained token embeddings otherwise initialize
         # randomly
@@ -104,11 +111,11 @@ class MultiTaskLSTMCRF(object):
         for ds in self.ds:
             input_layer = Input(shape=(self.max_seq_len,))
             model = shared_token_emb(input_layer)
+            # model = Concatenate()
             model = shared_token_bisltm(model)
             model = shared_dense(model)
             crf = CRF(ds.tag_type_count)
             output_layer = crf(model)
-
             # fully specified model
             self.model.append(Model(inputs=input_layer, outputs=output_layer))
             self.crf.append(crf)
