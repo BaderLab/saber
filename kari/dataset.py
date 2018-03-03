@@ -9,6 +9,7 @@ from keras.utils import to_categorical
 from keras.preprocessing.sequence import pad_sequences
 
 # TODO (John): set max_seq_len empirically.
+# TODO (John): Do I need to add a pad to char types?
 
 TRAIN_FILE_EXT = 'train.*'
 # TEST_FILE_EXT = 'test.*'
@@ -30,10 +31,13 @@ class Dataset(object):
         # shared by train/test
         self.raw_dataframe = None
         self.word_types = []
+        self.char_types = []
         self.tag_types = []
         self.word_type_count = 0
+        self.char_type_count = 0
         self.tag_type_count = 0
         self.word_type_to_idx = {}
+        self.char_type_to_idx = {}
         self.tag_type_to_idx = {}
         # not shared by train/test
         # self.train_dataframe = None
@@ -53,10 +57,12 @@ class Dataset(object):
         # self.train_dataframe = self.raw_dataframe.loc['train']
         # self.test_dataframe = self.raw_dataframe.loc['test']
         # get types and type counts
-        self.word_types, self.tag_types = self._get_types()
-        self.word_type_count, self.tag_type_count = len(self.word_types), len(self.tag_types)
+        self.word_types, self.char_types, self.tag_types = self._get_types()
+        self.word_type_count = len(self.word_types)
+        self.char_types_count = len(self.char_types)
+        self.tag_type_count = len(self.tag_types)
 
-    def load_dataset(self, shared_word_type_to_idx=None):
+    def load_dataset(self, shared_word_type_to_idx=None, shared_char_type_to_idx=None):
         """ Coordinates loading of given data set at self.dataset_folder.
 
         For a given dataset in CoNLL format at dataset_folder, cordinates
@@ -69,14 +75,15 @@ class Dataset(object):
 
         # if shared_by_compound is passed into function call, then this is a
         # compound dataset (word_type_to_idx is shared across datasets)
-        if shared_word_type_to_idx is not None:
+        if shared_word_type_to_idx is not None and shared_char_type_to_idx is not None:
             self.word_type_to_idx = shared_word_type_to_idx
+            self.char_type_to_idx = shared_char_type_to_idx
 
         ## TRAIN
         # get sentences
         self.train_sentences = self._get_sentences(self.trainset_filepath, sep=self.sep)
         # get type to idx sequences
-        self.train_word_idx_sequence = self._get_type_idx_sequence(self.train_sentences)
+        self.train_word_idx_sequence = self._get_type_idx_sequence(self.train_sentences, type_='word')
         self.train_tag_idx_sequence = self._get_type_idx_sequence(self.train_sentences, type_='tag')
         # convert tag idx sequences to categorical
         self.train_tag_idx_sequence = self._tag_idx_sequence_to_categorical(self.train_tag_idx_sequence)
@@ -132,10 +139,14 @@ class Dataset(object):
             types, and the last column contains the tag types.
         """
         word_types = list(set(self.raw_dataframe.iloc[:, 0].values))
+        char_types = []
+        for word in word_types:
+            char_types.extend(list(word))
+        char_types = list(set(char_types))
         tag_types = list(set(self.raw_dataframe.iloc[:, -1].values))
         word_types.append("ENDPAD")
 
-        return word_types, tag_types
+        return word_types, char_types, tag_types
 
     def _map_type_to_idx(self):
         """ Updates attributes with type to index dictionary maps.
@@ -202,7 +213,7 @@ class Dataset(object):
 
         return master_sentence_acc
 
-    def _get_type_idx_sequence(self, sentences_, type_='word'):
+    def _get_type_idx_sequence(self, sentences_, type_):
         """ Returns sequence of indices corresponding to data set sentences.
 
         Given a dictionary of type:idx key, value pairs, returns the sequence
@@ -226,19 +237,30 @@ class Dataset(object):
         # column_idx and pad are different for word types and tag types
 
         # word type
-        column_idx = 0
-        pad = 0
-        type_to_idx_ = self.word_type_to_idx
+        if type_ == 'word':
+            column_idx = 0
+            # allows us to use the mask_zero parameter of the embedding layer to
+            # ignore inputs with value zero.
+            pad = 0
+            type_to_idx_ = self.word_type_to_idx
+        elif type_ == 'char':
+            column_idx = 0
+            type_to_idx_ = self.char_type_to_idx
         # tag type
-        if type_ == 'tag':
+        elif type_ == 'tag':
             column_idx = -1
             pad = self.tag_type_to_idx['O']
             type_to_idx_ = self.tag_type_to_idx
 
         # get sequence of idx's in the order they appear in sentences
         type_sequence = [[type_to_idx_[ty[column_idx]] for ty in s] for s in sentences_]
-        type_sequence = pad_sequences(maxlen=self.max_seq_len, sequences=type_sequence,
-                                      padding='post', value=pad)
+
+        # don't pad char sequences
+        if type_ != 'char':
+            type_sequence = pad_sequences(maxlen=self.max_seq_len,
+                                          sequences=type_sequence,
+                                          padding='post',
+                                          value=pad)
 
         return type_sequence
 
