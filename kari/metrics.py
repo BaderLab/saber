@@ -11,12 +11,10 @@ from sklearn.metrics import precision_recall_fscore_support
 # fix this.
 # TODO (johngiorgi): this is likely copying big lists, find a way to get around
 # this
-
-
-# For all keys in train/valid scores, group the values based on shared class
-#
+# TODO (johngiorgi): For all keys in train/valid scores, group the values based on shared class
 
 class Metrics(Callback):
+    """ A class for handling performance metrics, inherits from Callback. """
     def __init__(self, X_train, X_valid, y_train, y_valid, tag_type_to_index):
         self.X_train = X_train
         self.X_valid = X_valid
@@ -25,7 +23,7 @@ class Metrics(Callback):
         self.tag_type_to_index = tag_type_to_index
 
     def on_train_begin(self, logs={}):
-        """
+        """ Series of steps to perform when training for a given model begins.
         """
         ## TRAIN
         self.train_precision_per_epoch = []
@@ -37,8 +35,7 @@ class Metrics(Callback):
         self.valid_f1_per_epoch = []
 
     def on_epoch_end(self, epoch, logs={}):
-        """
-        """
+        """ Series of steps to perform when a training epoch ends. """
         ## TRAIN
         # get predictions and gold labels
         y_true_train, y_pred_train = self._get_true_and_pred(self.X_train, self.y_train)
@@ -79,7 +76,7 @@ class Metrics(Callback):
         """
         # gold labels
         y_true = y.argmax(axis=-1)
-        y_true = np.asarray(y_true).ravel()
+        y_true = np.asarray(y_true).ravel() # flatten to 1D array
         # predicted labels
         y_pred = self.model.predict(X).argmax(axis=-1)
         y_pred = np.asarray(y_pred).ravel()
