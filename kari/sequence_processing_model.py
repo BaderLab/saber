@@ -164,7 +164,7 @@ class SequenceProcessingModel(object):
 
         return train_history
 
-    def predict(self):
+    def predict(self, task=0):
         """ Performs prediction for a given model and returns results.
 
         Performs prediction for the current model (self.model), and returns
@@ -176,15 +176,14 @@ class SequenceProcessingModel(object):
             y_true: 1D array like object containing the gold label sequence
             y_pred: 1D array like object containing the predicted sequence
         """
+        X = self.ds[task].train_word_idx_sequence
+        y = self.ds[task].train_tag_idx_sequence
         # get gold sequence, flatten into 1D array
-        y_true = self.y_test.argmax(axis=-1)
-        y_true = np.asarray(gold_idx).ravel()
+        y_true = y.argmax(axis=-1)
+        # y_true = np.asarray(y_true).ravel()
         # get predicted sequence, flatten into 1D array
-        y_pred = self.model.predict(self.X_test).argmax(axis=-1)
-        y_pred = np.asarray(pred_idx).ravel()
-
-        # get indices for all labels that are not the 'null' label, 'O'.
-        # labels_ = [(k, v)[1] for k, v in self.ds.word_type_to_idx.items() if k != 'O']
+        y_pred = self.model[task].model.predict(X).argmax(axis=-1)
+        # y_pred = np.asarray(y_pred).ravel()
 
         return y_true, y_pred
 
@@ -220,17 +219,22 @@ class SequenceProcessingModel(object):
 
         # get combined set of word types from all datasets
         comb_word_types = []
+        comb_char_types = []
         for ds in ds_acc:
             comb_word_types.extend(ds.word_types)
+            comb_char_types.extend(ds.char_types)
         comb_word_types = list(set(comb_word_types))
+        comb_char_types = list(set(comb_char_types))
 
         # compute word to index mappings that will be shared across datasets
         # pad of 1 accounts for the sequence pad (of 0) down the pipeline
         shared_word_type_to_idx = Dataset.sequence_2_idx(comb_word_types, pad=1)
+        shared_char_type_to_idx = Dataset.sequence_2_idx(comb_char_types, pad=0)
 
         # load all the datasets
         for ds in ds_acc:
-            ds.load_dataset(shared_word_type_to_idx=shared_word_type_to_idx)
+            ds.load_dataset(shared_word_type_to_idx=shared_word_type_to_idx,
+                            shared_char_type_to_idx=shared_char_type_to_idx)
 
         return ds_acc
 
