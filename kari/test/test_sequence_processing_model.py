@@ -4,12 +4,9 @@ import pytest
 from utils_parameter_parsing import *
 from sequence_processing_model import SequenceProcessingModel
 
-# TODO (johngiorgi): more tests need to be written, especially pertaining
-# to the model.
-
 # constants for dummy dataset/config/word embeddings to perform testing on
 PATH_TO_DUMMY_CONFIG = 'kari/test/resources/dummy_config.ini'
-PATH_TO_DUMMY_DATASET = 'kari/test/resources/dummy_dataset'
+PATH_TO_DUMMY_DATASET = 'kari/test/resources/single_dummy_dataset'
 PATH_TO_DUMMY_TOKEN_EMBEDDINGS = 'kari/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt'
 DUMMY_TRAIN_SENT_NUM = 2
 DUMMY_TEST_SENT_NUM = 1
@@ -75,14 +72,14 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
     assert model_without_dataset.batch_size == 1
     assert model_without_dataset.dataset_folder[0] == PATH_TO_DUMMY_DATASET
     assert model_without_dataset.debug == False
-    assert model_without_dataset.dropout_rate == 0.1
+    assert model_without_dataset.dropout_rate == 0.3
     assert model_without_dataset.freeze_token_embeddings == True
     assert model_without_dataset.gradient_clipping_value == 0.0
     assert model_without_dataset.k_folds == 5
     assert model_without_dataset.learning_rate == 0.01
     assert model_without_dataset.load_pretrained_model == False
     assert model_without_dataset.maximum_number_of_epochs == 10
-    assert model_without_dataset.model_name == 'LSTM-CRF-NER'
+    assert model_without_dataset.model_name == 'MT-LSTM-CRF'
     assert model_without_dataset.optimizer == 'sgd'
     assert model_without_dataset.output_folder == '../output'
     assert model_without_dataset.pretrained_model_weights == ''
@@ -104,10 +101,8 @@ def test_X_input_sequences_after_loading_single_dataset(model_with_single_datase
     model = model_with_single_dataset
     # check type
     assert type(ds.train_word_idx_sequence) == numpy.ndarray
-    # assert type(ds.test_word_idx_sequence) == numpy.ndarray
     # check shape
     assert ds.train_word_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM, model.max_seq_len)
-    # assert ds.test_word_idx_sequence.shape == (DUMMY_TEST_SENT_NUM, model.max_seq_len)
 
 def test_y_output_sequences_after_loading_single_dataset(model_with_single_dataset):
     """ Asserts y (labels) data partition attribute is initialized correctly when
@@ -118,12 +113,9 @@ def test_y_output_sequences_after_loading_single_dataset(model_with_single_datas
     model = model_with_single_dataset
     # check type
     assert type(ds.train_tag_idx_sequence) == numpy.ndarray
-    # assert type(ds.test_tag_idx_sequence) == numpy.ndarray
     # check value
     assert ds.train_tag_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
         ds.max_seq_len, ds.tag_type_count)
-    # assert ds.test_tag_idx_sequence.shape == (DUMMY_TEST_SENT_NUM,
-    #    ds.max_seq_len, ds.tag_type_count)
 
 def test_word_embeddings_after_loading_single_dataset(model_with_single_dataset):
     """ Asserts that pretained token embeddings are loaded correctly when
@@ -156,10 +148,8 @@ def test_X_input_sequences_after_loading_compound_dataset(model_with_compound_da
     for ds in model_with_compound_dataset.ds:
         # check type
         assert type(ds.train_word_idx_sequence) == numpy.ndarray
-        # assert type(ds.test_word_idx_sequence) == numpy.ndarray
         # check shape
         assert ds.train_word_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM, ds.max_seq_len)
-        # assert ds.test_word_idx_sequence.shape == (DUMMY_TEST_SENT_NUM, ds.max_seq_len)
 
 def test_y_output_sequences_after_loading_compound_dataset(model_with_compound_dataset):
     """ Asserts y (labels) data partition attribute is initialized correctly when
@@ -169,12 +159,9 @@ def test_y_output_sequences_after_loading_compound_dataset(model_with_compound_d
     # the same checks for each in a loop
     for ds in model_with_compound_dataset.ds:
         assert type(ds.train_tag_idx_sequence) == numpy.ndarray
-        # assert type(ds.test_tag_idx_sequence) == numpy.ndarray
         # check value
         assert ds.train_tag_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
             ds.max_seq_len, ds.tag_type_count)
-        # assert ds.test_tag_idx_sequence.shape == (DUMMY_TEST_SENT_NUM,
-        #    ds.max_seq_len, ds.tag_type_count)
 
 def test_word_embeddings_after_loading_compound_dataset(model_with_compound_dataset):
     """ Asserts that pretained token embeddings are loaded correctly when
