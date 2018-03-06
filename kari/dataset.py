@@ -13,6 +13,7 @@ from keras.preprocessing.sequence import pad_sequences
 
 TRAIN_FILE_EXT = 'train.*'
 # TEST_FILE_EXT = 'test.*'
+ENDPAD = 'ENDPAD'
 
 # method naming conventions: https://stackoverflow.com/questions/8689964/why-do-some-functions-have-underscores-before-and-after-the-function-name#8689983
 class Dataset(object):
@@ -28,39 +29,27 @@ class Dataset(object):
         self.names = names
         self.header = header
         self.max_seq_len = max_seq_len
+
         # shared by train/test
-        self.raw_dataframe = None
-        self.word_types = []
-        self.char_types = []
-        self.tag_types = []
-        self.word_type_count = 0
-        self.char_type_count = 0
-        self.tag_type_count = 0
         self.word_type_to_idx = {}
         self.char_type_to_idx = {}
         self.tag_type_to_idx = {}
-        # not shared by train/test
-        # self.train_dataframe = None
-        # self.test_dataframe = None
-        self.train_sentences = []
-        # self.test_sentences = []
-        self.train_word_idx_sequence = []
-        # self.test_word_idx_sequence = []
-        self.train_tag_idx_sequence = []
-        # self.test_tag_idx_sequence = []
-
         # on object construction, we read the dataset files and get word/tag
         # types, this is helpful for creating compound datasets
-
-        # load dataset file, then grab the train and test 'frames'
         self.raw_dataframe = self._load_dataset()
-        # self.train_dataframe = self.raw_dataframe.loc['train']
-        # self.test_dataframe = self.raw_dataframe.loc['test']
-        # get types and type counts
         self.word_types, self.char_types, self.tag_types = self._get_types()
         self.word_type_count = len(self.word_types)
-        self.char_types_count = len(self.char_types)
+        self.char_type_count = len(self.char_types)
         self.tag_type_count = len(self.tag_types)
+
+        # not shared by train/test
+        self.train_sentences = []
+        self.train_word_idx_sequence = []
+        self.train_tag_idx_sequence = []
+
+        # load dataset file, then grab the train and test 'frames'
+        # self.train_dataframe = self.raw_dataframe.loc['train']
+        # self.test_dataframe = self.raw_dataframe.loc['test']
 
     def load_dataset(self, shared_word_type_to_idx=None, shared_char_type_to_idx=None):
         """ Coordinates loading of given data set at self.dataset_folder.
@@ -78,14 +67,13 @@ class Dataset(object):
                                      indices shared between datasets
         """
         # generate type to index mappings
-        self.word_type_to_idx, self.tag_type_to_idx = self._map_type_to_idx()
+        self.word_type_to_idx, self.char_type_to_idx, self.tag_type_to_idx = self._map_type_to_idx()
 
         # if shared_by_compound is passed into function call, then this is a
         # compound dataset (word_type_to_idx is shared across datasets)
         if shared_word_type_to_idx is not None and shared_char_type_to_idx is not None:
             self.word_type_to_idx = shared_word_type_to_idx
             self.char_type_to_idx = shared_char_type_to_idx
-
 
         ## TRAIN
         # get sentences
@@ -150,16 +138,21 @@ class Dataset(object):
             a three-tuple containing the word types, chararcter types and
             tag types.
         """
-        # word types
+        ## WORD TYPES
         word_types = list(set(self.raw_dataframe.iloc[:, 0].values))
-        word_types.append("ENDPAD")
-        # char types
+        word_types.insert(0, ENDPAD) # make ENDPAD the 0th element
+
+        ## CHAR TYPE
         char_types = []
         for word in word_types:
             char_types.extend(list(word))
         char_types = list(set(char_types))
-        # tag types
+
+        ## TAG TYPE
         tag_types = list(set(self.raw_dataframe.iloc[:, -1].values))
+        # if the negative class is not first, swap it with the first element
+        neg_class_idx = tag_types.index('O')
+        tag_types[neg_class_idx], tag_types[0] = tag_types[0], tag_types[neg_class_idx]
 
         return word_types, char_types, tag_types
 
@@ -170,13 +163,13 @@ class Dataset(object):
         unique index.
 
         Returns:
-            two-tuple of word type and tag type to index mappings
+            three-tuple of word, char and tag type to index mappings
         """
+        word_type_to_idx = self._sequence_2_idx(self.word_types)
+        char_type_to_idx = self._sequence_2_idx(self.char_types)
         tag_type_to_idx = self._sequence_2_idx(self.tag_types)
-        # pad of 1 accounts for the sequence pad (of 0) down the pipeline
-        word_type_to_idx = self._sequence_2_idx(self.word_types, pad=1)
 
-        return word_type_to_idx, tag_type_to_idx
+        return word_type_to_idx, char_type_to_idx, tag_type_to_idx
 
     def _sequence_2_idx(self, sequence, offset=0):
         """ Returns a dictionary of element:idx pairs for each element in sequence.
@@ -193,10 +186,10 @@ class Dataset(object):
             a mapping from elements in the sequence to numbered indices
         """
         # offset accounts for sequence pad
-        return {e: i + pad for i, e in enumerate(list(set(sequence)))}
+        return {e: i + offset for i, e in enumerate(list(set(sequence)))}
 
     @staticmethod
-    def sequence_2_idx(sequence, pad=0):
+    def sequence_2_idx(sequence, offset=0):
         """ Returns a dictionary of element:idx pairs for each element in sequence.
 
         A class method that, when given a list, returns a dictionary of length
@@ -212,7 +205,7 @@ class Dataset(object):
             a mapping from elements in the sequence to numbered indices.
         """
         # offset accounts for sequence pad
-        return {e: i + pad for i, e in enumerate(list(set(sequence)))}
+        return {e: i + offset for i, e in enumerate(list(set(sequence)))}
 
     def _get_sentences(self, partition_filepath, sep='\t'):
         """ Returns sentences for csv/tsv file as a list lists of tuples.
@@ -318,5 +311,5 @@ class Dataset(object):
         # convert to one-hot encoding
         one_hots = [to_categorical(seq, self.tag_type_count) for seq in idx_sequence]
         one_hots = np.array(one_hots)
-        # one_hots = np.squeeze(one_hots, axis=2)
+
         return one_hots
