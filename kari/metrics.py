@@ -248,7 +248,7 @@ class Metrics(Callback):
         ## BODY
         for label, score in performance_scores.items():
             # specify an entire row
-            row = '{lab}{col1}{p:.2f}{col2}{r:.2f}{col3}{f1:.2f}{col4}{s}'.format(
+            row = '{lab}{col1}{p:.1%}{col2}{r:.1%}{col3}{f1:.1%}{col4}{s}'.format(
                 p=score[0],
                 r=score[1],
                 f1=score[2],

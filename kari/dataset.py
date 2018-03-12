@@ -17,9 +17,9 @@ ENDPAD = 'ENDPAD'
 
 # method naming conventions: https://stackoverflow.com/questions/8689964/why-do-some-functions-have-underscores-before-and-after-the-function-name#8689983
 class Dataset(object):
-    """ A class for handling data sets. """
+    """A class for handling data sets."""
     def __init__(self, dataset_folder, sep='\t', names=['Word', 'Tag'],
-                 header=None, max_seq_len=50):
+                 header=None, max_seq_len=75):
         self.dataset_folder = dataset_folder
         # search for any files in the dataset filepath ending with
         # TRAIN_FILE_EXT or TEST_FILE_EXT
@@ -80,6 +80,7 @@ class Dataset(object):
         self.train_sentences = self._get_sentences(self.trainset_filepath, sep=self.sep)
         # get type to idx sequences
         self.train_word_idx_sequence = self._get_type_idx_sequence(self.train_sentences, type_='word')
+        self.train_char_idx_sequence = self._get_type_idx_sequence(self.train_sentences, type_='char')
         self.train_tag_idx_sequence = self._get_type_idx_sequence(self.train_sentences, type_='tag')
         # convert tag idx sequences to categorical
         self.train_tag_idx_sequence = self._tag_idx_sequence_to_categorical(self.train_tag_idx_sequence)
@@ -242,11 +243,11 @@ class Dataset(object):
 
         return global_sentence_acc
 
-    def _get_type_idx_sequence(self, sentences_, type_):
+    def _get_type_idx_sequence(self, sentences, type_):
         """ Returns sequence of indices corresponding to data set sentences.
 
         Returns the sequence of idices corresponding to the type order in
-        sentences_, where type_ can be "word", "char", or "tag" correpsonding to
+        sentences, where type_ can be "word", "char", or "tag" correpsonding to
         word, char and tag types of the Dataset instance.
 
         Args:
@@ -266,31 +267,37 @@ class Dataset(object):
         assert type_ in ['word', 'char', 'tag'], """parameter type_ must be one
         of 'word', 'char', or 'tag'"""
 
-        # column_idx and pad are different for word types and tag types
         if type_ == 'word':
-            column_idx = 0
+            col_idx = 0
             # allows us to use the mask_zero parameter of the embedding layer to
             # ignore inputs with value zero.
-            pad = 0
-            type_to_idx_ = self.word_type_to_idx
+            pad = 0.0
+            type_to_idx = self.word_type_to_idx
         elif type_ == 'char':
-            column_idx = 0
-            type_to_idx_ = self.char_type_to_idx
+            col_idx = 0
+            pad = 0.0
+            type_to_idx = self.char_type_to_idx
         # tag type
         elif type_ == 'tag':
-            column_idx = -1
+            col_idx = -1
             pad = self.tag_type_to_idx['O']
-            type_to_idx_ = self.tag_type_to_idx
+            type_to_idx = self.tag_type_to_idx
 
         # get sequence of idx's in the order they appear in sentences
-        type_sequence = [[type_to_idx_[ty[column_idx]] for ty in s] for s in sentences_]
+        # procedure is slightly different for characters
+        if type_ == 'char':
+            type_sequence = [[[type_to_idx[ch] for ch in ty[col_idx]] for ty in s] for s in sentences]
+            # pad character sequences
+            self._pad_character_sequences(type_sequence, pad=pad)
+        else:
+            type_sequence = [[type_to_idx[ty[col_idx]] for ty in s] for s in sentences]
 
-        # don't pad char sequences
-        if type_ != 'char':
-            type_sequence = pad_sequences(maxlen=self.max_seq_len,
-                                          sequences=type_sequence,
-                                          padding='post',
-                                          value=pad)
+        # pad sequences
+        type_sequence = pad_sequences(maxlen=self.max_seq_len,
+                                      sequences=type_sequence,
+                                      padding='post',
+                                      truncating='post',
+                                      value=pad)
 
         return type_sequence
 
@@ -313,3 +320,23 @@ class Dataset(object):
         one_hots = np.array(one_hots)
 
         return one_hots
+
+    def _pad_character_sequences(self, sequence, pad=0, maxlen=10):
+        """ Pads a character sequence.
+
+        For a given character sequence given as a list (sentences) of
+        lists (word) of lists (characters), truncates all character lists to
+        maxlen, and pads those shorter than maxlen with pad.
+
+        Args:
+            sequence: a list of list of lists, corresponding to character
+                      sequences for each word for each sentence.
+            value: Int, padding value.
+            maxlen: Int, maximum length of all sequences.
+        """
+        for sent in sequence:
+            for word in sent:
+                if len(word) < maxlen:
+                    word += ((maxlen - len(word)) * [pad]) # pad chars
+                elif len(word) > maxlen:
+                    del word[maxlen:] # truncate chars
