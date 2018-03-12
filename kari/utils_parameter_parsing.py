@@ -4,7 +4,7 @@ import argparse
 import configparser
 
 # TODO: (johngiorgi): use the supported datatypes functions for bools: https://docs.python.org/3.6/library/configparser.html#supported-datatypes
-# TODO: (johngiorgi): is there a better way to specify multiple filepaths
+# TODO: (johngiorgi): is there a better way to specify multiple filepaths? There must be, with spaces
 
 def config_parser(config_filepath):
     """ Returns a parsed config file object.
@@ -44,6 +44,7 @@ def process_parameters(config, cli_arguments={}):
     parameters['output_folder'] = str(config['data']['output_folder'])
     parameters['pretrained_model_weights'] = str(config['data']['pretrained_model_weights'])
     parameters['token_embedding_dimension'] = int(config['data']['token_embedding_dimension'])
+    parameters['character_embedding_dimension'] = int(config['data']['character_embedding_dimension'])
     parameters['token_pretrained_embedding_filepath'] = str(config['data']['token_pretrained_embedding_filepath'])
     # training
     parameters['optimizer'] = str(config['training']['optimizer'])
@@ -73,10 +74,10 @@ def process_parameters(config, cli_arguments={}):
     return parameters
 
 def parse_arguments():
-    """ Parse command line arguments passed with call to Kari.
+    """Parse command line (CL) arguments passed with call to Kari.
 
     Returns:
-        cli_arguments: a dictionary of parsed CL arguments.
+        a dictionary of parsed CL arguments.
     """
 
     parser = argparse.ArgumentParser(description='Kari CLI')
@@ -88,7 +89,7 @@ def parse_arguments():
 
     parser.add_argument('--activation_function', required=False, type=str, help='')
     parser.add_argument('--batch_size', required=False, type=int, help='')
-    # parser.add_argument('--character_embedding_dimension', default=argument_default_value, help='')
+    parser.add_argument('--character_embedding_dimension', required=False, type=str, help='')
     # parser.add_argument('--character_lstm_hidden_state_dimension', default=argument_default_value, help='')
     # parser.add_argument('--check_for_digits_replaced_with_zeros', default=argument_default_value, help='')
     # parser.add_argument('--check_for_lowercase', default=argument_default_value, help='')
