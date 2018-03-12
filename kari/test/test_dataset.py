@@ -1,3 +1,4 @@
+import os
 import numpy
 import pytest
 import pandas
@@ -30,14 +31,14 @@ PATH_TO_DUMMY_DATASET = 'kari/test/resources/single_dummy_dataset'
 
 @pytest.fixture
 def empty_dummy_dataset():
-    """ Returns an empty dummy Dataset instance."""
+    """Returns an empty dummy Dataset instance."""
     dataset = Dataset(PATH_TO_DUMMY_DATASET)
 
     return dataset
 
 @pytest.fixture
 def single_dummy_dataset():
-    """ Returns a 'single' dummy Dataset instance. """
+    """Returns a 'single' dummy Dataset instance."""
     dataset = Dataset(PATH_TO_DUMMY_DATASET)
     dataset.load_dataset()
 
@@ -45,7 +46,7 @@ def single_dummy_dataset():
 
 @pytest.fixture
 def compound_dummy_dataset():
-    """ Returns a 'compound' dummy Dataset instance. """
+    """Returns a 'compound' dummy Dataset instance."""
     dataset = Dataset(PATH_TO_DUMMY_DATASET)
     # need to passs shared word and shared char to idx
     dataset.load_dataset()
@@ -53,15 +54,15 @@ def compound_dummy_dataset():
     return dataset
 
 def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
-    """ Asserts instance attributes are initialized correctly when dataset is
+    """Asserts instance attributes are initialized correctly when dataset is
     empty (i.e., load_dataset() method has not been called.)"""
     # attributes that are passed to __init__
-    assert type(empty_dummy_dataset.dataset_folder) == str
-    assert type(empty_dummy_dataset.trainset_filepath) == str
-    assert type(empty_dummy_dataset.sep) == str
-    assert type(empty_dummy_dataset.names) == bool or list
-    assert type(empty_dummy_dataset.header) == bool or int or list
-    assert type(empty_dummy_dataset.max_seq_len) == int
+    assert empty_dummy_dataset.dataset_folder == PATH_TO_DUMMY_DATASET
+    assert empty_dummy_dataset.trainset_filepath == os.path.join(PATH_TO_DUMMY_DATASET, 'train.tsv')
+    assert empty_dummy_dataset.sep == '\t'
+    assert empty_dummy_dataset.names == ['Word', 'Tag']
+    assert empty_dummy_dataset.header == None
+    assert empty_dummy_dataset.max_seq_len == 75
     # other instance attributes
     assert empty_dummy_dataset.word_type_to_idx == {}
     assert empty_dummy_dataset.char_type_to_idx == {}
@@ -84,7 +85,7 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     assert empty_dummy_dataset.train_tag_idx_sequence == []
 
 def test_type_to_idx_after_dataset_loaded(single_dummy_dataset):
-    """ Asserts that word_type_to_idx and tag_type_to_idx are updated as
+    """Asserts that word_type_to_idx and tag_type_to_idx are updated as
     expected after a call to load_dataset()."""
     # ensure we get the expected types after dataset is loaded
     assert type(single_dummy_dataset.word_type_to_idx) == dict
@@ -103,7 +104,7 @@ def test_type_to_idx_after_dataset_loaded(single_dummy_dataset):
                single_dummy_dataset.tag_type_to_idx.keys())
 
 def test_sentences_after_dataset_loaded(single_dummy_dataset):
-    """ Asserts that sentences are updated as expected after a call to
+    """Asserts that sentences are updated as expected after a call to
     load_dataset()."""
     assert single_dummy_dataset.train_sentences == DUMMY_TRAIN_SENT
 

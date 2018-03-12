@@ -13,92 +13,58 @@ from utils_generic import make_dir
 
 print('Kari version: {0}'.format('0.1-dev'))
 
-# TODO (johngiorgi): set max_seq_len based on empirical observations
-# TODO (johngiorgi): consider smarter default values for paramas
-# TODO (johngiorgi): make sure this process is shuffling the data
 # TODO (johngiorgi): make model checkpointing a config param
-# TODO (johngiorgi): make a debug mode that doesnt load token embeddings and loads only some lines of dataset
-# TODO (johngiorgi): abstract away all dataset details as single object
-# TODO (johngiorgi): consider introduction a new function, create_model()
+# TODO (johngiorgi): make a debug mode that doesn't load token embeddings and
+# loads only some lines of dataset
+# TODO (johngiorgi): implement saving loading of models
+# TODO (johngiorgi): predict should be more of an interface, calling it should
+# return a nicely formatted representation of the prediticted entities.
 
-class SequenceProcessingModel(object):
-    PARAM_DEFAULT = 'default_value_please_ignore_1YVBF48GBG98BGB8432G4874BF74BB'
+class SequenceProcessor(object):
+    """A class for handeling the loading, saving, training, and specifying of
+    sequence processing models. """
 
-    def __init__(self,
-                 activation_function=PARAM_DEFAULT,
-                 batch_size=PARAM_DEFAULT,
-                 dataset_folder=PARAM_DEFAULT,
-                 debug=PARAM_DEFAULT,
-                 dropout_rate=PARAM_DEFAULT,
-                 freeze_token_embeddings=PARAM_DEFAULT,
-                 gradient_clipping_value=PARAM_DEFAULT,
-                 k_folds=PARAM_DEFAULT,
-                 learning_rate=PARAM_DEFAULT,
-                 load_pretrained_model=PARAM_DEFAULT,
-                 maximum_number_of_epochs=PARAM_DEFAULT,
-                 model_name=PARAM_DEFAULT,
-                 optimizer=PARAM_DEFAULT,
-                 output_folder=PARAM_DEFAULT,
-                 pretrained_model_weights=PARAM_DEFAULT,
-                 token_pretrained_embedding_filepath=PARAM_DEFAULT,
-                 token_embedding_dimension=PARAM_DEFAULT,
-                 train_model=PARAM_DEFAULT,
-                 max_seq_len=PARAM_DEFAULT
-                 ):
-
-        ## INITIALIZE MODEL ATTRIBUTES
+    def __init__(self, config):
         # hyperparameters
-        self.activation_function = activation_function
-        self.batch_size = batch_size
-        self.dataset_folder = dataset_folder
-        self.debug = debug
-        self.dropout_rate = dropout_rate
-        self.freeze_token_embeddings = freeze_token_embeddings
-        self.gradient_clipping_value = gradient_clipping_value
-        self.k_folds = k_folds
-        self.learning_rate = learning_rate
-        self.load_pretrained_model = load_pretrained_model
-        self.maximum_number_of_epochs = maximum_number_of_epochs
-        self.model_name = model_name
-        self.optimizer = optimizer
-        self.output_folder = output_folder
-        self.pretrained_model_weights = pretrained_model_weights
-        self.token_embedding_dimension = token_embedding_dimension
-        self.token_pretrained_embedding_filepath = token_pretrained_embedding_filepath
-        self.train_model = train_model
-        self.max_seq_len = max_seq_len
+        self.config = config
+
         # dataset(s) tied to this instance
         self.ds = []
-        # embeddings tied to this instance
+        # token embeddings tied to this instance
         self.token_embedding_matrix = None
-        # Keras model object(s) tied to this instance
-        self.model = []
+
+        # Keras model object tied to this instance
+        self.model = None
 
     def load_pretrained_model_(self, pretrained_model_filepath):
         """
         """
+        # use with keras_contrib.utils
+        # save_load_utils.save_all_weights(self.model, path)
+        # save_load_utils.load_all_weights(self.model, path)
+
         self.model = load_model(pretrained_model_filepath)
 
     def load_dataset(self):
-        """ Coordinates the loading of a dataset.
+        """Coordinates the loading of a dataset.
 
         Coordinates the loading of a dataset by creating a one or more Dataset
         objects (one for each filepath in self.dataset_folder). Additionaly,
         if self.token_pretrained_embedding_filepath is provided, loads the token
         embeddings.
         """
-        assert len(self.dataset_folder) > 0, '''You must provide at
+        assert len(self.config['dataset_folder']) > 0, '''You must provide at
         least one dataset via the dataset_folder parameter'''
 
         start_time = time.time()
         # Datasets may be 'single' or 'compound' (more than one), loading
         # differs slightly. Consider a dataset single if there is only one
-        # filepath in self.dataset_folder and compound otherwise.
-        if len(self.dataset_folder) == 1:
-            print('Loading (single) dataset... ', end='', flush=True)
+        # filepath in self.config['dataset_folder'] and compound otherwise.
+        if len(self.config['dataset_folder']) == 1:
+            print('[INFO] Loading (single) dataset... ', end='', flush=True)
             self.ds = self._load_single_dataset()
         else:
-            print('Loading (compound) dataset... ', end='', flush=True)
+            print('[INFO] Loading (compound) dataset... ', end='', flush=True)
             self.ds = self._load_compound_dataset()
 
         elapsed_time = time.time() - start_time
@@ -106,35 +72,36 @@ class SequenceProcessingModel(object):
 
         # if pretrained token embeddings are provided, load them (if they are
         # not already loaded)
-        if (len(self.token_pretrained_embedding_filepath) > 0 and
-            self.token_embedding_matrix is None):
+        if (len(self.config['token_pretrained_embedding_filepath']) > 0 and
+                self.token_embedding_matrix is None):
             self._load_token_embeddings()
 
-    def specify_model(self):
-        """ Specifies and compiles the chosen model (self.model_name). """
-        # create a dictionary of the SequenceProcessingModel objects attributes
-        model_specifications = vars(self)
-
+    def create_model(self):
+        """Specifies and compiles chosen model (self.config['model_name'])."""
         # setup the chosen model
-        if self.model_name == 'LSTM-CRF':
-            print('Building the simple LSTM-CRF model for NER...', end='', flush=True)
+        if self.config['model_name'] == 'LSTM-CRF':
+            print('Building the single-task LSTM-CRF model for NER...', end='', flush=True)
             from models.simple_lstm_crf_ner import SimpleLSTMCRF
-            model_ = SimpleLSTMCRF(model_specifications=model_specifications)
-        elif self.model_name == 'MT-LSTM-CRF':
-            print('Building the multi-task LSTM-CRF model...', end='', flush=True)
+            model_ = SimpleLSTMCRF(config=self.config,
+                                   ds=self.ds,
+                                   token_embedding_matrix=self.token_embedding_matrix)
+        elif self.config['model_name'] == 'MT-LSTM-CRF':
+            print('[INFO] Building the multi-task LSTM-CRF model...')
             from models.multi_task_lstm_crf import MultiTaskLSTMCRF
-            model_ = MultiTaskLSTMCRF(model_specifications=model_specifications)
+            model_ = MultiTaskLSTMCRF(config=self.config,
+                                      ds=self.ds,
+                                      token_embedding_matrix=self.token_embedding_matrix)
 
         # specify and compile the chosen model
         model_.specify_()
         model_.compile_()
-        # update this objects model attribute with the compiled Keras model
+        # update this objects model attribute with instance of model class
         self.model = model_
 
         print('Done', flush=True)
 
     def fit(self):
-        """ Fit the specified model.
+        """Fit the specified model.
 
         For the given model (self.model), sets up per epoch checkpointing
         and fits the model.
@@ -146,9 +113,10 @@ class SequenceProcessingModel(object):
         # create a Callback object for model checkpointing
         checkpointer = self._setup_model_checkpointing()
         # fit
-        train_history = self.model.fit_(checkpointer=checkpointer)
+        # train_history = self.model.fit_(checkpointer=checkpointer)
+        # don't get history for now
+        self.model.fit_(checkpointer=checkpointer)
         '''
-
         # create Callback object for per epoch prec/recall/f1/support metrics
         metrics = Metrics(self.X_train, self.y_train, self.ds.word_type_to_idx)
         # fit
@@ -160,12 +128,11 @@ class SequenceProcessingModel(object):
                                        callbacks = [checkpointer, metrics],
                                        verbose=1)
         '''
-        train_history = pd.DataFrame(train_history.history)
-
-        return train_history
+        # train_history = pd.DataFrame(train_history.history)
+        # return train_history
 
     def predict(self, task=0):
-        """ Performs prediction for a given model and returns results.
+        """Performs prediction for a given model and returns results.
 
         Performs prediction for the current model (self.model), and returns
         a 2-tuple contain 1D array-like objects containing the true (gold)
@@ -173,8 +140,8 @@ class SequenceProcessingModel(object):
         to the sequence tags as per self.ds.word_type_to_idx.
 
         Returns:
-            y_true: 1D array like object containing the gold label sequence
-            y_pred: 1D array like object containing the predicted sequence
+            y_true: 1D array like object containing the gold label sequence.
+            y_pred: 1D array like object containing the predicted sequence.
         """
         X = self.ds[task].train_word_idx_sequence
         y = self.ds[task].train_tag_idx_sequence
@@ -188,34 +155,36 @@ class SequenceProcessingModel(object):
         return y_true, y_pred
 
     def _load_single_dataset(self):
-        """ Loads a single dataset.
+        """Loads a single dataset.
 
         Creates and loads a single dataset object for a dataset at
         self.dataset_folder[0].
 
         Returns:
-            a list containing a single dataset object
+            a list containing a single dataset object.
         """
-        ds = Dataset(self.dataset_folder[0], max_seq_len=self.max_seq_len)
+        ds = Dataset(dataset_folder=self.config['dataset_folder'][0],
+                     max_seq_len=self.config['max_seq_len'])
         ds.load_dataset()
 
         return [ds]
 
     def _load_compound_dataset(self):
-        """ Loads a compound dataset.
+        """Loads a compound dataset.
 
-        Creates and loads multiple, 'compound' datasets. Compound datasets
-        share multiple attributes (such as word/tag type to index mappings).
-        Loads such a dataset for each dataset at self.dataset_folder[0].
+        Creates and loads a 'compound' dataset. Compound datasets are specified
+        by multiple individual datasets, and share multiple attributes
+        (such as word/char type to index mappings). Loads such a dataset for
+        each dataset at self.dataset_folder[0].
 
         Returns:
-            a list containing multiple compound dataset objects
+            A list containing multiple compound dataset objects.
         """
         # accumulator for datasets
         ds_acc = []
 
-        for ds_filepath in self.dataset_folder:
-            ds_acc.append(Dataset(ds_filepath, max_seq_len=self.max_seq_len))
+        for ds_filepath in self.config['dataset_folder']:
+            ds_acc.append(Dataset(ds_filepath, max_seq_len=self.config['max_seq_len']))
 
         # get combined set of word types from all datasets
         comb_word_types = []
@@ -228,8 +197,8 @@ class SequenceProcessingModel(object):
 
         # compute word to index mappings that will be shared across datasets
         # pad of 1 accounts for the sequence pad (of 0) down the pipeline
-        shared_word_type_to_idx = Dataset.sequence_2_idx(comb_word_types, pad=1)
-        shared_char_type_to_idx = Dataset.sequence_2_idx(comb_char_types, pad=0)
+        shared_word_type_to_idx = Dataset.sequence_2_idx(comb_word_types)
+        shared_char_type_to_idx = Dataset.sequence_2_idx(comb_char_types)
 
         # load all the datasets
         for ds in ds_acc:
@@ -239,18 +208,18 @@ class SequenceProcessingModel(object):
         return ds_acc
 
     def _setup_model_checkpointing(self):
-        """ Sets up per epoch model checkpointing.
+        """Sets up per epoch model checkpointing.
 
         Sets up model checkpointing by:
-            1) creating the output_folder if it does not already exists
-            2) creating the checkpointing CallBack Keras object
+            1) creating the output_folder if it does not already exists.
+            2) creating the checkpointing CallBack Keras object.
 
         Returns:
             checkpointer: a Keras CallBack object for per epoch model
-            checkpointing
+                checkpointing.
         """
         # create output directory if it does not exist
-        make_dir(self.output_folder)
+        make_dir(self.config['output_folder'])
         # create path to output folder
         output_folder_ = os.path.join(self.output_folder,
                                       'model_checkpoint.{epoch:02d}-{val_loss:.2f}.hdf5')
@@ -260,7 +229,7 @@ class SequenceProcessingModel(object):
         return checkpointer
 
     def _load_token_embeddings(self):
-        """ Coordinates the loading of pre-trained token embeddings.
+        """Coordinates the loading of pre-trained token embeddings.
 
         Coordinates the loading of pre-trained token embeddings by reading in
         the file containing the token embeddings and created an embedding matrix
@@ -268,7 +237,7 @@ class SequenceProcessingModel(object):
         models word to idx mapping.
         """
         start_time = time.time()
-        print('Loading embeddings... ', end='', flush=True)
+        print('[INFO] Loading embeddings... ', end='', flush=True)
 
         # prepare the embedding indicies
         token_embeddings_index = self._prepare_token_embedding_layer()
@@ -293,7 +262,7 @@ class SequenceProcessingModel(object):
         token_embeddings_index = {}
         token_embedding_file_lines = []
 
-        with open(self.token_pretrained_embedding_filepath, 'r') as pte:
+        with open(self.config['token_pretrained_embedding_filepath'], 'r') as pte:
             token_embedding_file_lines = pte.readlines()
 
         for emb in token_embedding_file_lines:
