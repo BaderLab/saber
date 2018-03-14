@@ -27,7 +27,7 @@ DUMMY_TRAIN_SENT = [[("Human", "O"), ("APC2", "O"), ("maps", "O"), ("to", "O"),
 ("activity", "O"), ("could", "O"), ("not", "O"), ("be", "O"), ("accounted", "O"),
 ("for", "O"), ("on", "O"), ("the", "O"), ("basis", "O"), ("of", "O"),
 ("an", "O"), ("inhibitor", "O"), (".", "O")]]
-PATH_TO_DUMMY_DATASET = 'kari/test/resources/single_dummy_dataset'
+PATH_TO_DUMMY_DATASET = 'saber/test/resources/single_dummy_dataset'
 
 @pytest.fixture
 def empty_dummy_dataset():

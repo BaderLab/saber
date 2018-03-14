@@ -5,9 +5,9 @@ from utils_parameter_parsing import *
 from sequence_processor import SequenceProcessor
 
 # constants for dummy dataset/config/word embeddings to perform testing on
-PATH_TO_DUMMY_CONFIG = 'kari/test/resources/dummy_config.ini'
-PATH_TO_DUMMY_DATASET = 'kari/test/resources/single_dummy_dataset'
-PATH_TO_DUMMY_TOKEN_EMBEDDINGS = 'kari/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt'
+PATH_TO_DUMMY_CONFIG = 'saber/test/resources/dummy_config.ini'
+PATH_TO_DUMMY_DATASET = 'saber/test/resources/single_dummy_dataset'
+PATH_TO_DUMMY_TOKEN_EMBEDDINGS = 'saber/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt'
 DUMMY_TRAIN_SENT_NUM = 2
 DUMMY_TEST_SENT_NUM = 1
 # embedding matrix shape is num word types x dimension of embeddings
@@ -54,7 +54,7 @@ def model_with_compound_dataset(dummy_config):
     dataset is just two copies of the dataset, this makes writing tests
     much simpler. """
     # create a dictionary to serve as cli arguments
-    compound_dataset = PATH_TO_DUMMY_DATASET + ',' + PATH_TO_DUMMY_DATASET
+    compound_dataset = PATH_TO_DUMMY_DATASET + ' ' + PATH_TO_DUMMY_DATASET
     cli_arguments = {'dataset_folder': compound_dataset}
     # resolve parameters, cast to correct types
     parameters = process_parameters(dummy_config, cli_arguments)
@@ -91,7 +91,7 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
 
     assert model_without_dataset.ds == []
     assert model_without_dataset.token_embedding_matrix == None
-    assert model_without_dataset.model == []
+    assert model_without_dataset.model == None
 
 def test_X_input_sequences_after_loading_single_dataset(model_with_single_dataset):
     """Asserts X (input) data partition attribute is initialized correctly when
