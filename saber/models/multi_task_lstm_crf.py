@@ -1,15 +1,15 @@
 import os
 
 from keras import optimizers
+from keras.layers import LSTM
 from keras.models import Model
 from keras.models import Input
-from keras.layers import LSTM
-from keras.layers import Embedding
 from keras.layers import Dense
-from keras.layers import TimeDistributed
 from keras.layers import Dropout
-from keras.layers import Bidirectional
+from keras.layers import Embedding
 from keras.layers import Concatenate
+from keras.layers import Bidirectional
+from keras.layers import TimeDistributed
 from keras_contrib.layers.crf import CRF
 
 from sklearn.model_selection import KFold
@@ -17,9 +17,8 @@ from sklearn.model_selection import KFold
 import numpy as np
 
 from metrics import Metrics
-from utils_models import compile_model
 from utils_generic import make_dir
-
+from utils_models import compile_model
 
 # https://stackoverflow.com/questions/48615003/multi-task-learning-in-keras
 # https://machinelearningmastery.com/keras-functional-api-deep-learning/
@@ -37,12 +36,12 @@ from utils_generic import make_dir
 # TODO (johngiorgi): I need to name the models based on their dataset folder
 # TODO (johngiorgi): https://machinelearningmastery.com/dropout-regularization-deep-learning-models-keras/
 # TODO (johngiorgi): I NEED to be able to get the per fold performance metrics. Dumb solution:
-# save output of call to Kari to a file (command | tee ~/outputfile.txt or see here: https://askubuntu.com/questions/420981/how-do-i-save-terminal-output-to-a-file)
+# save output of call to Saber to a file (command | tee ~/outputfile.txt or see here: https://askubuntu.com/questions/420981/how-do-i-save-terminal-output-to-a-file)
 # TODO (johngiorgi): Setup learning rate decay.
 # TODO (johngiorgi): make sure this process is shuffling the data
 
 NUM_UNITS_WORD_LSTM = 200
-NUM_UNITS_DENSE = 200
+NUM_UNITS_DENSE = 50
 
 class MultiTaskLSTMCRF(object):
     """ A Keras implementation of BiLSTM-CRF for sequence labeling. """
@@ -77,7 +76,7 @@ class MultiTaskLSTMCRF(object):
                  keras.contrib, one for each model.
         """
 
-        ## TOKEN EMBEDDING LAYER
+        # token embedding layer
         if self.token_embedding_matrix is None:
             word_embeddings = Embedding(input_dim=len(self.ds[0].word_type_to_idx),
                                         output_dim=self.config['token_embedding_dimension'],
@@ -91,7 +90,7 @@ class MultiTaskLSTMCRF(object):
                                         mask_zero=True,
                                         trainable=(not self.config['freeze_token_embeddings']))
 
-        ## CHAR EMBEDDING LAYER
+        # character embedding layer
         '''
         char_ids = Input(shape=(10, self.config['max_seq_len'], ), dtype='int32')
 
@@ -108,12 +107,13 @@ class MultiTaskLSTMCRF(object):
         '''
 
 
-        ## TOKEN BILSTM LAYER
+        # word-level BiLSTM
         word_BiLSTM = Bidirectional(LSTM(units=NUM_UNITS_WORD_LSTM // 2,
-                                         return_sequences=True,
-                                         recurrent_dropout=self.config['dropout_rate']))
-        ## FULLY CONNECTED LAYER
-        fully_connected = TimeDistributed(Dense(units=NUM_UNITS_DENSE // 2,
+                                         return_sequences=True))
+        # dropout
+        dropout = Dropout(self.config['dropout_rate'])
+        # fully connected layer
+        fully_connected = TimeDistributed(Dense(units=NUM_UNITS_DENSE,
                                                 activation=self.config['activation_function']))
 
         # specify model, taking into account the shared layers
@@ -129,16 +129,10 @@ class MultiTaskLSTMCRF(object):
             self.model.append(Model(inputs=input_layer, outputs=output_layer))
             self.crf.append(crf)
 
-            # clear all non-shared layers
-            # input_layer = None
-            # output_layer = None
-            # crf = None
-            # model = None
-
         return self.model, self.crf
 
     def compile_(self):
-        """ Compiles a bidirectional multi-task LSTM-CRF for for sequence
+        """Compiles a bidirectional multi-task LSTM-CRF for for sequence
         tagging using Keras. """
         for model, crf in zip(self.model, self.crf):
             compile_model(model=model,
@@ -147,7 +141,7 @@ class MultiTaskLSTMCRF(object):
                           loss_function=crf.loss_function)
 
     def fit_(self, checkpointer):
-        """ Fits a bidirectional multi-task LSTM-CRF for for sequence tagging
+        """Fits a bidirectional multi-task LSTM-CRF for for sequence tagging
         using Keras. """
         # get indices of a k fold split training set
         # for each fold in this split
@@ -199,8 +193,7 @@ class MultiTaskLSTMCRF(object):
             self.compile_()
 
     def _get_train_valid_indices(self):
-        """
-        Get train and valid indicies for all k-folds for all datasets.
+        """Get train and valid indicies for all k-folds for all datasets.
 
         For all datatsets self.ds, gets k-fold train and valid indicies
         (number of k_folds specified by self.k_folds). Returns a list
@@ -232,7 +225,7 @@ class MultiTaskLSTMCRF(object):
         return compound_train_valid_indices
 
     def _get_data_partitions(self, train_valid_indices, fold):
-        """ Get train and valid partitions for all k-folds for all datasets.
+        """Get train and valid partitions for all k-folds for all datasets.
 
         For all datasets self.ds, gets the train and valid partitions for
         all k folds (number of k_folds specified by self.k_folds). Returns a

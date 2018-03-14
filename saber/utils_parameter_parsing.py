@@ -32,14 +32,12 @@ def process_parameters(config, cli_arguments={}):
     """
     parameters = {}
 
-    ## PARSE CONFIG
+    # parse config
     # mode
     parameters['model_name'] = str(config['mode']['model_name'])
     parameters['train_model'] = bool('True' == config['mode']['train_model'])
     parameters['load_pretrained_model'] = bool('True' == config['mode']['load_pretrained_model'])
     # data
-    # this parameter is a little different, can specify multiple values by
-    # seperating with a ','
     parameters['dataset_folder'] = str(config['data']['dataset_folder'])
     parameters['output_folder'] = str(config['data']['output_folder'])
     parameters['pretrained_model_weights'] = str(config['data']['pretrained_model_weights'])
@@ -60,27 +58,27 @@ def process_parameters(config, cli_arguments={}):
     parameters['debug'] = bool('True' == config['advanced']['debug'])
     parameters['freeze_token_embeddings'] = bool('True' == config['advanced']['freeze_token_embeddings'])
 
-    ## PARSE CLI ARGS AND OVERRIDE CONFIG
+    # overwrite any parameters in the config if specfied at CL
     for key, value in cli_arguments.items():
         if value is not None:
             parameters[key] = value
 
-    ## POST PROCESSING
-    # not needed downsteam of here.
-    if 'config_filepath' in parameters: del parameters['config_filepath']
-    # we want dataset_folder to be a list of strings.
-    parameters['dataset_folder'] = list(str(parameters['dataset_folder']).strip().replace(" ", "").split(','))
+    # do any post-processing here
+    # replace all whitespace with single space, create list of filepaths
+    parameters['dataset_folder'] = ' '.join(parameters['dataset_folder'].strip().split()).split()
+
+    print(parameters['dataset_folder'])
 
     return parameters
 
 def parse_arguments():
-    """Parse command line (CL) arguments passed with call to Kari.
+    """Parse command line (CL) arguments passed with call to Saber.
 
     Returns:
         a dictionary of parsed CL arguments.
     """
 
-    parser = argparse.ArgumentParser(description='Kari CLI')
+    parser = argparse.ArgumentParser(description='Saber CLI')
 
     parser.add_argument('--config_filepath',
                         default=os.path.join('.', 'config.ini'),
@@ -93,7 +91,7 @@ def parse_arguments():
     # parser.add_argument('--character_lstm_hidden_state_dimension', default=argument_default_value, help='')
     # parser.add_argument('--check_for_digits_replaced_with_zeros', default=argument_default_value, help='')
     # parser.add_argument('--check_for_lowercase', default=argument_default_value, help='')
-    parser.add_argument('--dataset_folder', required=False, type=str, help='')
+    parser.add_argument('--dataset_folder', required=False, type = 'lists', nargs='*', help='')
     parser.add_argument('--debug', required=False, type=bool, help='')
     parser.add_argument('--dropout_rate', required=False, type=float, help='')
     parser.add_argument('--freeze_token_embeddings', required=False, type=bool, help='')

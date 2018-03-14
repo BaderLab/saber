@@ -11,7 +11,7 @@ from dataset import Dataset
 from metrics import Metrics
 from utils_generic import make_dir
 
-print('Kari version: {0}'.format('0.1-dev'))
+print('Saber version: {0}'.format('0.1-dev'))
 
 # TODO (johngiorgi): make model checkpointing a config param
 # TODO (johngiorgi): make a debug mode that doesn't load token embeddings and
