@@ -13,7 +13,7 @@ you see with CNNs/MLPs/etc.
 '''
 
 def main():
-    """ Kari main method. """
+    """ Saber main method. """
     cli_arguments = parse_arguments() # parse CL args
     config = config_parser(cli_arguments['config_filepath']) # parse config.ini
     # resolve parameters, cast to correct types
