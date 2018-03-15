@@ -8,18 +8,14 @@ import pandas as pd
 from keras.utils import to_categorical
 from keras.preprocessing.sequence import pad_sequences
 
-# TODO (John): set max_seq_len empirically.
-# TODO (John): Do I need to add a pad to char types?
-
 TRAIN_FILE_EXT = 'train.*'
 # TEST_FILE_EXT = 'test.*'
 ENDPAD = 'ENDPAD'
 
-# method naming conventions: https://stackoverflow.com/questions/8689964/why-do-some-functions-have-underscores-before-and-after-the-function-name#8689983
 class Dataset(object):
     """A class for handling data sets."""
     def __init__(self, dataset_folder, sep='\t', names=['Word', 'Tag'],
-                 header=None, max_seq_len=75):
+                 header=None, max_word_seq_len=75, max_char_seq_len=10):
         self.dataset_folder = dataset_folder
         # search for any files in the dataset filepath ending with
         # TRAIN_FILE_EXT or TEST_FILE_EXT
@@ -28,7 +24,8 @@ class Dataset(object):
         self.sep = sep
         self.names = names
         self.header = header
-        self.max_seq_len = max_seq_len
+        self.max_word_seq_len = max_word_seq_len
+        self.max_char_seq_len = max_char_seq_len
 
         # shared by train/test
         self.word_type_to_idx = {}
@@ -45,6 +42,7 @@ class Dataset(object):
         # not shared by train/test
         self.train_sentences = []
         self.train_word_idx_sequence = []
+        self.train_char_idx_sequence = []
         self.train_tag_idx_sequence = []
 
         # load dataset file, then grab the train and test 'frames'
@@ -110,7 +108,7 @@ class Dataset(object):
                                   # can read in '"' word type.
                                   quoting = 3,
                                   # prevents pandas from interpreting 'null' as
-                                  # a NA value.
+                                  # a NA value, as in e.g. 'null hypotheis'
                                   na_filter=False)
 
         # testing_set = pd.read_csv(self.testset_filepath,
@@ -288,12 +286,14 @@ class Dataset(object):
         if type_ == 'char':
             type_sequence = [[[type_to_idx[ch] for ch in ty[col_idx]] for ty in s] for s in sentences]
             # pad character sequences
-            self._pad_character_sequences(type_sequence, pad=pad)
+            self._pad_character_sequences(type_sequence,
+                                          pad=pad,
+                                          maxlen=self.max_char_seq_len)
         else:
             type_sequence = [[type_to_idx[ty[col_idx]] for ty in s] for s in sentences]
 
         # pad sequences
-        type_sequence = pad_sequences(maxlen=self.max_seq_len,
+        type_sequence = pad_sequences(maxlen=self.max_word_seq_len,
                                       sequences=type_sequence,
                                       padding='post',
                                       truncating='post',

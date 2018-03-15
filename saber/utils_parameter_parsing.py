@@ -37,26 +37,31 @@ def process_parameters(config, cli_arguments={}):
     parameters['model_name'] = str(config['mode']['model_name'])
     parameters['train_model'] = bool('True' == config['mode']['train_model'])
     parameters['load_pretrained_model'] = bool('True' == config['mode']['load_pretrained_model'])
+
     # data
     parameters['dataset_folder'] = str(config['data']['dataset_folder'])
     parameters['output_folder'] = str(config['data']['output_folder'])
     parameters['pretrained_model_weights'] = str(config['data']['pretrained_model_weights'])
+    parameters['token_pretrained_embedding_filepath'] = str(config['data']['token_pretrained_embedding_filepath'])
     parameters['token_embedding_dimension'] = int(config['data']['token_embedding_dimension'])
     parameters['character_embedding_dimension'] = int(config['data']['character_embedding_dimension'])
-    parameters['token_pretrained_embedding_filepath'] = str(config['data']['token_pretrained_embedding_filepath'])
+
     # training
     parameters['optimizer'] = str(config['training']['optimizer'])
     parameters['activation_function'] = str(config['training']['activation_function'])
     parameters['learning_rate'] = float(config['training']['learning_rate'])
+    parameters['decay'] = float(config['training']['decay'])
     parameters['gradient_clipping_value'] = float(config['training']['gradient_clipping_value'])
     parameters['dropout_rate'] = float(config['training']['dropout_rate'])
     parameters['batch_size'] = int(config['training']['batch_size'])
     parameters['k_folds'] = int(config['training']['k_folds'])
     parameters['maximum_number_of_epochs'] = int(config['training']['maximum_number_of_epochs'])
-    parameters['max_seq_len'] = int(config['training']['max_seq_len'])
+
     # advanced
     parameters['debug'] = bool('True' == config['advanced']['debug'])
     parameters['freeze_token_embeddings'] = bool('True' == config['advanced']['freeze_token_embeddings'])
+    parameters['max_word_seq_len'] = int(config['advanced']['max_word_seq_len'])
+    parameters['max_char_seq_len'] = int(config['advanced']['max_char_seq_len'])
 
     # overwrite any parameters in the config if specfied at CL
     for key, value in cli_arguments.items():
@@ -66,8 +71,9 @@ def process_parameters(config, cli_arguments={}):
     # do any post-processing here
     # replace all whitespace with single space, create list of filepaths
     parameters['dataset_folder'] = ' '.join(parameters['dataset_folder'].strip().split()).split()
-
-    print(parameters['dataset_folder'])
+    # lowercase all str arguments (expect directory/file paths)
+    parameters['optimizer'] = parameters['optimizer'].strip().lower()
+    parameters['activation_function'] = parameters['activation_function'].strip().lower()
 
     return parameters
 
@@ -93,6 +99,7 @@ def parse_arguments():
     # parser.add_argument('--check_for_lowercase', default=argument_default_value, help='')
     parser.add_argument('--dataset_folder', required=False, type = 'lists', nargs='*', help='')
     parser.add_argument('--debug', required=False, type=bool, help='')
+    parser.add_argument('--decay', required=False, type=float, help='')
     parser.add_argument('--dropout_rate', required=False, type=float, help='')
     parser.add_argument('--freeze_token_embeddings', required=False, type=bool, help='')
     parser.add_argument('--gradient_clipping_value', required=False, type=float, help='')
@@ -125,7 +132,7 @@ def parse_arguments():
     parser.add_argument('--token_pretrained_embedding_filepath', required=False, type=str, help='')
     # parser.add_argument('--tokenizer', default=argument_default_value, help='')
     parser.add_argument('--train_model', required=False, type=bool, help='')
-    parser.add_argument('--max_seq_len', required=False, type=int, help='')
+    parser.add_argument('--max_word_seq_len', required=False, type=int, help='')
     # parser.add_argument('--use_character_lstm', default=argument_default_value, help='')
     # parser.add_argument('--use_crf', default=argument_default_value, help='')
     # parser.add_argument('--use_pretrained_model', default=argument_default_value, help='')

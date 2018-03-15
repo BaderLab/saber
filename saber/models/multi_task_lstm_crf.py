@@ -1,20 +1,21 @@
 import os
 
+import numpy as np
+from sklearn.model_selection import KFold
+
+import keras.backend as K
 from keras import optimizers
 from keras.layers import LSTM
 from keras.models import Model
 from keras.models import Input
 from keras.layers import Dense
+from keras.layers import Lambda
 from keras.layers import Dropout
 from keras.layers import Embedding
 from keras.layers import Concatenate
 from keras.layers import Bidirectional
 from keras.layers import TimeDistributed
 from keras_contrib.layers.crf import CRF
-
-from sklearn.model_selection import KFold
-
-import numpy as np
 
 from metrics import Metrics
 from utils_generic import make_dir
@@ -24,23 +25,21 @@ from utils_models import compile_model
 # https://machinelearningmastery.com/keras-functional-api-deep-learning/
 # https://medium.com/@literallywords/stratified-k-fold-with-keras-e57c487b1416
 
-# TODO (johngiorgi): not clear if I need to clear non-shared layers when
-# building the model
 # TODO (johngiorgi): the way I get train/test partitions is likely copying
 # huge lists
 # TODO (johngiorgi): I need to stratify the K-folds, but sklearns implementation
 # wont handle a y matrix of three dimensions, solve this!
-# TODO (johngiorgi): consider introduction a new function, create_model()
 # TODO (johngiorgi): It might be best that the outer most loop (k_folds) just
 # generate test/train indicies directly
 # TODO (johngiorgi): I need to name the models based on their dataset folder
 # TODO (johngiorgi): https://machinelearningmastery.com/dropout-regularization-deep-learning-models-keras/
 # TODO (johngiorgi): I NEED to be able to get the per fold performance metrics. Dumb solution:
 # save output of call to Saber to a file (command | tee ~/outputfile.txt or see here: https://askubuntu.com/questions/420981/how-do-i-save-terminal-output-to-a-file)
-# TODO (johngiorgi): Setup learning rate decay.
 # TODO (johngiorgi): make sure this process is shuffling the data
+# TODO (johngiorgi): https://machinelearningmastery.com/reshape-input-data-long-short-term-memory-networks-keras/
 
 NUM_UNITS_WORD_LSTM = 200
+NUM_UNITS_CHAR_LSTM = 200
 NUM_UNITS_DENSE = 50
 
 class MultiTaskLSTMCRF(object):
@@ -75,114 +74,125 @@ class MultiTaskLSTMCRF(object):
             crf: a list of task-specific crf layers implemented using
                  keras.contrib, one for each model.
         """
-
-        # token embedding layer
+        # Specify any shared layers outside the for loop
+        # Word-level embedding layer
         if self.token_embedding_matrix is None:
             word_embeddings = Embedding(input_dim=len(self.ds[0].word_type_to_idx),
                                         output_dim=self.config['token_embedding_dimension'],
-                                        input_length=self.config['max_seq_len'],
                                         mask_zero=True)
         else:
             word_embeddings = Embedding(input_dim=len(self.ds[0].word_type_to_idx) + 1,
                                         output_dim=self.token_embedding_matrix.shape[1],
-                                        weights=[self.token_embedding_matrix],
-                                        input_length=self.config['max_seq_len'],
                                         mask_zero=True,
+                                        weights=[self.token_embedding_matrix],
                                         trainable=(not self.config['freeze_token_embeddings']))
 
-        # character embedding layer
-        '''
-        char_ids = Input(shape=(10, self.config['max_seq_len'], ), dtype='int32')
+        # Character-level embedding layer
+        char_embeddings = Embedding(input_dim=(len(self.ds[0].char_type_to_idx)),
+                                    output_dim=self.config['character_embedding_dimension'],
+                                    mask_zero=True)
 
-        char_embeddings = Embedding(
-            input_dim=(len(self.ds[0].char_type_to_idx)),
-            output_dim=self.character_embedding_dimension,
-            mask_zero=True
-        )(char_ids)
+        # Char-level BiLSTM
+        fwd_state = LSTM(NUM_UNITS_CHAR_LSTM // 2, return_state=True)
+        bwd_state = LSTM(NUM_UNITS_CHAR_LSTM // 2, return_state=True,
+                                                   go_backwards=True)
 
-        fwd_state = LSTM(100, return_state=True)(char_embeddings)[-2]
-        bwd_state = LSTM(100, return_state=True, go_backwards=True)(char_embeddings)[-2]
-
-        char_embeddings = Concatenate(axis=-1)([fwd_state, bwd_state])
-        '''
-
-
-        # word-level BiLSTM
+        # Word-level BiLSTM
         word_BiLSTM = Bidirectional(LSTM(units=NUM_UNITS_WORD_LSTM // 2,
                                          return_sequences=True))
-        # dropout
+        # Dropout
         dropout = Dropout(self.config['dropout_rate'])
-        # fully connected layer
+
+        # Fully connected layer
         fully_connected = TimeDistributed(Dense(units=NUM_UNITS_DENSE,
                                                 activation=self.config['activation_function']))
 
-        # specify model, taking into account the shared layers
+        # Specify model, taking into account the shared layers
         for ds in self.ds:
-            input_layer = Input(shape=(self.config['max_seq_len'], ), dtype='int32')
-            model = word_embeddings(input_layer)
-            # model = Concatenate(axis=-1)([model, char_embeddings])
+            # Word-level embedding layers
+            word_ids = Input(shape=(None, ), dtype='int32')
+            word_embeddings_shared = word_embeddings(word_ids)
+
+            # Character-level embedding layers
+            char_ids = Input(shape=(None, None), dtype='int32')
+            char_embeddings_shared = char_embeddings(char_ids)
+            s = K.shape(char_embeddings_shared)
+            # Shape = (batch size, max sentence length, char embedding dimension)
+            char_embeddings_shared = Lambda(lambda x: K.reshape(x, shape=(-1, s[-2], self.config['character_embedding_dimension'])))(char_embeddings_shared)
+
+            # Character-level BiLSTM
+            fwd_state_shared = fwd_state(char_embeddings_shared)[-2]
+            bwd_state_shared = bwd_state(char_embeddings_shared)[-2]
+            char_embeddings_shared = Concatenate(axis=-1)([fwd_state_shared, bwd_state_shared])
+            # Shape = (batch size, max sentence length, char BiLSTM hidden size)
+            char_embeddings_shared = Lambda(lambda x: K.reshape(x, shape=(-1, s[1], NUM_UNITS_CHAR_LSTM)))(char_embeddings_shared)
+
+            # Concatenate word- and char-level embeddings
+            model = Concatenate(axis=-1)([word_embeddings_shared, char_embeddings_shared])
+
+            # Dropout
+            model = dropout(model)
+
+            # Word-level BiLSTM
             model = word_BiLSTM(model)
+
+            # Final fully connected layer
             model = fully_connected(model)
+
+            # CRF output layer
             crf = CRF(ds.tag_type_count)
             output_layer = crf(model)
-            # fully specified model
-            self.model.append(Model(inputs=input_layer, outputs=output_layer))
+
+            # Fully specified model
+            self.model.append(Model(inputs=[word_ids, char_ids], outputs=[output_layer]))
             self.crf.append(crf)
 
         return self.model, self.crf
 
     def compile_(self):
-        """Compiles a bidirectional multi-task LSTM-CRF for for sequence
-        tagging using Keras. """
+        """Compiles a bidirectional multi-task LSTM-CRF for sequence tagging
+        using Keras."""
         for model, crf in zip(self.model, self.crf):
             compile_model(model=model,
-                          learning_rate=self.config['learning_rate'],
-                          optimizer=self.config['optimizer'],
-                          loss_function=crf.loss_function)
+                          loss_function=crf.loss_function,
+                          lr=self.config['learning_rate'],
+                          decay=self.config['decay'],
+                          optimizer=self.config['optimizer'])
 
     def fit_(self, checkpointer):
         """Fits a bidirectional multi-task LSTM-CRF for for sequence tagging
         using Keras. """
-        # get indices of a k fold split training set
-        # for each fold in this split
-        # for each epoch in global epochs
-        # for each dataset and model
-        # fit the model, compute metrics for train/valid sets
-        # get average performance scores for this fold
-        # empty the model
-        # specify and compile again
-        # repeate\
-
         # get train/valid indicies for all datasets
         train_valid_indices = self._get_train_valid_indices()
 
         ## FOLDS
-        for fold in range(self.k_folds):
-            print('[INFO] Fold: ', fold + 1)
+        for fold in range(self.config['k_folds']):
             # get the train/valid partitioned data for all datasets
             data_partitions = self._get_data_partitions(train_valid_indices, fold)
             # create the Keras Callback object for computing/storing metrics
             self._get_metrics(data_partitions)
             ## EPOCHS
-            for epoch in range(self.maximum_number_of_epochs):
-                print('[INFO] Global epoch: ', epoch + 1)
+            for epoch in range(self.config['maximum_number_of_epochs']):
+                print('[INFO] Fold: {}; Global epoch: {}'.format(fold + 1, epoch + 1))
                 ## DATASETS/MODELS
                 for i, (ds, model) in enumerate(zip(self.ds, self.model)):
 
-                    # mainly for clearness
-                    X_train = data_partitions[i][0]
-                    X_valid = data_partitions[i][1]
-                    y_train = data_partitions[i][2]
-                    y_valid = data_partitions[i][3]
+                    # mainly for cleanliness
+                    X_word_train = data_partitions[i][0]
+                    X_word_valid = data_partitions[i][1]
+                    X_char_train = data_partitions[i][2]
+                    X_char_valid = data_partitions[i][3]
+                    y_train = data_partitions[i][4]
+                    y_valid = data_partitions[i][5]
 
-                    model.fit(x=X_train,
-                              y=y_train,
-                              batch_size=self.batch_size,
+                    model.fit(x=[X_word_train, X_char_train],
+                              y=[y_train],
+                              batch_size=self.config['batch_size'],
                               epochs=1,
-                              callbacks=[
-                                checkpointer,
-                                self.metrics[i]],
-                              validation_data=[X_valid, y_valid],
+                              callbacks=[#checkpointer,
+                                         self.metrics[i]],
+                              validation_data=([X_word_valid, X_char_valid],
+                                               [y_valid]),
                               verbose=1)
 
             # end of a k-fold, so clear the model, specify and compile again
@@ -196,12 +206,12 @@ class MultiTaskLSTMCRF(object):
         """Get train and valid indicies for all k-folds for all datasets.
 
         For all datatsets self.ds, gets k-fold train and valid indicies
-        (number of k_folds specified by self.k_folds). Returns a list
+        (number of k_folds specified by self.config['k_folds']). Returns a list
         of list of two-tuples, where the outer list is of length len(self.ds),
-        the inner list is of length len(self.k_folds) and contains two-tuples
-        corresponding to train indicies and valid indicies respectively. The
-        train indicies for the ith dataset and jth fold would thus be
-        compound_train_valid_indices[i][j][0].
+        the inner list is of length self.config['k_folds'] and contains
+        two-tuples corresponding to train indicies and valid indicies
+        respectively. The train indicies for the ith dataset and jth fold would
+        thus be compound_train_valid_indices[i][j][0].
 
         Returns:
             compound_train_valid_indices: a list of list of two-tuples, where
@@ -212,7 +222,7 @@ class MultiTaskLSTMCRF(object):
         # acc
         compound_train_valid_indices = []
         # Sklearn KFold object
-        kf = KFold(n_splits=self.k_folds, random_state=42)
+        kf = KFold(n_splits=self.config['k_folds'], random_state=42)
 
         for ds in self.ds:
             X = ds.train_word_idx_sequence
@@ -228,48 +238,71 @@ class MultiTaskLSTMCRF(object):
         """Get train and valid partitions for all k-folds for all datasets.
 
         For all datasets self.ds, gets the train and valid partitions for
-        all k folds (number of k_folds specified by self.k_folds). Returns a
-        list of four-tuples, (X_train, X_valid, y_train, y_valid)
+        all k folds (number of k_folds specified by self.config['k_folds']).
+        Returns a list of six-tuples:
+
+        (X_train_word, X_valid_word, X_train_char, X_valid_char, y_train, y_valid)
+
+        Where X represents the inputs, and y the labels. Inputs include
+        sequences of words (X_word), and sequences of characters (X_char)
+
+        Returns:
+            six-tuple containing train and valid data for all datasets.
         """
         # acc
         data_partition = []
 
         for i, ds in enumerate(self.ds):
-            X = ds.train_word_idx_sequence
+            X_word = ds.train_word_idx_sequence
+            X_char = ds.train_char_idx_sequence
             y = ds.train_tag_idx_sequence
             # train_valid_indices[i][fold] is a two-tuple, where index
             # 0 contains the train indicies and index 1 the valid
             # indicies
-            X_train = X[train_valid_indices[i][fold][0]]
-            X_valid = X[train_valid_indices[i][fold][1]]
+            X_word_train = X_word[train_valid_indices[i][fold][0]]
+            X_word_valid = X_word[train_valid_indices[i][fold][1]]
+            X_char_train = X_char[train_valid_indices[i][fold][0]]
+            X_char_valid = X_char[train_valid_indices[i][fold][1]]
             y_train = y[train_valid_indices[i][fold][0]]
             y_valid = y[train_valid_indices[i][fold][1]]
 
-            data_partition.append((X_train, X_valid, y_train, y_valid))
+            data_partition.append((X_word_train,
+                                   X_word_valid,
+                                   X_char_train,
+                                   X_char_valid,
+                                   y_train,
+                                   y_valid))
 
         return data_partition
 
     def _get_metrics(self, data_partitions):
-        """
+        """Creates Keras Metrics Callback objects, one for each dataset.
+
+        Args:
+            data_paritions: six-tuple containing train/valid data for all ds.
         """
         # acc
         metrics = []
 
         for i, ds in enumerate(self.ds):
-            # data_partitions[i] is a four-tuple where index 0 contains  X_train
+            # data_partitions[i] is a four-tuple where index 0 contains X_train
             # data partition, index 1 X_valid data partition, ..., for dataset i
-            X_train = data_partitions[i][0]
-            X_valid = data_partitions[i][1]
-            y_train = data_partitions[i][2]
-            y_valid = data_partitions[i][3]
+            X_word_train = data_partitions[i][0]
+            X_word_valid = data_partitions[i][1]
+            X_char_train = data_partitions[i][2]
+            X_char_valid = data_partitions[i][3]
+            y_train = data_partitions[i][4]
+            y_valid = data_partitions[i][5]
 
             # get final part of dataset folder path, i.e. the dataset name
-            ds_name = os.path.basename(os.path.normpath(self.dataset_folder[0]))
+            ds_name = os.path.basename(os.path.normpath(self.config['dataset_folder'][0]))
             # create an evaluation folder if it does not exist
-            output_folder_ = os.path.join(self.output_folder, ds_name, 'eval')
+            output_folder_ = os.path.join(self.config['output_folder'], ds_name, 'eval')
             make_dir(output_folder_)
 
-            metrics.append(Metrics(X_train, X_valid, y_train, y_valid,
+            metrics.append(Metrics([X_word_train, X_char_train],
+                                   [X_word_valid, X_char_valid],
+                                   y_train, y_valid,
                                    tag_type_to_idx = ds.tag_type_to_idx))
 
         self.metrics = metrics

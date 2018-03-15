@@ -164,7 +164,8 @@ class SequenceProcessor(object):
             a list containing a single dataset object.
         """
         ds = Dataset(dataset_folder=self.config['dataset_folder'][0],
-                     max_seq_len=self.config['max_seq_len'])
+                     max_word_seq_len=self.config['max_word_seq_len'],
+                     max_char_seq_len=self.config['max_char_seq_len'])
         ds.load_dataset()
 
         return [ds]
@@ -184,7 +185,9 @@ class SequenceProcessor(object):
         ds_acc = []
 
         for ds_filepath in self.config['dataset_folder']:
-            ds_acc.append(Dataset(ds_filepath, max_seq_len=self.config['max_seq_len']))
+            ds_acc.append(Dataset(dataset_folder=ds_filepath,
+                                  max_word_seq_len=self.config['max_word_seq_len'],
+                                  max_char_seq_len=self.config['max_char_seq_len']))
 
         # get combined set of word types from all datasets
         comb_word_types = []
@@ -221,7 +224,7 @@ class SequenceProcessor(object):
         # create output directory if it does not exist
         make_dir(self.config['output_folder'])
         # create path to output folder
-        output_folder_ = os.path.join(self.output_folder,
+        output_folder_ = os.path.join(self.config['output_folder'],
                                       'model_checkpoint.{epoch:02d}-{val_loss:.2f}.hdf5')
         # set up model checkpointing
         checkpointer = ModelCheckpoint(filepath=output_folder_)
