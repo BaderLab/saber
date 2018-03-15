@@ -4,7 +4,7 @@ import argparse
 import configparser
 
 # TODO: (johngiorgi): use the supported datatypes functions for bools: https://docs.python.org/3.6/library/configparser.html#supported-datatypes
-# TODO: (johngiorgi): is there a better way to specify multiple filepaths? There must be, with spaces
+# TODO: (johngiorgi): not clear if the post processing is neccecary
 
 def config_parser(config_filepath):
     """ Returns a parsed config file object.
@@ -83,7 +83,6 @@ def parse_arguments():
     Returns:
         a dictionary of parsed CL arguments.
     """
-
     parser = argparse.ArgumentParser(description='Saber CLI')
 
     parser.add_argument('--config_filepath',

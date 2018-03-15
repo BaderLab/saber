@@ -38,7 +38,7 @@ def model_with_single_dataset(dummy_config):
     """Returns an instance of SequenceProcessingModel initialized with the
     default configuration file and a single loaded dataset. """
     # create a dictionary to serve as cli arguments
-    cli_arguments = {'dataset_folder': PATH_TO_DUMMY_DATASET}
+    cli_arguments = {'dataset_folder': [PATH_TO_DUMMY_DATASET]}
     # resolve parameters, cast to correct types
     parameters = process_parameters(dummy_config, cli_arguments)
 
@@ -54,7 +54,7 @@ def model_with_compound_dataset(dummy_config):
     dataset is just two copies of the dataset, this makes writing tests
     much simpler. """
     # create a dictionary to serve as cli arguments
-    compound_dataset = PATH_TO_DUMMY_DATASET + ' ' + PATH_TO_DUMMY_DATASET
+    compound_dataset = [PATH_TO_DUMMY_DATASET, PATH_TO_DUMMY_DATASET]
     cli_arguments = {'dataset_folder': compound_dataset}
     # resolve parameters, cast to correct types
     parameters = process_parameters(dummy_config, cli_arguments)
@@ -71,7 +71,7 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
     assert model_without_dataset.config['activation_function'] == 'relu'
     assert model_without_dataset.config['batch_size'] == 1
     assert model_without_dataset.config['character_embedding_dimension'] == 30
-    assert model_without_dataset.config['dataset_folder'][0] == PATH_TO_DUMMY_DATASET
+    assert model_without_dataset.config['dataset_folder'] == [PATH_TO_DUMMY_DATASET]
     assert model_without_dataset.config['debug'] == False
     assert model_without_dataset.config['dropout_rate'] == 0.3
     assert model_without_dataset.config['freeze_token_embeddings'] == True

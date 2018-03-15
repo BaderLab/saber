@@ -25,7 +25,7 @@ def multi_task_lstm_crf_single_model(dummy_config):
     """Returns an instance of MultiTaskLSTMCRF initialized with the
     default configuration file and a single compiled model."""
     # create a dictionary to serve as cli arguments
-    cli_arguments = {'dataset_folder': PATH_TO_DUMMY_DATASET}
+    cli_arguments = {'dataset_folder': [PATH_TO_DUMMY_DATASET]}
     # resolve parameters, cast to correct types
     parameters = process_parameters(dummy_config, cli_arguments)
 
@@ -57,7 +57,7 @@ def test_model_attributes_after_creation_of_model(multi_task_lstm_crf_single_mod
     assert multi_task_lstm_crf_single_model.config['activation_function'] == 'relu'
     assert multi_task_lstm_crf_single_model.config['batch_size'] == 1
     assert multi_task_lstm_crf_single_model.config['character_embedding_dimension'] == 30
-    assert multi_task_lstm_crf_single_model.config['dataset_folder'][0] == PATH_TO_DUMMY_DATASET
+    assert multi_task_lstm_crf_single_model.config['dataset_folder'] == [PATH_TO_DUMMY_DATASET]
     assert multi_task_lstm_crf_single_model.config['debug'] == False
     assert multi_task_lstm_crf_single_model.config['dropout_rate'] == 0.3
     assert multi_task_lstm_crf_single_model.config['freeze_token_embeddings'] == True
