@@ -39,7 +39,7 @@ def process_parameters(config, cli_arguments={}):
     parameters['load_pretrained_model'] = bool('True' == config['mode']['load_pretrained_model'])
 
     # data
-    parameters['dataset_folder'] = str(config['data']['dataset_folder'])
+    parameters['dataset_folder'] = str(config['data']['dataset_folder']).split()
     parameters['output_folder'] = str(config['data']['output_folder'])
     parameters['pretrained_model_weights'] = str(config['data']['pretrained_model_weights'])
     parameters['token_pretrained_embedding_filepath'] = str(config['data']['token_pretrained_embedding_filepath'])
@@ -70,7 +70,7 @@ def process_parameters(config, cli_arguments={}):
 
     # do any post-processing here
     # replace all whitespace with single space, create list of filepaths
-    parameters['dataset_folder'] = ' '.join(parameters['dataset_folder'].strip().split()).split()
+    parameters['dataset_folder'] = [x.strip() for x in parameters['dataset_folder']]
     # lowercase all str arguments (expect directory/file paths)
     parameters['optimizer'] = parameters['optimizer'].strip().lower()
     parameters['activation_function'] = parameters['activation_function'].strip().lower()
@@ -97,7 +97,7 @@ def parse_arguments():
     # parser.add_argument('--character_lstm_hidden_state_dimension', default=argument_default_value, help='')
     # parser.add_argument('--check_for_digits_replaced_with_zeros', default=argument_default_value, help='')
     # parser.add_argument('--check_for_lowercase', default=argument_default_value, help='')
-    parser.add_argument('--dataset_folder', required=False, type = 'lists', nargs='*', help='')
+    parser.add_argument('--dataset_folder', required=False, nargs='*', help='')
     parser.add_argument('--debug', required=False, type=bool, help='')
     parser.add_argument('--decay', required=False, type=float, help='')
     parser.add_argument('--dropout_rate', required=False, type=float, help='')
