@@ -4,7 +4,31 @@ from utils_parameter_parsing import *
 
 # constants for dummy config/CL arguments to perform testing on
 PATH_TO_DUMMY_CONFIG = 'saber/test/resources/dummy_config.ini'
-DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS = {'model_name': 'MT-LSTM-CRF',
+DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS = {
+'model_name': 'MT-LSTM-CRF',
+'train_model': True,
+'load_pretrained_model': False,
+'dataset_folder': ['saber/test/resources/single_dummy_dataset'],
+'output_folder': '../output',
+'pretrained_model_weights': '',
+'token_pretrained_embedding_filepath': 'saber/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt',
+'token_embedding_dimension': 200,
+'character_embedding_dimension': 30,
+'optimizer': 'sgd',
+'activation_function': 'relu',
+'learning_rate': 0.01,
+'decay': 0.05,
+'gradient_clipping_value': 0.0,
+'dropout_rate': 0.3,
+'batch_size': 1,
+'k_folds': 2,
+'maximum_number_of_epochs': 10,
+'max_word_seq_len': 75,
+'max_char_seq_len': 10,
+'debug': False,
+'freeze_token_embeddings': True}
+DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS = {
+'model_name': 'MT-LSTM-CRF',
 'train_model': True,
 'load_pretrained_model': False,
 'dataset_folder': ['saber/test/resources/single_dummy_dataset'],
@@ -12,22 +36,23 @@ DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS = {'model_name': 'MT-LSTM-CRF',
 'token_pretrained_embedding_filepath': 'saber/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt',
 'token_embedding_dimension': 200,
 'character_embedding_dimension': 30,
-'optimizer': 'sgd', 'activation_function': 'relu', 'learning_rate': 0.01,
-'gradient_clipping_value': 0.0, 'dropout_rate': 0.3, 'batch_size': 1,
-'k_folds': 5, 'maximum_number_of_epochs': 10, 'max_seq_len': 50, 'debug': False,
+'optimizer': 'sgd',
+'activation_function': 'relu',
+'learning_rate': 0.05,
+'decay': 0.5,
+'gradient_clipping_value': 5.0,
+'dropout_rate': 0.3,
+'batch_size': 1,
+'k_folds': 2,
+'maximum_number_of_epochs': 10,
+'max_word_seq_len': 75,
+'max_char_seq_len': 10,
+'debug': False,
 'freeze_token_embeddings': True}
-DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS = {'model_name': 'MT-LSTM-CRF', 'train_model': True,
-'load_pretrained_model': False,
-'dataset_folder': ['saber/test/resources/single_dummy_dataset'],
-'output_folder': '../output', 'pretrained_model_weights': '',
-'token_pretrained_embedding_filepath': 'saber/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt',
-'token_embedding_dimension': 200,
-'character_embedding_dimension': 30,
-'optimizer': 'sgd', 'activation_function': 'relu', 'learning_rate': 0.05,
-'gradient_clipping_value': 5.0, 'dropout_rate': 0.3, 'batch_size': 1,
-'k_folds': 5, 'maximum_number_of_epochs': 10, 'max_seq_len': 50, 'debug': False,
-'freeze_token_embeddings': True}
-DUMMY_COMMAND_LINE_ARGS = {'gradient_clipping_value': 5.0, 'learning_rate':0.05}
+DUMMY_COMMAND_LINE_ARGS = {
+'gradient_clipping_value': 5.0,
+'learning_rate':0.05,
+'decay':0.5}
 
 @pytest.fixture
 def dummy_config():
@@ -74,15 +99,17 @@ def test_config_parser(dummy_config):
     assert dummy_config['training']['optimizer'] == 'sgd'
     assert dummy_config['training']['activation_function'] == 'relu'
     assert dummy_config['training']['learning_rate'] == '0.01'
+    assert dummy_config['training']['decay'] == '0.05'
     assert dummy_config['training']['gradient_clipping_value'] == '0'
     assert dummy_config['training']['dropout_rate'] == '0.3'
     assert dummy_config['training']['batch_size'] == '1'
-    assert dummy_config['training']['k_folds'] == '5'
+    assert dummy_config['training']['k_folds'] == '2'
     assert dummy_config['training']['maximum_number_of_epochs'] == '10'
-    assert dummy_config['training']['max_seq_len'] == '50'
 
     assert dummy_config['advanced']['debug'] == 'False'
     assert dummy_config['advanced']['freeze_token_embeddings'] == 'True'
+    assert dummy_config['advanced']['max_word_seq_len'] == '75'
+    assert dummy_config['advanced']['max_char_seq_len'] == '10'
 
 def test_process_parameters_no_command_line_args(dummy_parameters_no_CL_args):
     """ Asserts that the parameters are of the expected value/type after a

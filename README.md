@@ -7,18 +7,22 @@
 
 ### Requirements
 
-Requires `Python >= 3.5`. Requirements can be installed by calling `pip install -r requirements.txt`.
+Requires `Python >= 3.5`. Requirements can be installed by calling:
+```
+>>> pip install -r requirements.txt
+```
 
 ### Usage
 
 All hyper-parameters are specified in a configuration file. The configuration file can be specified when running __Saber__:
 
 ```
-python main.py --config_filepath path/to/config.ini
+>>> python main.py --config_filepath path/to/config.ini
 ```
 
 If not specified, the default config file (`saber/config.ini`) is loaded.
 
+There is also a **jupyter notebook** for interacting with Saber (`saber/Saber.ipynb`).
 ### Resources
 
 #### Datasets

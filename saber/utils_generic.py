@@ -1,7 +1,7 @@
 import os
 import errno
 
-""" A collection of generic helper/utility functions. """
+"""A collection of generic helper/utility functions."""
 
 # https://stackoverflow.com/questions/273192/how-can-i-create-a-directory-if-it-does-not-exist#273227
 def make_dir(directory_filepath):

@@ -6,11 +6,6 @@ import numpy as np
 from keras.callbacks import Callback
 from sklearn.metrics import precision_recall_fscore_support
 
-# https://medium.com/@thongonary/how-to-compute-f1-score-for-each-epoch-in-keras-a1acd17715a2
-# http://scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_recall_fscore_support.html
-# https://keunwoochoi.wordpress.com/2016/07/16/keras-callbacks/
-# https://keras.io/metrics/
-
 # TODO (johngiorgi): there is some hard coded ugliness going on in print_table, fix this.
 # TODO (johngiorgi): this is likely copying big lists, find a way to get around this
 
