@@ -76,8 +76,9 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
     assert model_without_dataset.config['dropout_rate'] == 0.3
     assert model_without_dataset.config['freeze_token_embeddings'] == True
     assert model_without_dataset.config['gradient_clipping_value'] == 0.0
-    assert model_without_dataset.config['k_folds'] == 5
+    assert model_without_dataset.config['k_folds'] == 2
     assert model_without_dataset.config['learning_rate'] == 0.01
+    assert model_without_dataset.config['decay'] == 0.05
     assert model_without_dataset.config['load_pretrained_model'] == False
     assert model_without_dataset.config['maximum_number_of_epochs'] == 10
     assert model_without_dataset.config['model_name'] == 'MT-LSTM-CRF'
@@ -87,7 +88,8 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
     assert model_without_dataset.config['token_embedding_dimension'] == 200
     assert model_without_dataset.config['token_pretrained_embedding_filepath'] == PATH_TO_DUMMY_TOKEN_EMBEDDINGS
     assert model_without_dataset.config['train_model'] == True
-    assert model_without_dataset.config['max_seq_len'] == 50
+    assert model_without_dataset.config['max_word_seq_len'] == 75
+    assert model_without_dataset.config['max_char_seq_len'] == 10
 
     assert model_without_dataset.ds == []
     assert model_without_dataset.token_embedding_matrix == None
@@ -103,7 +105,7 @@ def test_X_input_sequences_after_loading_single_dataset(model_with_single_datase
     # check type
     assert type(ds.train_word_idx_sequence) == numpy.ndarray
     # check shape
-    assert ds.train_word_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM, model.config['max_seq_len'])
+    assert ds.train_word_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM, model.config['max_word_seq_len'])
 
 def test_y_output_sequences_after_loading_single_dataset(model_with_single_dataset):
     """Asserts y (labels) data partition attribute is initialized correctly when
@@ -116,7 +118,7 @@ def test_y_output_sequences_after_loading_single_dataset(model_with_single_datas
     assert type(ds.train_tag_idx_sequence) == numpy.ndarray
     # check value
     assert ds.train_tag_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
-        ds.max_seq_len, ds.tag_type_count)
+        ds.max_word_seq_len, ds.tag_type_count)
 
 def test_word_embeddings_after_loading_single_dataset(model_with_single_dataset):
     """Asserts that pretained token embeddings are loaded correctly when
@@ -137,7 +139,7 @@ def test_agreement_between_model_and_single_dataset(model_with_single_dataset):
     model = model_with_single_dataset
 
     assert model.config['dataset_folder'][0] == ds.dataset_folder
-    assert model.config['max_seq_len'] == ds.max_seq_len
+    assert model.config['max_word_seq_len'] == ds.max_word_seq_len
 
 def test_X_input_sequences_after_loading_compound_dataset(model_with_compound_dataset):
     """Asserts X (input) data partition attribute is initialized correctly when
@@ -150,7 +152,7 @@ def test_X_input_sequences_after_loading_compound_dataset(model_with_compound_da
         assert type(ds.train_word_idx_sequence) == numpy.ndarray
         # check shape
         assert ds.train_word_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
-                                                    ds.max_seq_len)
+                                                    ds.max_word_seq_len)
 
 def test_y_output_sequences_after_loading_compound_dataset(model_with_compound_dataset):
     """Asserts y (labels) data partition attribute is initialized correctly when
@@ -162,7 +164,7 @@ def test_y_output_sequences_after_loading_compound_dataset(model_with_compound_d
         assert type(ds.train_tag_idx_sequence) == numpy.ndarray
         # check value
         assert ds.train_tag_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
-                                                   ds.max_seq_len,
+                                                   ds.max_word_seq_len,
                                                    ds.tag_type_count)
 
 def test_word_embeddings_after_loading_compound_dataset(model_with_compound_dataset):
@@ -186,4 +188,4 @@ def test_agreement_between_model_and_compound_dataset(model_with_compound_datase
     # the same checks for each in a loop
     for i, ds in enumerate(model.ds):
         assert model.config['dataset_folder'][i] == ds.dataset_folder
-        assert model.config['max_seq_len'] == ds.max_seq_len
+        assert model.config['max_word_seq_len'] == ds.max_word_seq_len

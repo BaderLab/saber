@@ -1,9 +1,19 @@
 from keras import optimizers
 
-"""A collection of model helper/utility functions."""
+"""
+A collection of model helper/utility functions.
+See https://keras.io/optimizers/ for more info on each optmizer.
+"""
 
-def compile_model(model, lr=0.01, decay=0.0, optimizer='sgd', loss_function):
-    """ Compiles a model specified with Keras.
+# TODO (johngiorgi) add verbosity parameter for printing model summary
+
+def compile_model(model,
+                  loss_function,
+                  lr=0.01,
+                  decay=0.0,
+                  optimizer='sgd',
+                  verbose=False):
+    """Compiles a model specified with Keras.
 
     Args:
         model: Keras model object to compile
@@ -16,8 +26,24 @@ def compile_model(model, lr=0.01, decay=0.0, optimizer='sgd', loss_function):
     # It is recommended to leave the parameters of this optimizer at their
     # default values (except the learning rate, which can be freely tuned).
     # This optimizer is usually a good choice for recurrent neural networks
-    elif optimizer == 'RMSprop':
-        optimizer_ = optimizers.RMSprop(lr=lr, decay=decay)
+    elif optimizer == 'rmrprop':
+        optimizer_ = optimizers.RMSprop(lr=lr)
+    # It is recommended to leave the parameters of this optimizer at their
+    # default values.
+    elif optimzer == 'adagrad':
+        optimizer_ = optimizers.Adagrad()
+    # It is recommended to leave the parameters of this optimizer at their
+    # default values.
+    elif optimzer == 'adadelta':
+        optimizer_ = optimizers.Adadelta()
+    elif optimizer == 'adam':
+        optimizer_ = optimizers.Adam(lr=lr, decay=decay)
+    elif optimizer == 'adamax':
+        optimizer_ = optimizers.Adamax(lr=lr, decay=decay)
+    # It is recommended to leave the parameters of this optimizer at their
+    # default values.
+    elif optimizer == 'nadam':
+        optimizer_ = optimizers.Nadam()
 
     model.compile(optimizer=optimizer_, loss=loss_function)
-    model.summary()
+    if verbose: model.summary()
