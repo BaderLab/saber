@@ -1,5 +1,5 @@
 from utils_parameter_parsing import *
-from sequence_processing_model import SequenceProcessor
+from sequence_processor import SequenceProcessor
 
 # TODO (johngiorgi): do something about paths as arguments - normalize?
 
@@ -11,7 +11,7 @@ def main():
     parameters = process_parameters(config, cli_arguments)
 
     # currently performs training by default
-    sequence_processor = SequenceProcessor(config)
+    sequence_processor = SequenceProcessor(parameters)
     sequence_processor.load_dataset()
     sequence_processor.create_model()
     sequence_processor.fit()
