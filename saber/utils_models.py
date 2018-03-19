@@ -9,9 +9,10 @@ See https://keras.io/optimizers/ for more info on each optmizer.
 
 def compile_model(model,
                   loss_function,
+                  optimizer,
                   lr=0.01,
                   decay=0.0,
-                  optimizer='sgd',
+                  clipvalue=0.0,
                   verbose=False):
     """Compiles a model specified with Keras.
 
@@ -22,7 +23,7 @@ def compile_model(model,
         loss_function: Keras loss_function object to compile model with
     """
     if optimizer == 'sgd':
-        optimizer_ = optimizers.SGD(lr=lr, decay=decay)
+        optimizer_ = optimizers.SGD(lr=lr, decay=decay, clipvalue=clipvalue)
     # It is recommended to leave the parameters of this optimizer at their
     # default values (except the learning rate, which can be freely tuned).
     # This optimizer is usually a good choice for recurrent neural networks
@@ -37,9 +38,9 @@ def compile_model(model,
     elif optimzer == 'adadelta':
         optimizer_ = optimizers.Adadelta()
     elif optimizer == 'adam':
-        optimizer_ = optimizers.Adam(lr=lr, decay=decay)
+        optimizer_ = optimizers.Adam(lr=lr, decay=decay, clipvalue=clipvalue)
     elif optimizer == 'adamax':
-        optimizer_ = optimizers.Adamax(lr=lr, decay=decay)
+        optimizer_ = optimizers.Adamax(lr=lr, decay=decay, clipvalue=clipvalue)
     # It is recommended to leave the parameters of this optimizer at their
     # default values.
     elif optimizer == 'nadam':

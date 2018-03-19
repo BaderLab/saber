@@ -61,7 +61,7 @@ def test_model_attributes_after_creation_of_model(multi_task_lstm_crf_single_mod
     assert multi_task_lstm_crf_single_model.config['debug'] == False
     assert multi_task_lstm_crf_single_model.config['dropout_rate'] == 0.3
     assert multi_task_lstm_crf_single_model.config['freeze_token_embeddings'] == True
-    assert multi_task_lstm_crf_single_model.config['gradient_clipping_value'] == 0.0
+    assert multi_task_lstm_crf_single_model.config['gradient_clip_value'] == 0.0
     assert multi_task_lstm_crf_single_model.config['k_folds'] == 2
     assert multi_task_lstm_crf_single_model.config['learning_rate'] == 0.01
     assert multi_task_lstm_crf_single_model.config['decay'] == 0.05
@@ -73,6 +73,7 @@ def test_model_attributes_after_creation_of_model(multi_task_lstm_crf_single_mod
     assert multi_task_lstm_crf_single_model.config['token_pretrained_embedding_filepath'] == PATH_TO_DUMMY_TOKEN_EMBEDDINGS
     assert multi_task_lstm_crf_single_model.config['max_word_seq_len'] == 75
     assert multi_task_lstm_crf_single_model.config['max_char_seq_len'] == 10
+    assert multi_task_lstm_crf_single_model.config['verbose'] == False
 
     # assert type(multi_task_lstm_crf_single_model.ds) == Dataset
     assert type(multi_task_lstm_crf_single_model.token_embedding_matrix) == numpy.ndarray
