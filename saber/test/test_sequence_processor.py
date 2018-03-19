@@ -75,7 +75,7 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
     assert model_without_dataset.config['debug'] == False
     assert model_without_dataset.config['dropout_rate'] == 0.3
     assert model_without_dataset.config['freeze_token_embeddings'] == True
-    assert model_without_dataset.config['gradient_clipping_value'] == 0.0
+    assert model_without_dataset.config['gradient_clip_value'] == 0.0
     assert model_without_dataset.config['k_folds'] == 2
     assert model_without_dataset.config['learning_rate'] == 0.01
     assert model_without_dataset.config['decay'] == 0.05
@@ -90,6 +90,7 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
     assert model_without_dataset.config['train_model'] == True
     assert model_without_dataset.config['max_word_seq_len'] == 75
     assert model_without_dataset.config['max_char_seq_len'] == 10
+    assert model_without_dataset.config['verbose'] == False
 
     assert model_without_dataset.ds == []
     assert model_without_dataset.token_embedding_matrix == None

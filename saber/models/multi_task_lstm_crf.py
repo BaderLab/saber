@@ -1,4 +1,5 @@
 import os
+import time
 
 import numpy as np
 from sklearn.model_selection import KFold
@@ -40,7 +41,7 @@ from utils_models import compile_model
 
 NUM_UNITS_WORD_LSTM = 200
 NUM_UNITS_CHAR_LSTM = 200
-NUM_UNITS_DENSE = 50
+NUM_UNITS_DENSE = NUM_UNITS_WORD_LSTM // 2
 
 class MultiTaskLSTMCRF(object):
     """ A Keras implementation of BiLSTM-CRF for sequence labeling. """
@@ -60,9 +61,8 @@ class MultiTaskLSTMCRF(object):
         self.model = []
         self.crf = []
 
-
     def specify_(self):
-        """ Specifies a multi-task bidirectional LSTM-CRF for sequence tagging
+        """Specifies a multi-task bidirectional LSTM-CRF for sequence tagging
         using Keras.
 
         Implements a hybrid long short-term memory network-condition random
@@ -97,15 +97,17 @@ class MultiTaskLSTMCRF(object):
         bwd_state = LSTM(NUM_UNITS_CHAR_LSTM // 2, return_state=True,
                                                    go_backwards=True)
 
-        # Word-level BiLSTM
-        word_BiLSTM = Bidirectional(LSTM(units=NUM_UNITS_WORD_LSTM // 2,
-                                         return_sequences=True))
         # Dropout
         dropout = Dropout(self.config['dropout_rate'])
 
-        # Fully connected layer
-        fully_connected = TimeDistributed(Dense(units=NUM_UNITS_DENSE,
-                                                activation=self.config['activation_function']))
+        # Word-level BiLSTM
+        word_BiLSTM = Bidirectional(LSTM(units=NUM_UNITS_WORD_LSTM // 2,
+                                         return_sequences=True))
+
+        # Feedforward after word-level BiLSTM
+        feedforward_af_word_lstm = TimeDistributed(
+            Dense(units=NUM_UNITS_DENSE,
+                  activation=self.config['activation_function']))
 
         # Specify model, taking into account the shared layers
         for ds in self.ds:
@@ -136,8 +138,11 @@ class MultiTaskLSTMCRF(object):
             # Word-level BiLSTM
             model = word_BiLSTM(model)
 
-            # Final fully connected layer
-            model = fully_connected(model)
+            # Feedforward after word-level BiLSTM
+            model = feedforward_af_word_lstm(model)
+            # Feedforward before word-level BiLSTM
+            model = TimeDistributed(Dense(units=ds.tag_type_count,
+                                          activation=self.config['activation_function']))(model)
 
             # CRF output layer
             crf = CRF(ds.tag_type_count)
@@ -155,9 +160,11 @@ class MultiTaskLSTMCRF(object):
         for model, crf in zip(self.model, self.crf):
             compile_model(model=model,
                           loss_function=crf.loss_function,
+                          optimizer=self.config['optimizer'],
                           lr=self.config['learning_rate'],
                           decay=self.config['decay'],
-                          optimizer=self.config['optimizer'])
+                          clipvalue=self.config['gradient_clip_value'],
+                          verbose=self.config['verbose'])
 
     def fit_(self, checkpointer):
         """Fits a bidirectional multi-task LSTM-CRF for for sequence tagging
@@ -170,7 +177,7 @@ class MultiTaskLSTMCRF(object):
             # get the train/valid partitioned data for all datasets
             data_partitions = self._get_data_partitions(train_valid_indices, fold)
             # create the Keras Callback object for computing/storing metrics
-            self._get_metrics(data_partitions)
+            metrics_current_fold = self._get_metrics(data_partitions)
             ## EPOCHS
             for epoch in range(self.config['maximum_number_of_epochs']):
                 print('[INFO] Fold: {}; Global epoch: {}'.format(fold + 1, epoch + 1))
@@ -190,7 +197,7 @@ class MultiTaskLSTMCRF(object):
                               batch_size=self.config['batch_size'],
                               epochs=1,
                               callbacks=[#checkpointer,
-                                         self.metrics[i]],
+                                         metrics_current_fold[i]],
                               validation_data=([X_word_valid, X_char_valid],
                                                [y_valid]),
                               verbose=1)
@@ -198,9 +205,24 @@ class MultiTaskLSTMCRF(object):
             # end of a k-fold, so clear the model, specify and compile again
             self.model = []
             self.crf = []
-            self.metrics = []
+            self.metrics.append(metrics_current_fold)
             self.specify_()
             self.compile_()
+
+        # super ugly and quick solution, need to clean this up!
+        out_file = '../output/performance_{d}_{t}.txt'.format(
+            d=time.strftime('%x').replace('/', '_'),
+            t=time.strftime('%X'))
+        with open(out_file, 'w') as f:
+            f.write('PERFORMANCE METRICS\n{}\n'.format('=' * 20))
+            for fold in range(self.config['k_folds']):
+                metrics_current_fold = self.metrics[fold]
+                f.write('Fold: {}\n'.format(fold))
+                for i, ds in enumerate(self.ds):
+                    metrics_current_model = metrics_current_fold[i]
+                    f.write('\tModel: {}\n'.format(i))
+                    f.write('\t\t{}\n'.format(
+                        str(metrics_current_model.valid_performance_metrics_per_epoch[-1])))
 
     def _get_train_valid_indices(self):
         """Get train and valid indicies for all k-folds for all datasets.
@@ -305,4 +327,4 @@ class MultiTaskLSTMCRF(object):
                                    y_train, y_valid,
                                    tag_type_to_idx = ds.tag_type_to_idx))
 
-        self.metrics = metrics
+        return metrics

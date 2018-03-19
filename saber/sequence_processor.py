@@ -1,5 +1,6 @@
 import os
 import time
+from pprint import pprint
 
 import numpy as np
 import pandas as pd
@@ -35,6 +36,8 @@ class SequenceProcessor(object):
 
         # Keras model object tied to this instance
         self.model = None
+
+        if self.config['verbose']: pprint(self.config)
 
     def load_pretrained_model_(self, pretrained_model_filepath):
         """
@@ -251,7 +254,10 @@ class SequenceProcessor(object):
 
         elapsed_time = time.time() - start_time
         print('Done ({0:.2f} seconds)'.format(elapsed_time))
-        print('Found {} word vectors of dimension {}'.format(len(token_embeddings_index), token_embedding_dimension))
+        print('{s}Found {t} word vectors of dimension {d}'.format(
+            s=' ' * 7,
+            t=len(token_embeddings_index),
+            d=token_embedding_dimension))
 
     def _prepare_token_embedding_layer(self):
         """ Creates an embedding index using pretrained token embeddings.

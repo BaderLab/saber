@@ -24,6 +24,8 @@ class Metrics(Callback):
         self.y_valid = y_valid
 
         self.tag_type_to_idx = tag_type_to_idx
+        # get inversed mapping from idx: tag, speeds up computations downstream
+        self.idx_to_tag_type = {v: k for k, v in tag_type_to_idx.items()}
 
         # epoch counter for model tied to this object
         self.current_epoch = 1
@@ -31,13 +33,9 @@ class Metrics(Callback):
     def on_train_begin(self, logs={}):
         """ Series of steps to perform when training begins. """
         ## TRAIN
-        self.train_precision_per_epoch = {}
-        self.train_recall_per_epoch = {}
-        self.train_f1_per_epoch = {}
+        self.train_performance_metrics_per_epoch = []
         ## VALID
-        self.valid_precision_per_epoch = {}
-        self.valid_recall_per_epoch = {}
-        self.valid_f1_per_epoch = {}
+        self.valid_performance_metrics_per_epoch = []
 
     def on_epoch_end(self, epoch, logs={}):
         """ Series of steps to perform when epoch ends. """
@@ -47,6 +45,10 @@ class Metrics(Callback):
 
         self._pretty_print_performance_scores(train_scores, title='train')
         self._pretty_print_performance_scores(valid_scores, title='valid')
+
+        # accumulate peformance metrics
+        self.train_performance_metrics_per_epoch.append(train_scores)
+        self.valid_performance_metrics_per_epoch.append(valid_scores)
 
         self.current_epoch += 1 # update the current epoch counter
 
@@ -64,8 +66,8 @@ class Metrics(Callback):
         # get predictions and gold labels
         y_true, y_pred = self._get_y_true_and_pred(X, y)
         # convert idx sequence to tag sequence
-        y_true_tag = self._index_to_tag(y_true, self.tag_type_to_idx)
-        y_pred_tag = self._index_to_tag(y_pred, self.tag_type_to_idx)
+        y_true_tag = [self.idx_to_tag_type[idx] for idx in y_true]
+        y_pred_tag = [self.idx_to_tag_type[idx] for idx in y_pred]
         # chunk the entities
         y_true_chunks = self._chunk_entities(y_true_tag)
         y_pred_chunks = self._chunk_entities(y_pred_tag)
@@ -104,27 +106,6 @@ class Metrics(Callback):
         shapes"""
 
         return y_true, y_pred
-
-    def _index_to_tag(self, y, tag_type_to_idx):
-        """ Converts a sequence of indices to their corresponding tags.
-
-        For a given sequence of indices, returns the corresponding sequence of
-        entity tags based on the giving mapping tag_type_to_idx.
-
-        Args:
-            y: 1D array like object containing the index sequence
-            tag_type_to_idx: a mapping entity tags to numbered indices
-
-        """
-        tag_key_list = list(tag_type_to_idx.keys())
-        tag_idx_list = list(tag_type_to_idx.values())
-
-        idx_to_tag = []
-
-        for i, idx in enumerate(y):
-            idx_to_tag.append(tag_key_list[tag_idx_list.index(idx)])
-
-        return idx_to_tag
 
     def _chunk_entities(self, seq):
         """ Chunks enities in the BIO or BIOES format.
