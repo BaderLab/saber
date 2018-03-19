@@ -51,13 +51,14 @@ def process_parameters(config, cli_arguments={}):
     parameters['activation_function'] = str(config['training']['activation_function'])
     parameters['learning_rate'] = float(config['training']['learning_rate'])
     parameters['decay'] = float(config['training']['decay'])
-    parameters['gradient_clipping_value'] = float(config['training']['gradient_clipping_value'])
+    parameters['gradient_clip_value'] = float(config['training']['gradient_clip_value'])
     parameters['dropout_rate'] = float(config['training']['dropout_rate'])
     parameters['batch_size'] = int(config['training']['batch_size'])
     parameters['k_folds'] = int(config['training']['k_folds'])
     parameters['maximum_number_of_epochs'] = int(config['training']['maximum_number_of_epochs'])
 
     # advanced
+    parameters['verbose'] = bool('True' == config['advanced']['verbose'])
     parameters['debug'] = bool('True' == config['advanced']['debug'])
     parameters['freeze_token_embeddings'] = bool('True' == config['advanced']['freeze_token_embeddings'])
     parameters['max_word_seq_len'] = int(config['advanced']['max_word_seq_len'])
@@ -101,7 +102,7 @@ def parse_arguments():
     parser.add_argument('--decay', required=False, type=float, help='')
     parser.add_argument('--dropout_rate', required=False, type=float, help='')
     parser.add_argument('--freeze_token_embeddings', required=False, type=bool, help='')
-    parser.add_argument('--gradient_clipping_value', required=False, type=float, help='')
+    parser.add_argument('--gradient_clip_value', required=False, type=float, help='')
     parser.add_argument('--k_folds', required=False, type=int, help='')
     parser.add_argument('--learning_rate', required=False, type=float, help='')
     parser.add_argument('--load_pretrained_model', required=False, type=bool, help='')
@@ -135,7 +136,7 @@ def parse_arguments():
     # parser.add_argument('--use_character_lstm', default=argument_default_value, help='')
     # parser.add_argument('--use_crf', default=argument_default_value, help='')
     # parser.add_argument('--use_pretrained_model', default=argument_default_value, help='')
-    # parser.add_argument('--verbose', default=argument_default_value, help='')
+    parser.add_argument('--verbose', required=False, action='store_true', help='')
 
     try:
         cli_arguments = parser.parse_args()
