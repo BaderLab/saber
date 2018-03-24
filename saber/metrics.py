@@ -1,10 +1,14 @@
 import os
 import codecs
+from statistics import mean
+from operator import itemgetter
 
 import numpy as np
 
 from keras.callbacks import Callback
 from sklearn.metrics import precision_recall_fscore_support
+
+from utils_models import precision_recall_f1_support
 
 # TODO (johngiorgi): there is some hard coded ugliness going on in print_table, fix this.
 # TODO (johngiorgi): this is likely copying big lists, find a way to get around this
@@ -16,7 +20,8 @@ class Metrics(Callback):
                  X_valid,
                  y_train,
                  y_valid,
-                 tag_type_to_idx):
+                 tag_type_to_idx,
+                 output_folder):
         # training data
         self.X_train = X_train
         self.X_valid = X_valid
@@ -27,28 +32,34 @@ class Metrics(Callback):
         # get inversed mapping from idx: tag, speeds up computations downstream
         self.idx_to_tag_type = {v: k for k, v in tag_type_to_idx.items()}
 
-        # epoch counter for model tied to this object
-        self.current_epoch = 1
+        self.output_folder = output_folder
 
-    def on_train_begin(self, logs={}):
-        """ Series of steps to perform when training begins. """
-        ## TRAIN
+        # epoch counter for model tied to this object
+        self.current_epoch = 0
+
+        # Model performance metrics accumulators
         self.train_performance_metrics_per_epoch = []
-        ## VALID
         self.valid_performance_metrics_per_epoch = []
 
+    def on_train_begin(self, logs={}):
+        """Series of steps to perform when training begins."""
+        pass
+
     def on_epoch_end(self, epoch, logs={}):
-        """ Series of steps to perform when epoch ends. """
+        """Series of steps to perform when epoch ends."""
         # get train/valid performance metrics
         train_scores = self._eval(self.X_train, self.y_train)
         valid_scores = self._eval(self.X_valid, self.y_valid)
 
-        self._pretty_print_performance_scores(train_scores, title='train')
-        self._pretty_print_performance_scores(valid_scores, title='valid')
+        self._print_performance_scores(train_scores, title='train')
+        self._print_performance_scores(valid_scores, title='valid')
 
         # accumulate peformance metrics
         self.train_performance_metrics_per_epoch.append(train_scores)
         self.valid_performance_metrics_per_epoch.append(valid_scores)
+
+        # write the performance metrics for the current epoch to disk
+        self._write_train_metrics()
 
         self.current_epoch += 1 # update the current epoch counter
 
@@ -108,7 +119,7 @@ class Metrics(Callback):
         return y_true, y_pred
 
     def _chunk_entities(self, seq):
-        """ Chunks enities in the BIO or BIOES format.
+        """Chunks enities in the BIO or BIOES format.
 
         For a given sequence of entities in the BIO or BIOES format, returns
         the chunked entities.
@@ -139,20 +150,25 @@ class Metrics(Callback):
         return chunks
 
     def _get_precision_recall_f1_support(self, y_true, y_pred):
-        """ Returns precision, recall, f1 and support.
+        """Returns precision, recall, f1 and support.
 
         For given gold (y_true) and predicited (y_pred) labels, returns the
-        precision, recall, f1 and support. Expected y_true and y_pred to be
-        a sequence of entity chunks.
+        precision, recall, f1 and support per label and the average across
+        labels. Expected y_true and y_pred to be a sequence of entity chunks.
 
         Args:
             y_true: list of (chunk_type, chunk_start, chunk_end)
             y_pred: list of (chunk_type, chunk_start, chunk_end)
         Returns:
-            dictionary containing (precision, recall, f1, support) for each
-            chunk type.
+            dict: dictionary containing (precision, recall, f1, support) for
+            each chunk type and the average across chunk types.
         """
-        performance_scores = {} # dict acc of metrics
+        performance_scores = {} # dict accumulator of per label of scores
+        # micro performance accumulators
+        FN_total = 0
+        FP_total = 0
+        TP_total = 0
+
         labels = list(set([chunk[0] for chunk in y_true])) # unique labels
 
         # get performance scores per label
@@ -161,7 +177,7 @@ class Metrics(Callback):
             y_true_lab = [chunk for chunk in y_true if chunk[0] == lab]
             y_pred_lab = [chunk for chunk in y_pred if chunk[0] == lab]
 
-            # accumulators
+            # per label performance accumulators
             FN = 0
             FP = 0
             TP = 0
@@ -172,7 +188,7 @@ class Metrics(Callback):
                     FN += 1
 
             for pred in y_pred_lab:
-                # FP
+                # FP / TP
                 if pred not in y_true_lab:
                     FP += 1
                 # TP
@@ -180,17 +196,26 @@ class Metrics(Callback):
                     TP += 1
 
             # get performance metrics
-            p = TP / (TP + FP) if TP > 0 else 0
-            r = TP / (TP + FN) if TP > 0 else 0
-            f1 = 2 * p * r / (p + r) if (p + r) > 0 else 0
-            s = len(y_true_lab)
+            performance_scores[lab] = precision_recall_f1_support(TP, FP, FN)
 
-            performance_scores[lab] = (p, r, f1, s)
+            # accumulate FNs, FPs, TPs
+            FN_total += FN
+            FP_total += FP
+            TP_total += TP
+
+        # get macro and micro peformance metrics averages
+        macro_p = mean([v[0] for v in performance_scores.values()])
+        macro_r = mean([v[1] for v in performance_scores.values()])
+        macro_f1 = mean([v[2] for v in performance_scores.values()])
+        total_support = TP_total + FN_total
+
+        performance_scores['MACRO_AVG'] = (macro_p, macro_r, macro_f1, total_support)
+        performance_scores['MICRO_AVG'] = precision_recall_f1_support(TP_total, FP_total, FN_total)
 
         return performance_scores
 
-    def _pretty_print_performance_scores(self, performance_scores, title='train'):
-        """ Prints a table of performance scores.
+    def _print_performance_scores(self, performance_scores, title='train'):
+        """Prints a table of performance scores.
 
         Args:
             performance_scores: a dictionary of label, score pairs where label
@@ -198,14 +223,15 @@ class Metrics(Callback):
                                 containing precision, recall, f1 and support
         """
         # collect table dimensions
-        col_width = 20
+        col_width = 4
         col_space = ' ' * col_width
-        col_width_1 = len('Label') + col_width
-        col_width_2 = col_width_1 + len('Precision') + col_width
-        col_width_3 = col_width_2 + len('Recall') + col_width
-        col_width_4 = col_width_3 + len('F1') + col_width
+        len_longest_label = max(len(s) for s in performance_scores)
+        dist_to_col_1 = len_longest_label + col_width
+        dist_to_col_2 = dist_to_col_1 + len('Precision') + col_width
+        dist_to_col_3 = dist_to_col_2 + len('Recall') + col_width
+        dist_to_col_4 = dist_to_col_3 + len('F1') + col_width
 
-        tab_width = 120
+        tab_width = dist_to_col_4 + len('Support') + col_width
         light_line = '-' * tab_width
         heavy_line = '=' * tab_width
 
@@ -214,7 +240,8 @@ class Metrics(Callback):
         print()
         title = '{col}{t}{col}'.format(t=title.upper(),
                                        col=' '*((tab_width-len(title))//2))
-        header = 'Label{col}Precision{col}Recall{col}F1{col}Support'.format(col=col_space)
+        header = 'Label{col1}Precision{cols}Recall{cols}F1{cols}Support'.format(col1=' ' * (dist_to_col_1 - len('Label')),
+                                                                                cols=col_space)
         print(heavy_line)
         print(title)
         print(light_line)
@@ -224,15 +251,42 @@ class Metrics(Callback):
         ## BODY
         for label, score in performance_scores.items():
             # specify an entire row
-            row = '{lab}{col1}{p:.1%}{col2}{r:.1%}{col3}{f1:.1%}{col4}{s}'.format(
+            row = '{lab}{col1}{p:.2%}{col2}{r:.2%}{col3}{f1:.2%}{col4}{s}'.format(
                 p=score[0],
                 r=score[1],
                 f1=score[2],
                 s=score[3],
                 lab=label,
-                col1=' ' * (col_width_1 - len(label) + len('Precision')//3 - 2),
-                col2=' ' * (col_width_2 - col_width_1 - len('Precision')//3 - 2),
-                col3=' ' * (col_width_3 - col_width_2 - len('Precision')//3 - 2),
-                col4=' ' * (col_width_4 - col_width_3 - len('Precision')//3))
+                col1=' ' * (dist_to_col_1 - len(label) + len('Precision')//3 - 2),
+                col2=' ' * (dist_to_col_2 - dist_to_col_1 - len('Precision')//3 - 2),
+                col3=' ' * (dist_to_col_3 - dist_to_col_2 - len('Precision')//3 - 2),
+                col4=' ' * (dist_to_col_4 - dist_to_col_3 - len('Precision')//3))
             print(row)
-        print(light_line)
+        print(heavy_line)
+
+    def _write_train_metrics(self):
+        """
+        """
+        # create output filepath
+        perf_metrics_filename = 'epoch_{0:03d}.txt'.format(self.current_epoch + 1)
+        eval_file_dirname = os.path.join(self.output_folder, perf_metrics_filename)
+        # write performance metrics for current epoch to file
+        micro_avg_per_epoch = [x['MICRO_AVG'] for x in self.valid_performance_metrics_per_epoch]
+        macro_avg_per_epoch = [x['MACRO_AVG'] for x in self.valid_performance_metrics_per_epoch]
+
+        best_micro_avg_val_score = max(micro_avg_per_epoch, key=itemgetter(2))
+        best_macro_avg_val_score = max(macro_avg_per_epoch, key=itemgetter(2))
+        best_micro_epoch = micro_avg_per_epoch.index(best_micro_avg_val_score)
+        best_macro_epoch = macro_avg_per_epoch.index(best_macro_avg_val_score)
+        best_micro_val_score = self.valid_performance_metrics_per_epoch[best_micro_epoch]
+        best_macro_val_score = self.valid_performance_metrics_per_epoch[best_macro_epoch]
+
+        with open(eval_file_dirname, 'a') as f:
+            f.write(str(self.valid_performance_metrics_per_epoch[self.current_epoch]))
+            f.write('\n')
+            f.write('Best performing epoch based on macro average: {}\n'.format(best_macro_epoch + 1))
+            f.write(str(best_macro_val_score))
+            f.write('\n')
+            f.write('Best performing epoch based on micro average: {}\n'.format(best_micro_epoch + 1))
+            f.write(str(best_micro_val_score))
+            f.write('\n')
