@@ -51,7 +51,7 @@ def process_parameters(config, cli_arguments={}):
     parameters['activation_function'] = str(config['training']['activation_function'])
     parameters['learning_rate'] = float(config['training']['learning_rate'])
     parameters['decay'] = float(config['training']['decay'])
-    parameters['gradient_clip_value'] = float(config['training']['gradient_clip_value'])
+    parameters['gradient_normalization'] = float(config['training']['gradient_normalization'])
     parameters['dropout_rate'] = float(config['training']['dropout_rate'])
     parameters['batch_size'] = int(config['training']['batch_size'])
     parameters['k_folds'] = int(config['training']['k_folds'])
@@ -75,6 +75,9 @@ def process_parameters(config, cli_arguments={}):
     # lowercase all str arguments (expect directory/file paths)
     parameters['optimizer'] = parameters['optimizer'].strip().lower()
     parameters['activation_function'] = parameters['activation_function'].strip().lower()
+    # Do not use gradient normalization if config value is 0
+    if parameters['gradient_normalization'] == 0:
+        parameters['gradient_normalization'] = None
 
     return parameters
 
@@ -102,7 +105,7 @@ def parse_arguments():
     parser.add_argument('--decay', required=False, type=float, help='')
     parser.add_argument('--dropout_rate', required=False, type=float, help='')
     parser.add_argument('--freeze_token_embeddings', required=False, type=bool, help='')
-    parser.add_argument('--gradient_clip_value', required=False, type=float, help='')
+    parser.add_argument('--gradient_normalization', required=False, type=float, help='')
     parser.add_argument('--k_folds', required=False, type=int, help='')
     parser.add_argument('--learning_rate', required=False, type=float, help='')
     parser.add_argument('--load_pretrained_model', required=False, type=bool, help='')
