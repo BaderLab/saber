@@ -18,7 +18,7 @@ DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS = {
 'activation_function': 'relu',
 'learning_rate': 0.01,
 'decay': 0.05,
-'gradient_clip_value': 0.0,
+'gradient_normalization': None,
 'dropout_rate': 0.3,
 'batch_size': 1,
 'k_folds': 2,
@@ -41,7 +41,7 @@ DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS = {
 'activation_function': 'relu',
 'learning_rate': 0.05,
 'decay': 0.5,
-'gradient_clip_value': 5.0,
+'gradient_normalization': 1.0,
 'dropout_rate': 0.3,
 'batch_size': 1,
 'k_folds': 2,
@@ -52,7 +52,7 @@ DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS = {
 'max_char_seq_len': 10,
 'freeze_token_embeddings': True}
 DUMMY_COMMAND_LINE_ARGS = {
-'gradient_clip_value': 5.0,
+'gradient_normalization': 1.0,
 'learning_rate':0.05,
 'decay':0.5}
 
@@ -102,7 +102,7 @@ def test_config_parser(dummy_config):
     assert dummy_config['training']['activation_function'] == 'relu'
     assert dummy_config['training']['learning_rate'] == '0.01'
     assert dummy_config['training']['decay'] == '0.05'
-    assert dummy_config['training']['gradient_clip_value'] == '0.0'
+    assert dummy_config['training']['gradient_normalization'] == '0.0'
     assert dummy_config['training']['dropout_rate'] == '0.3'
     assert dummy_config['training']['batch_size'] == '1'
     assert dummy_config['training']['k_folds'] == '2'
