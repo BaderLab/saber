@@ -75,7 +75,7 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
     assert model_without_dataset.config['debug'] == False
     assert model_without_dataset.config['dropout_rate'] == 0.3
     assert model_without_dataset.config['freeze_token_embeddings'] == True
-    assert model_without_dataset.config['gradient_clip_value'] == 0.0
+    assert model_without_dataset.config['gradient_normalization'] == None
     assert model_without_dataset.config['k_folds'] == 2
     assert model_without_dataset.config['learning_rate'] == 0.01
     assert model_without_dataset.config['decay'] == 0.05
