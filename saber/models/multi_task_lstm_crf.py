@@ -1,5 +1,8 @@
 import os
 import time
+from time import strftime
+from operator import itemgetter
+
 
 import numpy as np
 from sklearn.model_selection import KFold
@@ -93,18 +96,20 @@ class MultiTaskLSTMCRF(object):
                                     mask_zero=True)
 
         # Char-level BiLSTM
-        fwd_state = LSTM(NUM_UNITS_CHAR_LSTM // 2, return_state=True)
+        fwd_state = LSTM(NUM_UNITS_CHAR_LSTM // 2, return_state=True,
+                                                   recurrent_dropout=self.config['dropout_rate'])
         bwd_state = LSTM(NUM_UNITS_CHAR_LSTM // 2, return_state=True,
-                                                   go_backwards=True)
+                                                   go_backwards=True,
+                                                   recurrent_dropout=self.config['dropout_rate'])
 
-        # Dropout
-        dropout = Dropout(self.config['dropout_rate'])
+
 
         # Word-level BiLSTM
         word_BiLSTM = Bidirectional(LSTM(units=NUM_UNITS_WORD_LSTM // 2,
-                                         return_sequences=True))
+                                         return_sequences=True,
+                                         recurrent_dropout=self.config['dropout_rate']))
 
-        # Feedforward after word-level BiLSTM
+        # Feedforward before CRF
         feedforward_af_word_lstm = TimeDistributed(
             Dense(units=NUM_UNITS_DENSE,
                   activation=self.config['activation_function']))
@@ -133,14 +138,17 @@ class MultiTaskLSTMCRF(object):
             model = Concatenate(axis=-1)([word_embeddings_shared, char_embeddings_shared])
 
             # Dropout
-            model = dropout(model)
+            model = Dropout(self.config['dropout_rate'])(model)
 
             # Word-level BiLSTM
             model = word_BiLSTM(model)
 
+            # Dropout
+            model = Dropout(self.config['dropout_rate'])(model)
+
             # Feedforward after word-level BiLSTM
             model = feedforward_af_word_lstm(model)
-            # Feedforward before word-level BiLSTM
+            # Feedforward before CRF
             model = TimeDistributed(Dense(units=ds.tag_type_count,
                                           activation=self.config['activation_function']))(model)
 
@@ -163,7 +171,7 @@ class MultiTaskLSTMCRF(object):
                           optimizer=self.config['optimizer'],
                           lr=self.config['learning_rate'],
                           decay=self.config['decay'],
-                          clipvalue=self.config['gradient_clip_value'],
+                          clipnorm=self.config['gradient_normalization'],
                           verbose=self.config['verbose'])
 
     def fit_(self, checkpointer):
@@ -206,23 +214,9 @@ class MultiTaskLSTMCRF(object):
             self.model = []
             self.crf = []
             self.metrics.append(metrics_current_fold)
-            self.specify_()
-            self.compile_()
-
-        # super ugly and quick solution, need to clean this up!
-        out_file = '../output/performance_{d}_{t}.txt'.format(
-            d=time.strftime('%x').replace('/', '_'),
-            t=time.strftime('%X'))
-        with open(out_file, 'w') as f:
-            f.write('PERFORMANCE METRICS\n{}\n'.format('=' * 20))
-            for fold in range(self.config['k_folds']):
-                metrics_current_fold = self.metrics[fold]
-                f.write('Fold: {}\n'.format(fold))
-                for i, ds in enumerate(self.ds):
-                    metrics_current_model = metrics_current_fold[i]
-                    f.write('\tModel: {}\n'.format(i))
-                    f.write('\t\t{}\n'.format(
-                        str(metrics_current_model.valid_performance_metrics_per_epoch[-1])))
+            if fold < self.config['k_folds'] - 1:
+                self.specify_()
+                self.compile_()
 
     def _get_train_valid_indices(self):
         """Get train and valid indicies for all k-folds for all datasets.
@@ -305,6 +299,8 @@ class MultiTaskLSTMCRF(object):
         """
         # acc
         metrics = []
+        # get final part of each datasets directory, i.e. the dataset names
+        ds_names = '_'.join([os.path.basename(os.path.normpath(x)) for x in self.config['dataset_folder']])
 
         for i, ds in enumerate(self.ds):
             # data_partitions[i] is a four-tuple where index 0 contains X_train
@@ -316,15 +312,16 @@ class MultiTaskLSTMCRF(object):
             y_train = data_partitions[i][4]
             y_valid = data_partitions[i][5]
 
-            # get final part of dataset folder path, i.e. the dataset name
-            ds_name = os.path.basename(os.path.normpath(self.config['dataset_folder'][0]))
+            # create a dir name with date and time
+            eval = strftime("eval_%a_%b_%d_%I:%M").lower()
             # create an evaluation folder if it does not exist
-            output_folder_ = os.path.join(self.config['output_folder'], ds_name, 'eval')
+            output_folder_ = os.path.join(self.config['output_folder'], ds_names, eval)
             make_dir(output_folder_)
 
             metrics.append(Metrics([X_word_train, X_char_train],
                                    [X_word_valid, X_char_valid],
                                    y_train, y_valid,
-                                   tag_type_to_idx = ds.tag_type_to_idx))
+                                   tag_type_to_idx = ds.tag_type_to_idx,
+                                   output_folder=output_folder_))
 
         return metrics
