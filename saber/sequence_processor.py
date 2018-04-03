@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from keras.models import load_model
+from keras_contrib.layers.crf import CRF
 from keras.callbacks import ModelCheckpoint
 
 from dataset import Dataset
@@ -14,6 +15,8 @@ from utils_generic import make_dir
 
 print('Saber version: {0}'.format('0.1-dev'))
 
+
+# TODO (johngiorgi): READ: https://jeffknupp.com/blog/2014/06/18/improve-your-python-python-classes-and-object-oriented-programming/
 # TODO (johngiorgi): make model checkpointing a config param
 # TODO (johngiorgi): make a debug mode that doesn't load token embeddings and
 # loads only some lines of dataset
@@ -34,19 +37,27 @@ class SequenceProcessor(object):
         # token embeddings tied to this instance
         self.token_embedding_matrix = None
 
-        # Keras model object tied to this instance
+        # model object tied to this instance
         self.model = None
 
         if self.config['verbose']: pprint(self.config)
 
-    def load_pretrained_model_(self, pretrained_model_filepath):
-        """
-        """
-        # use with keras_contrib.utils
-        # save_load_utils.save_all_weights(self.model, path)
-        # save_load_utils.load_all_weights(self.model, path)
+    def predict(self, X, *args, **kwargs):
+        y_pred = self.model.predict(X, batch_size=1)
+        return y_pred
 
-        self.model = load_model(pretrained_model_filepath)
+    def evaluate(self, X, y):
+        score = self.model.evaluate(X, y, batch_size=1)
+        return score
+
+    def save(self, filepath, model=0):
+        self.model.model[model].save_weights('{}.h5'.format(filepath))
+
+    def load(self, filepath, model=0):
+        self.model.model[model].load_weights('{}.h5'.format(filepath))
+
+    def __getattr__(self, name):
+        return getattr(self.model, name)
 
     def load_dataset(self):
         """Coordinates the loading of a dataset.
