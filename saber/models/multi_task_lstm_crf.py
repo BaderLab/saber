@@ -3,7 +3,6 @@ import time
 from time import strftime
 from operator import itemgetter
 
-
 import numpy as np
 from sklearn.model_selection import KFold
 
@@ -193,12 +192,12 @@ class MultiTaskLSTMCRF(object):
                 for i, (ds, model) in enumerate(zip(self.ds, self.model)):
 
                     # mainly for cleanliness
-                    X_word_train = data_partitions[i][0]
-                    X_word_valid = data_partitions[i][1]
-                    X_char_train = data_partitions[i][2]
-                    X_char_valid = data_partitions[i][3]
-                    y_train = data_partitions[i][4]
-                    y_valid = data_partitions[i][5]
+                    X_word_train = np.array(data_partitions[i][0])
+                    X_word_valid = np.array(data_partitions[i][1])
+                    X_char_train = np.array(data_partitions[i][2])
+                    X_char_valid = np.array(data_partitions[i][3])
+                    y_train = np.array(data_partitions[i][4])
+                    y_valid = np.array(data_partitions[i][5])
 
                     model.fit(x=[X_word_train, X_char_train],
                               y=[y_train],
@@ -210,11 +209,13 @@ class MultiTaskLSTMCRF(object):
                                                [y_valid]),
                               verbose=1)
 
-            # end of a k-fold, so clear the model, specify and compile again
-            self.model = []
-            self.crf = []
+
             self.metrics.append(metrics_current_fold)
+
+            # end of a k-fold, so clear the model, specify and compile again
             if fold < self.config['k_folds'] - 1:
+                self.model = []
+                self.crf = []
                 self.specify_()
                 self.compile_()
 
