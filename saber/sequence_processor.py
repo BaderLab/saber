@@ -1,5 +1,6 @@
 import os
 import time
+import pickle
 from pprint import pprint
 
 import numpy as np
@@ -7,14 +8,15 @@ import pandas as pd
 
 from keras.models import load_model
 from keras_contrib.layers.crf import CRF
-from keras.callbacks import ModelCheckpoint
 
 from dataset import Dataset
 from metrics import Metrics
+from preprocessor import Preprocessor
 from utils_generic import make_dir
+from utils_models import create_train_session_dir
+from utils_models import setup_model_checkpointing
 
 print('Saber version: {0}'.format('0.1-dev'))
-
 
 # TODO (johngiorgi): READ: https://jeffknupp.com/blog/2014/06/18/improve-your-python-python-classes-and-object-oriented-programming/
 # TODO (johngiorgi): make model checkpointing a config param
@@ -40,6 +42,9 @@ class SequenceProcessor(object):
         # model object tied to this instance
         self.model = None
 
+        # preprocessor
+        self.preprocessor = Preprocessor()
+
         if self.config['verbose']: pprint(self.config)
 
     def predict(self, X, *args, **kwargs):
@@ -50,11 +55,45 @@ class SequenceProcessor(object):
         score = self.model.evaluate(X, y, batch_size=1)
         return score
 
-    def save(self, filepath, model=0):
-        self.model.model[model].save_weights('{}.h5'.format(filepath))
+    def save(self, model_name, filepath='../pretrained_models', model=0):
+        """Coordinates the saving of Saber models.
+
+        Saves the neccecary files for model persistance to filepath/model_name.
+
+        Args:
+            model_name (str): name of the saved model, this will be the name of
+                              the folder that contains the saved file.
+            filepath (str): directory path to save model folder to, defaults to
+                            ../pretrained_models
+            model (int): which model in self.model.model to save, defaults to 0
+        """
+        # create the pretrained model folder
+        make_dir(os.path.join(filepath, model_name))
+
+        # create filepaths
+        weights_filepath = os.path.join(filepath, 'model_weights.h5')
+        w2i_filepath = os.path.join(filepath, 'w2i.p')
+        c2i_filepath = os.path.join(filepath, 'c2i.p')
+
+        # save weights
+        self.model.model[model].save_weights(weights_filepath)
+        # save word to index and character to index mappings
+        pickle.dump(self.ds[model].word_type_to_idx, open(w2i_filepath, 'wb'))
+        pickle.dump(self.ds[model].char_type_to_idx, open(c2i_filepath, 'wb'))
 
     def load(self, filepath, model=0):
-        self.model.model[model].load_weights('{}.h5'.format(filepath))
+        """
+        """
+        # create filepaths
+        weights_filepath = os.path.join(filepath, 'model_weights.h5')
+        w2i_filepath = os.path.join(filepath, 'w2i.p')
+        c2i_filepath = os.path.join(filepath, 'c2i.p')
+
+        # load weights
+        self.model.model[model].load_weights(weights_filepath)
+        # load word to index and character to index mappings
+        w2i = pickle.load(open(w2i_filepath, "rb" ))
+        c2i = pickle.load(open(c2i_filepath, "rb" ))
 
     def __getattr__(self, name):
         return getattr(self.model, name)
@@ -124,12 +163,15 @@ class SequenceProcessor(object):
             train_hist, the history of the model training as a pandas
             dataframe.
         """
-        # create a Callback object for model checkpointing
-        checkpointer = self._setup_model_checkpointing()
+        # setup model checkpointing
+        train_session_dir = create_train_session_dir(self.config['dataset_folder'],
+                                                     self.config['output_folder'])
+        checkpointer = setup_model_checkpointing(train_session_dir)
+
         # fit
         # train_history = self.model.fit_(checkpointer=checkpointer)
         # don't get history for now
-        self.model.fit_(checkpointer=checkpointer)
+        self.model.fit_(checkpointer, train_session_dir)
         '''
         # create Callback object for per epoch prec/recall/f1/support metrics
         metrics = Metrics(self.X_train, self.y_train, self.ds.word_type_to_idx)
@@ -145,7 +187,7 @@ class SequenceProcessor(object):
         # train_history = pd.DataFrame(train_history.history)
         # return train_history
 
-    def predict(self, task=0):
+    def predict(self, text, task=0):
         """Performs prediction for a given model and returns results.
 
         Performs prediction for the current model (self.model), and returns
@@ -157,16 +199,18 @@ class SequenceProcessor(object):
             y_true: 1D array like object containing the gold label sequence.
             y_pred: 1D array like object containing the predicted sequence.
         """
-        X = self.ds[task].train_word_idx_sequence
-        y = self.ds[task].train_tag_idx_sequence
+        word_types, char_types, sentences = self.preprocessor.process_text(text)
+        # X = self.ds[task].train_word_idx_sequence
+        # y = self.ds[task].train_tag_idx_sequence
         # get gold sequence, flatten into 1D array
-        y_true = y.argmax(axis=-1)
+        # y_true = y.argmax(axis=-1)
         # y_true = np.asarray(y_true).ravel()
         # get predicted sequence, flatten into 1D array
-        y_pred = self.model[task].model.predict(X).argmax(axis=-1)
+        # y_pred = self.model[task].model.predict(X).argmax(axis=-1)
         # y_pred = np.asarray(y_pred).ravel()
 
-        return y_true, y_pred
+        # return y_true, y_pred
+        return word_types, char_types, sentences
 
     def _load_single_dataset(self):
         """Loads a single dataset.
@@ -178,7 +222,6 @@ class SequenceProcessor(object):
             a list containing a single dataset object.
         """
         ds = Dataset(dataset_folder=self.config['dataset_folder'][0],
-                     max_word_seq_len=self.config['max_word_seq_len'],
                      max_char_seq_len=self.config['max_char_seq_len'])
         ds.load_dataset()
 
@@ -200,7 +243,6 @@ class SequenceProcessor(object):
 
         for ds_filepath in self.config['dataset_folder']:
             ds_acc.append(Dataset(dataset_folder=ds_filepath,
-                                  max_word_seq_len=self.config['max_word_seq_len'],
                                   max_char_seq_len=self.config['max_char_seq_len']))
 
         # get combined set of word types from all datasets
@@ -214,8 +256,9 @@ class SequenceProcessor(object):
 
         # compute word to index mappings that will be shared across datasets
         # pad of 1 accounts for the sequence pad (of 0) down the pipeline
-        shared_word_type_to_idx = Dataset.sequence_2_idx(comb_word_types)
-        shared_char_type_to_idx = Dataset.sequence_2_idx(comb_char_types)
+        # TODO (johngiorgi): Why did I drop the offset?
+        shared_word_type_to_idx = Preprocessor.sequence_to_idx(comb_word_types)
+        shared_char_type_to_idx = Preprocessor.sequence_to_idx(comb_char_types)
 
         # load all the datasets
         for ds in ds_acc:
@@ -223,27 +266,6 @@ class SequenceProcessor(object):
                             shared_char_type_to_idx=shared_char_type_to_idx)
 
         return ds_acc
-
-    def _setup_model_checkpointing(self):
-        """Sets up per epoch model checkpointing.
-
-        Sets up model checkpointing by:
-            1) creating the output_folder if it does not already exists.
-            2) creating the checkpointing CallBack Keras object.
-
-        Returns:
-            checkpointer: a Keras CallBack object for per epoch model
-                checkpointing.
-        """
-        # create output directory if it does not exist
-        make_dir(self.config['output_folder'])
-        # create path to output folder
-        output_folder_ = os.path.join(self.config['output_folder'],
-                                      'model_checkpoint.{epoch:02d}-{val_loss:.2f}.hdf5')
-        # set up model checkpointing
-        checkpointer = ModelCheckpoint(filepath=output_folder_)
-
-        return checkpointer
 
     def _load_token_embeddings(self):
         """Coordinates the loading of pre-trained token embeddings.
@@ -271,7 +293,7 @@ class SequenceProcessor(object):
             d=token_embedding_dimension))
 
     def _prepare_token_embedding_layer(self):
-        """ Creates an embedding index using pretrained token embeddings.
+        """Creates an embedding index using pretrained token embeddings.
 
         For the models given pretrained token embeddings, creates and returns a
         dictionary mapping words to known embeddings.
@@ -299,7 +321,7 @@ class SequenceProcessor(object):
     def _prepare_token_embedding_matrix(self,
                                         token_embeddings_index,
                                         token_embedding_dimensions):
-        """ Creates an embedding matrix using pretrained token embeddings.
+        """Creates an embedding matrix using pretrained token embeddings.
 
         For the models word to idx mappings, and word to pre-trained token
         embeddings, creates a matrix which maps all words in the models dataset
