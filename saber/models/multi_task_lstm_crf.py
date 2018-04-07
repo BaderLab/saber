@@ -1,6 +1,5 @@
 import os
 import time
-from time import strftime
 from operator import itemgetter
 
 import numpy as np
@@ -21,7 +20,6 @@ from keras.layers import TimeDistributed
 from keras_contrib.layers.crf import CRF
 
 from metrics import Metrics
-from utils_generic import make_dir
 from utils_models import compile_model
 
 # https://stackoverflow.com/questions/48615003/multi-task-learning-in-keras
@@ -46,7 +44,7 @@ NUM_UNITS_CHAR_LSTM = 200
 NUM_UNITS_DENSE = NUM_UNITS_WORD_LSTM // 2
 
 class MultiTaskLSTMCRF(object):
-    """ A Keras implementation of BiLSTM-CRF for sequence labeling. """
+    """A Keras implementation of a BiLSTM-CRF for sequence labeling."""
 
     def __init__(self, config, ds, token_embedding_matrix=None):
         # config contains a dictionary of hyperparameters
@@ -71,13 +69,16 @@ class MultiTaskLSTMCRF(object):
         field (LSTM-CRF) multi-task model for sequence tagging.
 
         Returns:
-            model: a list of keras models, sharing (excluding crf layer) sharing
+            model: a list of keras models, sharing (excluding the crf layer)
                    some number of layers.
             crf: a list of task-specific crf layers implemented using
                  keras.contrib, one for each model.
         """
         # Specify any shared layers outside the for loop
         # Word-level embedding layer
+
+        # TODO (johngiorgi): why is there a discrepency between the + 1 in
+        # the pretrained and random word embddings situations
         if self.token_embedding_matrix is None:
             word_embeddings = Embedding(input_dim=len(self.ds[0].word_type_to_idx),
                                         output_dim=self.config['token_embedding_dimension'],
@@ -173,10 +174,10 @@ class MultiTaskLSTMCRF(object):
                           clipnorm=self.config['gradient_normalization'],
                           verbose=self.config['verbose'])
 
-    def fit_(self, checkpointer):
+    def fit_(self, checkpointer, output_dir):
         """Fits a bidirectional multi-task LSTM-CRF for for sequence tagging
-        using Keras. """
-        # get train/valid indicies for all datasets
+        using Keras."""
+        # get train/valid indicies for each dataset
         train_valid_indices = self._get_train_valid_indices()
 
         ## FOLDS
@@ -184,7 +185,7 @@ class MultiTaskLSTMCRF(object):
             # get the train/valid partitioned data for all datasets
             data_partitions = self._get_data_partitions(train_valid_indices, fold)
             # create the Keras Callback object for computing/storing metrics
-            metrics_current_fold = self._get_metrics(data_partitions)
+            metrics_current_fold = self._get_metrics(data_partitions, output_dir)
             ## EPOCHS
             for epoch in range(self.config['maximum_number_of_epochs']):
                 print('[INFO] Fold: {}; Global epoch: {}'.format(fold + 1, epoch + 1))
@@ -203,7 +204,7 @@ class MultiTaskLSTMCRF(object):
                               y=[y_train],
                               batch_size=self.config['batch_size'],
                               epochs=1,
-                              callbacks=[#checkpointer,
+                              callbacks=[checkpointer[i],
                                          metrics_current_fold[i]],
                               validation_data=([X_word_valid, X_char_valid],
                                                [y_valid]),
@@ -292,7 +293,7 @@ class MultiTaskLSTMCRF(object):
 
         return data_partition
 
-    def _get_metrics(self, data_partitions):
+    def _get_metrics(self, data_partitions, output_dir):
         """Creates Keras Metrics Callback objects, one for each dataset.
 
         Args:
@@ -300,8 +301,6 @@ class MultiTaskLSTMCRF(object):
         """
         # acc
         metrics = []
-        # get final part of each datasets directory, i.e. the dataset names
-        ds_names = '_'.join([os.path.basename(os.path.normpath(x)) for x in self.config['dataset_folder']])
 
         for i, ds in enumerate(self.ds):
             # data_partitions[i] is a four-tuple where index 0 contains X_train
@@ -313,16 +312,10 @@ class MultiTaskLSTMCRF(object):
             y_train = data_partitions[i][4]
             y_valid = data_partitions[i][5]
 
-            # create a dir name with date and time
-            eval = strftime("eval_%a_%b_%d_%I:%M").lower()
-            # create an evaluation folder if it does not exist
-            output_folder_ = os.path.join(self.config['output_folder'], ds_names, eval)
-            make_dir(output_folder_)
-
             metrics.append(Metrics([X_word_train, X_char_train],
                                    [X_word_valid, X_char_valid],
                                    y_train, y_valid,
                                    tag_type_to_idx = ds.tag_type_to_idx,
-                                   output_folder=output_folder_))
+                                   output_dir=output_dir[i]))
 
         return metrics
