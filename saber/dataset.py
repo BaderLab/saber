@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 
 from keras.utils import to_categorical
-from keras.preprocessing.sequence import pad_sequences
+
+from preprocessor import Preprocessor
 
 TRAIN_FILE_EXT = 'train.*'
 # TEST_FILE_EXT = 'test.*'
@@ -15,7 +16,7 @@ ENDPAD = 'ENDPAD'
 class Dataset(object):
     """A class for handling data sets."""
     def __init__(self, dataset_folder, sep='\t', names=['Word', 'Tag'],
-                 header=None, max_word_seq_len=75, max_char_seq_len=10):
+                 header=None, max_char_seq_len=15):
         self.dataset_folder = dataset_folder
         # search for any files in the dataset filepath ending with
         # TRAIN_FILE_EXT or TEST_FILE_EXT
@@ -24,7 +25,6 @@ class Dataset(object):
         self.sep = sep
         self.names = names
         self.header = header
-        self.max_word_seq_len = max_word_seq_len
         self.max_char_seq_len = max_char_seq_len
 
         # shared by train/test
@@ -65,11 +65,13 @@ class Dataset(object):
                                      indices shared between datasets
         """
         # generate type to index mappings
-        self.word_type_to_idx, self.char_type_to_idx, self.tag_type_to_idx = self._map_type_to_idx()
+        self.word_type_to_idx, self.char_type_to_idx, self.tag_type_to_idx = \
+            self._map_type_to_idx()
 
         # if shared_by_compound is passed into function call, then this is a
         # compound dataset (word_type_to_idx is shared across datasets)
-        if shared_word_type_to_idx is not None and shared_char_type_to_idx is not None:
+        if ((shared_word_type_to_idx is not None) and
+           (shared_char_type_to_idx is not None)):
             self.word_type_to_idx = shared_word_type_to_idx
             self.char_type_to_idx = shared_char_type_to_idx
 
@@ -77,9 +79,15 @@ class Dataset(object):
         # get sentences
         self.train_sentences = self._get_sentences(self.trainset_filepath, sep=self.sep)
         # get type to idx sequences
-        self.train_word_idx_sequence = self._get_type_idx_sequence(self.train_sentences, type_='word')
-        self.train_char_idx_sequence = self._get_type_idx_sequence(self.train_sentences, type_='char')
-        self.train_tag_idx_sequence = self._get_type_idx_sequence(self.train_sentences, type_='tag')
+        self.train_word_idx_sequence = Preprocessor.get_type_idx_sequence(self.train_sentences,
+                                                                          word_type_to_idx=self.word_type_to_idx,
+                                                                          max_char_seq_len=self.max_char_seq_len)
+        self.train_char_idx_sequence = Preprocessor.get_type_idx_sequence(self.train_sentences,
+                                                                          char_type_to_idx=self.char_type_to_idx,
+                                                                          max_char_seq_len=self.max_char_seq_len)
+        self.train_tag_idx_sequence = Preprocessor.get_type_idx_sequence(self.train_sentences,
+                                                                          tag_type_to_idx=self.tag_type_to_idx,
+                                                                          max_char_seq_len=self.max_char_seq_len)
         # convert tag idx sequences to categorical
         self.train_tag_idx_sequence = self._tag_idx_sequence_to_categorical(self.train_tag_idx_sequence)
         ## TEST
@@ -124,7 +132,7 @@ class Dataset(object):
         return raw_dataset
 
     def _get_types(self):
-        """ Returns word types, char types and tag types.
+        """Returns word types, char types and tag types.
 
         Returns the word types, character types and tag types for the current
         loaded dataset (self.raw_dataframe)
@@ -137,17 +145,17 @@ class Dataset(object):
             a three-tuple containing the word types, chararcter types and
             tag types.
         """
-        ## WORD TYPES
+        # Word types
         word_types = list(set(self.raw_dataframe.iloc[:, 0].values))
         word_types.insert(0, ENDPAD) # make ENDPAD the 0th element
 
-        ## CHAR TYPE
+        # Char types
         char_types = []
         for word in word_types:
             char_types.extend(list(word))
         char_types = list(set(char_types))
 
-        ## TAG TYPE
+        # Tag types
         tag_types = list(set(self.raw_dataframe.iloc[:, -1].values))
         # if the negative class is not first, swap it with the first element
         neg_class_idx = tag_types.index('O')
@@ -164,50 +172,15 @@ class Dataset(object):
         Returns:
             three-tuple of word, char and tag type to index mappings
         """
-        word_type_to_idx = self._sequence_2_idx(self.word_types)
-        char_type_to_idx = self._sequence_2_idx(self.char_types)
-        tag_type_to_idx = self._sequence_2_idx(self.tag_types)
+        # TODO (johngiorgi): Why did I drop the offset?
+        word_type_to_idx = Preprocessor.sequence_to_idx(self.word_types)
+        char_type_to_idx = Preprocessor.sequence_to_idx(self.char_types)
+        tag_type_to_idx = Preprocessor.sequence_to_idx(self.tag_types)
 
         return word_type_to_idx, char_type_to_idx, tag_type_to_idx
 
-    def _sequence_2_idx(self, sequence, offset=0):
-        """ Returns a dictionary of element:idx pairs for each element in sequence.
-
-        Given a list, returns a dictionary of length len(sequence) + pad where
-        the keys are elements of sequence and the values are unique integers.
-
-        Args:
-            sequence: a list of sequence data.
-            offset: used when computing the mapping. An offset a 1 means we
-                    begin computing the mapping at 1, useful if we want to
-                    use 0 as a padding value.
-        Returns:
-            a mapping from elements in the sequence to numbered indices
-        """
-        # offset accounts for sequence pad
-        return {e: i + offset for i, e in enumerate(list(set(sequence)))}
-
-    @staticmethod
-    def sequence_2_idx(sequence, offset=0):
-        """ Returns a dictionary of element:idx pairs for each element in sequence.
-
-        A class method that, when given a list, returns a dictionary of length
-        len(sequence) + pad where the keys are elements of sequence and the
-        values are unique integers.
-
-        Args:
-            sequence: a list of sequence data.
-            offset: used when computing the mapping. An offset a 1 means we
-                    begin computing the mapping at 1, useful if we want to
-                    use 0 as a padding value.
-        Returns:
-            a mapping from elements in the sequence to numbered indices.
-        """
-        # offset accounts for sequence pad
-        return {e: i + offset for i, e in enumerate(list(set(sequence)))}
-
     def _get_sentences(self, partition_filepath, sep='\t'):
-        """ Returns sentences for csv/tsv file as a list lists of tuples.
+        """Returns sentences for csv/tsv file as a list lists of tuples.
 
         Returns a list of lists of two-tuples for the csv/tsv at
         partition_filepath, where the inner lists represent sentences, and the
@@ -220,7 +193,6 @@ class Dataset(object):
         Returns:
             a list of lists of two-tuples, where the inner lists are sentences
             containing ordered (word, tag) pairs.
-
         """
         # accumulators
         global_sentence_acc = []
@@ -241,68 +213,8 @@ class Dataset(object):
 
         return global_sentence_acc
 
-    def _get_type_idx_sequence(self, sentences, type_):
-        """ Returns sequence of indices corresponding to data set sentences.
-
-        Returns the sequence of idices corresponding to the type order in
-        sentences, where type_ can be "word", "char", or "tag" correpsonding to
-        word, char and tag types of the Dataset instance.
-
-        Args:
-            type_: "word", "char", or "tag"
-            sentences: a list of lists, where each list represents a sentence
-                for the Dataset instance and each sublist contains ordered
-                (word, tag) pairs.
-
-        Returns:
-            a list, containing a sequence of idx's corresponding to the type
-            order in sentences.
-
-        Preconditions:
-            assumes that the first column of the data set contains the word
-            types, and the last column contains the tag types.
-        """
-        assert type_ in ['word', 'char', 'tag'], """parameter type_ must be one
-        of 'word', 'char', or 'tag'"""
-
-        if type_ == 'word':
-            col_idx = 0
-            # allows us to use the mask_zero parameter of the embedding layer to
-            # ignore inputs with value zero.
-            pad = 0.0
-            type_to_idx = self.word_type_to_idx
-        elif type_ == 'char':
-            col_idx = 0
-            pad = 0.0
-            type_to_idx = self.char_type_to_idx
-        # tag type
-        elif type_ == 'tag':
-            col_idx = -1
-            pad = self.tag_type_to_idx['O']
-            type_to_idx = self.tag_type_to_idx
-
-        # get sequence of idx's in the order they appear in sentences
-        # procedure is slightly different for characters
-        if type_ == 'char':
-            type_sequence = [[[type_to_idx[ch] for ch in ty[col_idx]] for ty in s] for s in sentences]
-            # pad character sequences
-            self._pad_character_sequences(type_sequence,
-                                          pad=pad,
-                                          maxlen=self.max_char_seq_len)
-        else:
-            type_sequence = [[type_to_idx[ty[col_idx]] for ty in s] for s in sentences]
-
-        # pad sequences
-        type_sequence = pad_sequences(maxlen=self.max_word_seq_len,
-                                      sequences=type_sequence,
-                                      padding='post',
-                                      truncating='post',
-                                      value=pad)
-
-        return type_sequence
-
     def _tag_idx_sequence_to_categorical(self, idx_sequence):
-        """ One-hot encodes a given class vector.
+        """One-hot encodes a given class vector.
 
         Converts a class vector of integers, (idx_sequence) to a
         one-hot encoded matrix. The number of classes in the one-hot encoding
@@ -320,23 +232,3 @@ class Dataset(object):
         one_hots = np.array(one_hots)
 
         return one_hots
-
-    def _pad_character_sequences(self, sequence, pad=0, maxlen=10):
-        """ Pads a character sequence.
-
-        For a given character sequence given as a list (sentences) of
-        lists (word) of lists (characters), truncates all character lists to
-        maxlen, and pads those shorter than maxlen with pad.
-
-        Args:
-            sequence: a list of list of lists, corresponding to character
-                      sequences for each word for each sentence.
-            value: Int, padding value.
-            maxlen: Int, maximum length of all sequences.
-        """
-        for sent in sequence:
-            for word in sent:
-                if len(word) < maxlen:
-                    word += ((maxlen - len(word)) * [pad]) # pad chars
-                elif len(word) > maxlen:
-                    del word[maxlen:] # truncate chars
