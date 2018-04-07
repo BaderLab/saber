@@ -24,7 +24,7 @@ def dummy_config():
 
 @pytest.fixture
 def model_without_dataset(dummy_config):
-    """Returns an instance of SequenceProcessingModel initialized with the
+    """Returns an instance of SequenceProcessor initialized with the
     default configuration file and no loaded dataset. """
     # resolve parameters, cast to correct types
     parameters = process_parameters(dummy_config)
@@ -35,7 +35,7 @@ def model_without_dataset(dummy_config):
 
 @pytest.fixture
 def model_with_single_dataset(dummy_config):
-    """Returns an instance of SequenceProcessingModel initialized with the
+    """Returns an instance of SequenceProcessor initialized with the
     default configuration file and a single loaded dataset. """
     # create a dictionary to serve as cli arguments
     cli_arguments = {'dataset_folder': [PATH_TO_DUMMY_DATASET]}
@@ -49,7 +49,7 @@ def model_with_single_dataset(dummy_config):
 
 @pytest.fixture
 def model_with_compound_dataset(dummy_config):
-    """Returns an instance of SequenceProcessingModel initialized with the
+    """Returns an instance of SequenceProcessor initialized with the
     default configuration file and a compound loaded dataset. The compound
     dataset is just two copies of the dataset, this makes writing tests
     much simpler. """
@@ -88,8 +88,7 @@ def test_attributes_after_initilization_of_model(model_without_dataset):
     assert model_without_dataset.config['token_embedding_dimension'] == 200
     assert model_without_dataset.config['token_pretrained_embedding_filepath'] == PATH_TO_DUMMY_TOKEN_EMBEDDINGS
     assert model_without_dataset.config['train_model'] == True
-    assert model_without_dataset.config['max_word_seq_len'] == 75
-    assert model_without_dataset.config['max_char_seq_len'] == 10
+    assert model_without_dataset.config['max_char_seq_len'] == 15
     assert model_without_dataset.config['verbose'] == False
 
     assert model_without_dataset.ds == []
@@ -106,7 +105,7 @@ def test_X_input_sequences_after_loading_single_dataset(model_with_single_datase
     # check type
     assert type(ds.train_word_idx_sequence) == numpy.ndarray
     # check shape
-    assert ds.train_word_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM, model.config['max_word_seq_len'])
+    assert ds.train_word_idx_sequence.shape[0] == DUMMY_TRAIN_SENT_NUM
 
 def test_y_output_sequences_after_loading_single_dataset(model_with_single_dataset):
     """Asserts y (labels) data partition attribute is initialized correctly when
@@ -118,8 +117,8 @@ def test_y_output_sequences_after_loading_single_dataset(model_with_single_datas
     # check type
     assert type(ds.train_tag_idx_sequence) == numpy.ndarray
     # check value
-    assert ds.train_tag_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
-        ds.max_word_seq_len, ds.tag_type_count)
+    assert ds.train_tag_idx_sequence.shape[0] == DUMMY_TRAIN_SENT_NUM
+    assert ds.train_tag_idx_sequence.shape[-1] == ds.tag_type_count
 
 def test_word_embeddings_after_loading_single_dataset(model_with_single_dataset):
     """Asserts that pretained token embeddings are loaded correctly when
@@ -133,14 +132,13 @@ def test_word_embeddings_after_loading_single_dataset(model_with_single_dataset)
     assert model.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
 
 def test_agreement_between_model_and_single_dataset(model_with_single_dataset):
-    """Asserts that the attributes common to SequenceProcessingModel and
+    """Asserts that the attributes common to SequenceProcessor and
     Dataset are the same for single datasets."""
     # shortens assert statments
     ds = model_with_single_dataset.ds[0]
     model = model_with_single_dataset
 
     assert model.config['dataset_folder'][0] == ds.dataset_folder
-    assert model.config['max_word_seq_len'] == ds.max_word_seq_len
 
 def test_X_input_sequences_after_loading_compound_dataset(model_with_compound_dataset):
     """Asserts X (input) data partition attribute is initialized correctly when
@@ -152,8 +150,7 @@ def test_X_input_sequences_after_loading_compound_dataset(model_with_compound_da
         # check type
         assert type(ds.train_word_idx_sequence) == numpy.ndarray
         # check shape
-        assert ds.train_word_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
-                                                    ds.max_word_seq_len)
+        assert ds.train_word_idx_sequence.shape[0] == DUMMY_TRAIN_SENT_NUM
 
 def test_y_output_sequences_after_loading_compound_dataset(model_with_compound_dataset):
     """Asserts y (labels) data partition attribute is initialized correctly when
@@ -164,9 +161,8 @@ def test_y_output_sequences_after_loading_compound_dataset(model_with_compound_d
     for ds in model_with_compound_dataset.ds:
         assert type(ds.train_tag_idx_sequence) == numpy.ndarray
         # check value
-        assert ds.train_tag_idx_sequence.shape == (DUMMY_TRAIN_SENT_NUM,
-                                                   ds.max_word_seq_len,
-                                                   ds.tag_type_count)
+        assert ds.train_tag_idx_sequence.shape[0] == DUMMY_TRAIN_SENT_NUM
+        assert ds.train_tag_idx_sequence.shape[-1] == ds.tag_type_count
 
 def test_word_embeddings_after_loading_compound_dataset(model_with_compound_dataset):
     """ Asserts that pretained token embeddings are loaded correctly when
@@ -180,7 +176,7 @@ def test_word_embeddings_after_loading_compound_dataset(model_with_compound_data
     assert model.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
 
 def test_agreement_between_model_and_compound_dataset(model_with_compound_dataset):
-    """ Asserts that the attributes common to SequenceProcessingModel and
+    """Asserts that the attributes common to SequenceProcessor and
     Dataset are the same for compound datasets.
     """
     # shortens assert statments
@@ -189,4 +185,4 @@ def test_agreement_between_model_and_compound_dataset(model_with_compound_datase
     # the same checks for each in a loop
     for i, ds in enumerate(model.ds):
         assert model.config['dataset_folder'][i] == ds.dataset_folder
-        assert model.config['max_word_seq_len'] == ds.max_word_seq_len
+        assert model.config['max_char_seq_len'] == ds.max_char_seq_len

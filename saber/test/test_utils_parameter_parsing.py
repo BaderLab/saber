@@ -25,8 +25,7 @@ DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS = {
 'maximum_number_of_epochs': 10,
 'verbose': False,
 'debug': False,
-'max_word_seq_len': 75,
-'max_char_seq_len': 10,
+'max_char_seq_len': 15,
 'freeze_token_embeddings': True}
 DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS = {
 'model_name': 'MT-LSTM-CRF',
@@ -48,8 +47,7 @@ DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS = {
 'maximum_number_of_epochs': 10,
 'verbose': False,
 'debug': False,
-'max_word_seq_len': 75,
-'max_char_seq_len': 10,
+'max_char_seq_len': 15,
 'freeze_token_embeddings': True}
 DUMMY_COMMAND_LINE_ARGS = {
 'gradient_normalization': 1.0,
@@ -110,8 +108,7 @@ def test_config_parser(dummy_config):
 
     assert dummy_config['advanced']['debug'] == 'False'
     assert dummy_config['advanced']['freeze_token_embeddings'] == 'True'
-    assert dummy_config['advanced']['max_word_seq_len'] == '75'
-    assert dummy_config['advanced']['max_char_seq_len'] == '10'
+    assert dummy_config['advanced']['max_char_seq_len'] == '15'
     assert dummy_config['advanced']['verbose'] == 'False'
 
 def test_process_parameters_no_command_line_args(dummy_parameters_no_CL_args):
