@@ -21,7 +21,7 @@ class Metrics(Callback):
                  y_train,
                  y_valid,
                  tag_type_to_idx,
-                 output_folder):
+                 output_dir):
         # training data
         self.X_train = X_train
         self.X_valid = X_valid
@@ -29,10 +29,11 @@ class Metrics(Callback):
         self.y_valid = y_valid
 
         self.tag_type_to_idx = tag_type_to_idx
+
         # get inversed mapping from idx: tag, speeds up computations downstream
         self.idx_to_tag_type = {v: k for k, v in tag_type_to_idx.items()}
 
-        self.output_folder = output_folder
+        self.output_dir = output_dir
 
         # epoch counter for model tied to this object
         self.current_epoch = 0
@@ -269,7 +270,7 @@ class Metrics(Callback):
         """
         # create output filepath
         perf_metrics_filename = 'epoch_{0:03d}.txt'.format(self.current_epoch + 1)
-        eval_file_dirname = os.path.join(self.output_folder, perf_metrics_filename)
+        eval_file_dirname = os.path.join(self.output_dir, perf_metrics_filename)
         # write performance metrics for current epoch to file
         micro_avg_per_epoch = [x['MICRO_AVG'] for x in self.valid_performance_metrics_per_epoch]
         macro_avg_per_epoch = [x['MACRO_AVG'] for x in self.valid_performance_metrics_per_epoch]
