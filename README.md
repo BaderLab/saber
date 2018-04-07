@@ -9,17 +9,17 @@
 
 Requires `Python >= 3.5`. Requirements can be installed by calling:
 ```
->>> pip install -r requirements.txt
+$ pip install -r requirements.txt
 ```
 
-It is recommended that you create a virtual enviornment first. See [here](https://docs.python.org/3/tutorial/venv.html).
+It is recommended that you create a virtual environment first. See [here](https://docs.python.org/3/tutorial/venv.html).
 
 ### Usage
 
 All hyper-parameters are specified in a configuration file. The configuration file can be specified when running __Saber__:
 
 ```
->>> python main.py --config_filepath path/to/config.ini
+$ python main.py --config_filepath path/to/config.ini
 ```
 
 If not specified, the default config file (`saber/config.ini`) is loaded.
