@@ -61,7 +61,6 @@ def process_parameters(config, cli_arguments={}):
     parameters['verbose'] = bool('True' == config['advanced']['verbose'])
     parameters['debug'] = bool('True' == config['advanced']['debug'])
     parameters['freeze_token_embeddings'] = bool('True' == config['advanced']['freeze_token_embeddings'])
-    parameters['max_word_seq_len'] = int(config['advanced']['max_word_seq_len'])
     parameters['max_char_seq_len'] = int(config['advanced']['max_char_seq_len'])
 
     # overwrite any parameters in the config if specfied at CL
@@ -135,7 +134,7 @@ def parse_arguments():
     parser.add_argument('--token_pretrained_embedding_filepath', required=False, type=str, help='')
     # parser.add_argument('--tokenizer', default=argument_default_value, help='')
     parser.add_argument('--train_model', required=False, type=bool, help='')
-    parser.add_argument('--max_word_seq_len', required=False, type=int, help='')
+    parser.add_argument('--max_char_seq_len', required=False, type=int, help='')
     # parser.add_argument('--use_character_lstm', default=argument_default_value, help='')
     # parser.add_argument('--use_crf', default=argument_default_value, help='')
     # parser.add_argument('--use_pretrained_model', default=argument_default_value, help='')
