@@ -15,17 +15,15 @@ ENDPAD = 'ENDPAD'
 
 class Dataset(object):
     """A class for handling data sets."""
-    def __init__(self, dataset_folder, sep='\t', names=['Word', 'Tag'],
-                 header=None, max_char_seq_len=15):
-        self.dataset_folder = dataset_folder
+    def __init__(self, filepath, sep='\t', names=['Word', 'Tag'], header=None):
+        self.filepath = filepath
         # search for any files in the dataset filepath ending with
         # TRAIN_FILE_EXT or TEST_FILE_EXT
-        self.trainset_filepath = glob.glob(os.path.join(dataset_folder, TRAIN_FILE_EXT))[0]
-        # self.testset_filepath = glob.glob(os.path.join(dataset_folder, TEST_FILE_EXT))[0]
+        self.trainset_filepath = glob.glob(os.path.join(filepath, TRAIN_FILE_EXT))[0]
+        # self.testset_filepath = glob.glob(os.path.join(filepath, TEST_FILE_EXT))[0]
         self.sep = sep
         self.names = names
         self.header = header
-        self.max_char_seq_len = max_char_seq_len
 
         # shared by train/test
         self.word_type_to_idx = {}
@@ -50,11 +48,11 @@ class Dataset(object):
         # self.test_dataframe = self.raw_dataframe.loc['test']
 
     def load_dataset(self, shared_word_type_to_idx=None, shared_char_type_to_idx=None):
-        """ Coordinates loading of given data set at self.dataset_folder.
+        """ Coordinates loading of given data set at self.filepath.
 
-        For a given dataset in CoNLL format at dataset_folder, cordinates
+        For a given dataset in CoNLL format at filepath, cordinates
         the loading of data into a pandas dataframe and updates instance
-        attributes. Expects self.dataset_folder to be a directory containing
+        attributes. Expects self.filepathto be a directory containing
         a single file, train.*. If this is a compound dataset,
         shared_word_type_to_idx and shared_char_type_to_idx must be provided.
 
@@ -80,14 +78,11 @@ class Dataset(object):
         self.train_sentences = self._get_sentences(self.trainset_filepath, sep=self.sep)
         # get type to idx sequences
         self.train_word_idx_sequence = Preprocessor.get_type_idx_sequence(self.train_sentences,
-                                                                          word_type_to_idx=self.word_type_to_idx,
-                                                                          max_char_seq_len=self.max_char_seq_len)
+                                                                          word_type_to_idx=self.word_type_to_idx)
         self.train_char_idx_sequence = Preprocessor.get_type_idx_sequence(self.train_sentences,
-                                                                          char_type_to_idx=self.char_type_to_idx,
-                                                                          max_char_seq_len=self.max_char_seq_len)
+                                                                          char_type_to_idx=self.char_type_to_idx)
         self.train_tag_idx_sequence = Preprocessor.get_type_idx_sequence(self.train_sentences,
-                                                                          tag_type_to_idx=self.tag_type_to_idx,
-                                                                          max_char_seq_len=self.max_char_seq_len)
+                                                                          tag_type_to_idx=self.tag_type_to_idx)
         # convert tag idx sequences to categorical
         self.train_tag_idx_sequence = self._tag_idx_sequence_to_categorical(self.train_tag_idx_sequence)
         ## TEST
@@ -100,10 +95,10 @@ class Dataset(object):
         # self.test_tag_idx_sequence = self._tag_idx_sequence_to_categorical(self.test_tag_idx_sequence)
 
     def _load_dataset(self):
-        """ Loads data set given at self.dataset_folder in pandas dataframe.
+        """ Loads data set given at self.filepathin pandas dataframe.
 
-        Loads a given dataset in CoNLL format at dataset_folder into a pandas
-        dataframe and updates instance. Expects self.dataset_folder to be a
+        Loads a given dataset in CoNLL format at filepathinto a pandas
+        dataframe and updates instance. Expects self.filepathto be a
         directory containing two files, train.* and test.*
 
         Returns:

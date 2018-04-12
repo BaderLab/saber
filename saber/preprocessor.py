@@ -14,18 +14,18 @@ class Preprocessor(object):
         # Load Spacy english model
         self.nlp = en_core_web_sm.load()
 
-    def transform(self, text):
+    def transform(self, text, w2i, c2i):
         """
         """
         # get tokens, sentences, and word_types
         word_types, char_types, sentences = self._process_text(text)
-        word_idx_sequence = get_type_idx_sequence(sentences,
-                                                  word_type_to_idx=None)
+        word_idx_sequence = self.get_type_idx_sequence(sentences,
+                                                       word_type_to_idx=w2i)
 
-        char_idx_sequence = get_type_idx_sequence(sentences,
-                                                  char_type_to_idx=None)
+        char_idx_sequence = self.get_type_idx_sequence(sentences,
+                                                       char_type_to_idx=c2i)
 
-        return word_types, char_types, sentences
+        return word_idx_sequence, char_idx_sequence
 
     def _process_text(self, text):
         """Process raw text."""
@@ -76,8 +76,7 @@ class Preprocessor(object):
     def get_type_idx_sequence(sentences,
                               word_type_to_idx=None,
                               char_type_to_idx=None,
-                              tag_type_to_idx=None,
-                              max_char_seq_len=10):
+                              tag_type_to_idx=None):
         """Returns sequence of indices corresponding to data set sentences.
 
         Returns the sequence of idices corresponding to the type order in
@@ -110,9 +109,13 @@ class Preprocessor(object):
             # get sequence of chars
             type_seq = [[[char_type_to_idx[ch] for ch in ty[col_idx]] for ty in s] for s in sentences]
 
+            # TODO (johngiorgi): this can't be the most efficient sol'n
+            # get the length of the longest character sequence
+            max_len = max([len(x) for x in max(type_seq, key=(lambda x: len(x)))])
+
             # create a sequence of padded character vectors
             for i, char_seq in enumerate(type_seq):
-                type_seq[i] = pad_sequences(maxlen=max_char_seq_len,
+                type_seq[i] = pad_sequences(maxlen=max_len,
                                             sequences=char_seq,
                                             padding="post",
                                             truncating='post',
