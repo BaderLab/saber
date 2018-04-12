@@ -77,6 +77,9 @@ def process_parameters(config, cli_arguments={}):
     # Do not use gradient normalization if config value is 0
     if parameters['gradient_normalization'] == 0:
         parameters['gradient_normalization'] = None
+    if parameters['token_pretrained_embedding_filepath'] == '':
+        parameters['token_pretrained_embedding_filepath'] = None
+
 
     return parameters
 

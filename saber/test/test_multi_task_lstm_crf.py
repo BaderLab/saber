@@ -31,6 +31,7 @@ def multi_task_lstm_crf_single_model(dummy_config):
 
     seq_processor_with_single_ds = SequenceProcessor(config=parameters)
     seq_processor_with_single_ds.load_dataset()
+    seq_processor_with_single_ds.load_embeddings()
     seq_processor_with_single_ds.create_model()
     multi_task_lstm_crf_single_model = seq_processor_with_single_ds.model
 
@@ -45,7 +46,7 @@ def train_valid_indices_single_model(multi_task_lstm_crf_single_model):
 
 @pytest.fixture
 def data_partitions_single_model(multi_task_lstm_crf_single_model, train_valid_indices_single_model):
-    """Returns an data partitions from call to _get_data_partitions()
+    """Returns a data partitions from call to _get_data_partitions()
     of a MultiTaskLSTMCRF object for fold=0."""
     data_partitions_single_model = multi_task_lstm_crf_single_model._get_data_partitions(train_valid_indices_single_model, fold=0)
     return data_partitions_single_model
@@ -74,7 +75,7 @@ def test_model_attributes_after_creation_of_model(multi_task_lstm_crf_single_mod
     assert multi_task_lstm_crf_single_model.config['max_char_seq_len'] == 15
     assert multi_task_lstm_crf_single_model.config['verbose'] == False
 
-    # assert type(multi_task_lstm_crf_single_model.ds) == Dataset
+    # assert type(multi_task_lstm_crf_single_model.ds) == []
     assert type(multi_task_lstm_crf_single_model.token_embedding_matrix) == numpy.ndarray
     # assert type(multi_task_lstm_crf_single_model.model) == []
     # assert len(multi_task_lstm_crf_single_model.model) == 1
