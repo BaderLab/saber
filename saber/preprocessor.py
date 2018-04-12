@@ -14,7 +14,7 @@ class Preprocessor(object):
         # Load Spacy english model
         self.nlp = en_core_web_sm.load()
 
-    def process_text(self, text):
+    def transform(self, text):
         """
         """
         # get tokens, sentences, and word_types
