@@ -57,12 +57,11 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     """Asserts instance attributes are initialized correctly when dataset is
     empty (i.e., load_dataset() method has not been called.)"""
     # attributes that are passed to __init__
-    assert empty_dummy_dataset.dataset_folder == PATH_TO_DUMMY_DATASET
+    assert empty_dummy_dataset.filepath == PATH_TO_DUMMY_DATASET
     assert empty_dummy_dataset.trainset_filepath == os.path.join(PATH_TO_DUMMY_DATASET, 'train.tsv')
     assert empty_dummy_dataset.sep == '\t'
     assert empty_dummy_dataset.names == ['Word', 'Tag']
     assert empty_dummy_dataset.header == None
-    assert empty_dummy_dataset.max_char_seq_len == 15
     # other instance attributes
     assert empty_dummy_dataset.word_type_to_idx == {}
     assert empty_dummy_dataset.char_type_to_idx == {}
@@ -120,6 +119,5 @@ def test_type_idx_sequence_after_dataset_loaded(single_dummy_dataset):
     # ensure that sentences are of the expected length
     assert single_dummy_dataset.train_word_idx_sequence.shape[0] == len(DUMMY_TRAIN_SENT)
     assert single_dummy_dataset.train_char_idx_sequence.shape[0] == len(DUMMY_TRAIN_SENT)
-    assert single_dummy_dataset.train_char_idx_sequence.shape[-1] == single_dummy_dataset.max_char_seq_len
     assert single_dummy_dataset.train_tag_idx_sequence.shape[0] == len(DUMMY_TRAIN_SENT)
     assert single_dummy_dataset.train_tag_idx_sequence.shape[-1] == len(DUMMY_TAG_TYPES)

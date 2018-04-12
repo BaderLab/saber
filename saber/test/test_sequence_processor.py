@@ -91,7 +91,6 @@ def test_attributes_after_initilization_of_model(model_no_ds_no_embed):
     assert model_no_ds_no_embed.config['token_embedding_dimension'] == 200
     assert model_no_ds_no_embed.config['token_pretrained_embedding_filepath'] == PATH_TO_DUMMY_TOKEN_EMBEDDINGS
     assert model_no_ds_no_embed.config['train_model'] == True
-    assert model_no_ds_no_embed.config['max_char_seq_len'] == 15
     assert model_no_ds_no_embed.config['verbose'] == False
 
     assert model_no_ds_no_embed.ds == []
@@ -145,7 +144,7 @@ def test_agreement_between_model_and_single_dataset(model_sing_ds_no_embed):
     ds = model_sing_ds_no_embed.ds[0]
     model = model_sing_ds_no_embed
 
-    assert model.config['dataset_folder'][0] == ds.dataset_folder
+    assert model.config['dataset_folder'][0] == ds.filepath
 
 def test_X_input_sequences_after_loading_compound_dataset(model_compound_ds_no_embed):
     """Asserts X (input) data partition attribute is initialized correctly when
@@ -180,5 +179,4 @@ def test_agreement_between_model_and_compound_dataset(model_compound_ds_no_embed
     # for testing purposes, the datasets are identical so we can simply peform
     # the same checks for each in a loop
     for i, ds in enumerate(model.ds):
-        assert model.config['dataset_folder'][i] == ds.dataset_folder
-        assert model.config['max_char_seq_len'] == ds.max_char_seq_len
+        assert model.config['dataset_folder'][i] == ds.filepath
