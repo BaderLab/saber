@@ -28,9 +28,9 @@ print('Saber version: {0}'.format('0.1-dev'))
 
 class SequenceProcessor(object):
     """A class for handeling the loading, saving, training, and specifying of
-    sequence processing models. """
+    sequence processing models."""
 
-    def __init__(self, config):
+    def __init__(self, config=None):
         # hyperparameters
         self.config = config
 
@@ -45,7 +45,15 @@ class SequenceProcessor(object):
         # preprocessor
         self.preprocessor = Preprocessor()
 
-        if self.config['verbose']: pprint(self.config)
+        # TODO (johngiorgi): need to make a decison as to whether or not
+        # a config is required to create a SequenceProcessor object.
+
+        # load pretrained token embeddings if they are provided
+        if (self.config is not None and
+            len(self.config['token_pretrained_embedding_filepath']) > 0):
+            self._load_token_embeddings()
+
+        if self.config is not None and self.config['verbose']: pprint(self.config)
 
     def predict(self, X, *args, **kwargs):
         y_pred = self.model.predict(X, batch_size=1)
@@ -55,45 +63,57 @@ class SequenceProcessor(object):
         score = self.model.evaluate(X, y, batch_size=1)
         return score
 
-    def save(self, model_name, filepath='../pretrained_models', model=0):
+    def save(self, filepath, model=0):
         """Coordinates the saving of Saber models.
 
-        Saves the neccecary files for model persistance to filepath/model_name.
+        Saves the necessary files for model persistance to filepath.
 
         Args:
-            model_name (str): name of the saved model, this will be the name of
-                              the folder that contains the saved file.
-            filepath (str): directory path to save model folder to, defaults to
-                            ../pretrained_models
+            filepath (str): directory path to save model folder to
             model (int): which model in self.model.model to save, defaults to 0
         """
         # create the pretrained model folder
-        make_dir(os.path.join(filepath, model_name))
+        make_dir(os.path.join(filepath))
+
+        # create a dictionary containg everything we need to save the model
+        model_attributes = {}
+
+        model_attributes['config'] = self.config
+        model_attributes['token_embeddings'] = self.token_embedding_matrix
+        model_attributes['ds'] = self.ds
 
         # create filepaths
         weights_filepath = os.path.join(filepath, 'model_weights.h5')
-        w2i_filepath = os.path.join(filepath, 'w2i.p')
-        c2i_filepath = os.path.join(filepath, 'c2i.p')
+        attributes_filepath = os.path.join(filepath, 'model_attributes.pickle')
 
         # save weights
         self.model.model[model].save_weights(weights_filepath)
-        # save word to index and character to index mappings
-        pickle.dump(self.ds[model].word_type_to_idx, open(w2i_filepath, 'wb'))
-        pickle.dump(self.ds[model].char_type_to_idx, open(c2i_filepath, 'wb'))
+        # save attributes
+        pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
 
-    def load(self, filepath, model=0):
-        """
+    def load(self, filepath):
+        """Coordinates the saving of Saber models.
+
+        Loads the necessary files for model creation from filepath.
+
+        Args:
+            filepath (str): directory path to saved pretrained folder
         """
         # create filepaths
         weights_filepath = os.path.join(filepath, 'model_weights.h5')
-        w2i_filepath = os.path.join(filepath, 'w2i.p')
-        c2i_filepath = os.path.join(filepath, 'c2i.p')
+        attributes_filepath = os.path.join(filepath, 'model_attributes.pickle')
+
+        # load attributes
+        model_attributes = pickle.load(open(attributes_filepath, "rb" ))
+        self.config = model_attributes['config']
+        self.ds = model_attributes['ds']
+        self.token_embedding_matrix = model_attributes['token_embeddings']
+
+        # create model based on saved models attributes
+        self.create_model()
 
         # load weights
-        self.model.model[model].load_weights(weights_filepath)
-        # load word to index and character to index mappings
-        w2i = pickle.load(open(w2i_filepath, "rb" ))
-        c2i = pickle.load(open(c2i_filepath, "rb" ))
+        self.model.model[0].load_weights(weights_filepath)
 
     def __getattr__(self, name):
         return getattr(self.model, name)
@@ -122,12 +142,6 @@ class SequenceProcessor(object):
 
         elapsed_time = time.time() - start_time
         print('Done ({0:.2f} seconds)'.format(elapsed_time))
-
-        # if pretrained token embeddings are provided, load them (if they are
-        # not already loaded)
-        if (len(self.config['token_pretrained_embedding_filepath']) > 0 and
-                self.token_embedding_matrix is None):
-            self._load_token_embeddings()
 
     def create_model(self):
         """Specifies and compiles chosen model (self.config['model_name'])."""
@@ -172,18 +186,6 @@ class SequenceProcessor(object):
         # train_history = self.model.fit_(checkpointer=checkpointer)
         # don't get history for now
         self.model.fit_(checkpointer, train_session_dir)
-        '''
-        # create Callback object for per epoch prec/recall/f1/support metrics
-        metrics = Metrics(self.X_train, self.y_train, self.ds.word_type_to_idx)
-        # fit
-        train_history = self.model.fit(self.X_train,
-                                       self.y_train,
-                                       batch_size=self.batch_size,
-                                       epochs=self.maximum_number_of_epochs,
-                                       validation_split=0.1,
-                                       callbacks = [checkpointer, metrics],
-                                       verbose=1)
-        '''
         # train_history = pd.DataFrame(train_history.history)
         # return train_history
 
