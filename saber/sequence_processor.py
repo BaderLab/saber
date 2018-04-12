@@ -48,8 +48,27 @@ class SequenceProcessor(object):
 
         if self.config['verbose']: pprint(self.config)
 
-    def predict(self, X, *args, **kwargs):
-        y_pred = self.model.predict(X, batch_size=1)
+    def predict(self, text, model=0, *args, **kwargs):
+        """Performs prediction for a given model and returns results."""
+        ds_ = self.ds[model]
+        model_ = self.model.model[model]
+
+        idx2word = {v: k for k, v in ds_.word_type_to_idx.items()}
+        idx2tag = {v: k for k, v in ds_.tag_type_to_idx.items()}
+
+        word_seq, char_seq = self.preprocessor.transform(text,
+                                                        ds_.word_type_to_idx,
+                                                        ds_.char_type_to_idx)
+
+        y_pred = model_.predict([word_seq, char_seq]).argmax(-1)
+        y_pred = np.asarray(y_pred).ravel()
+
+        print("{:15}||{}".format("Word", "Prediction"))
+        print(30 * "=")
+        for sent in word_seq:
+            for w, pred in zip(sent, y_pred):
+                print("{:15}: {:5}".format(idx2word[w], idx2tag[pred]))
+
         return y_pred
 
     def evaluate(self, X, y):
@@ -183,31 +202,6 @@ class SequenceProcessor(object):
         # train_history = pd.DataFrame(train_history.history)
         # return train_history
 
-    def predict(self, text, task=0):
-        """Performs prediction for a given model and returns results.
-
-        Performs prediction for the current model (self.model), and returns
-        a 2-tuple contain 1D array-like objects containing the true (gold)
-        labels and the predicted labels, where labels are integers corresponding
-        to the sequence tags as per self.ds.word_type_to_idx.
-
-        Returns:
-            y_true: 1D array like object containing the gold label sequence.
-            y_pred: 1D array like object containing the predicted sequence.
-        """
-        word_types, char_types, sentences = self.preprocessor.process_text(text)
-        # X = self.ds[task].train_word_idx_sequence
-        # y = self.ds[task].train_tag_idx_sequence
-        # get gold sequence, flatten into 1D array
-        # y_true = y.argmax(axis=-1)
-        # y_true = np.asarray(y_true).ravel()
-        # get predicted sequence, flatten into 1D array
-        # y_pred = self.model[task].model.predict(X).argmax(axis=-1)
-        # y_pred = np.asarray(y_pred).ravel()
-
-        # return y_true, y_pred
-        return word_types, char_types, sentences
-
     def _load_single_dataset(self):
         """Loads a single dataset.
 
@@ -217,8 +211,7 @@ class SequenceProcessor(object):
         Returns:
             a list containing a single dataset object.
         """
-        ds = Dataset(dataset_folder=self.config['dataset_folder'][0],
-                     max_char_seq_len=self.config['max_char_seq_len'])
+        ds = Dataset(self.config['dataset_folder'][0])
         ds.load_dataset()
 
         return [ds]
@@ -234,12 +227,8 @@ class SequenceProcessor(object):
         Returns:
             A list containing multiple compound dataset objects.
         """
-        # accumulator for datasets
-        ds_acc = []
-
-        for ds_filepath in self.config['dataset_folder']:
-            ds_acc.append(Dataset(dataset_folder=ds_filepath,
-                                  max_char_seq_len=self.config['max_char_seq_len']))
+        # accumulate datasets
+        ds_acc = [Dataset(ds) for ds in self.config['dataset_folder']]
 
         # get combined set of word types from all datasets
         comb_word_types = []

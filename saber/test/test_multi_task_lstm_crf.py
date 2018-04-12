@@ -72,7 +72,6 @@ def test_model_attributes_after_creation_of_model(multi_task_lstm_crf_single_mod
     assert multi_task_lstm_crf_single_model.config['pretrained_model_weights'] == ''
     assert multi_task_lstm_crf_single_model.config['token_embedding_dimension'] == 200
     assert multi_task_lstm_crf_single_model.config['token_pretrained_embedding_filepath'] == PATH_TO_DUMMY_TOKEN_EMBEDDINGS
-    assert multi_task_lstm_crf_single_model.config['max_char_seq_len'] == 15
     assert multi_task_lstm_crf_single_model.config['verbose'] == False
 
     # assert type(multi_task_lstm_crf_single_model.ds) == []
