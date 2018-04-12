@@ -25,12 +25,13 @@ print('Saber version: {0}'.format('0.1-dev'))
 # TODO (johngiorgi): implement saving loading of models
 # TODO (johngiorgi): predict should be more of an interface, calling it should
 # return a nicely formatted representation of the prediticted entities.
+# TODO (johngiorgi): use proper error handeling for load_ds / load_token methods
 
 class SequenceProcessor(object):
     """A class for handeling the loading, saving, training, and specifying of
     sequence processing models."""
 
-    def __init__(self, config=None):
+    def __init__(self, config):
         # hyperparameters
         self.config = config
 
@@ -45,15 +46,7 @@ class SequenceProcessor(object):
         # preprocessor
         self.preprocessor = Preprocessor()
 
-        # TODO (johngiorgi): need to make a decison as to whether or not
-        # a config is required to create a SequenceProcessor object.
-
-        # load pretrained token embeddings if they are provided
-        if (self.config is not None and
-            len(self.config['token_pretrained_embedding_filepath']) > 0):
-            self._load_token_embeddings()
-
-        if self.config is not None and self.config['verbose']: pprint(self.config)
+        if self.config['verbose']: pprint(self.config)
 
     def predict(self, X, *args, **kwargs):
         y_pred = self.model.predict(X, batch_size=1)
@@ -119,13 +112,7 @@ class SequenceProcessor(object):
         return getattr(self.model, name)
 
     def load_dataset(self):
-        """Coordinates the loading of a dataset.
-
-        Coordinates the loading of a dataset by creating a one or more Dataset
-        objects (one for each filepath in self.dataset_folder). Additionaly,
-        if self.token_pretrained_embedding_filepath is provided, loads the token
-        embeddings.
-        """
+        """Coordinates the loading of a dataset."""
         assert len(self.config['dataset_folder']) > 0, '''You must provide at
         least one dataset via the dataset_folder parameter'''
 
@@ -142,6 +129,13 @@ class SequenceProcessor(object):
 
         elapsed_time = time.time() - start_time
         print('Done ({0:.2f} seconds)'.format(elapsed_time))
+
+    def load_embeddings(self):
+        """Coordinates the loading of pre-trained token embeddings."""
+        assert self.ds, 'You must load a dataset before loading token embeddings'
+        assert self.config['token_pretrained_embedding_filepath'] is not None, 'Token embedding filepath must be provided in the config file or at the command line'
+
+        self._load_token_embeddings()
 
     def create_model(self):
         """Specifies and compiles chosen model (self.config['model_name'])."""
@@ -281,18 +275,18 @@ class SequenceProcessor(object):
         print('[INFO] Loading embeddings... ', end='', flush=True)
 
         # prepare the embedding indicies
-        token_embeddings_index = self._prepare_token_embedding_layer()
-        token_embedding_dimension = len(list(token_embeddings_index.values())[0])
-        # fill up the embedding matrix, update attribute
-        embedding_matrix = self._prepare_token_embedding_matrix(token_embeddings_index, token_embedding_dimension)
+        embedding_index = self._prepare_token_embedding_layer()
+        embedding_dimension = len(list(embedding_index.values())[0])
+        # create the embedding matrix, update attribute
+        embedding_matrix = self._prepare_token_embedding_matrix(embedding_index, embedding_dimension)
         self.token_embedding_matrix = embedding_matrix
 
         elapsed_time = time.time() - start_time
         print('Done ({0:.2f} seconds)'.format(elapsed_time))
         print('{s}Found {t} word vectors of dimension {d}'.format(
             s=' ' * 7,
-            t=len(token_embeddings_index),
-            d=token_embedding_dimension))
+            t=len(embedding_index),
+            d=embedding_dimension))
 
     def _prepare_token_embedding_layer(self):
         """Creates an embedding index using pretrained token embeddings.
@@ -301,31 +295,30 @@ class SequenceProcessor(object):
         dictionary mapping words to known embeddings.
 
         Returns:
-            token_embeddings_index: mapping of words to pre-trained token embeddings
+            embedding_index: mapping of words to pre-trained token embeddings
         """
-        token_embeddings_index = {}
-        token_embedding_file_lines = []
+        # acc
+        embedding_index = {}
 
+        # open pre-trained token embedding file for reading
         with open(self.config['token_pretrained_embedding_filepath'], 'r') as pte:
-            token_embedding_file_lines = pte.readlines()
+            for line in pte:
+                # split line, get word and its embedding
+                values = line.split()
+                word = values[0]
+                coefs = np.asarray(values[1:], dtype='float32')
 
-        for emb in token_embedding_file_lines:
-            values = emb.split()
+                # update our embedding index
+                embedding_index[word] = coefs
 
-            word = values[0] # get words
-            coefs = np.asarray(values[1:], dtype='float32') # get emb vectos
-
-            # update our embedding index
-            token_embeddings_index[word] = coefs
-
-        return token_embeddings_index
+        return embedding_index
 
     def _prepare_token_embedding_matrix(self,
-                                        token_embeddings_index,
-                                        token_embedding_dimensions):
+                                        embedding_index,
+                                        embedding_size):
         """Creates an embedding matrix using pretrained token embeddings.
 
-        For the models word to idx mappings, and word to pre-trained token
+        For the models word to index mappings, and word to pre-trained token
         embeddings, creates a matrix which maps all words in the models dataset
         to a pre-trained token embedding. If the token embedding does not exist
         in the pre-trained token embeddings file, the word will be mapped to
@@ -336,14 +329,15 @@ class SequenceProcessor(object):
             token embedding for the ith word in the models word to idx mapping.
         """
         # initialize the embeddings matrix
+        # plus 1 accounts for out-of-vocabulary tokens
         token_embedding_matrix = np.zeros((len(self.ds[0].word_type_to_idx) + 1,
-                                           token_embedding_dimensions))
+                                           embedding_size))
 
         # lookup embeddings for every word in the dataset
         for word, i in self.ds[0].word_type_to_idx.items():
-            token_embeddings_vector = token_embeddings_index.get(word)
-            if token_embeddings_vector is not None:
+            token_embedding = embedding_index.get(word)
+            if token_embedding is not None:
                 # words not found in embedding index will be all-zeros.
-                token_embedding_matrix[i] = token_embeddings_vector
+                token_embedding_matrix[i] = token_embedding
 
         return token_embedding_matrix

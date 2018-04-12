@@ -13,6 +13,9 @@ DUMMY_TEST_SENT_NUM = 1
 # embedding matrix shape is num word types x dimension of embeddings
 DUMMY_EMBEDDINGS_MATRIX_SHAPE = (25, 2)
 
+# TODO (johngiorgi): add some kind of test that accounts for the error thrown
+# when we try to load token embedding before loading a dataset.
+
 @pytest.fixture
 def dummy_config():
     """Returns an instance of a configparser object after parsing the dummy
@@ -23,18 +26,18 @@ def dummy_config():
     return dummy_config
 
 @pytest.fixture
-def model_without_dataset(dummy_config):
+def model_no_ds_no_embed(dummy_config):
     """Returns an instance of SequenceProcessor initialized with the
     default configuration file and no loaded dataset. """
     # resolve parameters, cast to correct types
     parameters = process_parameters(dummy_config)
 
-    model_without_dataset = SequenceProcessor(config=parameters)
+    model_no_ds_no_embed = SequenceProcessor(config=parameters)
 
-    return model_without_dataset
+    return model_no_ds_no_embed
 
 @pytest.fixture
-def model_with_single_dataset(dummy_config):
+def model_sing_ds_no_embed(dummy_config):
     """Returns an instance of SequenceProcessor initialized with the
     default configuration file and a single loaded dataset. """
     # create a dictionary to serve as cli arguments
@@ -42,13 +45,13 @@ def model_with_single_dataset(dummy_config):
     # resolve parameters, cast to correct types
     parameters = process_parameters(dummy_config, cli_arguments)
 
-    model_with_single_dataset = SequenceProcessor(config=parameters)
-    model_with_single_dataset.load_dataset()
+    model_sing_ds_no_embed = SequenceProcessor(config=parameters)
+    model_sing_ds_no_embed.load_dataset()
 
-    return model_with_single_dataset
+    return model_sing_ds_no_embed
 
 @pytest.fixture
-def model_with_compound_dataset(dummy_config):
+def model_compound_ds_no_embed(dummy_config):
     """Returns an instance of SequenceProcessor initialized with the
     default configuration file and a compound loaded dataset. The compound
     dataset is just two copies of the dataset, this makes writing tests
@@ -59,128 +62,121 @@ def model_with_compound_dataset(dummy_config):
     # resolve parameters, cast to correct types
     parameters = process_parameters(dummy_config, cli_arguments)
 
-    model_with_compound_dataset = SequenceProcessor(config=parameters)
-    model_with_compound_dataset.load_dataset()
+    model_compound_ds_no_embed = SequenceProcessor(config=parameters)
+    model_compound_ds_no_embed.load_dataset()
 
-    return model_with_compound_dataset
+    return model_compound_ds_no_embed
 
-def test_attributes_after_initilization_of_model(model_without_dataset):
+def test_attributes_after_initilization_of_model(model_no_ds_no_embed):
     """Asserts instance attributes are initialized correctly when sequence
     model is initialized (and before dataset is loaded)."""
     # check value/type
-    assert model_without_dataset.config['activation_function'] == 'relu'
-    assert model_without_dataset.config['batch_size'] == 1
-    assert model_without_dataset.config['character_embedding_dimension'] == 30
-    assert model_without_dataset.config['dataset_folder'] == [PATH_TO_DUMMY_DATASET]
-    assert model_without_dataset.config['debug'] == False
-    assert model_without_dataset.config['dropout_rate'] == 0.3
-    assert model_without_dataset.config['freeze_token_embeddings'] == True
-    assert model_without_dataset.config['gradient_normalization'] == None
-    assert model_without_dataset.config['k_folds'] == 2
-    assert model_without_dataset.config['learning_rate'] == 0.01
-    assert model_without_dataset.config['decay'] == 0.05
-    assert model_without_dataset.config['load_pretrained_model'] == False
-    assert model_without_dataset.config['maximum_number_of_epochs'] == 10
-    assert model_without_dataset.config['model_name'] == 'MT-LSTM-CRF'
-    assert model_without_dataset.config['optimizer'] == 'sgd'
-    assert model_without_dataset.config['output_folder'] == '../output'
-    assert model_without_dataset.config['pretrained_model_weights'] == ''
-    assert model_without_dataset.config['token_embedding_dimension'] == 200
-    assert model_without_dataset.config['token_pretrained_embedding_filepath'] == PATH_TO_DUMMY_TOKEN_EMBEDDINGS
-    assert model_without_dataset.config['train_model'] == True
-    assert model_without_dataset.config['max_char_seq_len'] == 15
-    assert model_without_dataset.config['verbose'] == False
+    assert model_no_ds_no_embed.config['activation_function'] == 'relu'
+    assert model_no_ds_no_embed.config['batch_size'] == 1
+    assert model_no_ds_no_embed.config['character_embedding_dimension'] == 30
+    assert model_no_ds_no_embed.config['dataset_folder'] == [PATH_TO_DUMMY_DATASET]
+    assert model_no_ds_no_embed.config['debug'] == False
+    assert model_no_ds_no_embed.config['dropout_rate'] == 0.3
+    assert model_no_ds_no_embed.config['freeze_token_embeddings'] == True
+    assert model_no_ds_no_embed.config['gradient_normalization'] == None
+    assert model_no_ds_no_embed.config['k_folds'] == 2
+    assert model_no_ds_no_embed.config['learning_rate'] == 0.01
+    assert model_no_ds_no_embed.config['decay'] == 0.05
+    assert model_no_ds_no_embed.config['load_pretrained_model'] == False
+    assert model_no_ds_no_embed.config['maximum_number_of_epochs'] == 10
+    assert model_no_ds_no_embed.config['model_name'] == 'MT-LSTM-CRF'
+    assert model_no_ds_no_embed.config['optimizer'] == 'sgd'
+    assert model_no_ds_no_embed.config['output_folder'] == '../output'
+    assert model_no_ds_no_embed.config['pretrained_model_weights'] == ''
+    assert model_no_ds_no_embed.config['token_embedding_dimension'] == 200
+    assert model_no_ds_no_embed.config['token_pretrained_embedding_filepath'] == PATH_TO_DUMMY_TOKEN_EMBEDDINGS
+    assert model_no_ds_no_embed.config['train_model'] == True
+    assert model_no_ds_no_embed.config['max_char_seq_len'] == 15
+    assert model_no_ds_no_embed.config['verbose'] == False
 
-    assert model_without_dataset.ds == []
-    assert model_without_dataset.token_embedding_matrix == None
-    assert model_without_dataset.model == None
+    assert model_no_ds_no_embed.ds == []
+    assert model_no_ds_no_embed.token_embedding_matrix == None
+    assert model_no_ds_no_embed.model == None
 
-def test_X_input_sequences_after_loading_single_dataset(model_with_single_dataset):
+def test_token_embeddings_load(model_sing_ds_no_embed,
+                               model_compound_ds_no_embed):
+    """Asserts that pre-trained token embeddings are loaded correctly when
+    SequenceProcessor.load_embeddings() is called"""
+    # load embeddings for each model
+    model_sing_ds_no_embed.load_embeddings()
+    model_compound_ds_no_embed.load_embeddings()
+
+    # check type
+    assert type(model_sing_ds_no_embed.token_embedding_matrix) == numpy.ndarray
+    assert type(model_compound_ds_no_embed.token_embedding_matrix) == numpy.ndarray
+    # check value
+    assert model_sing_ds_no_embed.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
+    assert model_compound_ds_no_embed.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
+
+def test_X_input_sequences_after_loading_single_dataset(model_sing_ds_no_embed):
     """Asserts X (input) data partition attribute is initialized correctly when
     sequence model is initialized (and after dataset is loaded) for single
     datasets."""
     # shortens assert statments
-    ds = model_with_single_dataset.ds[0]
-    model = model_with_single_dataset
+    ds = model_sing_ds_no_embed.ds[0]
+    model = model_sing_ds_no_embed
     # check type
     assert type(ds.train_word_idx_sequence) == numpy.ndarray
     # check shape
     assert ds.train_word_idx_sequence.shape[0] == DUMMY_TRAIN_SENT_NUM
 
-def test_y_output_sequences_after_loading_single_dataset(model_with_single_dataset):
+def test_y_output_sequences_after_loading_single_dataset(model_sing_ds_no_embed):
     """Asserts y (labels) data partition attribute is initialized correctly when
     sequence model is initialized (and after dataset is loaded) for single
     datasets."""
     # shortens assert statments
-    ds = model_with_single_dataset.ds[0]
-    model = model_with_single_dataset
+    ds = model_sing_ds_no_embed.ds[0]
+    model = model_sing_ds_no_embed
     # check type
     assert type(ds.train_tag_idx_sequence) == numpy.ndarray
     # check value
     assert ds.train_tag_idx_sequence.shape[0] == DUMMY_TRAIN_SENT_NUM
     assert ds.train_tag_idx_sequence.shape[-1] == ds.tag_type_count
 
-def test_word_embeddings_after_loading_single_dataset(model_with_single_dataset):
-    """Asserts that pretained token embeddings are loaded correctly when
-    sequence model is initialized (and after dataset is loaded) for single
-    datasets."""
-    # shortens assert statments
-    model = model_with_single_dataset
-    # check type
-    assert type(model.token_embedding_matrix) == numpy.ndarray
-    # check value
-    assert model.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
-
-def test_agreement_between_model_and_single_dataset(model_with_single_dataset):
+def test_agreement_between_model_and_single_dataset(model_sing_ds_no_embed):
     """Asserts that the attributes common to SequenceProcessor and
     Dataset are the same for single datasets."""
     # shortens assert statments
-    ds = model_with_single_dataset.ds[0]
-    model = model_with_single_dataset
+    ds = model_sing_ds_no_embed.ds[0]
+    model = model_sing_ds_no_embed
 
     assert model.config['dataset_folder'][0] == ds.dataset_folder
 
-def test_X_input_sequences_after_loading_compound_dataset(model_with_compound_dataset):
+def test_X_input_sequences_after_loading_compound_dataset(model_compound_ds_no_embed):
     """Asserts X (input) data partition attribute is initialized correctly when
     sequence model is initialized (and after dataset is loaded) for compound
     datasets."""
     # for testing purposes, the datasets are identical so we can simply peform
     # the same checks for each in a loop
-    for ds in model_with_compound_dataset.ds:
+    for ds in model_compound_ds_no_embed.ds:
         # check type
         assert type(ds.train_word_idx_sequence) == numpy.ndarray
         # check shape
         assert ds.train_word_idx_sequence.shape[0] == DUMMY_TRAIN_SENT_NUM
 
-def test_y_output_sequences_after_loading_compound_dataset(model_with_compound_dataset):
+def test_y_output_sequences_after_loading_compound_dataset(model_compound_ds_no_embed):
     """Asserts y (labels) data partition attribute is initialized correctly when
     sequence model is initialized (and after dataset is loaded) for compound
     datasets."""
     # for testing purposes, the datasets are identical so we can simply peform
     # the same checks for each in a loop
-    for ds in model_with_compound_dataset.ds:
+    for ds in model_compound_ds_no_embed.ds:
         assert type(ds.train_tag_idx_sequence) == numpy.ndarray
         # check value
         assert ds.train_tag_idx_sequence.shape[0] == DUMMY_TRAIN_SENT_NUM
         assert ds.train_tag_idx_sequence.shape[-1] == ds.tag_type_count
 
-def test_word_embeddings_after_loading_compound_dataset(model_with_compound_dataset):
-    """ Asserts that pretained token embeddings are loaded correctly when
-    sequence model is initialized (and after dataset is loaded) for compound
-    datasets """
-    # shortens assert statments
-    model = model_with_compound_dataset
-    # check type
-    assert type(model.token_embedding_matrix) == numpy.ndarray
-    # check value
-    assert model.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
-
-def test_agreement_between_model_and_compound_dataset(model_with_compound_dataset):
+def test_agreement_between_model_and_compound_dataset(model_compound_ds_no_embed):
     """Asserts that the attributes common to SequenceProcessor and
     Dataset are the same for compound datasets.
     """
     # shortens assert statments
-    model = model_with_compound_dataset
+    model = model_compound_ds_no_embed
     # for testing purposes, the datasets are identical so we can simply peform
     # the same checks for each in a loop
     for i, ds in enumerate(model.ds):
