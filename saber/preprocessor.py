@@ -56,10 +56,12 @@ class Preprocessor(object):
 
     @staticmethod
     def sequence_to_idx(sequence, offset=0):
-        """Returns a dictionary of element:idx pairs for each element in sequence.
+        """Returns a dictionary of element:index pairs for each element in
+        sequence.
 
-        Given a list, returns a dictionary of length len(sequence) + pad where
-        the keys are elements of sequence and the values are unique integers.
+        Given a list, returns a dictionary of length len(sequence) + offset
+        where the keys are elements of sequence and the values are unique
+        integers.
 
         Args:
             sequence (list): sequence data.
@@ -68,9 +70,12 @@ class Preprocessor(object):
                     use 0 as a padding value.
         Returns:
             a mapping from elements in the sequence to numbered indices
+
+        Preconditions:
+            assumes that all elements in sequence are unique
         """
         # offset accounts for sequence pad
-        return {e: i + offset for i, e in enumerate(list(set(sequence)))}
+        return {e: i + offset for i, e in enumerate(sequence)}
 
     @staticmethod
     def get_type_idx_sequence(sentences,
