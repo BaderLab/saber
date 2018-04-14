@@ -11,7 +11,8 @@ from preprocessor import Preprocessor
 
 TRAIN_FILE_EXT = 'train.*'
 # TEST_FILE_EXT = 'test.*'
-ENDPAD = 'ENDPAD'
+PAD = '<PAD>'
+NULL_TAG = 'O'
 
 class Dataset(object):
     """A class for handling data sets."""
@@ -142,7 +143,6 @@ class Dataset(object):
         """
         # Word types
         word_types = list(set(self.raw_dataframe.iloc[:, 0].values))
-        word_types.insert(0, ENDPAD) # make ENDPAD the 0th element
 
         # Char types
         char_types = []
@@ -152,22 +152,26 @@ class Dataset(object):
 
         # Tag types
         tag_types = list(set(self.raw_dataframe.iloc[:, -1].values))
+
+        # Post processing
+        word_types.insert(0, PAD) # make PAD the 0th element
+        char_types.insert(0, PAD) # make PAD the 0th element
         # if the negative class is not first, swap it with the first element
-        neg_class_idx = tag_types.index('O')
-        tag_types[neg_class_idx], tag_types[0] = tag_types[0], tag_types[neg_class_idx]
+        null_tag_idx = tag_types.index(NULL_TAG)
+        tag_types[null_tag_idx], tag_types[0] = tag_types[0], tag_types[null_tag_idx]
 
         return word_types, char_types, tag_types
 
-    def _map_type_to_idx(self):
-        """ Returns type to index mappings.
 
-        Returns dictionaries mapping each word type and each tag type to a
-        unique index.
+    def _map_type_to_idx(self):
+        """Returns type to index mappings.
+
+        Returns dictionaries mapping each word, char and tag type to a unique
+        index.
 
         Returns:
             three-tuple of word, char and tag type to index mappings
         """
-        # TODO (johngiorgi): Why did I drop the offset?
         word_type_to_idx = Preprocessor.sequence_to_idx(self.word_types)
         char_type_to_idx = Preprocessor.sequence_to_idx(self.char_types)
         tag_type_to_idx = Preprocessor.sequence_to_idx(self.tag_types)
@@ -223,7 +227,7 @@ class Dataset(object):
             one-hot endcoded matrix representation of idx_sequence.
         """
         # convert to one-hot encoding
-        one_hots = [to_categorical(seq, self.tag_type_count) for seq in idx_sequence]
+        one_hots = [to_categorical(s, self.tag_type_count) for s in idx_sequence]
         one_hots = np.array(one_hots)
 
         return one_hots

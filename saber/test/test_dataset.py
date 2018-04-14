@@ -15,11 +15,11 @@ from dataset import Dataset
 
 # constants for dummy dataset to perform testing on
 DUMMY_WORD_TYPES = ["Human", "APC2", "maps", "to", "chromosome", "19p13",
-".", "The", "absence", "of", "functional", "C7", "activity", "could", "not", "be",
-"accounted", "for", "on", "the", "basis", "an", "inhibitor", "ENDPAD"]
-DUMMY_CHAR_TYPES = ['2', 's', 'E', 'c', 'N', 'T', 'd', 'e', 'H', 'h', 'a', 'b',
-'v', 'C', 'm', 't', '9', 'P', 'p', 'r', '3', 'D', 'u', '.', 'o', '7', 'n', 'f',
-'y', 'l', '1', 'i', 'A']
+".", "The", "absence", "of", "functional", "C7", "activity", "could", "not",
+"be", "accounted", "for", "on", "the", "basis", "an", "inhibitor", "<PAD>"]
+DUMMY_CHAR_TYPES = ['2', 's', 'c', 'T', 'd', 'e', 'H', 'h', 'a', 'b', 'v', 'C',
+'m', 't', '9', 'p', 'r', '3', 'u', '.', 'o', '7', 'n', 'f', 'y', 'l', '1', 'i',
+'A', 'P', '<PAD>']
 DUMMY_TAG_TYPES = ["O", "B-DISO", "I-DISO", "E-DISO"]
 DUMMY_TRAIN_SENT = [[("Human", "O"), ("APC2", "O"), ("maps", "O"), ("to", "O"),
 ("chromosome", "O"), ("19p13", "O"), (".", "O")], [("The", "O"),
@@ -48,7 +48,6 @@ def single_dummy_dataset():
 def compound_dummy_dataset():
     """Returns a 'compound' dummy Dataset instance."""
     dataset = Dataset(PATH_TO_DUMMY_DATASET)
-    # need to passs shared word and shared char to idx
     dataset.load_dataset()
 
     return dataset
@@ -71,6 +70,7 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     assert type(empty_dummy_dataset.word_types) == list
     assert set(empty_dummy_dataset.word_types) == set(DUMMY_WORD_TYPES)
     assert type(empty_dummy_dataset.char_types) == list
+    print(empty_dummy_dataset.char_types)
     assert set(empty_dummy_dataset.char_types) == set(DUMMY_CHAR_TYPES)
     assert type(empty_dummy_dataset.tag_types) == list
     assert set(empty_dummy_dataset.tag_types) == set(DUMMY_TAG_TYPES)
