@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/BaderLab/Saber.svg?branch=master)](https://travis-ci.org/BaderLab/Saber)
 [![Coverage Status](https://coveralls.io/repos/github/BaderLab/Saber/badge.svg?branch=master)](https://coveralls.io/github/BaderLab/Saber?branch=master)
+[![spaCy](https://img.shields.io/badge/spaCy-v2-09a3d5.svg)](https://spacy.io)
 [![MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 # Saber
