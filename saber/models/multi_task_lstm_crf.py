@@ -34,8 +34,6 @@ from utils_models import compile_model
 # generate test/train indicies directly
 # TODO (johngiorgi): I need to name the models based on their dataset folder
 # TODO (johngiorgi): https://machinelearningmastery.com/dropout-regularization-deep-learning-models-keras/
-# TODO (johngiorgi): I NEED to be able to get the per fold performance metrics. Dumb solution:
-# save output of call to Saber to a file (command | tee ~/outputfile.txt or see here: https://askubuntu.com/questions/420981/how-do-i-save-terminal-output-to-a-file)
 # TODO (johngiorgi): make sure this process is shuffling the data
 # TODO (johngiorgi): https://machinelearningmastery.com/reshape-input-data-long-short-term-memory-networks-keras/
 
@@ -84,7 +82,7 @@ class MultiTaskLSTMCRF(object):
                                         output_dim=self.config['token_embedding_dimension'],
                                         mask_zero=True)
         else:
-            word_embeddings = Embedding(input_dim=len(self.ds[0].word_type_to_idx) + 1,
+            word_embeddings = Embedding(input_dim=len(self.ds[0].word_type_to_idx),
                                         output_dim=self.token_embedding_matrix.shape[1],
                                         mask_zero=True,
                                         weights=[self.token_embedding_matrix],
@@ -149,11 +147,11 @@ class MultiTaskLSTMCRF(object):
             # Feedforward after word-level BiLSTM
             model = feedforward_af_word_lstm(model)
             # Feedforward before CRF
-            model = TimeDistributed(Dense(units=ds.tag_type_count,
+            model = TimeDistributed(Dense(units=len(ds.tag_types),
                                           activation=self.config['activation_function']))(model)
 
             # CRF output layer
-            crf = CRF(ds.tag_type_count)
+            crf = CRF(len(ds.tag_types))
             output_layer = crf(model)
 
             # Fully specified model
@@ -243,7 +241,7 @@ class MultiTaskLSTMCRF(object):
         kf = KFold(n_splits=self.config['k_folds'], random_state=42)
 
         for ds in self.ds:
-            X = ds.train_word_idx_sequence
+            X = ds.train_word_idx_seq
             # acc
             dataset_train_valid_indices = []
             for train_idx, valid_idx in kf.split(X):
@@ -271,9 +269,9 @@ class MultiTaskLSTMCRF(object):
         data_partition = []
 
         for i, ds in enumerate(self.ds):
-            X_word = ds.train_word_idx_sequence
-            X_char = ds.train_char_idx_sequence
-            y = ds.train_tag_idx_sequence
+            X_word = ds.train_word_idx_seq
+            X_char = ds.train_char_idx_seq
+            y = ds.train_tag_idx_seq
             # train_valid_indices[i][fold] is a two-tuple, where index
             # 0 contains the train indicies and index 1 the valid
             # indicies
