@@ -3,6 +3,9 @@ import en_core_web_sm
 
 from keras.preprocessing.sequence import pad_sequences
 
+UNK = '<UNK>'
+PAD_IDX = 0
+
 class Preprocessor(object):
     """A class for processing text data."""
     def __init__(self):
@@ -19,11 +22,11 @@ class Preprocessor(object):
         """
         # get tokens, sentences, and word_types
         word_types, char_types, sentences = self._process_text(text)
-        word_idx_sequence = self.get_type_idx_sequence(sentences,
-                                                       word_type_to_idx=w2i)
 
-        char_idx_sequence = self.get_type_idx_sequence(sentences,
-                                                       char_type_to_idx=c2i)
+        word_idx_sequence = self.get_type_idx_sequence(sentences, w2i, type='word')
+        char_idx_sequence = self.get_type_idx_sequence(sentences, c2i, type='char')
+
+        print(word_idx_sequence)
 
         return word_idx_sequence, char_idx_sequence
 
@@ -49,13 +52,13 @@ class Preprocessor(object):
 
         # get sentences
         for sent in doc.sents:
-            token_sequence = [(token.text, 'O') for token in self.nlp(sent.text)]
+            token_sequence = [token.text for token in self.nlp(sent.text)]
             sentences.append(token_sequence)
 
         return list(word_types), list(char_types), sentences
 
     @staticmethod
-    def sequence_to_idx(sequence, offset=0):
+    def sequence_to_idx(seq, offset=0):
         """Returns a dictionary of element:index pairs for each element in
         sequence.
 
@@ -75,13 +78,10 @@ class Preprocessor(object):
             assumes that all elements in sequence are unique
         """
         # offset accounts for sequence pad
-        return {e: i + offset for i, e in enumerate(sequence)}
+        return {e: i + offset for i, e in enumerate(seq)}
 
     @staticmethod
-    def get_type_idx_sequence(sentences,
-                              word_type_to_idx=None,
-                              char_type_to_idx=None,
-                              tag_type_to_idx=None):
+    def get_type_idx_sequence(seq, type_to_idx, type='word'):
         """Returns sequence of indices corresponding to data set sentences.
 
         Returns the sequence of idices corresponding to the type order in
@@ -101,20 +101,24 @@ class Preprocessor(object):
             assumes that the first column of the data set contains the word
             types, and the last column contains the tag types.
         """
-        assert ((word_type_to_idx is not None) or (char_type_to_idx is not None)
-            or (tag_type_to_idx is not None)), '''One of of word_type_to_idx,
-            char_type_to_idx, or tag_type_to_idx must be provided.'''
+        assert type in ['word', 'char', 'tag'], "Argument type must be one 'word', 'char' or 'type'"
 
-        col_idx = -1 if tag_type_to_idx is not None else 0
-        # pad allows use of mask_zero parameter to ignore inputs with value zero
-        pad = tag_type_to_idx['O'] if tag_type_to_idx is not None else 0
+        pad = 0 # sequence pad
 
-        # char type
-        if char_type_to_idx is not None:
-            # get sequence of chars
-            type_seq = [[[char_type_to_idx[ch] for ch in ty[col_idx]] for ty in s] for s in sentences]
+        # Word type
+        if type == 'word':
+            type_seq = [[type_to_idx.get(x, type_to_idx[UNK]) for x in s] \
+                for s in seq]
+        # Tag type
+        elif type == 'tag':
+            type_seq = [[type_to_idx.get(x) for x in s] for s in seq]
+        # Char type
+        elif type == 'char':
+            # get index sequence of chars
+            type_seq = [[[type_to_idx.get(c, type_to_idx[UNK]) for c in w] \
+                for w in s] for s in seq]
 
-            # TODO (johngiorgi): this can't be the most efficient sol'n
+            # TODO (johngiorgi): this can't be the most efficient sol'n to
             # get the length of the longest character sequence
             max_len = max([len(x) for x in max(type_seq, key=(lambda x: len(x)))])
 
@@ -124,22 +128,12 @@ class Preprocessor(object):
                                             sequences=char_seq,
                                             padding="post",
                                             truncating='post',
-                                            value=pad)
-        else:
-            # word type
-            if word_type_to_idx is not None:
-                type_to_idx = word_type_to_idx
-            # tag type
-            elif tag_type_to_idx is not None:
-                type_to_idx = tag_type_to_idx
-
-            # get sequence of types (word, or tag)
-            type_seq = [[type_to_idx[ty[col_idx]] for ty in s] for s in sentences]
+                                            value=PAD_IDX)
 
         # pad sequences
         type_seq = pad_sequences(sequences=type_seq,
                                  padding='post',
                                  truncating='post',
-                                 value=pad)
+                                 value=PAD_IDX)
 
         return type_seq
