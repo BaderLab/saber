@@ -12,7 +12,7 @@ from preprocessor import Preprocessor
 TRAIN_FILE_EXT = 'train.*'
 # TEST_FILE_EXT = 'test.*'
 PAD = '<PAD>'
-NULL_TAG = 'O'
+UNK = '<UNK>'
 
 class Dataset(object):
     """A class for handling data sets."""
@@ -26,108 +26,122 @@ class Dataset(object):
         self.names = names
         self.header = header
 
-        # shared by train/test
-        self.word_type_to_idx = {}
-        self.char_type_to_idx = {}
-        self.tag_type_to_idx = {}
-        # on object construction, we read the dataset files and get word/tag
-        # types, this is helpful for creating compound datasets
-        self.raw_dataframe = self._load_dataset()
-        self.word_types, self.char_types, self.tag_types = self._get_types()
-        self.word_type_count = len(self.word_types)
-        self.char_type_count = len(self.char_types)
-        self.tag_type_count = len(self.tag_types)
+        # word and tag sequences from dataset
+        self.word_seq = None
+        self.tag_seq = None
 
-        # not shared by train/test
-        self.train_sentences = []
-        self.train_word_idx_sequence = []
-        self.train_char_idx_sequence = []
-        self.train_tag_idx_sequence = []
+        # word, character, and tag types from dataset
+        self.word_types = None
+        self.char_types = None
+        self.tag_types = None
+
+        # mappings of type: index for word, character and tag types
+        self.word_type_to_idx = None
+        self.char_type_to_idx = None
+        self.tag_type_to_idx = None
+
+        # index sequences of words, characters and tags for training
+        self.train_word_idx_seq = None
+        self.train_char_idx_seq = None
+        self.train_tag_idx_seq = None
 
         # load dataset file, then grab the train and test 'frames'
         # self.train_dataframe = self.raw_dataframe.loc['train']
         # self.test_dataframe = self.raw_dataframe.loc['test']
 
-    def load_dataset(self, shared_word_type_to_idx=None, shared_char_type_to_idx=None):
-        """ Coordinates loading of given data set at self.filepath.
+    def load_dataset(self, word_type_to_idx=None, char_type_to_idx=None):
+        """Coordinates loading of given data set at self.filepath.
 
         For a given dataset in CoNLL format at filepath, cordinates
         the loading of data into a pandas dataframe and updates instance
         attributes. Expects self.filepathto be a directory containing
         a single file, train.*. If this is a compound dataset,
-        shared_word_type_to_idx and shared_char_type_to_idx must be provided.
+        word_type_to_idx and char_type_to_idx must be provided.
 
         Args:
-            shared_word_type_to_idx: optional, a mapping of word types to
+            word_type_to_idx: optional, a mapping of word types to
                                      indices shared between datasets
-            shared_char_type_to_idx: optional, a mapping of character types to
+            char_type_to_idx: optional, a mapping of character types to
                                      indices shared between datasets
         """
-        # generate type to index mappings
-        self.word_type_to_idx, self.char_type_to_idx, self.tag_type_to_idx = \
-            self._map_type_to_idx()
-
         # if shared_by_compound is passed into function call, then this is a
-        # compound dataset (word_type_to_idx is shared across datasets)
-        if ((shared_word_type_to_idx is not None) and
-           (shared_char_type_to_idx is not None)):
-            self.word_type_to_idx = shared_word_type_to_idx
-            self.char_type_to_idx = shared_char_type_to_idx
+        # compound dataset (word and char index mappings shared across datasets)
+        if word_type_to_idx is not None and char_type_to_idx is not None:
+            self.word_type_to_idx = word_type_to_idx
+            self.char_type_to_idx = char_type_to_idx
+        else:
+            # load data and labels from file
+            self.load_data_and_labels()
+            # get word, char, and tag types
+            self.get_types()
+            # generate shared type to index mappings
+            self.word_type_to_idx = Preprocessor.sequence_to_idx(self.word_types)
+            self.char_type_to_idx  = Preprocessor.sequence_to_idx(self.char_types)
 
-        ## TRAIN
-        # get sentences
-        self.train_sentences = self._get_sentences(self.trainset_filepath, sep=self.sep)
+        # generate un-shared type to index mappings
+        self.tag_type_to_idx = Preprocessor.sequence_to_idx(self.tag_types)
+
         # get type to idx sequences
-        self.train_word_idx_sequence = Preprocessor.get_type_idx_sequence(self.train_sentences,
-                                                                          word_type_to_idx=self.word_type_to_idx)
-        self.train_char_idx_sequence = Preprocessor.get_type_idx_sequence(self.train_sentences,
-                                                                          char_type_to_idx=self.char_type_to_idx)
-        self.train_tag_idx_sequence = Preprocessor.get_type_idx_sequence(self.train_sentences,
-                                                                          tag_type_to_idx=self.tag_type_to_idx)
+        self.train_word_idx_seq = Preprocessor.get_type_idx_sequence(self.word_seq, self.word_type_to_idx, type='word')
+        self.train_char_idx_seq = Preprocessor.get_type_idx_sequence(self.word_seq, self.char_type_to_idx, type='char')
+        self.train_tag_idx_seq = Preprocessor.get_type_idx_sequence(self.tag_seq, self.tag_type_to_idx, type='tag')
         # convert tag idx sequences to categorical
-        self.train_tag_idx_sequence = self._tag_idx_sequence_to_categorical(self.train_tag_idx_sequence)
-        ## TEST
-        # get sentences
-        # self.test_sentences = self._get_sentences(self.testset_filepath, sep=self.sep)
-        # get type to idx sequences
-        # self.test_word_idx_sequence = self._get_type_idx_sequence(self.test_sentences)
-        # self.test_tag_idx_sequence = self._get_type_idx_sequence(self.test_sentences, type_='tag')
-        # convert tag idx sequences to categorical
-        # self.test_tag_idx_sequence = self._tag_idx_sequence_to_categorical(self.test_tag_idx_sequence)
+        self.train_tag_idx_seq = self._tag_idx_sequence_to_categorical(self.train_tag_idx_seq)
 
-    def _load_dataset(self):
-        """ Loads data set given at self.filepathin pandas dataframe.
+    def load_data_and_labels(self):
+        """Loads CoNLL format data set given at self.trainset_filepath.
 
-        Loads a given dataset in CoNLL format at filepathinto a pandas
-        dataframe and updates instance. Expects self.filepathto be a
-        directory containing two files, train.* and test.*
+        Updates self.word_seq and self.tag_seq each with a numpy array of lists
+        containg the word and tag sequence respectively. Expects filepath to be
+        a directory containing one file, train.*. The file format is
+        tab-separated values. A blank line is required at the end of each
+        sentence.
 
-        Returns:
-            single merged pandas dataframe for train and test files.
+        Example dataset:
+        '''
+        The	O
+        transcription	O
+        of	O
+        most	O
+        RP	B-PRGE
+        genes	I-PRGE
+        is	O
+        activated	O
+        by	O
+        ...
+        '''
         """
-        raw_dataset = pd.read_csv(self.trainset_filepath,
-                                  header=self.header, sep=self.sep,
-                                  names=self.names, encoding="utf-8",
-                                  # forces pandas to ignore quotes such that we
-                                  # can read in '"' word type.
-                                  quoting = 3,
-                                  # prevents pandas from interpreting 'null' as
-                                  # a NA value, as in e.g. 'null hypotheis'
-                                  na_filter=False)
+        # global accumulators
+        word_seq, tag_seq = [], []
 
-        # testing_set = pd.read_csv(self.testset_filepath,
-        #                           header=self.header, sep=self.sep,
-        #                           names=self.names, encoding="utf-8",
-        #                           quoting = 3, na_filter=False)
+        with codecs.open(self.trainset_filepath, 'r', encoding='utf-8') as ds:
+            # local accumulators
+            words, tags = [], []
 
-        # concatenate dataframes vertically with keys
-        # frames = [training_set, testing_set]
-        # raw_dataset = pd.concat(frames, keys=['train', 'test'])
-        # forward propogate last valid value to file NAs.
-        raw_dataset = raw_dataset.fillna(method='ffill')
-        return raw_dataset
+            for line in ds:
+                line = line.rstrip() # right strip
 
-    def _get_types(self):
+                # accumulate each sequence
+                if len(line) == 0 or line.startswith('-DOCSTART-'):
+                    if len(words) != 0:
+                        word_seq.append(words)
+                        tag_seq.append(tags)
+                        words, tags = [], []
+
+                # accumulate each word in a sequence
+                else:
+                    word, tag = line.split('\t')
+                    words.append(word)
+                    tags.append(tag)
+
+            # in order to collect last sentence in the file
+            word_seq.append(words)
+            tag_seq.append(tags)
+
+        self.word_seq = np.asarray(word_seq)
+        self.tag_seq = np.asarray(tag_seq)
+
+    def get_types(self):
         """Returns word types, char types and tag types.
 
         Returns the word types, character types and tag types for the current
@@ -142,7 +156,7 @@ class Dataset(object):
             tag types.
         """
         # Word types
-        word_types = list(set(self.raw_dataframe.iloc[:, 0].values))
+        word_types = list(set([w for s in self.word_seq for w in s]))
 
         # Char types
         char_types = []
@@ -151,17 +165,18 @@ class Dataset(object):
         char_types = list(set(char_types))
 
         # Tag types
-        tag_types = list(set(self.raw_dataframe.iloc[:, -1].values))
+        tag_types = list(set([t for s in self.tag_seq for t in s]))
 
         # Post processing
-        word_types.insert(0, PAD) # make PAD the 0th element
-        char_types.insert(0, PAD) # make PAD the 0th element
-        # if the negative class is not first, swap it with the first element
-        null_tag_idx = tag_types.index(NULL_TAG)
-        tag_types[null_tag_idx], tag_types[0] = tag_types[0], tag_types[null_tag_idx]
+        word_types.insert(0, PAD) # make PAD the 0th index
+        word_types.insert(1, UNK) # make UNK the 1st idex
+        char_types.insert(0, PAD)
+        char_types.insert(1, UNK)
+        tag_types.insert(0, PAD)
 
-        return word_types, char_types, tag_types
-
+        self.word_types = word_types
+        self.char_types = char_types
+        self.tag_types = tag_types
 
     def _map_type_to_idx(self):
         """Returns type to index mappings.
@@ -172,47 +187,11 @@ class Dataset(object):
         Returns:
             three-tuple of word, char and tag type to index mappings
         """
-        word_type_to_idx = Preprocessor.sequence_to_idx(self.word_types)
-        char_type_to_idx = Preprocessor.sequence_to_idx(self.char_types)
-        tag_type_to_idx = Preprocessor.sequence_to_idx(self.tag_types)
+        self.word_type_to_idx = Preprocessor.sequence_to_idx(self.word_types)
+        self.char_type_to_idx  = Preprocessor.sequence_to_idx(self.char_types)
+        self.tag_type_to_idx = Preprocessor.sequence_to_idx(self.tag_types)
 
-        return word_type_to_idx, char_type_to_idx, tag_type_to_idx
-
-    def _get_sentences(self, partition_filepath, sep='\t'):
-        """Returns sentences for csv/tsv file as a list lists of tuples.
-
-        Returns a list of lists of two-tuples for the csv/tsv at
-        partition_filepath, where the inner lists represent sentences, and the
-        tuples are ordered (word, tag) pairs.
-
-        Args:
-            partition_filepath: filepath to csv/tsv file for train/test set partition
-            sep: delimiter for csv/tsv file at filepath
-
-        Returns:
-            a list of lists of two-tuples, where the inner lists are sentences
-            containing ordered (word, tag) pairs.
-        """
-        # accumulators
-        global_sentence_acc = []
-        indivdual_sentence_acc = []
-
-        with codecs.open(partition_filepath, 'r', encoding='utf-8') as ds:
-            for line in ds:
-                # accumulate all lines in a sentence
-                if line != '\n':
-                    indivdual_sentence_acc.append(tuple(line.strip().split('\t')))
-                # reached the end of the sentence
-                else:
-                    global_sentence_acc.append(indivdual_sentence_acc)
-                    indivdual_sentence_acc = []
-
-            # in order to collect last sentence in the file
-            global_sentence_acc.append(indivdual_sentence_acc)
-
-        return global_sentence_acc
-
-    def _tag_idx_sequence_to_categorical(self, idx_sequence):
+    def _tag_idx_sequence_to_categorical(self, idx_seq):
         """One-hot encodes a given class vector.
 
         Converts a class vector of integers, (idx_sequence) to a
@@ -227,7 +206,7 @@ class Dataset(object):
             one-hot endcoded matrix representation of idx_sequence.
         """
         # convert to one-hot encoding
-        one_hots = [to_categorical(s, self.tag_type_count) for s in idx_sequence]
+        one_hots = [to_categorical(s, len(self.tag_types)) for s in idx_seq]
         one_hots = np.array(one_hots)
 
         return one_hots

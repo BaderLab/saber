@@ -53,12 +53,13 @@ class SequenceProcessor(object):
         ds_ = self.ds[model]
         model_ = self.model.model[model]
 
+        # TODO (johngiorgi): find a way around this!
         idx2word = {v: k for k, v in ds_.word_type_to_idx.items()}
         idx2tag = {v: k for k, v in ds_.tag_type_to_idx.items()}
 
         word_seq, char_seq = self.preprocessor.transform(text,
-                                                        ds_.word_type_to_idx,
-                                                        ds_.char_type_to_idx)
+                                                         ds_.word_type_to_idx,
+                                                         ds_.char_type_to_idx)
 
         y_pred = model_.predict([word_seq, char_seq]).argmax(-1)
         y_pred = np.asarray(y_pred).ravel()
@@ -66,8 +67,8 @@ class SequenceProcessor(object):
         print("{:15}||{}".format("Word", "Prediction"))
         print(30 * "=")
         for sent in word_seq:
-            for w, pred in zip(sent, y_pred):
-                print("{:15}: {:5}".format(idx2word[w], idx2tag[pred]))
+            for i, p in enumerate(y_pred):
+                print("{:15}: {:5}".format(idx2word[sent[i]], idx2tag[p]))
 
         return y_pred
 
@@ -95,7 +96,7 @@ class SequenceProcessor(object):
         model_attributes['ds'] = self.ds
 
         # create filepaths
-        weights_filepath = os.path.join(filepath, 'model_weights.h5')
+        weights_filepath = os.path.join(filepath, 'model_weights.hdf5')
         attributes_filepath = os.path.join(filepath, 'model_attributes.pickle')
 
         # save weights
@@ -112,7 +113,7 @@ class SequenceProcessor(object):
             filepath (str): directory path to saved pretrained folder
         """
         # create filepaths
-        weights_filepath = os.path.join(filepath, 'model_weights.h5')
+        weights_filepath = os.path.join(filepath, 'model_weights.hdf5')
         attributes_filepath = os.path.join(filepath, 'model_attributes.pickle')
 
         # load attributes
@@ -158,14 +159,10 @@ class SequenceProcessor(object):
 
     def create_model(self):
         """Specifies and compiles chosen model (self.config['model_name'])."""
+        assert self.config['model_name'] in ['MT-LSTM-CRF'], 'Model name is not valid.'
+
         # setup the chosen model
-        if self.config['model_name'] == 'LSTM-CRF':
-            print('Building the single-task LSTM-CRF model for NER...', end='', flush=True)
-            from models.simple_lstm_crf_ner import SimpleLSTMCRF
-            model_ = SimpleLSTMCRF(config=self.config,
-                                   ds=self.ds,
-                                   token_embedding_matrix=self.token_embedding_matrix)
-        elif self.config['model_name'] == 'MT-LSTM-CRF':
+        if self.config['model_name'] == 'MT-LSTM-CRF':
             print('[INFO] Building the multi-task LSTM-CRF model...')
             from models.multi_task_lstm_crf import MultiTaskLSTMCRF
             model_ = MultiTaskLSTMCRF(config=self.config,
@@ -228,12 +225,16 @@ class SequenceProcessor(object):
             A list containing multiple compound dataset objects.
         """
         # accumulate datasets
-        ds_acc = [Dataset(ds) for ds in self.config['dataset_folder']]
+        compound_ds = [Dataset(ds) for ds in self.config['dataset_folder']]
+
+        for ds in compound_ds:
+            ds.load_data_and_labels()
+            ds.get_types()
 
         # get combined set of word types from all datasets
         comb_word_types = []
         comb_char_types = []
-        for ds in ds_acc:
+        for ds in compound_ds:
             comb_word_types.extend(ds.word_types)
             comb_char_types.extend(ds.char_types)
         comb_word_types = list(set(comb_word_types))
@@ -241,16 +242,14 @@ class SequenceProcessor(object):
 
         # compute word to index mappings that will be shared across datasets
         # pad of 1 accounts for the sequence pad (of 0) down the pipeline
-        # TODO (johngiorgi): Why did I drop the offset?
-        shared_word_type_to_idx = Preprocessor.sequence_to_idx(comb_word_types)
-        shared_char_type_to_idx = Preprocessor.sequence_to_idx(comb_char_types)
+        word_type_to_idx = Preprocessor.sequence_to_idx(comb_word_types)
+        char_type_to_idx = Preprocessor.sequence_to_idx(comb_char_types)
 
         # load all the datasets
-        for ds in ds_acc:
-            ds.load_dataset(shared_word_type_to_idx=shared_word_type_to_idx,
-                            shared_char_type_to_idx=shared_char_type_to_idx)
+        for ds in compound_ds:
+            ds.load_dataset(word_type_to_idx, char_type_to_idx)
 
-        return ds_acc
+        return compound_ds
 
     def _load_token_embeddings(self):
         """Coordinates the loading of pre-trained token embeddings.
@@ -318,8 +317,7 @@ class SequenceProcessor(object):
             token embedding for the ith word in the models word to idx mapping.
         """
         # initialize the embeddings matrix
-        # plus 1 accounts for out-of-vocabulary tokens
-        token_embedding_matrix = np.zeros((len(self.ds[0].word_type_to_idx) + 1,
+        token_embedding_matrix = np.zeros((len(self.ds[0].word_type_to_idx),
                                            embedding_size))
 
         # lookup embeddings for every word in the dataset

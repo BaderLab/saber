@@ -10,6 +10,7 @@ PATH_TO_DUMMY_DATASET = 'saber/test/resources/single_dummy_dataset'
 PATH_TO_DUMMY_TOKEN_EMBEDDINGS = 'saber/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt'
 DUMMY_TRAIN_SENT_NUM = 2
 DUMMY_TEST_SENT_NUM = 1
+DUMMY_TAG_TYPE_COUNT = 5
 # embedding matrix shape is num word types x dimension of embeddings
 DUMMY_EMBEDDINGS_MATRIX_SHAPE = (25, 2)
 
@@ -120,9 +121,9 @@ def test_X_input_sequences_after_loading_single_dataset(model_sing_ds_no_embed):
     ds = model_sing_ds_no_embed.ds[0]
     model = model_sing_ds_no_embed
     # check type
-    assert type(ds.train_word_idx_sequence) == numpy.ndarray
+    assert type(ds.train_word_idx_seq) == numpy.ndarray
     # check shape
-    assert ds.train_word_idx_sequence.shape[0] == DUMMY_TRAIN_SENT_NUM
+    assert ds.train_word_idx_seq.shape[0] == DUMMY_TRAIN_SENT_NUM
 
 def test_y_output_sequences_after_loading_single_dataset(model_sing_ds_no_embed):
     """Asserts y (labels) data partition attribute is initialized correctly when
@@ -132,10 +133,10 @@ def test_y_output_sequences_after_loading_single_dataset(model_sing_ds_no_embed)
     ds = model_sing_ds_no_embed.ds[0]
     model = model_sing_ds_no_embed
     # check type
-    assert type(ds.train_tag_idx_sequence) == numpy.ndarray
+    assert type(ds.train_tag_idx_seq) == numpy.ndarray
     # check value
-    assert ds.train_tag_idx_sequence.shape[0] == DUMMY_TRAIN_SENT_NUM
-    assert ds.train_tag_idx_sequence.shape[-1] == ds.tag_type_count
+    assert ds.train_tag_idx_seq.shape[0] == DUMMY_TRAIN_SENT_NUM
+    assert ds.train_tag_idx_seq.shape[-1] == DUMMY_TAG_TYPE_COUNT
 
 def test_agreement_between_model_and_single_dataset(model_sing_ds_no_embed):
     """Asserts that the attributes common to SequenceProcessor and
@@ -154,9 +155,9 @@ def test_X_input_sequences_after_loading_compound_dataset(model_compound_ds_no_e
     # the same checks for each in a loop
     for ds in model_compound_ds_no_embed.ds:
         # check type
-        assert type(ds.train_word_idx_sequence) == numpy.ndarray
+        assert type(ds.train_word_idx_seq) == numpy.ndarray
         # check shape
-        assert ds.train_word_idx_sequence.shape[0] == DUMMY_TRAIN_SENT_NUM
+        assert ds.train_word_idx_seq.shape[0] == DUMMY_TRAIN_SENT_NUM
 
 def test_y_output_sequences_after_loading_compound_dataset(model_compound_ds_no_embed):
     """Asserts y (labels) data partition attribute is initialized correctly when
@@ -165,10 +166,10 @@ def test_y_output_sequences_after_loading_compound_dataset(model_compound_ds_no_
     # for testing purposes, the datasets are identical so we can simply peform
     # the same checks for each in a loop
     for ds in model_compound_ds_no_embed.ds:
-        assert type(ds.train_tag_idx_sequence) == numpy.ndarray
+        assert type(ds.train_tag_idx_seq) == numpy.ndarray
         # check value
-        assert ds.train_tag_idx_sequence.shape[0] == DUMMY_TRAIN_SENT_NUM
-        assert ds.train_tag_idx_sequence.shape[-1] == ds.tag_type_count
+        assert ds.train_tag_idx_seq.shape[0] == DUMMY_TRAIN_SENT_NUM
+        assert ds.train_tag_idx_seq.shape[-1] == DUMMY_TAG_TYPE_COUNT
 
 def test_agreement_between_model_and_compound_dataset(model_compound_ds_no_embed):
     """Asserts that the attributes common to SequenceProcessor and
