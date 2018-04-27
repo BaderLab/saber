@@ -8,6 +8,7 @@ import numpy as np
 from keras.callbacks import Callback
 from sklearn.metrics import precision_recall_fscore_support
 
+from preprocessor import Preprocessor
 from utils_models import precision_recall_f1_support
 
 # TODO (johngiorgi): there is some hard coded ugliness going on in print_table, fix this.
@@ -81,8 +82,8 @@ class Metrics(Callback):
         y_true_tag = [self.idx_to_tag_type[idx] for idx in y_true]
         y_pred_tag = [self.idx_to_tag_type[idx] for idx in y_pred]
         # chunk the entities
-        y_true_chunks = self._chunk_entities(y_true_tag)
-        y_pred_chunks = self._chunk_entities(y_pred_tag)
+        y_true_chunks = Preprocessor.chunk_entities(y_true_tag)
+        y_pred_chunks = Preprocessor.chunk_entities(y_pred_tag)
 
         # get performance scores per label
         performance_scores = self._get_precision_recall_f1_support(y_true_chunks,
@@ -118,37 +119,6 @@ class Metrics(Callback):
         shapes"""
 
         return y_true, y_pred
-
-    def _chunk_entities(self, seq):
-        """Chunks enities in the BIO or BIOES format.
-
-        For a given sequence of entities in the BIO or BIOES format, returns
-        the chunked entities.
-
-        Args:
-            seq (list): sequence of labels.
-        Returns:
-            list: list of (chunk_type, chunk_start, chunk_end).
-        Example:
-            >>> seq = ['B-PRGE', 'I-PRGE', 'O', 'B-PRGE']
-            >>> print(get_entities(seq))
-            [('PRGE', 0, 2), ('PRGE', 3, 4)]
-        """
-        i = 0
-        chunks = []
-        seq = seq + ['O']  # add sentinel
-        types = [tag.split('-')[-1] for tag in seq]
-        while i < len(seq):
-            if seq[i].startswith('B'):
-                for j in range(i+1, len(seq)):
-                    if seq[j].startswith('I') and types[j] == types[i]:
-                        continue
-                    break
-                chunks.append((types[i], i, j))
-                i = j
-            else:
-                i += 1
-        return chunks
 
     def _get_precision_recall_f1_support(self, y_true, y_pred):
         """Returns precision, recall, f1 and support.

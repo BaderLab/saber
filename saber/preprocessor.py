@@ -1,61 +1,69 @@
+import re
 import spacy
 import en_core_web_sm
 
 from keras.preprocessing.sequence import pad_sequences
 
 UNK = '<UNK>'
-PAD_IDX = 0
+PAD_VALUE = 0
 
 class Preprocessor(object):
     """A class for processing text data."""
     def __init__(self):
-
-        # TODO (johngiorgi): Read about spacys models, choose the most
-        # sensible for our purposes. Update the requirements.txt file if you
-        # change this, and the import statement above!
-
-        # Load Spacy english model
-        self.nlp = en_core_web_sm.load()
+        # Load Spacy english model (small), disable NER pipeline
+        self.nlp = en_core_web_sm.load(disable=['ner'])
 
     def transform(self, text, w2i, c2i):
         """
         """
-        # get tokens, sentences, and word_types
-        word_types, char_types, sentences = self._process_text(text)
+        text_ = self._sterilize(text)
+        # get sentences and token offsets
+        sentences, offsets = self._process_text(text_)
 
         word_idx_sequence = self.get_type_idx_sequence(sentences, w2i, type='word')
         char_idx_sequence = self.get_type_idx_sequence(sentences, c2i, type='char')
 
-        print(word_idx_sequence)
+        transformed_text = {
+            'text': text_,
+            'sentences': sentences,
+            'offsets': offsets,
+            'word_idx_sequence': word_idx_sequence,
+            'char_idx_sequence': char_idx_sequence
+        }
 
-        return word_idx_sequence, char_idx_sequence
+        return transformed_text
 
     def _process_text(self, text):
         """Process raw text."""
         doc = self.nlp(text) # process text with spacy
 
         # accumulators
-        word_types = set()
-        char_types = set()
+        # word_types = set()
+        # char_types = set()
         sentences = []
+        offsets = []
 
-        # TODO (johngiorgi): I am almost sure that there is a more elegant
-        # way to do this with the Spacy API. Figure it out!
-
-        # get tokens
-        for token in doc:
-            word_types.add(token.text)
-
-        # get characters
-        for word in word_types:
-            char_types.update(list(word))
-
-        # get sentences
+        # TODO (johngiorgi): Do I need word types?
+        # collect token sequence and word types
         for sent in doc.sents:
-            token_sequence = [token.text for token in self.nlp(sent.text)]
-            sentences.append(token_sequence)
+            token_seq = []
+            token_offset_seq = []
+            for token in sent:
+                # word_types.add(token.text)
+                token_seq.append(token.text)
+                token_offset_seq.append((token.idx, token.idx + len(token.text)))
+            sentences.append(token_seq)
+            offsets.append(token_offset_seq)
 
-        return list(word_types), list(char_types), sentences
+        # TODO (johngiorgi): Do I need character types?
+        # collect characters types
+        # for word in word_types:
+        #    char_types.update(list(word))
+
+        # sanity check
+        assert [len(s) for s in sentences] == [len(o) for o in offsets], 'sentences of offsets differ in size.'
+
+        return sentences, offsets
 
     @staticmethod
     def sequence_to_idx(seq, offset=0):
@@ -128,12 +136,58 @@ class Preprocessor(object):
                                             sequences=char_seq,
                                             padding="post",
                                             truncating='post',
-                                            value=PAD_IDX)
+                                            value=PAD_VALUE)
 
         # pad sequences
         type_seq = pad_sequences(sequences=type_seq,
                                  padding='post',
                                  truncating='post',
-                                 value=PAD_IDX)
+                                 value=PAD_VALUE)
 
         return type_seq
+
+    @staticmethod
+    def chunk_entities(seq):
+        """Chunks enities in the BIO or BIOES format.
+
+        For a given sequence of entities in the BIO or BIOES format, returns
+        the chunked entities.
+
+        Args:
+            seq (list): sequence of labels.
+        Returns:
+            list: list of (chunk_type, chunk_start, chunk_end).
+        Example:
+            >>> seq = ['B-PRGE', 'I-PRGE', 'O', 'B-PRGE']
+            >>> print(get_entities(seq))
+            [('PRGE', 0, 2), ('PRGE', 3, 4)]
+        """
+        i = 0
+        chunks = []
+        seq = seq + ['O']  # add sentinel
+        types = [tag.split('-')[-1] for tag in seq]
+        while i < len(seq):
+            if seq[i].startswith('B'):
+                for j in range(i+1, len(seq)):
+                    if seq[j].startswith('I') and types[j] == types[i]:
+                        continue
+                    break
+                chunks.append((types[i], i, j))
+                i = j
+            else:
+                i += 1
+        return chunks
+
+    def _sterilize(self, text):
+        """Sterilize input text.
+
+        For given input text, remove proceeding and preeceding spaces, and replace
+        spans of multiple spaces with a single space.
+
+        Args:
+            text (str): text to sterilize
+
+        Returns:
+            sterilized message
+        """
+        return re.sub('\s+', ' ', text.strip())
