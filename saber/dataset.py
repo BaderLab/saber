@@ -80,6 +80,8 @@ class Dataset(object):
 
         # generate un-shared type to index mappings
         self.tag_type_to_idx = Preprocessor.sequence_to_idx(self.tag_types)
+        # create reverse mapping of indices to tags
+        self.idx_to_tag_type = {v: k for k, v in self.tag_type_to_idx.items()}
 
         # get type to idx sequences
         self.train_word_idx_seq = Preprocessor.get_type_idx_sequence(self.word_seq, self.word_type_to_idx, type='word')

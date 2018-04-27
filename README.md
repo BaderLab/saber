@@ -3,9 +3,9 @@
 [![spaCy](https://img.shields.io/badge/spaCy-v2-09a3d5.svg)](https://spacy.io)
 [![MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-# Saber
+# SΛBER
 
-**Saber** (**S**equence **A**nnotator for **B**iomedical **E**ntities and **R**elations) is a deep-learning based tool for **information extraction** in the biomedical domain.
+**SΛBER** (**S**equence **A**nnotator for **B**iomedical **E**ntities and **R**elations) is a deep-learning based tool for **information extraction** in the biomedical domain.
 
 ### Requirements
 
