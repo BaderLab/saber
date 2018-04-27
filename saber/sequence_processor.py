@@ -1,14 +1,18 @@
 import os
 import time
+import json
 import pickle
 from pprint import pprint
+from itertools import chain
 
 import numpy as np
 import pandas as pd
 
+from spacy import displacy
 from keras.models import load_model
 from keras_contrib.layers.crf import CRF
 
+import constants
 from dataset import Dataset
 from metrics import Metrics
 from preprocessor import Preprocessor
@@ -48,29 +52,60 @@ class SequenceProcessor(object):
 
         if self.config['verbose']: pprint(self.config)
 
-    def predict(self, text, model=0, *args, **kwargs):
+    def predict(self, text, model=0, jupyter=False, *args, **kwargs):
         """Performs prediction for a given model and returns results."""
         ds_ = self.ds[model]
         model_ = self.model.model[model]
 
-        # TODO (johngiorgi): find a way around this!
-        idx2word = {v: k for k, v in ds_.word_type_to_idx.items()}
+        # get reverse mapping of indices to tags
+        # TODO: change to the following statement with new models
+        # idx2tag = ds_.idx_to_tag_type
         idx2tag = {v: k for k, v in ds_.tag_type_to_idx.items()}
+        # process raw input text
+        transformed_text = self.preprocessor.transform(text,
+                                                       ds_.word_type_to_idx,
+                                                       ds_.char_type_to_idx)
 
-        word_seq, char_seq = self.preprocessor.transform(text,
-                                                         ds_.word_type_to_idx,
-                                                         ds_.char_type_to_idx)
+        # perform prediction, convert to tag sequence
+        y_pred = model_.predict([transformed_text['word_idx_sequence'],
+                                 transformed_text['char_idx_sequence']]).argmax(-1)
+        idx_pred_seq = np.asarray(y_pred).ravel()
+        # TODO: clean this up, need to drop pads.
+        tag_pred_seq = [idx2tag[idx] for idx in idx_pred_seq if idx2tag[idx] != '<PAD>']
 
-        y_pred = model_.predict([word_seq, char_seq]).argmax(-1)
-        y_pred = np.asarray(y_pred).ravel()
+        # chunk the predicted entities
+        chunk_pred_seq = self.preprocessor.chunk_entities(tag_pred_seq)
+        # flatten the token offsets
+        offsets = list(chain.from_iterable(transformed_text['offsets']))
 
-        print("{:15}||{}".format("Word", "Prediction"))
-        print(30 * "=")
-        for sent in word_seq:
-            for i, p in enumerate(y_pred):
-                print("{:15}: {:5}".format(idx2word[sent[i]], idx2tag[p]))
+        # TODO: this should be moved to a unit test
+        assert len(tag_pred_seq) == len(offsets)
 
-        return y_pred
+        # accumulator for predicted entities
+        ents = []
+
+        for chunk in chunk_pred_seq:
+            # get token indicies of the labeled chunk
+            chunk_start = chunk[1]
+            chunk_end = chunk[-1] - 1
+            # character indicies of the labeled chunk
+            start, end = offsets[chunk_start][0], offsets[chunk_end][-1]
+            # create the entity
+            ents.append({'start': start,
+                         'end': end,
+                         'label': chunk[0]})
+
+        annotation = {
+            'text': transformed_text['text'],
+            'ents': ents,
+            'title': None
+        }
+
+        if jupyter:
+            displacy.render(annotation, jupyter=jupyter, style='ent',
+                            manual=True, options=constants.OPTIONS)
+
+        return json.dumps(annotation, ensure_ascii=False)
 
     def evaluate(self, X, y):
         score = self.model.evaluate(X, y, batch_size=1)
@@ -93,7 +128,7 @@ class SequenceProcessor(object):
 
         model_attributes['config'] = self.config
         model_attributes['token_embeddings'] = self.token_embedding_matrix
-        model_attributes['ds'] = self.ds
+        model_attributes['ds'] = self.ds[model]
 
         # create filepaths
         weights_filepath = os.path.join(filepath, 'model_weights.hdf5')
@@ -119,7 +154,7 @@ class SequenceProcessor(object):
         # load attributes
         model_attributes = pickle.load(open(attributes_filepath, "rb" ))
         self.config = model_attributes['config']
-        self.ds = model_attributes['ds']
+        self.ds = [model_attributes['ds']]
         self.token_embedding_matrix = model_attributes['token_embeddings']
 
         # create model based on saved models attributes
@@ -148,7 +183,7 @@ class SequenceProcessor(object):
             self.ds = self._load_compound_dataset()
 
         elapsed_time = time.time() - start_time
-        print('Done ({0:.2f} seconds)'.format(elapsed_time))
+        print('Done ({0:.2f} seconds).'.format(elapsed_time))
 
     def load_embeddings(self):
         """Coordinates the loading of pre-trained token embeddings."""
@@ -161,9 +196,10 @@ class SequenceProcessor(object):
         """Specifies and compiles chosen model (self.config['model_name'])."""
         assert self.config['model_name'] in ['MT-LSTM-CRF'], 'Model name is not valid.'
 
+        start_time = time.time()
         # setup the chosen model
         if self.config['model_name'] == 'MT-LSTM-CRF':
-            print('[INFO] Building the multi-task LSTM-CRF model...')
+            print('[INFO] Building the multi-task LSTM-CRF model... ', end='', flush=True)
             from models.multi_task_lstm_crf import MultiTaskLSTMCRF
             model_ = MultiTaskLSTMCRF(config=self.config,
                                       ds=self.ds,
@@ -175,7 +211,8 @@ class SequenceProcessor(object):
         # update this objects model attribute with instance of model class
         self.model = model_
 
-        print('Done', flush=True)
+        elapsed_time = time.time() - start_time
+        print('Done ({0:.2f} seconds).'.format(elapsed_time))
 
     def fit(self):
         """Fit the specified model.
