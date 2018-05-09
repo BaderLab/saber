@@ -1,9 +1,12 @@
-Keras==2.1.5
-spacy==2.0.11
+Flask==1.0.2
+# Keras contrib repo
+git+https://www.github.com/keras-team/keras-contrib.git
+# Spacy small english language model
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
 h5py==2.7.1
+Keras==2.1.5
 numpy==1.14.2
 pandas==0.22.0
 scikit-learn==0.19.1
+spacy==2.0.11
 tensorflow==1.7.0
-git+https://www.github.com/keras-team/keras-contrib.git
-https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
