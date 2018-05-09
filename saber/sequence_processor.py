@@ -162,6 +162,8 @@ class SequenceProcessor(object):
 
         # load weights
         self.model.model[0].load_weights(weights_filepath)
+        # https://github.com/keras-team/keras/issues/6124
+        self.model.model[0]._make_predict_function()
 
     def __getattr__(self, name):
         return getattr(self.model, name)
