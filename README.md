@@ -3,18 +3,23 @@
 [![spaCy](https://img.shields.io/badge/spaCy-v2-09a3d5.svg)](https://spacy.io)
 [![MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-# SΛBER
+# Saber
 
-**SΛBER** (**S**equence **A**nnotator for **B**iomedical **E**ntities and **R**elations) is a deep-learning based tool for **information extraction** in the biomedical domain.
+**Saber** (**S**equence **A**nnotator for **B**iomedical **E**ntities and **R**elations) is a deep-learning based tool for **information extraction** in the biomedical domain.
 
 ### Requirements
 
-Requires `Python >= 3.5`. Requirements can be installed by calling:
+Requires `Python >= 3.5`. It is recommended that you create a virtual environment before installing the requirements (see [here](https://docs.python.org/3/tutorial/venv.html)). Alternatively, on linux with python-virtualenv installed, you can call:
+
+```
+$ virtualenv --python=/path/to/python3 your_project_dir
+```
+
+Requirements can be installed by calling:
+
 ```
 $ pip install -r requirements.txt
 ```
-
-It is recommended that you create a virtual environment first. See [here](https://docs.python.org/3/tutorial/venv.html).
 
 ### Usage
 
@@ -27,6 +32,7 @@ $ python main.py --config_filepath path/to/config.ini
 If not specified, the default config file (`saber/config.ini`) is loaded.
 
 There is also a **jupyter notebook** for interacting with Saber (`saber/Saber.ipynb`).
+
 ### Resources
 
 #### Datasets
