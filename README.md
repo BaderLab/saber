@@ -9,12 +9,19 @@
 
 ### Requirements
 
-Requires `Python >= 3.5`. Requirements can be installed by calling:
+Requires `Python >= 3.5`. 
+
+It is recommended that you create a virtual environment first. 
+See [here](https://docs.python.org/3/tutorial/venv.html). 
+Or, on linux with python-virtualenv installed, you can do:
+```
+$ virtualenv --python=/path/to/python3 your_project_dir
+```
+
+Requirements can be installed by calling:
 ```
 $ pip install -r requirements.txt
 ```
-
-It is recommended that you create a virtual environment first. See [here](https://docs.python.org/3/tutorial/venv.html).
 
 ### Usage
 

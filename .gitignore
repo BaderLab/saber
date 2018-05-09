@@ -15,6 +15,11 @@ dist/
 downloads/
 eggs/
 .eggs/
+bin/
+share/
+include/
+local/
+man/
 lib/
 lib64/
 parts/
@@ -34,6 +39,7 @@ wheels/
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+pip-selfcheck.json
 
 # Unit test / coverage reports
 htmlcov/
@@ -102,3 +108,7 @@ ENV/
 
 # pytest
 .pytest_cache
+
+# IDE
+.idea
+*.iml
