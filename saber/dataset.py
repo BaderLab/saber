@@ -7,12 +7,10 @@ import pandas as pd
 
 from keras.utils import to_categorical
 
+from constants import UNK
+from constants import PAD
+from constants import TRAIN_FILE_EXT
 from preprocessor import Preprocessor
-
-TRAIN_FILE_EXT = 'train.*'
-# TEST_FILE_EXT = 'test.*'
-PAD = '<PAD>'
-UNK = '<UNK>'
 
 class Dataset(object):
     """A class for handling data sets."""
