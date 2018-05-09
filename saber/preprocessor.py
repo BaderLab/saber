@@ -4,8 +4,7 @@ import en_core_web_sm
 
 from keras.preprocessing.sequence import pad_sequences
 
-UNK = '<UNK>'
-PAD_VALUE = 0
+from constants import UNK, PAD_VALUE
 
 class Preprocessor(object):
     """A class for processing text data."""
