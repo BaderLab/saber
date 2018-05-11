@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/BaderLab/Saber.svg?branch=master)](https://travis-ci.org/BaderLab/Saber)
 [![Coverage Status](https://coveralls.io/repos/github/BaderLab/Saber/badge.svg?branch=master)](https://coveralls.io/github/BaderLab/Saber?branch=master)
+[![Documentation Status](https://readthedocs.org/projects/saber-baderlab/badge/?version=latest)](http://saber-baderlab.readthedocs.io/en/latest/?badge=latest)
 [![spaCy](https://img.shields.io/badge/spaCy-v2-09a3d5.svg)](https://spacy.io)
 [![MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
@@ -7,15 +8,56 @@
 
 **Saber** (**S**equence **A**nnotator for **B**iomedical **E**ntities and **R**elations) is a deep-learning based tool for **information extraction** in the biomedical domain.
 
-### Requirements
+### Quickstart
 
-Requires `Python >= 3.5`. It is recommended that you create a virtual environment before installing the requirements (see [here](https://docs.python.org/3/tutorial/venv.html)). Alternatively, on linux with python-virtualenv installed, you can call:
+First, clone the repository:
 
 ```
-$ virtualenv --python=/path/to/python3 your_project_dir
+$ git clone https://github.com/BaderLab/Saber.git
 ```
 
-Requirements can be installed by calling:
+When using pip it is generally recommended to install packages in a virtual environment to avoid modifying system state.
+
+#### Using venv
+
+To create the virtual environment:
+
+```
+$ python3 -m venv project_dir
+```
+
+Next, you need to activate the environment.
+
+On Windows, run:
+
+```
+$ project_dir\Scripts\activate.bat
+```
+
+On Unix or MacOS, run:
+
+```
+$ source project_dir/bin/activate
+```
+
+#### Using Conda
+
+If you use Conda/Miniconda, you can create an environment by running:
+
+
+```
+$ conda create -n myenv python=3
+```
+
+To activate the environment:
+
+```
+$ source activate myenv
+```
+
+#### Installing requirements
+
+With your virtual environment activated, install all requirements:
 
 ```
 $ pip install -r requirements.txt
@@ -23,21 +65,42 @@ $ pip install -r requirements.txt
 
 ### Usage
 
-All hyper-parameters are specified in a configuration file. The configuration file can be specified when running __Saber__:
+You can interact with Saber as a command line tool, web-service or via the Juypter notebooks.
+
+#### Command line tool
+
+All hyper-parameters are specified in a configuration file. The configuration file can be specified when running Saber:
 
 ```
 $ python main.py --config_filepath path/to/config.ini
 ```
 
-If not specified, the default config file (`saber/config.ini`) is loaded.
+If not specified, the default configuration file at `saber/config.ini` is used.
 
-There is also a **jupyter notebook** for interacting with Saber (`saber/Saber.ipynb`).
+#### Web-service
+
+To run Saber as a web-service, `cd` into the directory `saber` and run:
+
+```
+$ export FLASK_APP=web_service.py
+$ python -m flask run
+```
+
+You can then make a GET request with the argument `text`.
+
+#### Juypter notebooks
+
+See `saber/Saber.ipynb`.
+
+### Requirements
+
+Requires `Python >= 3.5`.
 
 ### Resources
 
 #### Datasets
 
-Corpora are collected in the **dataset** folder for convenience. Many of the corpora in the IOB and IOBES tag format were originally collected by [Crichton _et al_., 2017](https://doi.org/10.1186/s12859-017-1776-8), [here](https://github.com/cambridgeltl/MTL-Bioinformatics-2016).
+Corpora are collected in the `datasets` folder for convenience. Many of the corpora in the IOB and IOBES tag format were originally collected by [Crichton _et al_., 2017](https://doi.org/10.1186/s12859-017-1776-8), [here](https://github.com/cambridgeltl/MTL-Bioinformatics-2016).
 
 #### Word embeddings
 
