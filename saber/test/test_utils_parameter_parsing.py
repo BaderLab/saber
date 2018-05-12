@@ -8,7 +8,7 @@ DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS = {
 'model_name': 'MT-LSTM-CRF',
 'train_model': True,
 'load_pretrained_model': False,
-'dataset_folder': ['saber/test/resources/single_dummy_dataset'],
+'dataset_folder': ['saber/test/resources/dummy_dataset'],
 'output_folder': '../output',
 'pretrained_model_weights': '',
 'token_pretrained_embedding_filepath': 'saber/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt',
@@ -30,7 +30,7 @@ DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS = {
 'model_name': 'MT-LSTM-CRF',
 'train_model': True,
 'load_pretrained_model': False,
-'dataset_folder': ['saber/test/resources/single_dummy_dataset'],
+'dataset_folder': ['saber/test/resources/dummy_dataset'],
 'output_folder': '../output', 'pretrained_model_weights': '',
 'token_pretrained_embedding_filepath': 'saber/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt',
 'token_embedding_dimension': 200,
@@ -89,7 +89,7 @@ def test_config_parser(dummy_config):
     assert dummy_config['mode']['train_model'] == 'True'
     assert dummy_config['mode']['load_pretrained_model'] == 'False'
 
-    assert dummy_config['data']['dataset_folder'] == 'saber/test/resources/single_dummy_dataset'
+    assert dummy_config['data']['dataset_folder'] == 'saber/test/resources/dummy_dataset'
     assert dummy_config['data']['output_folder'] == '../output'
     assert dummy_config['data']['pretrained_model_weights'] == ''
     assert dummy_config['data']['token_pretrained_embedding_filepath'] == 'saber/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt'
