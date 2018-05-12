@@ -4,10 +4,8 @@ import numpy as np
 
 from dataset import Dataset
 
-# TODO (johngiorgi): need to write tests for compound dataset
-
 # constants for dummy dataset to perform testing on
-DUMMY_DS_FILEPATH = 'saber/test/resources/single_dummy_dataset'
+PATH_TO_DUMMY_DATASET = 'saber/test/resources/dummy_dataset'
 DUMMY_WORD_SEQ = [
     ['Human', 'APC2', 'maps', 'to', 'chromosome', '19p13', '.'],
     ['The', 'absence', 'of', 'functional', 'C7', 'activity', 'could', 'not',
@@ -32,23 +30,14 @@ DUMMY_TAG_TYPES = ['O', 'B-DISO', 'I-DISO', 'E-DISO', '<PAD>']
 @pytest.fixture
 def empty_dummy_dataset():
     """Returns an empty dummy Dataset instance."""
-    dataset = Dataset(DUMMY_DS_FILEPATH)
+    dataset = Dataset(PATH_TO_DUMMY_DATASET)
 
     return dataset
 
 @pytest.fixture
-def single_dummy_dataset():
-    """Returns a 'single' dummy Dataset instance."""
-    dataset = Dataset(DUMMY_DS_FILEPATH)
-    dataset.load_dataset()
-
-    return dataset
-
-# TODO
-@pytest.fixture
-def compound_dummy_dataset():
-    """Returns a 'compound' dummy Dataset instance."""
-    dataset = Dataset(DUMMY_DS_FILEPATH)
+def loaded_dummy_dataset():
+    """Returns a dummy Dataset instance after calling load_dataset()"""
+    dataset = Dataset(PATH_TO_DUMMY_DATASET)
     dataset.load_dataset()
 
     return dataset
@@ -57,8 +46,8 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     """Asserts instance attributes are initialized correctly when dataset is
     empty (i.e., load_dataset() method has not been called.)"""
     # attributes that are passed to __init__
-    assert empty_dummy_dataset.filepath == DUMMY_DS_FILEPATH
-    trainset_filepath = os.path.join(DUMMY_DS_FILEPATH, 'train.tsv')
+    assert empty_dummy_dataset.filepath == PATH_TO_DUMMY_DATASET
+    trainset_filepath = os.path.join(PATH_TO_DUMMY_DATASET, 'train.tsv')
     assert empty_dummy_dataset.trainset_filepath == trainset_filepath
     assert empty_dummy_dataset.sep == '\t'
     assert empty_dummy_dataset.names == ['Word', 'Tag']
@@ -74,6 +63,7 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     assert empty_dummy_dataset.word_type_to_idx == None
     assert empty_dummy_dataset.char_type_to_idx == None
     assert empty_dummy_dataset.tag_type_to_idx == None
+    assert empty_dummy_dataset.idx_to_tag_type == None
 
     assert empty_dummy_dataset.train_word_idx_seq == None
     assert empty_dummy_dataset.train_char_idx_seq == None
@@ -117,47 +107,45 @@ def test_map_type_to_idx(empty_dummy_dataset):
     assert all(key in DUMMY_TAG_TYPES for key in
                empty_dummy_dataset.tag_type_to_idx.keys())
 
-def test_input_sequences_after_loading_single_dataset(single_dummy_dataset):
+def test_input_sequences_after_loading_dataset(loaded_dummy_dataset):
     """Asserts that word_seq and tag_seq are updated as expected after a call to
-    load_dataset() is made on a single dataset."""
-    assert np.array_equal(single_dummy_dataset.word_seq, DUMMY_WORD_SEQ)
-    assert np.array_equal(single_dummy_dataset.tag_seq, DUMMY_TAG_SEQ)
-    
-def test_types_after_loading_single_dataset(single_dummy_dataset):
-    """Asserts that word_types, char_types and tag_types are updated as expected
-    after a call to load_dataset() is made on a single dataset."""
-    assert set(single_dummy_dataset.word_types) == set(DUMMY_WORD_TYPES)
-    assert set(single_dummy_dataset.char_types) == set(DUMMY_CHAR_TYPES)
-    assert set(single_dummy_dataset.tag_types) == set(DUMMY_TAG_TYPES)
+    load_dataset() is made on a dataset."""
+    assert np.array_equal(loaded_dummy_dataset.word_seq, DUMMY_WORD_SEQ)
+    assert np.array_equal(loaded_dummy_dataset.tag_seq, DUMMY_TAG_SEQ)
 
-def test_type_to_idx_mapping_after_loading_single_dataset(single_dummy_dataset):
+def test_types_after_loading_dataset(loaded_dummy_dataset):
+    """Asserts that word_types, char_types and tag_types are updated as expected
+    after a call to load_dataset() is made on a dataset."""
+    assert set(loaded_dummy_dataset.word_types) == set(DUMMY_WORD_TYPES)
+    assert set(loaded_dummy_dataset.char_types) == set(DUMMY_CHAR_TYPES)
+    assert set(loaded_dummy_dataset.tag_types) == set(DUMMY_TAG_TYPES)
+
+def test_type_to_idx_mapping_after_loading_dataset(loaded_dummy_dataset):
     """Asserts that word_type_to_idx, char_type_to_idx and tag_type_to_idx are
-    updated as expected after a call to load_dataset() is made on a single
-    dataset."""
+    updated as expected after a call to load_dataset() is made on a dataset."""
     # ensure that type to index mapping is of expected length
-    assert len(single_dummy_dataset.word_type_to_idx) == len(DUMMY_WORD_TYPES)
-    assert len(single_dummy_dataset.char_type_to_idx) == len(DUMMY_CHAR_TYPES)
-    assert len(single_dummy_dataset.tag_type_to_idx) == len(DUMMY_TAG_TYPES)
+    assert len(loaded_dummy_dataset.word_type_to_idx) == len(DUMMY_WORD_TYPES)
+    assert len(loaded_dummy_dataset.char_type_to_idx) == len(DUMMY_CHAR_TYPES)
+    assert len(loaded_dummy_dataset.tag_type_to_idx) == len(DUMMY_TAG_TYPES)
     # ensure that type to index mapping contains the expected keys
     assert all(key in DUMMY_WORD_TYPES for key in
-               single_dummy_dataset.word_type_to_idx.keys())
+               loaded_dummy_dataset.word_type_to_idx.keys())
     assert all(key in DUMMY_CHAR_TYPES for key in
-               single_dummy_dataset.char_type_to_idx.keys())
+               loaded_dummy_dataset.char_type_to_idx.keys())
     assert all(key in DUMMY_TAG_TYPES for key in
-               single_dummy_dataset.tag_type_to_idx.keys())
+               loaded_dummy_dataset.tag_type_to_idx.keys())
 
-def test_train_idx_sequences_after_loading_single_dataset(single_dummy_dataset):
-    """Asserts that train_word_idx_seq, train_char_idx_seq and
-    train_tag_idx_seq are updated as expected after a call to
-    load_dataset() is made on a single dataset."""
+def test_train_idx_sequences_after_loading_dataset(loaded_dummy_dataset):
+    """Asserts that train_word_idx_seq, train_char_idx_seq and train_tag_idx_seq
+    are updated as expected after a call to load_dataset() is made on a dataset."""
     # ensure that type to index
     # ensure we get the expected type after dataset is loaded
-    assert type(single_dummy_dataset.train_word_idx_seq) == np.ndarray
-    assert type(single_dummy_dataset.train_char_idx_seq) == np.ndarray
-    assert type(single_dummy_dataset.train_tag_idx_seq) == np.ndarray
+    assert type(loaded_dummy_dataset.train_word_idx_seq) == np.ndarray
+    assert type(loaded_dummy_dataset.train_char_idx_seq) == np.ndarray
+    assert type(loaded_dummy_dataset.train_tag_idx_seq) == np.ndarray
 
     # ensure that sentences are of the expected length
-    assert single_dummy_dataset.train_word_idx_seq.shape[0] == len(DUMMY_WORD_SEQ)
-    assert single_dummy_dataset.train_char_idx_seq.shape[0] == len(DUMMY_WORD_SEQ)
-    assert single_dummy_dataset.train_tag_idx_seq.shape[0] == len(DUMMY_WORD_SEQ)
-    assert single_dummy_dataset.train_tag_idx_seq.shape[-1] == len(DUMMY_TAG_TYPES)
+    assert loaded_dummy_dataset.train_word_idx_seq.shape[0] == len(DUMMY_WORD_SEQ)
+    assert loaded_dummy_dataset.train_char_idx_seq.shape[0] == len(DUMMY_WORD_SEQ)
+    assert loaded_dummy_dataset.train_tag_idx_seq.shape[0] == len(DUMMY_WORD_SEQ)
+    assert loaded_dummy_dataset.train_tag_idx_seq.shape[-1] == len(DUMMY_TAG_TYPES)
