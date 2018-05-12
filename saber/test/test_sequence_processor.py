@@ -6,7 +6,7 @@ from sequence_processor import SequenceProcessor
 
 # constants for dummy dataset/config/word embeddings to perform testing on
 PATH_TO_DUMMY_CONFIG = 'saber/test/resources/dummy_config.ini'
-PATH_TO_DUMMY_DATASET = 'saber/test/resources/single_dummy_dataset'
+PATH_TO_DUMMY_DATASET = 'saber/test/resources/dummy_dataset'
 PATH_TO_DUMMY_TOKEN_EMBEDDINGS = 'saber/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt'
 DUMMY_TRAIN_SENT_NUM = 2
 DUMMY_TEST_SENT_NUM = 1
@@ -56,7 +56,7 @@ def model_compound_ds_no_embed(dummy_config):
     """Returns an instance of SequenceProcessor initialized with the
     default configuration file and a compound loaded dataset. The compound
     dataset is just two copies of the dataset, this makes writing tests
-    much simpler. """
+    much simpler."""
     # create a dictionary to serve as cli arguments
     compound_dataset = [PATH_TO_DUMMY_DATASET, PATH_TO_DUMMY_DATASET]
     cli_arguments = {'dataset_folder': compound_dataset}
