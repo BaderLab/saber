@@ -3,7 +3,6 @@ import time
 from operator import itemgetter
 
 import numpy as np
-from sklearn.model_selection import KFold
 
 import keras.backend as K
 from keras import optimizers
@@ -19,8 +18,9 @@ from keras.layers import Bidirectional
 from keras.layers import TimeDistributed
 from keras_contrib.layers.crf import CRF
 
+import utils_models
 from metrics import Metrics
-from utils_models import compile_model
+
 
 # https://stackoverflow.com/questions/48615003/multi-task-learning-in-keras
 # https://machinelearningmastery.com/keras-functional-api-deep-learning/
@@ -164,32 +164,31 @@ class MultiTaskLSTMCRF(object):
         """Compiles a bidirectional multi-task LSTM-CRF for sequence tagging
         using Keras."""
         for model, crf in zip(self.model, self.crf):
-            compile_model(model=model,
-                          loss_function=crf.loss_function,
-                          optimizer=self.config['optimizer'],
-                          lr=self.config['learning_rate'],
-                          decay=self.config['decay'],
-                          clipnorm=self.config['gradient_normalization'],
-                          verbose=self.config['verbose'])
+            utils_models.compile_model(model=model,
+                                      loss_function=crf.loss_function,
+                                      optimizer=self.config['optimizer'],
+                                      lr=self.config['learning_rate'],
+                                      decay=self.config['decay'],
+                                      clipnorm=self.config['gradient_normalization'],
+                                      verbose=self.config['verbose'])
 
     def fit_(self, checkpointer, output_dir):
         """Fits a bidirectional multi-task LSTM-CRF for for sequence tagging
         using Keras."""
         # get train/valid indicies for each dataset
-        train_valid_indices = self._get_train_valid_indices()
+        train_valid_indices = utils_models.get_train_valid_indices(self.ds, self.config['k_folds'])
 
         ## FOLDS
         for fold in range(self.config['k_folds']):
             # get the train/valid partitioned data for all datasets
-            data_partitions = self._get_data_partitions(train_valid_indices, fold)
+            data_partitions = utils_models.get_data_partitions(self.ds, train_valid_indices, fold)
             # create the Keras Callback object for computing/storing metrics
-            metrics_current_fold = self._get_metrics(data_partitions, output_dir)
+            metrics_current_fold = utils_models.get_metrics(self.ds, data_partitions, output_dir)
             ## EPOCHS
             for epoch in range(self.config['maximum_number_of_epochs']):
                 print('[INFO] Fold: {}; Global epoch: {}'.format(fold + 1, epoch + 1))
                 ## DATASETS/MODELS
                 for i, (ds, model) in enumerate(zip(self.ds, self.model)):
-
                     # mainly for cleanliness
                     X_word_train = np.array(data_partitions[i][0])
                     X_word_valid = np.array(data_partitions[i][1])
@@ -217,103 +216,3 @@ class MultiTaskLSTMCRF(object):
                 self.crf = []
                 self.specify_()
                 self.compile_()
-
-    def _get_train_valid_indices(self):
-        """Get train and valid indicies for all k-folds for all datasets.
-
-        For all datatsets self.ds, gets k-fold train and valid indicies
-        (number of k_folds specified by self.config['k_folds']). Returns a list
-        of list of two-tuples, where the outer list is of length len(self.ds),
-        the inner list is of length self.config['k_folds'] and contains
-        two-tuples corresponding to train indicies and valid indicies
-        respectively. The train indicies for the ith dataset and jth fold would
-        thus be compound_train_valid_indices[i][j][0].
-
-        Returns:
-            compound_train_valid_indices: a list of list of two-tuples, where
-            compound_train_valid_indices[i][j] is a tuple containing the train
-            and valid indicies (in that order) for the ith dataset and jth
-            k-fold.
-        """
-        # acc
-        compound_train_valid_indices = []
-        # Sklearn KFold object
-        kf = KFold(n_splits=self.config['k_folds'], random_state=42)
-
-        for ds in self.ds:
-            X = ds.train_word_idx_seq
-            # acc
-            dataset_train_valid_indices = []
-            for train_idx, valid_idx in kf.split(X):
-                dataset_train_valid_indices.append((train_idx, valid_idx))
-            compound_train_valid_indices.append(dataset_train_valid_indices)
-
-        return compound_train_valid_indices
-
-    def _get_data_partitions(self, train_valid_indices, fold):
-        """Get train and valid partitions for all k-folds for all datasets.
-
-        For all datasets self.ds, gets the train and valid partitions for
-        all k folds (number of k_folds specified by self.config['k_folds']).
-        Returns a list of six-tuples:
-
-        (X_train_word, X_valid_word, X_train_char, X_valid_char, y_train, y_valid)
-
-        Where X represents the inputs, and y the labels. Inputs include
-        sequences of words (X_word), and sequences of characters (X_char)
-
-        Returns:
-            six-tuple containing train and valid data for all datasets.
-        """
-        # acc
-        data_partition = []
-
-        for i, ds in enumerate(self.ds):
-            X_word = ds.train_word_idx_seq
-            X_char = ds.train_char_idx_seq
-            y = ds.train_tag_idx_seq
-            # train_valid_indices[i][fold] is a two-tuple, where index
-            # 0 contains the train indicies and index 1 the valid
-            # indicies
-            X_word_train = X_word[train_valid_indices[i][fold][0]]
-            X_word_valid = X_word[train_valid_indices[i][fold][1]]
-            X_char_train = X_char[train_valid_indices[i][fold][0]]
-            X_char_valid = X_char[train_valid_indices[i][fold][1]]
-            y_train = y[train_valid_indices[i][fold][0]]
-            y_valid = y[train_valid_indices[i][fold][1]]
-
-            data_partition.append((X_word_train,
-                                   X_word_valid,
-                                   X_char_train,
-                                   X_char_valid,
-                                   y_train,
-                                   y_valid))
-
-        return data_partition
-
-    def _get_metrics(self, data_partitions, output_dir):
-        """Creates Keras Metrics Callback objects, one for each dataset.
-
-        Args:
-            data_paritions: six-tuple containing train/valid data for all ds.
-        """
-        # acc
-        metrics = []
-
-        for i, ds in enumerate(self.ds):
-            # data_partitions[i] is a four-tuple where index 0 contains X_train
-            # data partition, index 1 X_valid data partition, ..., for dataset i
-            X_word_train = data_partitions[i][0]
-            X_word_valid = data_partitions[i][1]
-            X_char_train = data_partitions[i][2]
-            X_char_valid = data_partitions[i][3]
-            y_train = data_partitions[i][4]
-            y_valid = data_partitions[i][5]
-
-            metrics.append(Metrics([X_word_train, X_char_train],
-                                   [X_word_valid, X_char_valid],
-                                   y_train, y_valid,
-                                   tag_type_to_idx = ds.tag_type_to_idx,
-                                   output_dir=output_dir[i]))
-
-        return metrics
