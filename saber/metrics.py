@@ -8,14 +8,14 @@ import numpy as np
 from keras.callbacks import Callback
 from sklearn.metrics import precision_recall_fscore_support
 
+import utils_models
 from preprocessor import Preprocessor
-from utils_models import precision_recall_f1_support
 
 # TODO (johngiorgi): there is some hard coded ugliness going on in print_table, fix this.
 # TODO (johngiorgi): this is likely copying big lists, find a way to get around this
 
 class Metrics(Callback):
-    """ A class for handling performance metrics, inherits from Callback. """
+    """A class for handling performance metrics, inherits from Callback."""
     def __init__(self,
                  X_train,
                  X_valid,

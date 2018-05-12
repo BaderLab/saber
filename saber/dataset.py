@@ -3,7 +3,6 @@ import time
 import glob
 import codecs
 import numpy as np
-import pandas as pd
 
 from keras.utils import to_categorical
 
@@ -37,6 +36,8 @@ class Dataset(object):
         self.word_type_to_idx = None
         self.char_type_to_idx = None
         self.tag_type_to_idx = None
+        # inverse mapping from indices to tag types 
+        self.idx_to_tag_type = None
 
         # index sequences of words, characters and tags for training
         self.train_word_idx_seq = None
