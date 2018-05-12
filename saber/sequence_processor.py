@@ -6,8 +6,6 @@ from pprint import pprint
 from itertools import chain
 
 import numpy as np
-import pandas as pd
-
 from spacy import displacy
 from keras.models import load_model
 from keras_contrib.layers.crf import CRF
@@ -26,9 +24,6 @@ print('Saber version: {0}'.format('0.1-dev'))
 # TODO (johngiorgi): make model checkpointing a config param
 # TODO (johngiorgi): make a debug mode that doesn't load token embeddings and
 # loads only some lines of dataset
-# TODO (johngiorgi): implement saving loading of models
-# TODO (johngiorgi): predict should be more of an interface, calling it should
-# return a nicely formatted representation of the prediticted entities.
 # TODO (johngiorgi): use proper error handeling for load_ds / load_token methods
 
 class SequenceProcessor(object):
@@ -58,9 +53,7 @@ class SequenceProcessor(object):
         model_ = self.model.model[model]
 
         # get reverse mapping of indices to tags
-        # TODO: change to the following statement with new models
-        # idx2tag = ds_.idx_to_tag_type
-        idx2tag = {v: k for k, v in ds_.tag_type_to_idx.items()}
+        idx2tag = ds_.idx_to_tag_type
         # process raw input text
         transformed_text = self.preprocessor.transform(text,
                                                        ds_.word_type_to_idx,
@@ -93,6 +86,7 @@ class SequenceProcessor(object):
             # create the entity
             ents.append({'start': start,
                          'end': end,
+                         'text': transformed_text['text'][start:end],
                          'label': chunk[0]})
 
         annotation = {
