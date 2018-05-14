@@ -8,6 +8,10 @@
 
 **Saber** (**S**equence **A**nnotator for **B**iomedical **E**ntities and **R**elations) is a deep-learning based tool for **information extraction** in the biomedical domain.
 
+### Requirements
+
+Requires `Python >= 3.5`.
+
 ### Quickstart
 
 First, clone the repository:
@@ -18,26 +22,34 @@ $ git clone https://github.com/BaderLab/Saber.git
 
 When using pip it is generally recommended to install packages in a virtual environment to avoid modifying system state.
 
-#### Using venv
+#### Using virtualenv or venv
 
-To create the virtual environment:
+To create the virtual environment.
+
+Using [virtualenv](https://virtualenv.pypa.io/en/stable/):
 
 ```
-$ python3 -m venv project_dir
+$ virtualenv path/to/venv
+```
+
+Using [venv](https://docs.python.org/3/library/venv.html):
+
+```
+$ python3 -m venv /path/to/new/virtual/environment
 ```
 
 Next, you need to activate the environment.
 
-On Windows, run:
+On Windows (cmd.exe), run:
 
 ```
-$ project_dir\Scripts\activate.bat
+$ \path\to\new\virtual\environment\Scripts\activate.bat
 ```
 
-On Unix or MacOS, run:
+On Unix or MacOS (bash/zsh), run:
 
 ```
-$ source project_dir/bin/activate
+$ source /path/to/new/virtual/environment/bin/activate
 ```
 
 #### Using Conda
@@ -65,7 +77,7 @@ $ pip install -r requirements.txt
 
 ### Usage
 
-You can interact with Saber as a command line tool, web-service or via the Juypter notebooks.
+You can interact with Saber as a command line tool, web-service or via the Juypter notebooks. If you created a virtual environment, remember to activate it first.
 
 #### Command line tool
 
@@ -77,6 +89,8 @@ $ python main.py --config_filepath path/to/config.ini
 
 If not specified, the default configuration file at `saber/config.ini` is used.
 
+> Note: At this time, the command-line tool simply trains the model.
+
 #### Web-service
 
 To run Saber as a web-service, `cd` into the directory `saber` and run:
@@ -86,15 +100,26 @@ $ export FLASK_APP=web_service.py
 $ python -m flask run
 ```
 
-You can then make a GET request with the argument `text`.
+You can then make a POST request with a `json` payload, e.g.:
+
+```
+{
+  "text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."
+}
+```
+
+For example, running the web-service locally and using `cURL`:
+
+```
+curl --request POST \
+     --url http://127.0.0.1:5000/annotate/text \
+     --header 'content-type: application/json' \
+     --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}'
+```
 
 #### Juypter notebooks
 
 See `saber/Saber.ipynb`.
-
-### Requirements
-
-Requires `Python >= 3.5`.
 
 ### Resources
 
