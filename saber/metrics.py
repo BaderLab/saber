@@ -167,7 +167,7 @@ class Metrics(Callback):
                     TP += 1
 
             # get performance metrics
-            performance_scores[lab] = precision_recall_f1_support(TP, FP, FN)
+            performance_scores[lab] = utils_models.precision_recall_f1_support(TP, FP, FN)
 
             # accumulate FNs, FPs, TPs
             FN_total += FN
@@ -181,7 +181,7 @@ class Metrics(Callback):
         total_support = TP_total + FN_total
 
         performance_scores['MACRO_AVG'] = (macro_p, macro_r, macro_f1, total_support)
-        performance_scores['MICRO_AVG'] = precision_recall_f1_support(TP_total, FP_total, FN_total)
+        performance_scores['MICRO_AVG'] = utils_models.precision_recall_f1_support(TP_total, FP_total, FN_total)
 
         return performance_scores
 
