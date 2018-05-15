@@ -21,18 +21,14 @@ from keras_contrib.layers.crf import CRF
 import utils_models
 from metrics import Metrics
 
-
 # https://stackoverflow.com/questions/48615003/multi-task-learning-in-keras
 # https://machinelearningmastery.com/keras-functional-api-deep-learning/
 # https://medium.com/@literallywords/stratified-k-fold-with-keras-e57c487b1416
 
-# TODO (johngiorgi): the way I get train/test partitions is likely copying
-# huge lists
 # TODO (johngiorgi): I need to stratify the K-folds, but sklearns implementation
 # wont handle a y matrix of three dimensions, solve this!
 # TODO (johngiorgi): It might be best that the outer most loop (k_folds) just
 # generate test/train indicies directly
-# TODO (johngiorgi): I need to name the models based on their dataset folder
 # TODO (johngiorgi): https://machinelearningmastery.com/dropout-regularization-deep-learning-models-keras/
 # TODO (johngiorgi): make sure this process is shuffling the data
 # TODO (johngiorgi): https://machinelearningmastery.com/reshape-input-data-long-short-term-memory-networks-keras/
@@ -40,6 +36,8 @@ from metrics import Metrics
 NUM_UNITS_WORD_LSTM = 200
 NUM_UNITS_CHAR_LSTM = 200
 NUM_UNITS_DENSE = NUM_UNITS_WORD_LSTM // 2
+# see: https://keras.io/layers/recurrent/#lstm
+IMPLEMENTATION = 2
 
 class MultiTaskLSTMCRF(object):
     """A Keras implementation of a BiLSTM-CRF for sequence labeling."""
@@ -73,10 +71,8 @@ class MultiTaskLSTMCRF(object):
                  keras.contrib, one for each model.
         """
         # Specify any shared layers outside the for loop
-        # Word-level embedding layer
 
-        # TODO (johngiorgi): why is there a discrepency between the + 1 in
-        # the pretrained and random word embddings situations
+        # Word-level embedding layer
         if self.token_embedding_matrix is None:
             word_embeddings = Embedding(input_dim=len(self.ds[0].word_type_to_idx),
                                         output_dim=self.config['token_embedding_dimension'],
@@ -95,9 +91,11 @@ class MultiTaskLSTMCRF(object):
 
         # Char-level BiLSTM
         fwd_state = LSTM(NUM_UNITS_CHAR_LSTM // 2, return_state=True,
+                                                   dropout=self.config['dropout_rate'],
                                                    recurrent_dropout=self.config['dropout_rate'])
         bwd_state = LSTM(NUM_UNITS_CHAR_LSTM // 2, return_state=True,
                                                    go_backwards=True,
+                                                   dropout=self.config['dropout_rate'],
                                                    recurrent_dropout=self.config['dropout_rate'])
 
 
@@ -105,11 +103,21 @@ class MultiTaskLSTMCRF(object):
         # Word-level BiLSTM
         word_BiLSTM = Bidirectional(LSTM(units=NUM_UNITS_WORD_LSTM // 2,
                                          return_sequences=True,
+                                         dropout=self.config['dropout_rate'],
                                          recurrent_dropout=self.config['dropout_rate']))
 
         # Feedforward before CRF
         feedforward_af_word_lstm = TimeDistributed(
             Dense(units=NUM_UNITS_DENSE,
+                  activation=self.config['activation_function']))
+
+
+        # get all unique tag types across all datasets
+        all_tag_types = [ds.tag_types for ds in self.ds]
+        all_tag_types = set(x for l in all_tag_types for x in l)
+
+        feedforward_bf_crf = TimeDistributed(
+            Dense(units=len(all_tag_types),
                   activation=self.config['activation_function']))
 
         # Specify model, taking into account the shared layers
@@ -123,32 +131,31 @@ class MultiTaskLSTMCRF(object):
             char_embeddings_shared = char_embeddings(char_ids)
             s = K.shape(char_embeddings_shared)
             # Shape = (batch size, max sentence length, char embedding dimension)
-            char_embeddings_shared = Lambda(lambda x: K.reshape(x, shape=(-1, s[-2], self.config['character_embedding_dimension'])))(char_embeddings_shared)
+            char_embeddings_shared = Lambda(lambda x: K.reshape(
+                x, shape=(-1, s[-2], self.config['character_embedding_dimension'])))(char_embeddings_shared)
 
             # Character-level BiLSTM
             fwd_state_shared = fwd_state(char_embeddings_shared)[-2]
             bwd_state_shared = bwd_state(char_embeddings_shared)[-2]
             char_embeddings_shared = Concatenate(axis=-1)([fwd_state_shared, bwd_state_shared])
             # Shape = (batch size, max sentence length, char BiLSTM hidden size)
-            char_embeddings_shared = Lambda(lambda x: K.reshape(x, shape=(-1, s[1], NUM_UNITS_CHAR_LSTM)))(char_embeddings_shared)
+            char_embeddings_shared = Lambda(lambda x: K.reshape(
+                x, shape=(-1, s[1], NUM_UNITS_CHAR_LSTM)))(char_embeddings_shared)
 
-            # Concatenate word- and char-level embeddings
+            # Concatenate word- and char-level embeddings + dropout
             model = Concatenate(axis=-1)([word_embeddings_shared, char_embeddings_shared])
-
-            # Dropout
             model = Dropout(self.config['dropout_rate'])(model)
 
-            # Word-level BiLSTM
+            # Word-level BiLSTM + dropout
             model = word_BiLSTM(model)
-
-            # Dropout
             model = Dropout(self.config['dropout_rate'])(model)
 
-            # Feedforward after word-level BiLSTM
+            # Feedforward after word-level BiLSTM + dropout
             model = feedforward_af_word_lstm(model)
-            # Feedforward before CRF
-            model = TimeDistributed(Dense(units=len(ds.tag_types),
-                                          activation=self.config['activation_function']))(model)
+            model = Dropout(self.config['dropout_rate'])(model)
+            # Feedforward before CRF + dropout
+            model = feedforward_bf_crf(model)
+            model = Dropout(self.config['dropout_rate'])(model)
 
             # CRF output layer
             crf = CRF(len(ds.tag_types))
@@ -165,12 +172,12 @@ class MultiTaskLSTMCRF(object):
         using Keras."""
         for model, crf in zip(self.model, self.crf):
             utils_models.compile_model(model=model,
-                                      loss_function=crf.loss_function,
-                                      optimizer=self.config['optimizer'],
-                                      lr=self.config['learning_rate'],
-                                      decay=self.config['decay'],
-                                      clipnorm=self.config['gradient_normalization'],
-                                      verbose=self.config['verbose'])
+                                       loss_function=crf.loss_function,
+                                       optimizer=self.config['optimizer'],
+                                       lr=self.config['learning_rate'],
+                                       decay=self.config['decay'],
+                                       clipnorm=self.config['gradient_normalization'],
+                                       verbose=self.config['verbose'])
 
     def fit_(self, checkpointer, output_dir):
         """Fits a bidirectional multi-task LSTM-CRF for for sequence tagging
@@ -186,7 +193,10 @@ class MultiTaskLSTMCRF(object):
             metrics_current_fold = utils_models.get_metrics(self.ds, data_partitions, output_dir)
             ## EPOCHS
             for epoch in range(self.config['maximum_number_of_epochs']):
-                print('[INFO] Fold: {}; Global epoch: {}'.format(fold + 1, epoch + 1))
+                print('[INFO] Fold: {}/{}; Global epoch: {}/{}'.format(fold + 1,
+                                                                       self.config['k_folds'],
+                                                                       epoch + 1,
+                                                                       self.config['maximum_number_of_epochs']))
                 ## DATASETS/MODELS
                 for i, (ds, model) in enumerate(zip(self.ds, self.model)):
                     # mainly for cleanliness
