@@ -29,13 +29,13 @@ To create the virtual environment.
 Using [virtualenv](https://virtualenv.pypa.io/en/stable/):
 
 ```
-$ virtualenv path/to/venv
+$ virtualenv /path/to/new/venv
 ```
 
 Using [venv](https://docs.python.org/3/library/venv.html):
 
 ```
-$ python3 -m venv /path/to/new/virtual/environment
+$ python3 -m venv /path/to/new/venv
 ```
 
 Next, you need to activate the environment.
@@ -43,13 +43,13 @@ Next, you need to activate the environment.
 On Windows (cmd.exe), run:
 
 ```
-$ \path\to\new\virtual\environment\Scripts\activate.bat
+$ \path\to\new\venv\Scripts\activate.bat
 ```
 
 On Unix or MacOS (bash/zsh), run:
 
 ```
-$ source /path/to/new/virtual/environment/bin/activate
+$ source /path/to/new/venv/bin/activate
 ```
 
 #### Using Conda
@@ -69,7 +69,7 @@ $ source activate myenv
 
 #### Installing requirements
 
-With your virtual environment activated, install all requirements:
+With your **virtual environment activated**, install all requirements:
 
 ```
 $ pip install -r requirements.txt
@@ -77,7 +77,7 @@ $ pip install -r requirements.txt
 
 ### Usage
 
-You can interact with Saber as a command line tool, web-service or via the Juypter notebooks. If you created a virtual environment, remember to activate it first.
+You can interact with Saber as a command line tool, web-service or via the Juypter notebooks. If you created a virtual environment, **remember to activate it first**.
 
 #### Command line tool
 
@@ -100,11 +100,19 @@ $ export FLASK_APP=web_service.py
 $ python -m flask run
 ```
 
-You can then make a POST request with a `json` payload, e.g.:
+There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a POST request with a `json` payload, e.g.:
 
 ```
 {
   "text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."
+}
+```
+
+Or:
+
+```
+{
+  "pmid": 11835401
 }
 ```
 
@@ -116,6 +124,8 @@ curl --request POST \
      --header 'content-type: application/json' \
      --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}'
 ```
+
+> Currently, the pre-trained 'CRAFT' model in the `pretrained_models/` folder powers the web-service.
 
 #### Juypter notebooks
 
