@@ -1,20 +1,21 @@
-from utils_parameter_parsing import *
+#!/usr/bin/env python3
+from config import Config
 from sequence_processor import SequenceProcessor
-
-# TODO (johngiorgi): do something about paths as arguments - normalize?
 
 def main():
     """Saber main method."""
-    cli_arguments = parse_arguments() # parse CL args
-    config = config_parser(cli_arguments['config_filepath']) # parse config.ini
-    # resolve parameters, cast to correct types
-    parameters = process_parameters(config, cli_arguments)
+    # create and collect model and training parameters
+    config = Config()
 
     # currently performs training by default
-    sequence_processor = SequenceProcessor(parameters)
-    sequence_processor.load_dataset()
-    sequence_processor.create_model()
-    sequence_processor.fit()
+    sp = SequenceProcessor(config)
+    sp.load_dataset()
+
+    # if pretrained token embeddings are provided, load them
+    if config.token_pretrained_embedding_filepath is not None:
+        sp.load_embeddings()
+    sp.create_model()
+    sp.fit()
 
 if __name__ == '__main__':
     main()

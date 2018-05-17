@@ -45,7 +45,7 @@ class SequenceProcessor(object):
         # preprocessor
         self.preprocessor = Preprocessor()
 
-        if self.config['verbose']: pprint(self.config)
+        if self.config.verbose: pprint(self.config)
 
     def predict(self, text, model=0, jupyter=False, *args, **kwargs):
         """Performs prediction for a given model and returns results."""
@@ -60,19 +60,19 @@ class SequenceProcessor(object):
                                                        ds_.char_type_to_idx)
 
         # perform prediction, convert to tag sequence
-        y_pred = model_.predict([transformed_text['word_idx_sequence'],
-                                 transformed_text['char_idx_sequence']]).argmax(-1)
+        y_pred = model_.predict([transformed_text['word2idx'],
+                                 transformed_text['char2idx']]).argmax(-1)
         idx_pred_seq = np.asarray(y_pred).ravel()
         # TODO: clean this up, need to drop pads.
-        tag_pred_seq = [idx2tag[idx] for idx in idx_pred_seq if idx2tag[idx] != '<PAD>']
-
+        tag_pred_seq = [idx2tag[idx] for idx in idx_pred_seq if
+                        idx2tag[idx] != constants.PAD]
         # chunk the predicted entities
         chunk_pred_seq = self.preprocessor.chunk_entities(tag_pred_seq)
         # flatten the token offsets
         offsets = list(chain.from_iterable(transformed_text['offsets']))
 
         # TODO: this should be moved to a unit test
-        assert len(tag_pred_seq) == len(offsets)
+        # assert len(tag_pred_seq) == len(offsets)
 
         # accumulator for predicted entities
         ents = []
@@ -147,7 +147,7 @@ class SequenceProcessor(object):
 
         # load attributes
         model_attributes = pickle.load(open(attributes_filepath, "rb" ))
-        self.config = model_attributes['config']
+        # self.config = model_attributes['config']
         self.ds = [model_attributes['ds']]
         self.token_embedding_matrix = model_attributes['token_embeddings']
 
@@ -164,14 +164,14 @@ class SequenceProcessor(object):
 
     def load_dataset(self):
         """Coordinates the loading of a dataset."""
-        assert len(self.config['dataset_folder']) > 0, '''You must provide at
+        assert len(self.config.dataset_folder) > 0, '''You must provide at
         least one dataset via the dataset_folder parameter'''
 
         start_time = time.time()
         # Datasets may be 'single' or 'compound' (more than one), loading
         # differs slightly. Consider a dataset single if there is only one
-        # filepath in self.config['dataset_folder'] and compound otherwise.
-        if len(self.config['dataset_folder']) == 1:
+        # filepath in self.config.dataset_folder'] and compound otherwise.
+        if len(self.config.dataset_folder) == 1:
             print('[INFO] Loading (single) dataset... ', end='', flush=True)
             self.ds = self._load_single_dataset()
         else:
@@ -184,17 +184,17 @@ class SequenceProcessor(object):
     def load_embeddings(self):
         """Coordinates the loading of pre-trained token embeddings."""
         assert self.ds, 'You must load a dataset before loading token embeddings'
-        assert self.config['token_pretrained_embedding_filepath'] is not None, 'Token embedding filepath must be provided in the config file or at the command line'
+        assert self.config.token_pretrained_embedding_filepath is not None, 'Token embedding filepath must be provided in the config file or at the command line'
 
         self._load_token_embeddings()
 
     def create_model(self):
-        """Specifies and compiles chosen model (self.config['model_name'])."""
-        assert self.config['model_name'] in ['MT-LSTM-CRF'], 'Model name is not valid.'
+        """Specifies and compiles chosen model (self.config.model_name)."""
+        assert self.config.model_name in ['MT-LSTM-CRF'], 'Model name is not valid.'
 
         start_time = time.time()
         # setup the chosen model
-        if self.config['model_name'] == 'MT-LSTM-CRF':
+        if self.config.model_name == 'MT-LSTM-CRF':
             print('[INFO] Building the multi-task LSTM-CRF model... ', end='', flush=True)
             from models.multi_task_lstm_crf import MultiTaskLSTMCRF
             model_ = MultiTaskLSTMCRF(config=self.config,
@@ -221,8 +221,8 @@ class SequenceProcessor(object):
             dataframe.
         """
         # setup model checkpointing
-        train_session_dir = create_train_session_dir(self.config['dataset_folder'],
-                                                     self.config['output_folder'])
+        train_session_dir = create_train_session_dir(self.config.dataset_folder,
+                                                     self.config.output_folder)
         checkpointer = setup_model_checkpointing(train_session_dir)
 
         # fit
@@ -241,7 +241,8 @@ class SequenceProcessor(object):
         Returns:
             a list containing a single dataset object.
         """
-        ds = Dataset(self.config['dataset_folder'][0])
+        ds = Dataset(filepath=self.config.dataset_folder[0],
+                     replace_rare_tokens=self.config.replace_rare_tokens)
         ds.load_dataset()
 
         return [ds]
@@ -258,7 +259,9 @@ class SequenceProcessor(object):
             A list containing multiple compound dataset objects.
         """
         # accumulate datasets
-        compound_ds = [Dataset(ds) for ds in self.config['dataset_folder']]
+        compound_ds = [Dataset(filepath=ds, \
+            replace_rare_tokens=self.config.replace_rare_tokens) for ds in
+            self.config.dataset_folder]
 
         for ds in compound_ds:
             ds.load_data_and_labels()
@@ -316,13 +319,14 @@ class SequenceProcessor(object):
         dictionary mapping words to known embeddings.
 
         Returns:
-            embedding_index: mapping of words to pre-trained token embeddings
+            embedding_index (dict): mapping of words to pre-trained token
+                embeddings
         """
         # acc
         embedding_index = {}
 
         # open pre-trained token embedding file for reading
-        with open(self.config['token_pretrained_embedding_filepath'], 'r') as pte:
+        with open(self.config.token_pretrained_embedding_filepath, 'r') as pte:
             for line in pte:
                 # split line, get word and its embedding
                 values = line.split()
