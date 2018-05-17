@@ -135,21 +135,15 @@ First, with your virtual environment activated run:
 $ pip install jupyter
 ```
 
-<<<<<<< HEAD
 > Note, you only need to install this once!
 
-=======
->>>>>>> b1787109119c38f57f11f78bd41286b2e5b9b8f4
 Then `cd` into `saber` and run:
 
 ```
 jupyter notebook
 ```
-<<<<<<< HEAD
 
 Check out the `lightning_tour.ipynb` notebook for an overview.
-=======
->>>>>>> b1787109119c38f57f11f78bd41286b2e5b9b8f4
 
 ### Resources
 
