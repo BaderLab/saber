@@ -22,7 +22,6 @@ install:
   - pip install coveralls
 
 script:
-  - PYTHONPATH=./saber py.test
+  - PYTHONPATH=./saber py.test --cov=saber 
 
-after_success:
-  - coveralls
+after_success: coveralls
