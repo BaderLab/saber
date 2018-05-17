@@ -129,7 +129,17 @@ curl --request POST \
 
 #### Juypter notebooks
 
-See `saber/Saber.ipynb`.
+First, with your virtual environment activated run:
+
+```
+$ pip install jupyter
+```
+
+Then `cd` into `saber` and run:
+
+```
+jupyter notebook
+```
 
 ### Resources
 
