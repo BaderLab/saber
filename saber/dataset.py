@@ -2,26 +2,33 @@ import os
 import time
 import glob
 import codecs
-import numpy as np
 
 from keras.utils import to_categorical
+import numpy as np
 
-from constants import UNK
-from constants import PAD
+import constants
 from constants import TRAIN_FILE_EXT
 from preprocessor import Preprocessor
 
 class Dataset(object):
     """A class for handling data sets."""
-    def __init__(self, filepath, sep='\t', names=['Word', 'Tag'], header=None):
+    def __init__(self, filepath, sep='\t', replace_rare_tokens=True):
         self.filepath = filepath
         # search for any files in the dataset filepath ending with
         # TRAIN_FILE_EXT or TEST_FILE_EXT
-        self.trainset_filepath = glob.glob(os.path.join(filepath, TRAIN_FILE_EXT))[0]
-        # self.testset_filepath = glob.glob(os.path.join(filepath, TEST_FILE_EXT))[0]
+        try:
+            self.trainset_filepath = glob.glob(os.path.join(filepath, \
+                TRAIN_FILE_EXT))[0]
+            # self.testset_filepath = glob.glob(os.path.join(filepath, \
+            #   TEST_FILE_EXT))[0]
+        except FileNotFoundError:
+            print("[ERROR] No dataset at {}".format(filepath))
+
+
+        # column delimiter in CONLL dataset
         self.sep = sep
-        self.names = names
-        self.header = header
+        # replace all rare tokens with special unknown token
+        self.replace_rare_tokens = replace_rare_tokens
 
         # word and tag sequences from dataset
         self.word_seq = None
@@ -36,7 +43,7 @@ class Dataset(object):
         self.word_type_to_idx = None
         self.char_type_to_idx = None
         self.tag_type_to_idx = None
-        # inverse mapping from indices to tag types 
+        # inverse mapping from indices to tag types
         self.idx_to_tag_type = None
 
         # index sequences of words, characters and tags for training
@@ -73,7 +80,7 @@ class Dataset(object):
             self.load_data_and_labels()
             # get word, char, and tag types
             self.get_types()
-            # generate shared type to index mappings
+            # generate type to index mappings
             self.word_type_to_idx = Preprocessor.sequence_to_idx(self.word_types)
             self.char_type_to_idx  = Preprocessor.sequence_to_idx(self.char_types)
 
@@ -139,6 +146,9 @@ class Dataset(object):
             word_seq.append(words)
             tag_seq.append(tags)
 
+        # replace all rare tokens with special unknown token
+        if self.replace_rare_tokens:
+            word_seq = Preprocessor.replace_rare_tokens(word_seq)
         self.word_seq = np.asarray(word_seq)
         self.tag_seq = np.asarray(tag_seq)
 
@@ -169,11 +179,16 @@ class Dataset(object):
         tag_types = list(set([t for s in self.tag_seq for t in s]))
 
         # Post processing
-        word_types.insert(0, PAD) # make PAD the 0th index
-        word_types.insert(1, UNK) # make UNK the 1st idex
-        char_types.insert(0, PAD)
-        char_types.insert(1, UNK)
-        tag_types.insert(0, PAD)
+        # TODO: there has to be a simpler way to do this
+        word_types.insert(0, constants.PAD) # make PAD the 0th index
+        word_types.insert(1, constants.UNK) # make UNK the 1st index
+        # word_types.insert(2, constants.START) # make START the 2nd index
+        # word_types.insert(3, constants.END) # make END the 3rd index
+        char_types.insert(0, constants.PAD)
+        char_types.insert(1, constants.UNK)
+        # char_types.insert(2, constants.START)
+        # char_types.insert(3, constants.END)
+        tag_types.insert(0, constants.PAD)
 
         self.word_types = word_types
         self.char_types = char_types

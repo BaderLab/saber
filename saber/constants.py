@@ -13,7 +13,11 @@ OPTIONS = {# 'ents': ['PRGE', 'CHED', 'LIVB', 'CL', 'SO', 'GO'],
 
 UNK = '<UNK>' # out-of-vocabulary token
 PAD = '<PAD>' # sequence pad token
+START = '<START>' # start-of-sentence token
+END = '<END>' # end-of-sentence token
+
 PAD_VALUE = 0 # value of sequence pad
+NUM_RARE = 1 # tokens that occur less than NUM_RARE times are replaced UNK
 
 # train and test filename patterns
 TRAIN_FILE_EXT = 'train.*'
