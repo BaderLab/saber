@@ -1,15 +1,20 @@
 import re
+from collections import Counter
+
 import spacy
 import en_core_web_sm
-
 from keras.preprocessing.sequence import pad_sequences
 
-from constants import UNK, PAD_VALUE
+from constants import UNK
+from constants import START
+from constants import END
+from constants import PAD_VALUE
+from constants import NUM_RARE
 
 class Preprocessor(object):
     """A class for processing text data."""
     def __init__(self):
-        # Load Spacy english model (small), disable NER pipeline
+        # load Spacy english model (core, small), disable NER pipeline
         self.nlp = en_core_web_sm.load(disable=['ner'])
 
     def transform(self, text, w2i, c2i):
@@ -26,14 +31,33 @@ class Preprocessor(object):
             'text': text_,
             'sentences': sentences,
             'offsets': offsets,
-            'word_idx_sequence': word_idx_sequence,
-            'char_idx_sequence': char_idx_sequence
+            'word2idx': word_idx_sequence,
+            'char2idx': char_idx_sequence
         }
 
         return transformed_text
 
     def _process_text(self, text):
-        """Process raw text."""
+        """Returns sentences and character offsets of tokens in text.
+
+        For the given text, uses Spacy to return a two-tuple of the sentences
+        and character offsets (relative to their position in text) of each token
+        in text.
+
+        Args:
+            text (str): raw text to process
+
+        Returns:
+            a two-tuple, containing the sentences in text (as a list of lists)
+            and the character offsets for every token in text (relative to
+            their position in text, as a list of lists).
+
+        Example:
+            >>> preprocessor = Preprocessor()
+            >>> text = "A simple example!"
+            >>> preprocessor._process_text(text)
+            ([['Simple', 'example', '!']], [[(0, 6), (7, 14), (14, 15)]])
+        """
         doc = self.nlp(text) # process text with spacy
 
         # accumulators
@@ -51,6 +75,7 @@ class Preprocessor(object):
                 # word_types.add(token.text)
                 token_seq.append(token.text)
                 token_offset_seq.append((token.idx, token.idx + len(token.text)))
+            # sentences.append([START] + token_seq + [END])
             sentences.append(token_seq)
             offsets.append(token_offset_seq)
 
@@ -60,7 +85,7 @@ class Preprocessor(object):
         #    char_types.update(list(word))
 
         # sanity check
-        assert [len(s) for s in sentences] == [len(o) for o in offsets], 'sentences of offsets differ in size.'
+        # assert [len(s) for s in sentences] == [len(o) for o in offsets], 'sentences of offsets differ in size.'
 
         return sentences, offsets
 
@@ -91,14 +116,14 @@ class Preprocessor(object):
     def get_type_idx_sequence(seq, type_to_idx, type='word'):
         """Returns sequence of indices corresponding to data set sentences.
 
-        Returns the sequence of idices corresponding to the type order in
+        Returns the sequence of indices corresponding to the type order in
         sentences, where type_ can be "word", "char", or "tag" correpsonding to
         word, char and tag types of the Dataset instance.
 
         Args:
-            sentences: a list of lists, where each list represents a sentence
-                for the Dataset instance and each sublist contains ordered
-                (word, tag) pairs.
+            seq: list of lists where each list represents a sentence for the
+            Dataset instance and each sublist contains ordered (word, tag) pairs
+            type_to_idx:
 
         Returns:
             a list, containing a sequence of idx's corresponding to the type
@@ -154,8 +179,10 @@ class Preprocessor(object):
 
         Args:
             seq (list): sequence of labels.
+
         Returns:
             list: list of (chunk_type, chunk_start, chunk_end).
+
         Example:
             >>> seq = ['B-PRGE', 'I-PRGE', 'O', 'B-PRGE']
             >>> print(get_entities(seq))
@@ -176,6 +203,33 @@ class Preprocessor(object):
             else:
                 i += 1
         return chunks
+
+    @staticmethod
+    def replace_rare_tokens(sentences):
+        """
+        Replaces rare tokens in sentences with an special unknown token.
+
+        Args:
+            sentences: list of lists where each inner list is a sentence
+                represented as a list of strings (tokens)
+
+        Returns:
+            sentences, where all rare tokens have been replaced by a special
+                unknown token
+        """
+        c = Counter()
+
+        # create a token count across all sentences
+        for sent in sentences:
+            c.update(sent)
+
+        # replace rare words with UNK token
+        for i, sent in enumerate(sentences):
+            for j, token in enumerate(sent):
+                if c[token] <= NUM_RARE:
+                    sentences[i][j] = UNK
+
+        return sentences
 
     def _sterilize(self, text):
         """Sterilize input text.

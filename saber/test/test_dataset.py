@@ -30,14 +30,15 @@ DUMMY_TAG_TYPES = ['O', 'B-DISO', 'I-DISO', 'E-DISO', '<PAD>']
 @pytest.fixture
 def empty_dummy_dataset():
     """Returns an empty dummy Dataset instance."""
-    dataset = Dataset(PATH_TO_DUMMY_DATASET)
+    # Don't replace rare tokens for the sake of testing
+    dataset = Dataset(PATH_TO_DUMMY_DATASET, replace_rare_tokens=False)
 
     return dataset
 
 @pytest.fixture
 def loaded_dummy_dataset():
     """Returns a dummy Dataset instance after calling load_dataset()"""
-    dataset = Dataset(PATH_TO_DUMMY_DATASET)
+    dataset = Dataset(PATH_TO_DUMMY_DATASET, replace_rare_tokens=False)
     dataset.load_dataset()
 
     return dataset
@@ -50,8 +51,7 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     trainset_filepath = os.path.join(PATH_TO_DUMMY_DATASET, 'train.tsv')
     assert empty_dummy_dataset.trainset_filepath == trainset_filepath
     assert empty_dummy_dataset.sep == '\t'
-    assert empty_dummy_dataset.names == ['Word', 'Tag']
-    assert empty_dummy_dataset.header == None
+    assert empty_dummy_dataset.replace_rare_tokens == False
     # other instance attributes
     assert empty_dummy_dataset.word_seq == None
     assert empty_dummy_dataset.tag_seq == None

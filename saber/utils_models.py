@@ -122,7 +122,7 @@ def setup_model_checkpointing(output_dir):
 
     for dir in output_dir:
         # set up model checkpointing
-        metric_filepath = os.path.join(dir, 'epoch_{epoch:02d}_checkpoint.hdf5')
+        metric_filepath = os.path.join(dir, 'model_weights_best.hdf5')
         checkpointers.append(
             ModelCheckpoint(filepath=metric_filepath,
                             monitor='val_loss',
