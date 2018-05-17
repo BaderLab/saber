@@ -42,8 +42,3 @@ def get_root(xml):
         return ET.fromstring(xml)
     except:
         return None
-
-def is_gz_file(filepath):
-    """Returns true if the file at filepath is gzip compressed."""
-    with open(filepath, 'rb') as test_f:
-        return binascii.hexlify(test_f.read(2)) == b'1f8b'

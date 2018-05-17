@@ -1,38 +1,29 @@
 import os.path
 import json
 import zipfile
+from setuptools.archive_util import unpack_archive
 
 from flask import Flask
 from flask import request
 from flask import jsonify
 app = Flask('saber')
 
-from utils_parameter_parsing import *
+from config import Config
 from sequence_processor import SequenceProcessor
 from utils_web_service import get_pubmed_text
-from utils_web_service import is_gz_file
 
 PRETRAINED_MODEL_BASE_DIR = '../pretrained_models/'
 MODEL = os.path.join(PRETRAINED_MODEL_BASE_DIR, 'CRAFT')
-# TRIG_MODEL = os.path.join(PRETRAINED_MODEL_BASE_DIR, 'TRIG')
 
+# decompress the pre-trained model if this is not already done
 if not os.path.isdir(MODEL):
     print('[INFO] Unzipping pretrained model...', end='', flush=True)
-    zip_ref = zipfile.ZipFile(MODEL + '.zip', 'r')
-    zip_ref.extractall(PRETRAINED_MODEL_BASE_DIR)
-    zip_ref.close()
+    unpack_archive(MODEL + '.tar.bz2', PRETRAINED_MODEL_BASE_DIR)
     print(' Done.')
 
-PATH_TO_CONFIG = './config.ini' # set the path to your config here
-
-config = config_parser(PATH_TO_CONFIG) # parse config
-parameters = process_parameters(config) # get parameters
-
-sp = SequenceProcessor(parameters)
-# trig_sp = SequenceProcessor(parameters)
-
-sp.load(MODEL)
-# trig_sp.load(TRIG_MODEL)
+config = Config() # parse config
+sp = SequenceProcessor(config) # create sequence processor
+sp.load(MODEL) # load the pre-trained model
 
 @app.route('/annotate/text', methods=['POST'])
 def annotate():
