@@ -4,7 +4,6 @@ from statistics import mean
 from operator import itemgetter
 
 import numpy as np
-
 from keras.callbacks import Callback
 from sklearn.metrics import precision_recall_fscore_support
 

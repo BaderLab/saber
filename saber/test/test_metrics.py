@@ -1,7 +1,7 @@
 import pytest
 
 from utils_models import *
-from utils_parameter_parsing import *
+from config import Config
 from metrics import Metrics
 from sequence_processor import SequenceProcessor
 
@@ -13,8 +13,11 @@ PATH_TO_METRICS_OUTPUT = 'totally/arbitrary'
 def dummy_config():
     """Returns an instance of a configparser object after parsing the dummy
     config file. """
-    # parse the dummy config
-    dummy_config = config_parser(PATH_TO_DUMMY_CONFIG)
+    # create a dictionary to serve as cli arguments
+    cli_arguments = {'dataset_folder': [PATH_TO_DUMMY_DATASET]}
+    # create the config object, taking into account the CLI args
+    dummy_config = Config(PATH_TO_DUMMY_CONFIG)
+    dummy_config.process_parameters(cli_arguments)
 
     return dummy_config
 
@@ -22,12 +25,7 @@ def dummy_config():
 def multi_task_lstm_crf_single_model(dummy_config):
     """Returns an instance of MultiTaskLSTMCRF initialized with the
     default configuration file and a single compiled model."""
-    # create a dictionary to serve as cli arguments
-    cli_arguments = {'dataset_folder': [PATH_TO_DUMMY_DATASET]}
-    # resolve parameters, cast to correct types
-    parameters = process_parameters(dummy_config, cli_arguments)
-
-    seq_processor_with_single_ds = SequenceProcessor(config=parameters)
+    seq_processor_with_single_ds = SequenceProcessor(dummy_config)
     seq_processor_with_single_ds.load_dataset()
     seq_processor_with_single_ds.load_embeddings()
     seq_processor_with_single_ds.create_model()
@@ -40,7 +38,7 @@ def train_valid_indices_single_model(multi_task_lstm_crf_single_model):
     """Returns an train/valid indices from call to get_train_valid_indices()
     of a MultiTaskLSTMCRF object."""
     ds_ = multi_task_lstm_crf_single_model.ds
-    k_folds = multi_task_lstm_crf_single_model.config['k_folds']
+    k_folds = multi_task_lstm_crf_single_model.config.k_folds
 
     train_valid_indices_single_model = get_train_valid_indices(ds_, k_folds)
     return train_valid_indices_single_model
