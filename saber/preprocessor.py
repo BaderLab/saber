@@ -90,16 +90,16 @@ class Preprocessor(object):
         return sentences, offsets
 
     @staticmethod
-    def sequence_to_idx(seq, offset=0):
+    def type_to_idx(types, offset=0):
         """Returns a dictionary of element:index pairs for each element in
-        sequence.
+        types.
 
         Given a list, returns a dictionary of length len(sequence) + offset
-        where the keys are elements of sequence and the values are unique
+        where the keys are elements of types and the values are unique
         integers.
 
         Args:
-            sequence (list): sequence data.
+            types (list): a list of unique types (word, char, or tag)
             offset (int): used when computing the mapping. An offset a 1 means
                     we begin computing the mapping at 1, useful if we want to
                     use 0 as a padding value.
@@ -110,7 +110,7 @@ class Preprocessor(object):
             assumes that all elements in sequence are unique
         """
         # offset accounts for sequence pad
-        return {e: i + offset for i, e in enumerate(seq)}
+        return {e: i + offset for i, e in enumerate(types)}
 
     @staticmethod
     def get_type_idx_sequence(seq, type_to_idx, type='word'):
@@ -175,17 +175,19 @@ class Preprocessor(object):
         """Chunks enities in the BIO or BIOES format.
 
         For a given sequence of entities in the BIO or BIOES format, returns
-        the chunked entities.
+        the chunked entities. Note that invalid tag sequences will not be
+        returned as chunks.
 
         Args:
             seq (list): sequence of labels.
 
         Returns:
-            list: list of (chunk_type, chunk_start, chunk_end).
+            list: list of [chunk_type, chunk_start (inclusive),
+                chunk_end (exclusive)].
 
         Example:
             >>> seq = ['B-PRGE', 'I-PRGE', 'O', 'B-PRGE']
-            >>> print(get_entities(seq))
+            >>> get_entities(seq)
             [('PRGE', 0, 2), ('PRGE', 3, 4)]
         """
         i = 0
@@ -205,7 +207,7 @@ class Preprocessor(object):
         return chunks
 
     @staticmethod
-    def replace_rare_tokens(sentences):
+    def replace_rare_tokens(sentences, count=NUM_RARE):
         """
         Replaces rare tokens in sentences with an special unknown token.
 
@@ -226,7 +228,7 @@ class Preprocessor(object):
         # replace rare words with UNK token
         for i, sent in enumerate(sentences):
             for j, token in enumerate(sent):
-                if c[token] <= NUM_RARE:
+                if c[token] <= count:
                     sentences[i][j] = UNK
 
         return sentences
