@@ -278,8 +278,8 @@ class SequenceProcessor(object):
 
         # compute word to index mappings that will be shared across datasets
         # pad of 1 accounts for the sequence pad (of 0) down the pipeline
-        word_type_to_idx = Preprocessor.sequence_to_idx(comb_word_types)
-        char_type_to_idx = Preprocessor.sequence_to_idx(comb_char_types)
+        word_type_to_idx = Preprocessor.type_to_idx(comb_word_types)
+        char_type_to_idx = Preprocessor.type_to_idx(comb_char_types)
 
         # load all the datasets
         for ds in compound_ds:

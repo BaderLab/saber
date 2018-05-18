@@ -81,11 +81,11 @@ class Dataset(object):
             # get word, char, and tag types
             self.get_types()
             # generate type to index mappings
-            self.word_type_to_idx = Preprocessor.sequence_to_idx(self.word_types)
-            self.char_type_to_idx  = Preprocessor.sequence_to_idx(self.char_types)
+            self.word_type_to_idx = Preprocessor.type_to_idx(self.word_types)
+            self.char_type_to_idx  = Preprocessor.type_to_idx(self.char_types)
 
         # generate un-shared type to index mappings
-        self.tag_type_to_idx = Preprocessor.sequence_to_idx(self.tag_types)
+        self.tag_type_to_idx = Preprocessor.type_to_idx(self.tag_types)
         # create reverse mapping of indices to tags
         self.idx_to_tag_type = {v: k for k, v in self.tag_type_to_idx.items()}
 
@@ -203,9 +203,9 @@ class Dataset(object):
         Returns:
             three-tuple of word, char and tag type to index mappings
         """
-        self.word_type_to_idx = Preprocessor.sequence_to_idx(self.word_types)
-        self.char_type_to_idx  = Preprocessor.sequence_to_idx(self.char_types)
-        self.tag_type_to_idx = Preprocessor.sequence_to_idx(self.tag_types)
+        self.word_type_to_idx = Preprocessor.type_to_idx(self.word_types)
+        self.char_type_to_idx  = Preprocessor.type_to_idx(self.char_types)
+        self.tag_type_to_idx = Preprocessor.type_to_idx(self.tag_types)
 
     def _tag_idx_sequence_to_categorical(self, idx_seq):
         """One-hot encodes a given class vector.
