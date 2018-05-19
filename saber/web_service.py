@@ -13,7 +13,7 @@ from sequence_processor import SequenceProcessor
 from utils_web_service import get_pubmed_text
 
 PRETRAINED_MODEL_BASE_DIR = '../pretrained_models/'
-MODEL = os.path.join(PRETRAINED_MODEL_BASE_DIR, 'CRAFT')
+MODEL = os.path.join(PRETRAINED_MODEL_BASE_DIR, 'PRGE')
 
 # decompress the pre-trained model if this is not already done
 if not os.path.isdir(MODEL):
