@@ -1,5 +1,3 @@
-import binascii
-
 import xml.etree.ElementTree as ET
 from urllib.request import urlopen
 
