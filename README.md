@@ -125,7 +125,7 @@ curl --request POST \
      --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}'
 ```
 
-> Currently, the pre-trained 'CRAFT' model in the `pretrained_models/` folder powers the web-service.
+> Currently, the pre-trained 'PRGE' model in the `pretrained_models/` folder powers the web-service.
 
 #### Juypter notebooks
 
