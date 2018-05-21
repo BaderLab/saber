@@ -25,13 +25,15 @@ DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS = {
 'maximum_number_of_epochs': 10,
 'verbose': False,
 'debug': False,
-'freeze_token_embeddings': True}
+'freeze_token_embeddings': True,
+'replace_rare_tokens': False}
 DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS = {
 'model_name': 'MT-LSTM-CRF',
 'train_model': True,
 'load_pretrained_model': False,
 'dataset_folder': ['saber/test/resources/dummy_dataset'],
-'output_folder': '../output', 'pretrained_model_weights': '',
+'output_folder': '../output',
+'pretrained_model_weights': '',
 'token_pretrained_embedding_filepath': 'saber/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt',
 'token_embedding_dimension': 200,
 'character_embedding_dimension': 30,
@@ -46,7 +48,8 @@ DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS = {
 'maximum_number_of_epochs': 10,
 'verbose': False,
 'debug': False,
-'freeze_token_embeddings': True}
+'freeze_token_embeddings': True,
+'replace_rare_tokens': False}
 DUMMY_COMMAND_LINE_ARGS = {
 'gradient_normalization': 1.0,
 'learning_rate':0.05,
@@ -77,51 +80,43 @@ def config_with_cli_args():
 def test_parse_config_args_no_cli_args(config_no_cli_args, config_with_cli_args):
     """Asserts the Config.config object contains the expected values after
     call to Config.parse_config_args(), with and without CLI args."""
-    dummy_config_no_cli_args = config_no_cli_args.config
-    dummy_config_with_cli_args = config_with_cli_args.config
+    config_no_cli_args_ = config_no_cli_args.config
+    config_with_cli_args_ = config_with_cli_args.config
 
-    assert dummy_config_no_cli_args['mode']['model_name'] == \
-        dummy_config_with_cli_args['mode']['model_name'] == 'MT-LSTM-CRF'
-    assert dummy_config_no_cli_args['mode']['train_model'] == \
-        dummy_config_with_cli_args['mode']['train_model'] == 'True'
-    assert dummy_config_no_cli_args['mode']['load_pretrained_model'] == \
-        dummy_config_with_cli_args['mode']['load_pretrained_model'] == 'False'
+    config_sections = ['mode', 'data', 'model', 'training', 'advanced']
 
-    assert dummy_config_no_cli_args['data']['dataset_folder'] == \
-        dummy_config_with_cli_args['data']['dataset_folder'] == 'saber/test/resources/dummy_dataset'
-    assert dummy_config_no_cli_args['data']['output_folder'] == \
-        dummy_config_with_cli_args['data']['output_folder'] == '../output'
-    assert dummy_config_no_cli_args['data']['pretrained_model_weights'] == \
-        dummy_config_with_cli_args['data']['pretrained_model_weights'] == ''
-    assert dummy_config_no_cli_args['data']['token_pretrained_embedding_filepath'] == \
-        dummy_config_with_cli_args['data']['token_pretrained_embedding_filepath'] == \
-        'saber/test/resources/dummy_word_embeddings/dummy_word_embeddings.txt'
+    # Check that all arguments in the config object are as expected. For the
+    # special case of lists, first create a string representation (as it would
+    # appear in the config file). For the special case of None, we cheat by
+    # setting the expected value equal to the actual value. None's occur due to
+    # post processing, which we aren't testing here.
+    for section in config_sections:
+        # checks for config argument with no CLI args
+        for k, v in config_no_cli_args_[section].items():
+            expected = DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS[k]
+            # special case of lists
+            if type(expected) is list:
+                expected = ' '.join(expected)
+            # special case of None
+            elif expected is None:
+                expected = v
 
-    assert dummy_config_no_cli_args['training']['optimizer'] == \
-        dummy_config_with_cli_args['training']['optimizer'] == 'sgd'
-    assert dummy_config_no_cli_args['training']['activation_function'] == \
-        dummy_config_with_cli_args['training']['activation_function'] == 'relu'
-    assert dummy_config_no_cli_args['training']['learning_rate'] == \
-        dummy_config_with_cli_args['training']['learning_rate'] == '0.01'
-    assert dummy_config_no_cli_args['training']['decay'] == \
-        dummy_config_with_cli_args['training']['decay'] == '0.05'
-    assert dummy_config_no_cli_args['training']['gradient_normalization'] == \
-        dummy_config_with_cli_args['training']['gradient_normalization'] == '0.0'
-    assert dummy_config_no_cli_args['training']['dropout_rate'] == \
-        dummy_config_with_cli_args['training']['dropout_rate'] == '0.3'
-    assert dummy_config_no_cli_args['training']['batch_size'] == \
-        dummy_config_with_cli_args['training']['batch_size'] == '1'
-    assert dummy_config_no_cli_args['training']['k_folds'] == \
-        dummy_config_with_cli_args['training']['k_folds'] == '2'
-    assert dummy_config_no_cli_args['training']['maximum_number_of_epochs'] == \
-        dummy_config_with_cli_args['training']['maximum_number_of_epochs'] == '10'
+            assert v == str(expected)
 
-    assert dummy_config_no_cli_args['advanced']['debug'] == \
-        dummy_config_with_cli_args['advanced']['debug'] == 'False'
-    assert dummy_config_no_cli_args['advanced']['freeze_token_embeddings'] == \
-        dummy_config_with_cli_args['advanced']['freeze_token_embeddings'] == 'True'
-    assert dummy_config_no_cli_args['advanced']['verbose'] == \
-        dummy_config_with_cli_args['advanced']['verbose'] == 'False'
+        # checks for config argument with CLI args
+        for k, v in config_with_cli_args_[section].items():
+            expected = DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS[k]
+            # special case of lists
+            if type(expected) is list:
+                expected = ' '.join(expected)
+            # special case of None
+            elif expected is None:
+                expected = v
+            # special case of CLI overriding config file args
+            elif k in DUMMY_COMMAND_LINE_ARGS:
+                expected = v
+
+            assert v == str(expected)
 
 def test_process_parameters_no_command_line_args(config_no_cli_args):
     """Asserts that the parameters are of the expected value/type after a
