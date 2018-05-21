@@ -49,6 +49,7 @@ class SequenceProcessor(object):
 
     def predict(self, text, model=0, jupyter=False, *args, **kwargs):
         """Performs prediction for a given model and returns results."""
+        assert text, "Argument text must be a valid string!"
         ds_ = self.ds[model]
         model_ = self.model.model[model]
 
@@ -147,7 +148,10 @@ class SequenceProcessor(object):
 
         # load attributes
         model_attributes = pickle.load(open(attributes_filepath, "rb" ))
-        # self.config = model_attributes['config']
+        # TODO: come up with a much better solution than this.
+        self.config.token_embedding_dimension = model_attributes['config'].token_embedding_dimension
+        self.config.character_embedding_dimension = model_attributes['config'].character_embedding_dimension
+
         self.ds = [model_attributes['ds']]
         self.token_embedding_matrix = model_attributes['token_embeddings']
 
@@ -270,20 +274,24 @@ class SequenceProcessor(object):
         # get combined set of word types from all datasets
         comb_word_types = []
         comb_char_types = []
+        comb_tag_types = []
         for ds in compound_ds:
             comb_word_types.extend(ds.word_types)
             comb_char_types.extend(ds.char_types)
+            comb_tag_types.extend(ds.tag_types)
         comb_word_types = list(set(comb_word_types))
         comb_char_types = list(set(comb_char_types))
+        comb_tag_types = list(set(comb_tag_types))
 
-        # compute word to index mappings that will be shared across datasets
-        # pad of 1 accounts for the sequence pad (of 0) down the pipeline
-        word_type_to_idx = Preprocessor.type_to_idx(comb_word_types)
-        char_type_to_idx = Preprocessor.type_to_idx(comb_char_types)
+        # compute type to index mappings that will be shared across datasets
+        type_to_idx = {}
+        type_to_idx['word'] = Preprocessor.type_to_idx(comb_word_types)
+        type_to_idx['char'] = Preprocessor.type_to_idx(comb_char_types)
+        type_to_idx['tag'] = Preprocessor.type_to_idx(comb_tag_types)
 
         # load all the datasets
         for ds in compound_ds:
-            ds.load_dataset(word_type_to_idx, char_type_to_idx)
+            ds.load_dataset(type_to_idx)
 
         return compound_ds
 
