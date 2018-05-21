@@ -91,18 +91,21 @@ class MultiTaskLSTMCRF(object):
         # Char-level BiLSTM
         fwd_state = LSTM(NUM_UNITS_CHAR_LSTM // 2, return_state=True,
                                                    dropout=self.config.dropout_rate,
-                                                   recurrent_dropout=self.config.dropout_rate)
+                                                   recurrent_dropout=self.config.dropout_rate,
+                                                   implementation=IMPLEMENTATION)
         bwd_state = LSTM(NUM_UNITS_CHAR_LSTM // 2, return_state=True,
                                                    go_backwards=True,
                                                    dropout=self.config.dropout_rate,
-                                                   recurrent_dropout=self.config.dropout_rate)
+                                                   recurrent_dropout=self.config.dropout_rate,
+                                                   implementation=IMPLEMENTATION)
 
 
         # Word-level BiLSTM
         word_BiLSTM = Bidirectional(LSTM(units=NUM_UNITS_WORD_LSTM // 2,
                                          return_sequences=True,
                                          dropout=self.config.dropout_rate,
-                                         recurrent_dropout=self.config.dropout_rate))
+                                         recurrent_dropout=self.config.dropout_rate,
+                                         implementation=IMPLEMENTATION))
 
         # Feedforward before CRF
         feedforward_af_word_lstm = TimeDistributed(
