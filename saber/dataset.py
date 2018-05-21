@@ -55,7 +55,7 @@ class Dataset(object):
         # self.train_dataframe = self.raw_dataframe.loc['train']
         # self.test_dataframe = self.raw_dataframe.loc['test']
 
-    def load_dataset(self, word_type_to_idx=None, char_type_to_idx=None):
+    def load_dataset(self, type_to_idx=None):
         """Coordinates loading of given data set at self.filepath.
 
         For a given dataset in CoNLL format at filepath, cordinates
@@ -72,9 +72,10 @@ class Dataset(object):
         """
         # if shared_by_compound is passed into function call, then this is a
         # compound dataset (word and char index mappings shared across datasets)
-        if word_type_to_idx is not None and char_type_to_idx is not None:
-            self.word_type_to_idx = word_type_to_idx
-            self.char_type_to_idx = char_type_to_idx
+        if type_to_idx is not None:
+            self.word_type_to_idx = type_to_idx['word']
+            self.char_type_to_idx = type_to_idx['char']
+            self.tag_type_to_idx = type_to_idx['tag']
         else:
             # load data and labels from file
             self.load_data_and_labels()
@@ -83,10 +84,9 @@ class Dataset(object):
             # generate type to index mappings
             self.word_type_to_idx = Preprocessor.type_to_idx(self.word_types)
             self.char_type_to_idx  = Preprocessor.type_to_idx(self.char_types)
+            self.tag_type_to_idx = Preprocessor.type_to_idx(self.tag_types)
 
-        # generate un-shared type to index mappings
-        self.tag_type_to_idx = Preprocessor.type_to_idx(self.tag_types)
-        # create reverse mapping of indices to tags
+        # create reverse mapping of indices to tags, save computation downstream
         self.idx_to_tag_type = {v: k for k, v in self.tag_type_to_idx.items()}
 
         # get type to idx sequences
@@ -222,7 +222,8 @@ class Dataset(object):
             one-hot endcoded matrix representation of idx_sequence.
         """
         # convert to one-hot encoding
-        one_hots = [to_categorical(s, len(self.tag_types)) for s in idx_seq]
+        one_hots = [to_categorical(s, len(self.tag_type_to_idx)) for s in
+            idx_seq]
         one_hots = np.array(one_hots)
 
         return one_hots
