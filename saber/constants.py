@@ -22,3 +22,6 @@ NUM_RARE = 1 # tokens that occur less than NUM_RARE times are replaced UNK
 # train and test filename patterns
 TRAIN_FILE_EXT = 'train.*'
 # TEST_FILE_EXT = 'test.*'
+
+# relative path to pretrained model directory
+PRETRAINED_MODEL_BASE_DIR = '../pretrained_models'
