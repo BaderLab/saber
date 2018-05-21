@@ -1,6 +1,8 @@
 import pytest
 
+import constants
 from preprocessor import Preprocessor
+
 
 @pytest.fixture
 def preprocessor():
@@ -39,6 +41,13 @@ def test_type_to_idx():
     assert Preprocessor.type_to_idx(simple_seq) == simple_expected
     assert Preprocessor.type_to_idx(simple_seq, offset=1) == offset_expected
     assert Preprocessor.type_to_idx(blank_seq) == blank_expected
+
+def test_get_type_to_idx_sequence():
+    """"""
+    simple_seq = ["This", "is", "a", "test", ".", constants.UNK]
+    simple_type_to_idx = Preprocessor.type_to_idx(simple_seq)
+    simple_expected = [0, 1, 2, 3, 4]
+    simple_actual = Preprocessor.get_type_idx_sequence(seq=simple_seq, type_to_idx=simple_type_to_idx)
 
 def test_chunk_entities():
     """Asserts that call to Preprocessor.chunk_entities() returns the
