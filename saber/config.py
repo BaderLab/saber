@@ -64,9 +64,11 @@ class Config(object):
             ['pretrained_model_weights'])
         parameters['token_pretrained_embedding_filepath'] = str(self.config \
             ['data']['token_pretrained_embedding_filepath'])
-        parameters['token_embedding_dimension'] = int(self.config['data'] \
+
+        # model
+        parameters['token_embedding_dimension'] = int(self.config['model'] \
             ['token_embedding_dimension'])
-        parameters['character_embedding_dimension'] = int(self.config['data'] \
+        parameters['character_embedding_dimension'] = int(self.config['model'] \
             ['character_embedding_dimension'])
 
         # training
