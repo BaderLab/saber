@@ -96,9 +96,17 @@ If not specified, the default configuration file at `saber/config.ini` is used.
 To run Saber as a web-service, `cd` into the directory `saber` and run:
 
 ```
-$ export FLASK_APP=web_service.py
-$ python -m flask run
+$ python app.py
 ```
+
+To build Saber with Docker from the project root directory:
+
+```
+docker build -t saber .
+```
+
+To run: `docker run --rm -p 5000:5000 --name saber1 -dt saber` (use `-it` instead of `-dt` to try it interactively) 
+
 
 There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a POST request with a `json` payload, e.g.:
 
@@ -119,10 +127,7 @@ Or:
 For example, running the web-service locally and using `cURL`:
 
 ```
-curl --request POST \
-     --url http://127.0.0.1:5000/annotate/text \
-     --header 'content-type: application/json' \
-     --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}'
+curl -XPOST --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}' 'http://localhost:5000/annotate/text'
 ```
 
 > Currently, the pre-trained 'PRGE' model in the `pretrained_models/` folder powers the web-service.
