@@ -1,13 +1,10 @@
 import json
+import utils_web_service
 
-from flask import Flask
 from flask import request
 from flask import jsonify
-app = Flask('saber')
-
-import utils_web_service
-from config import Config
-from sequence_processor import SequenceProcessor
+from flask import Flask
+app = Flask(__name__)
 
 ENTITIES = {'PRGE': True,
             'LIVB': False,
@@ -76,3 +73,6 @@ def predict(text, ents):
         final_annotation = jsonify(final_annotation)
 
     return final_annotation
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0')
