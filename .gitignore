@@ -112,3 +112,5 @@ ENV/
 # IDE
 .idea
 *.iml
+/pretrained_models/CRAFT/
+/pretrained_models/PRGE/
