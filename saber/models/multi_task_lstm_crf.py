@@ -1,5 +1,6 @@
 import os
 import time
+import random
 from operator import itemgetter
 
 import numpy as np
@@ -84,7 +85,7 @@ class MultiTaskLSTMCRF(object):
                                         trainable=(not self.config.freeze_token_embeddings))
 
         # Character-level embedding layer
-        char_embeddings = Embedding(input_dim=(len(self.ds[0].char_type_to_idx)),
+        char_embeddings = Embedding(input_dim=len(self.ds[0].char_type_to_idx),
                                     output_dim=self.config.character_embedding_dimension,
                                     mask_zero=True)
 
@@ -114,7 +115,7 @@ class MultiTaskLSTMCRF(object):
 
 
         # get all unique tag types across all datasets
-        all_tag_types = [ds.tag_types for ds in self.ds]
+        all_tag_types = [ds.tag_type_to_idx.keys() for ds in self.ds]
         all_tag_types = set(x for l in all_tag_types for x in l)
 
         feedforward_bf_crf = TimeDistributed(
@@ -159,7 +160,7 @@ class MultiTaskLSTMCRF(object):
             model = Dropout(self.config.dropout_rate)(model)
 
             # CRF output layer
-            crf = CRF(len(ds.tag_types))
+            crf = CRF(len(ds.tag_type_to_idx))
             output_layer = crf(model)
 
             # Fully specified model
@@ -182,7 +183,14 @@ class MultiTaskLSTMCRF(object):
 
     def fit_(self, checkpointer, output_dir):
         """Fits a bidirectional multi-task LSTM-CRF for for sequence tagging
-        using Keras."""
+        using Keras.
+
+        Args:
+            checkpointer: Keras ModelCheckpoint object which allows for per
+                epoch model checkpointing.
+            output_dir: a list of filepaths to save model output to, one for
+                each model.
+        """
         # get train/valid indicies for each dataset
         train_valid_indices = utils_models.get_train_valid_indices(self.ds, self.config.k_folds)
 
@@ -192,14 +200,16 @@ class MultiTaskLSTMCRF(object):
             data_partitions = utils_models.get_data_partitions(self.ds, train_valid_indices, fold)
             # create the Keras Callback object for computing/storing metrics
             metrics_current_fold = utils_models.get_metrics(self.ds, data_partitions, output_dir)
+
             ## EPOCHS
             for epoch in range(self.config.maximum_number_of_epochs):
-                print('[INFO] Fold: {}/{}; Global epoch: {}/{}'.format(fold + 1,
-                                                                       self.config.k_folds,
-                                                                       epoch + 1,
-                                                                       self.config.maximum_number_of_epochs))
+                print('[INFO] Fold: {}/{}; Global epoch: {}/{}'.format(fold + 1, \
+                    self.config.k_folds, epoch + 1, self.config.maximum_number_of_epochs))
+
                 ## DATASETS/MODELS
-                for i, (ds, model) in enumerate(zip(self.ds, self.model)):
+                # get a random ordering of the dataset/model indices
+                ds_idx = random.sample(range(0, len(self.ds)), len(self.ds))
+                for i in ds_idx:
                     # mainly for cleanliness
                     X_word_train = np.array(data_partitions[i][0])
                     X_word_valid = np.array(data_partitions[i][1])
@@ -208,20 +218,16 @@ class MultiTaskLSTMCRF(object):
                     y_train = np.array(data_partitions[i][4])
                     y_valid = np.array(data_partitions[i][5])
 
-                    model.fit(x=[X_word_train, X_char_train],
-                              y=[y_train],
-                              batch_size=self.config.batch_size,
-                              epochs=1,
-                              callbacks=[checkpointer[i],
-                                         metrics_current_fold[i]],
-                              validation_data=([X_word_valid, X_char_valid],
-                                               [y_valid]),
-                              verbose=1)
-
+                    self.model[i].fit(x=[X_word_train, X_char_train], \
+                        y=[y_train], batch_size=self.config.batch_size, epochs=1, \
+                        callbacks=[checkpointer[i], metrics_current_fold[i]], \
+                        validation_data=([X_word_valid, X_char_valid], [y_valid]), \
+                        verbose=1)
 
             self.metrics.append(metrics_current_fold)
 
-            # end of a k-fold, so clear the model, specify and compile again
+            # End of a k-fold, so clear the model, specify and compile again.
+            # Do not clear the last model.
             if fold < self.config.k_folds - 1:
                 self.model = []
                 self.crf = []
