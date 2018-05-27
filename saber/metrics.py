@@ -4,10 +4,11 @@ from statistics import mean
 from operator import itemgetter
 
 import numpy as np
+from prettytable import PrettyTable
 from keras.callbacks import Callback
-from sklearn.metrics import precision_recall_fscore_support
 
 import utils_models
+from utils_generic import make_dir
 from preprocessor import Preprocessor
 
 # TODO (johngiorgi): there is some hard coded ugliness going on in print_table, fix this.
@@ -15,28 +16,24 @@ from preprocessor import Preprocessor
 
 class Metrics(Callback):
     """A class for handling performance metrics, inherits from Callback."""
-    def __init__(self,
-                 X_train,
-                 X_valid,
-                 y_train,
-                 y_valid,
-                 tag_type_to_idx,
-                 output_dir):
+    def __init__(self, X_train, X_valid, y_train, y_valid, idx_to_tag_type,
+                 output_dir, fold=0):
         # training data
         self.X_train = X_train
         self.X_valid = X_valid
         self.y_train = y_train
         self.y_valid = y_valid
 
-        self.tag_type_to_idx = tag_type_to_idx
-
-        # get inversed mapping from idx: tag, speeds up computations downstream
-        self.idx_to_tag_type = {v: k for k, v in tag_type_to_idx.items()}
+        # inversed mapping from idx: tag
+        self.idx_to_tag_type = idx_to_tag_type
 
         self.output_dir = output_dir
 
         # epoch counter for model tied to this object
         self.current_epoch = 0
+
+        # current k-fold counter for model tied to this object
+        self.current_fold = fold
 
         # Model performance metrics accumulators
         self.train_performance_metrics_per_epoch = []
@@ -60,7 +57,7 @@ class Metrics(Callback):
         self.valid_performance_metrics_per_epoch.append(valid_scores)
 
         # write the performance metrics for the current epoch to disk
-        self._write_train_metrics()
+        self._write_metrics_to_disk()
 
         self.current_epoch += 1 # update the current epoch counter
 
@@ -166,7 +163,8 @@ class Metrics(Callback):
                     TP += 1
 
             # get performance metrics
-            performance_scores[lab] = utils_models.precision_recall_f1_support(TP, FP, FN)
+            performance_scores[lab] = \
+                utils_models.precision_recall_f1_support(TP, FP, FN)
 
             # accumulate FNs, FPs, TPs
             FN_total += FN
@@ -180,66 +178,58 @@ class Metrics(Callback):
         total_support = TP_total + FN_total
 
         performance_scores['MACRO_AVG'] = (macro_p, macro_r, macro_f1, total_support)
-        performance_scores['MICRO_AVG'] = utils_models.precision_recall_f1_support(TP_total, FP_total, FN_total)
+        performance_scores['MICRO_AVG'] = \
+            utils_models.precision_recall_f1_support(TP_total, FP_total, FN_total)
 
         return performance_scores
 
     def _print_performance_scores(self, performance_scores, title='train'):
-        """Prints a table of performance scores.
+        """Prints an ASCII table of performance scores.
 
         Args:
             performance_scores: a dictionary of label, score pairs where label
                                 is a sequence tag and scores is a 4-tuple
                                 containing precision, recall, f1 and support
+            title (str): the title of the table (uppercased).
         """
-        # collect table dimensions
-        col_width = 4
-        col_space = ' ' * col_width
-        len_longest_label = max(len(s) for s in performance_scores)
-        dist_to_col_1 = len_longest_label + col_width
-        dist_to_col_2 = dist_to_col_1 + len('Precision') + col_width
-        dist_to_col_3 = dist_to_col_2 + len('Recall') + col_width
-        dist_to_col_4 = dist_to_col_3 + len('F1') + col_width
+        # create table, give it a title a column names
+        table = PrettyTable()
+        table.title = title.upper()
+        table.field_names = ['Label', 'Precision', 'Recall', 'F1', 'Support']
 
-        tab_width = dist_to_col_4 + len('Support') + col_width
-        light_line = '-' * tab_width
-        heavy_line = '=' * tab_width
+        # column alignment
+        table.align['Label'] = 'l'
+        table.align['Precision'] = 'r'
+        table.align['Recall'] = 'r'
+        table.align['F1'] = 'r'
+        table.align['Support'] = 'r'
 
-        ## HEADER
-        print()
-        print()
-        title = '{col}{t}{col}'.format(t=title.upper(),
-                                       col=' '*((tab_width-len(title))//2))
-        header = 'Label{col1}Precision{cols}Recall{cols}F1{cols}Support'.format(col1=' ' * (dist_to_col_1 - len('Label')),
-                                                                                cols=col_space)
-        print(heavy_line)
-        print(title)
-        print(light_line)
-        print(header)
+        # create and add the rows
+        for label, scores in performance_scores.items():
+            row = [label]
+            # convert scores to formatted percentage strings, don't include
+            # support
+            row_scores = list(scores)
+            for i in range(len(row_scores) - 1):
+                row_scores[i] = str(round(row_scores[i] * 100, 2)) + '%'
 
-        print(heavy_line)
-        ## BODY
-        for label, score in performance_scores.items():
-            # specify an entire row
-            row = '{lab}{col1}{p:.2%}{col2}{r:.2%}{col3}{f1:.2%}{col4}{s}'.format(
-                p=score[0],
-                r=score[1],
-                f1=score[2],
-                s=score[3],
-                lab=label,
-                col1=' ' * (dist_to_col_1 - len(label) + len('Precision')//3 - 2),
-                col2=' ' * (dist_to_col_2 - dist_to_col_1 - len('Precision')//3 - 2),
-                col3=' ' * (dist_to_col_3 - dist_to_col_2 - len('Precision')//3 - 2),
-                col4=' ' * (dist_to_col_4 - dist_to_col_3 - len('Precision')//3))
-            print(row)
-        print(heavy_line)
+            row.extend(row_scores)
+            table.add_row(row)
 
-    def _write_train_metrics(self):
+        print(table)
+
+    def _write_metrics_to_disk(self):
         """
         """
-        # create output filepath
-        perf_metrics_filename = 'epoch_{0:03d}.txt'.format(self.current_epoch + 1)
-        eval_file_dirname = os.path.join(self.output_dir, perf_metrics_filename)
+        # create evaluation output directory
+        fold = 'fold_{}'.format(self.current_fold + 1)
+        eval_dirname = os.path.join(self.output_dir, fold)
+        make_dir(eval_dirname)
+
+        # create filepath to evaluation file
+        eval_filename = 'epoch_{0:03d}.txt'.format(self.current_epoch + 1)
+        eval_filepath = os.path.join(eval_dirname, eval_filename)
+
         # write performance metrics for current epoch to file
         micro_avg_per_epoch = [x['MICRO_AVG'] for x in self.valid_performance_metrics_per_epoch]
         macro_avg_per_epoch = [x['MACRO_AVG'] for x in self.valid_performance_metrics_per_epoch]
@@ -251,7 +241,7 @@ class Metrics(Callback):
         best_micro_val_score = self.valid_performance_metrics_per_epoch[best_micro_epoch]
         best_macro_val_score = self.valid_performance_metrics_per_epoch[best_macro_epoch]
 
-        with open(eval_file_dirname, 'a') as f:
+        with open(eval_filepath, 'a') as f:
             f.write(str(self.valid_performance_metrics_per_epoch[self.current_epoch]))
             f.write('\n')
             f.write('Best performing epoch based on macro average: {}\n'.format(best_macro_epoch + 1))
