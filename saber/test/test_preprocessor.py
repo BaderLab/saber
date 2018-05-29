@@ -3,7 +3,6 @@ import pytest
 import constants
 from preprocessor import Preprocessor
 
-
 @pytest.fixture
 def preprocessor():
     """Returns an instance of a Preprocessor object."""
@@ -48,6 +47,7 @@ def test_get_type_to_idx_sequence():
     simple_type_to_idx = Preprocessor.type_to_idx(simple_seq)
     simple_expected = [0, 1, 2, 3, 4]
     simple_actual = Preprocessor.get_type_idx_sequence(seq=simple_seq, type_to_idx=simple_type_to_idx)
+    # TODO
 
 def test_chunk_entities():
     """Asserts that call to Preprocessor.chunk_entities() returns the
@@ -69,8 +69,8 @@ def test_chunk_entities():
     assert Preprocessor.chunk_entities(invalid_seq) == invalid_expected
     assert Preprocessor.chunk_entities(blank_seq) == blank_expected
 
-def test_sterilize(preprocessor):
-    """Asserts that call to Preprocessor._sterilize() returns the
+def test_sterilize():
+    """Asserts that call to Preprocessor.sterilize() returns the
     expected results."""
     # test for proceeding and preeceding spaces
     simple_text = " This is an easy test. "
@@ -82,6 +82,6 @@ def test_sterilize(preprocessor):
     blank_text = ""
     blank_expected = ""
 
-    assert preprocessor._sterilize(simple_text) == simple_expected
-    assert preprocessor._sterilize(multiple_spaces_text) == multiple_spaces_expected
-    assert preprocessor._sterilize(blank_text) == blank_expected
+    assert Preprocessor.sterilize(simple_text) == simple_expected
+    assert Preprocessor.sterilize(multiple_spaces_text) == multiple_spaces_expected
+    assert Preprocessor.sterilize(blank_text) == blank_expected

@@ -86,8 +86,8 @@ def test_attributes_after_initilization_of_model(sp_no_ds_no_embed):
     assert sp_no_ds_no_embed.config.character_embedding_dimension == 30
     assert sp_no_ds_no_embed.config.dataset_folder == [PATH_TO_DUMMY_DATASET]
     assert sp_no_ds_no_embed.config.debug == False
-    assert sp_no_ds_no_embed.config.dropout_rate == 0.3
-    assert sp_no_ds_no_embed.config.freeze_token_embeddings == True
+    assert sp_no_ds_no_embed.config.dropout_rate == {'input': 0.25, 'output':0.25, 'recurrent': 0.25, 'word_embed': 0.1}
+    assert sp_no_ds_no_embed.config.trainable_token_embeddings == False
     assert sp_no_ds_no_embed.config.gradient_normalization == None
     assert sp_no_ds_no_embed.config.k_folds == 2
     assert sp_no_ds_no_embed.config.learning_rate == 0.01
@@ -116,8 +116,8 @@ def test_token_embeddings_load(sp_sing_ds_no_embed,
     sp_compound_ds_no_embed.load_embeddings()
 
     # check type
-    assert type(sp_sing_ds_no_embed.token_embedding_matrix) == numpy.ndarray
-    assert type(sp_compound_ds_no_embed.token_embedding_matrix) == numpy.ndarray
+    assert isinstance(sp_sing_ds_no_embed.token_embedding_matrix, numpy.ndarray)
+    assert isinstance(sp_compound_ds_no_embed.token_embedding_matrix, numpy.ndarray)
     # check value
     assert sp_sing_ds_no_embed.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
     assert sp_compound_ds_no_embed.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
@@ -130,7 +130,7 @@ def test_X_input_sequences_after_loading_single_dataset(sp_sing_ds_no_embed):
     ds = sp_sing_ds_no_embed.ds[0]
     model = sp_sing_ds_no_embed
     # check type
-    assert type(ds.train_word_idx_seq) == numpy.ndarray
+    assert isinstance(ds.train_word_idx_seq, numpy.ndarray)
     # check shape
     assert ds.train_word_idx_seq.shape[0] == DUMMY_TRAIN_SENT_NUM
 
@@ -142,7 +142,7 @@ def test_y_output_sequences_after_loading_single_dataset(sp_sing_ds_no_embed):
     ds = sp_sing_ds_no_embed.ds[0]
     model = sp_sing_ds_no_embed
     # check type
-    assert type(ds.train_tag_idx_seq) == numpy.ndarray
+    assert isinstance(ds.train_tag_idx_seq, numpy.ndarray)
     # check value
     assert ds.train_tag_idx_seq.shape[0] == DUMMY_TRAIN_SENT_NUM
     assert ds.train_tag_idx_seq.shape[-1] == DUMMY_TAG_TYPE_COUNT
@@ -200,8 +200,8 @@ def test_predict(sp_single_ds_no_embed_with_model):
     multi_sentence_text = "This is a simple text. With multiple sentences"
     multi_sentence_annotation = {'text': multi_sentence_text, 'ents': [], 'title': None}
 
-    simple_prediction = json.loads(sp_single_ds_no_embed_with_model.predict(simple_text))
-    multi_sentence_prediction = json.loads(sp_single_ds_no_embed_with_model.predict(multi_sentence_text))
+    simple_prediction = sp_single_ds_no_embed_with_model.predict(simple_text)
+    multi_sentence_prediction = sp_single_ds_no_embed_with_model.predict(multi_sentence_text)
     # wipe the predicted entities as these are stochastic.
     simple_prediction['ents'] = []
     multi_sentence_prediction['ents'] = []
@@ -219,10 +219,10 @@ def test_predict_blank_or_invalid(sp_single_ds_no_embed_with_model):
     false_bool_test = False
 
     with pytest.raises(AssertionError):
-        prediction = sp_single_ds_no_embed_with_model.predict(blank_text_test)
+        sp_single_ds_no_embed_with_model.predict(blank_text_test)
     with pytest.raises(AssertionError):
-        prediction = sp_single_ds_no_embed_with_model.predict(none_test)
+        sp_single_ds_no_embed_with_model.predict(none_test)
     with pytest.raises(AssertionError):
-        prediction = sp_single_ds_no_embed_with_model.predict(empty_list_test)
+        sp_single_ds_no_embed_with_model.predict(empty_list_test)
     with pytest.raises(AssertionError):
-        prediction = sp_single_ds_no_embed_with_model.predict(false_bool_test)
+        sp_single_ds_no_embed_with_model.predict(false_bool_test)

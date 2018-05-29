@@ -1,7 +1,7 @@
+# -*- coding: utf-8 -*-
 import re
 from collections import Counter
 
-import spacy
 import en_core_web_sm
 from keras.preprocessing.sequence import pad_sequences
 
@@ -20,12 +20,12 @@ class Preprocessor(object):
     def transform(self, text, w2i, c2i):
         """
         """
-        text_ = self._sterilize(text)
+        text_ = self.sterilize(text)
         # get sentences and token offsets
         sentences, offsets = self._process_text(text_)
 
-        word_idx_sequence = self.get_type_idx_sequence(sentences, w2i, type='word')
-        char_idx_sequence = self.get_type_idx_sequence(sentences, c2i, type='char')
+        word_idx_sequence = self.get_type_idx_sequence(sentences, w2i, type_='word')
+        char_idx_sequence = self.get_type_idx_sequence(sentences, c2i, type_='char')
 
         transformed_text = {
             'text': text_,
@@ -90,7 +90,7 @@ class Preprocessor(object):
         return sentences, offsets
 
     @staticmethod
-    def type_to_idx(types, offset=0):
+    def type_to_idx(types, initial_mapping=None, offset=0):
         """Returns a dictionary of element:index pairs for each element in
         types.
 
@@ -99,21 +99,35 @@ class Preprocessor(object):
         integers.
 
         Args:
-            types (list): a list of unique types (word, char, or tag)
-            offset (int): used when computing the mapping. An offset a 1 means
+            types (list): A list of unique types (word, char, or tag)
+            initial_mapping (dict): An initial mapping of types to integers. If
+                not none, the mapping of types to integers will update this
+                dictionary, with the integer count begginning at
+                len(initial_mapping)
+            offset (int): Used when computing the mapping. An offset a 1 means
                     we begin computing the mapping at 1, useful if we want to
-                    use 0 as a padding value.
+                    use 0 as a padding value. Has no effect if initial_mapping
+                    is not None.
         Returns:
             a mapping from elements in the sequence to numbered indices
 
         Preconditions:
             assumes that all elements in sequence are unique
         """
-        # offset accounts for sequence pad
-        return {e: i + offset for i, e in enumerate(types)}
+        if initial_mapping is not None:
+            # if a type in initial_mapping already exists in types, remove it
+            for type in initial_mapping:
+                if type in types:
+                    types.remove(type)
+            mapping = {e: i + len(initial_mapping) for i, e in enumerate(types)}
+            mapping.update(initial_mapping)
+            return mapping
+        else:
+            # offset accounts for sequence pad
+            return {e: i + offset for i, e in enumerate(types)}
 
     @staticmethod
-    def get_type_idx_sequence(seq, type_to_idx, type='word'):
+    def get_type_idx_sequence(seq, type_to_idx, type_='word'):
         """Returns sequence of indices corresponding to data set sentences.
 
         Returns the sequence of indices corresponding to the type order in
@@ -133,19 +147,17 @@ class Preprocessor(object):
             assumes that the first column of the data set contains the word
             types, and the last column contains the tag types.
         """
-        assert type in ['word', 'char', 'tag'], "Argument type must be one 'word', 'char' or 'type'"
-
-        pad = 0 # sequence pad
+        assert type_ in ['word', 'char', 'tag'], "Argument type must be one 'word', 'char' or 'type'"
 
         # Word type
-        if type == 'word':
+        if type_ == 'word':
             type_seq = [[type_to_idx.get(x, type_to_idx[UNK]) for x in s] \
                 for s in seq]
         # Tag type
-        elif type == 'tag':
+        elif type_ == 'tag':
             type_seq = [[type_to_idx.get(x) for x in s] for s in seq]
         # Char type
-        elif type == 'char':
+        elif type_ == 'char':
             # get index sequence of chars
             type_seq = [[[type_to_idx.get(c, type_to_idx[UNK]) for c in w] \
                 for w in s] for s in seq]
@@ -233,7 +245,8 @@ class Preprocessor(object):
 
         return sentences
 
-    def _sterilize(self, text):
+    @staticmethod
+    def sterilize(text):
         """Sterilize input text.
 
         For given input text, remove proceeding and preeceding spaces, and replace
