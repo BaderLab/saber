@@ -1,7 +1,10 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 import argparse
 import configparser
+
+from preprocessor import Preprocessor
 
 # TODO: (johngiorgi): use the supported datatypes functions for bools: https://docs.python.org/3.6/library/configparser.html#supported-datatypes
 # TODO: (johngiorgi): not clear if the post processing is neccecary
@@ -50,51 +53,50 @@ class Config(object):
 
         # parse config
         # mode
-        parameters['model_name'] = str(self.config['mode']['model_name'])
-        parameters['train_model'] = bool('True' == self.config['mode'] \
-            ['train_model'])
-        parameters['load_pretrained_model'] = bool('True' == \
-            self.config['mode']['load_pretrained_model'])
+        parameters['model_name'] = self.config['mode']['model_name']
+        parameters['train_model'] = self.config['mode'].getboolean \
+            ('train_model')
+        parameters['load_pretrained_model'] = self.config['mode'].getboolean \
+            ('load_pretrained_model')
 
         # data
-        parameters['dataset_folder'] = str(self.config['data'] \
-            ['dataset_folder']).split()
-        parameters['output_folder'] = str(self.config['data']['output_folder'])
-        parameters['pretrained_model_weights'] = str(self.config['data'] \
-            ['pretrained_model_weights'])
-        parameters['token_pretrained_embedding_filepath'] = str(self.config \
-            ['data']['token_pretrained_embedding_filepath'])
+        parameters['dataset_folder'] = self.config['data']['dataset_folder']. \
+            split(',')
+        parameters['output_folder'] = self.config['data']['output_folder']
+        parameters['pretrained_model_weights'] = self.config['data'] \
+            ['pretrained_model_weights']
+        parameters['token_pretrained_embedding_filepath'] = self.config \
+            ['data']['token_pretrained_embedding_filepath']
 
         # model
-        parameters['token_embedding_dimension'] = int(self.config['model'] \
-            ['token_embedding_dimension'])
-        parameters['character_embedding_dimension'] = int(self.config['model'] \
-            ['character_embedding_dimension'])
+        parameters['token_embedding_dimension'] = self.config['model'].getint( \
+            'token_embedding_dimension')
+        parameters['character_embedding_dimension'] = self.config['model']. \
+            getint('character_embedding_dimension')
 
         # training
-        parameters['optimizer'] = str(self.config['training']['optimizer'])
-        parameters['activation_function'] = str(self.config['training'] \
-            ['activation_function'])
-        parameters['learning_rate'] = float(self.config['training'] \
-            ['learning_rate'])
-        parameters['decay'] = float(self.config['training']['decay'])
-        parameters['gradient_normalization'] = float(self.config['training'] \
-            ['gradient_normalization'])
-        parameters['dropout_rate'] = float(self.config['training'] \
-            ['dropout_rate'])
-        parameters['batch_size'] = int(self.config['training']['batch_size'])
-        parameters['k_folds'] = int(self.config['training']['k_folds'])
-        parameters['maximum_number_of_epochs'] = int(self.config['training'] \
-            ['maximum_number_of_epochs'])
+        parameters['optimizer'] = self.config['training']['optimizer']
+        parameters['activation_function'] = self.config['training'] \
+            ['activation_function']
+        parameters['learning_rate'] = self.config['training'].getfloat \
+            ('learning_rate')
+        parameters['decay'] = self.config['training'].getfloat('decay')
+        parameters['gradient_normalization'] = self.config['training']. \
+            getfloat('gradient_normalization')
+        parameters['dropout_rate'] = self.config['training']['dropout_rate']. \
+            split(',')
+        parameters['batch_size'] = self.config['training'].getint('batch_size')
+        parameters['k_folds'] = self.config['training'].getint('k_folds')
+        parameters['maximum_number_of_epochs'] = self.config['training']. \
+            getint('maximum_number_of_epochs')
 
         # advanced
-        parameters['verbose'] = bool('True' == self.config['advanced'] \
-            ['verbose'])
-        parameters['debug'] = bool('True' == self.config['advanced']['debug'])
-        parameters['replace_rare_tokens'] = bool('True' == \
-            self.config['advanced']['replace_rare_tokens'])
-        parameters['freeze_token_embeddings'] = bool('True' == self.config \
-            ['advanced']['freeze_token_embeddings'])
+        parameters['verbose'] = self.config['advanced'].getboolean('verbose')
+        parameters['debug'] = self.config['advanced'].getboolean('debug')
+        parameters['replace_rare_tokens'] = self.config['advanced'].getboolean \
+            ('replace_rare_tokens')
+        parameters['trainable_token_embeddings'] = self.config['advanced']. \
+            getboolean('trainable_token_embeddings')
 
         # overwrite any parameters in the config if specfied at CL
         for key, value in cli_arguments.items():
@@ -103,16 +105,30 @@ class Config(object):
 
         # do any post-processing here
         # replace all whitespace with single space, create list of filepaths
-        parameters['dataset_folder'] = [x.strip() for x in parameters['dataset_folder']]
-        # lowercase all str arguments (expect directory/file paths)
-        parameters['optimizer'] = parameters['optimizer'].strip().lower()
-        parameters['activation_function'] = parameters['activation_function'].strip().lower()
-        # Do not use gradient normalization if config value is 0
+        parameters['dataset_folder'] = [Preprocessor.sterilize(ds) for ds in
+            parameters['dataset_folder']]
+
+        # convert dropout rates to floats
+        parameters['dropout_rate'] = {
+            'input': float(parameters['dropout_rate'][0]),
+            'output': float(parameters['dropout_rate'][1]),
+            'recurrent': float(parameters['dropout_rate'][2]),
+            'word_embed':float(parameters['dropout_rate'][3])
+        }
+
+        # normalize all str arguments (expect directory/file paths)
+        parameters['model_name'] = Preprocessor.sterilize(parameters \
+            ['model_name'])
+        parameters['optimizer'] = Preprocessor.sterilize(parameters \
+            ['optimizer']).lower()
+        parameters['activation_function'] = Preprocessor.sterilize(parameters \
+            ['activation_function']).lower()
+
+        # do not use gradient normalization if config value is 0
         if parameters['gradient_normalization'] == 0:
             parameters['gradient_normalization'] = None
         if parameters['token_pretrained_embedding_filepath'] == '':
             parameters['token_pretrained_embedding_filepath'] = None
-
 
         # use parameters dictionary to update instance attributes
         for k, v in parameters.items():
@@ -142,8 +158,8 @@ class Config(object):
         parser.add_argument('--dataset_folder', required=False, nargs='*', help='')
         parser.add_argument('--debug', required=False, action='store_true', help='')
         parser.add_argument('--decay', required=False, type=float, help='')
-        parser.add_argument('--dropout_rate', required=False, type=float, help='')
-        parser.add_argument('--freeze_token_embeddings', required=False, action='store_true', help='')
+        parser.add_argument('--dropout_rate', required=False, type=dict, help='')
+        parser.add_argument('--trainable_token_embeddings', required=False, action='store_true', help='')
         parser.add_argument('--gradient_normalization', required=False, type=float, help='')
         parser.add_argument('--k_folds', required=False, type=int, help='')
         parser.add_argument('--learning_rate', required=False, type=float, help='')
