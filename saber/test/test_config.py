@@ -19,13 +19,13 @@ DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS = {
 'learning_rate': 0.01,
 'decay': 0.05,
 'gradient_normalization': None,
-'dropout_rate': 0.3,
+'dropout_rate': {'input': 0.25, 'output':0.25, 'recurrent': 0.25, 'word_embed': 0.1},
 'batch_size': 1,
 'k_folds': 2,
 'maximum_number_of_epochs': 10,
 'verbose': False,
 'debug': False,
-'freeze_token_embeddings': True,
+'trainable_token_embeddings': False,
 'replace_rare_tokens': False}
 DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS = {
 'model_name': 'MT-LSTM-CRF',
@@ -42,13 +42,13 @@ DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS = {
 'learning_rate': 0.05,
 'decay': 0.5,
 'gradient_normalization': 1.0,
-'dropout_rate': 0.3,
+'dropout_rate': {'input': 0.25, 'output':0.25, 'recurrent': 0.25, 'word_embed': 0.1},
 'batch_size': 1,
 'k_folds': 2,
 'maximum_number_of_epochs': 10,
 'verbose': False,
 'debug': False,
-'freeze_token_embeddings': True,
+'trainable_token_embeddings': False,
 'replace_rare_tokens': False}
 DUMMY_COMMAND_LINE_ARGS = {
 'gradient_normalization': 1.0,
@@ -95,8 +95,11 @@ def test_parse_config_args_no_cli_args(config_no_cli_args, config_with_cli_args)
         for k, v in config_no_cli_args_[section].items():
             expected = DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS[k]
             # special case of lists
-            if type(expected) is list:
+            if isinstance(expected, list):
                 expected = ' '.join(expected)
+            # TODO: this is a cop-out, figure out how to check dictionaries
+            elif isinstance(expected, dict):
+                expected = v
             # special case of None
             elif expected is None:
                 expected = v
@@ -107,8 +110,11 @@ def test_parse_config_args_no_cli_args(config_no_cli_args, config_with_cli_args)
         for k, v in config_with_cli_args_[section].items():
             expected = DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS[k]
             # special case of lists
-            if type(expected) is list:
+            if isinstance(expected, list):
                 expected = ' '.join(expected)
+            # TODO: this is a cop-out, figure out how to check dictionaries
+            elif isinstance(expected, dict):
+                expected = v
             # special case of None
             elif expected is None:
                 expected = v

@@ -1,5 +1,4 @@
 import os
-import codecs
 from statistics import mean
 from operator import itemgetter
 
@@ -49,8 +48,8 @@ class Metrics(Callback):
         train_scores = self._eval(self.X_train, self.y_train)
         valid_scores = self._eval(self.X_valid, self.y_valid)
 
-        self._print_performance_scores(train_scores, title='train')
-        self._print_performance_scores(valid_scores, title='valid')
+        self.print_performance_scores(train_scores, title='train')
+        self.print_performance_scores(valid_scores, title='valid')
 
         # accumulate peformance metrics
         self.train_performance_metrics_per_epoch.append(train_scores)
@@ -82,8 +81,8 @@ class Metrics(Callback):
         y_pred_chunks = Preprocessor.chunk_entities(y_pred_tag)
 
         # get performance scores per label
-        performance_scores = self._get_precision_recall_f1_support(y_true_chunks,
-                                                                   y_pred_chunks)
+        performance_scores = self.get_precision_recall_f1_support(y_true_chunks,
+                                                                  y_pred_chunks)
 
         return performance_scores
 
@@ -116,7 +115,8 @@ class Metrics(Callback):
 
         return y_true, y_pred
 
-    def _get_precision_recall_f1_support(self, y_true, y_pred):
+    @staticmethod
+    def get_precision_recall_f1_support(self, y_true, y_pred):
         """Returns precision, recall, f1 and support.
 
         For given gold (y_true) and predicited (y_pred) labels, returns the
@@ -183,7 +183,8 @@ class Metrics(Callback):
 
         return performance_scores
 
-    def _print_performance_scores(self, performance_scores, title='train'):
+    @staticmethod
+    def print_performance_scores(self, performance_scores, title=None):
         """Prints an ASCII table of performance scores.
 
         Args:
@@ -194,7 +195,7 @@ class Metrics(Callback):
         """
         # create table, give it a title a column names
         table = PrettyTable()
-        table.title = title.upper()
+        if title is not None: table.title = title.upper()
         table.field_names = ['Label', 'Precision', 'Recall', 'F1', 'Support']
 
         # column alignment

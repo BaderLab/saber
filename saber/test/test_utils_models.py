@@ -1,7 +1,5 @@
 import pytest
-import numpy
 
-from dataset import Dataset
 from metrics import Metrics
 from utils_models import *
 from config import Config
@@ -64,7 +62,9 @@ def metrics_single_model(multi_task_lstm_crf_single_model, data_partitions_singl
     train_session_dir = create_train_session_dir(model_.config.dataset_folder,
                                                  model_.config.output_folder)
 
-    return get_metrics(ds_, data_partitions_single_model, train_session_dir)
+    return get_metrics(datasets=ds_,
+                       data_partitions=data_partitions_single_model,
+                       output_dir=train_session_dir)
 
 def test_precision_recall_f1_support():
     """Asserts that precision_recall_f1_support returns the expected values."""

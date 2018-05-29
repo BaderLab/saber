@@ -1,13 +1,12 @@
+# -*- coding: utf-8 -*-
 import os
-import time
 import glob
 import codecs
 
-from keras.utils import to_categorical
 import numpy as np
+from keras.utils import to_categorical
 
 import constants
-from constants import TRAIN_FILE_EXT
 from preprocessor import Preprocessor
 
 class Dataset(object):
@@ -18,12 +17,11 @@ class Dataset(object):
         # TRAIN_FILE_EXT or TEST_FILE_EXT
         try:
             self.trainset_filepath = glob.glob(os.path.join(filepath, \
-                TRAIN_FILE_EXT))[0]
+                constants.TRAIN_FILE_EXT))[0]
             # self.testset_filepath = glob.glob(os.path.join(filepath, \
             #   TEST_FILE_EXT))[0]
-        except FileNotFoundError:
-            print("[ERROR] No dataset at {}".format(filepath))
-
+        except IndexError:
+            print("[ERROR] No dataset found at {}".format(filepath))
 
         # column delimiter in CONLL dataset
         self.sep = sep
@@ -51,10 +49,6 @@ class Dataset(object):
         self.train_char_idx_seq = None
         self.train_tag_idx_seq = None
 
-        # load dataset file, then grab the train and test 'frames'
-        # self.train_dataframe = self.raw_dataframe.loc['train']
-        # self.test_dataframe = self.raw_dataframe.loc['test']
-
     def load_dataset(self, type_to_idx=None):
         """Coordinates loading of given data set at self.filepath.
 
@@ -75,24 +69,45 @@ class Dataset(object):
         if type_to_idx is not None:
             self.word_type_to_idx = type_to_idx['word']
             self.char_type_to_idx = type_to_idx['char']
-            self.tag_type_to_idx = type_to_idx['tag']
         else:
             # load data and labels from file
             self.load_data_and_labels()
             # get word, char, and tag types
             self.get_types()
             # generate type to index mappings
-            self.word_type_to_idx = Preprocessor.type_to_idx(self.word_types)
-            self.char_type_to_idx  = Preprocessor.type_to_idx(self.char_types)
-            self.tag_type_to_idx = Preprocessor.type_to_idx(self.tag_types)
+            self.word_type_to_idx = Preprocessor.type_to_idx(
+                types=self.word_types,
+                initial_mapping={constants.PAD: 0, constants.UNK: 1}
+            )
+            self.char_type_to_idx = Preprocessor.type_to_idx(
+                types=self.char_types,
+                initial_mapping={constants.PAD: 0, constants.UNK: 1}
+            )
 
+        # generate un-shared type to index mappings
+        self.tag_type_to_idx = Preprocessor.type_to_idx(
+            types=self.tag_types,
+            initial_mapping={constants.PAD: 0}
+        )
         # create reverse mapping of indices to tags, save computation downstream
         self.idx_to_tag_type = {v: k for k, v in self.tag_type_to_idx.items()}
 
         # get type to idx sequences
-        self.train_word_idx_seq = Preprocessor.get_type_idx_sequence(self.word_seq, self.word_type_to_idx, type='word')
-        self.train_char_idx_seq = Preprocessor.get_type_idx_sequence(self.word_seq, self.char_type_to_idx, type='char')
-        self.train_tag_idx_seq = Preprocessor.get_type_idx_sequence(self.tag_seq, self.tag_type_to_idx, type='tag')
+        self.train_word_idx_seq = Preprocessor.get_type_idx_sequence(
+            seq=self.word_seq,
+            type_to_idx=self.word_type_to_idx,
+            type_='word'
+        )
+        self.train_char_idx_seq = Preprocessor.get_type_idx_sequence(
+            seq=self.word_seq,
+            type_to_idx=self.char_type_to_idx,
+            type_='char'
+        )
+        self.train_tag_idx_seq = Preprocessor.get_type_idx_sequence(
+            seq=self.tag_seq,
+            type_to_idx=self.tag_type_to_idx,
+            type_='tag'
+        )
         # convert tag idx sequences to categorical
         self.train_tag_idx_seq = self._tag_idx_sequence_to_categorical(self.train_tag_idx_seq)
 
@@ -138,9 +153,11 @@ class Dataset(object):
 
                 # accumulate each word in a sequence
                 else:
-                    word, tag = line.split('\t')
-                    words.append(word)
-                    tags.append(tag)
+                    # ignore comment lines
+                    if not line.startswith('# '):
+                        word, tag = line.split('\t')
+                        words.append(word)
+                        tags.append(tag)
 
             # in order to collect last sentence in the file
             word_seq.append(words)
@@ -149,6 +166,7 @@ class Dataset(object):
         # replace all rare tokens with special unknown token
         if self.replace_rare_tokens:
             word_seq = Preprocessor.replace_rare_tokens(word_seq)
+
         self.word_seq = np.asarray(word_seq)
         self.tag_seq = np.asarray(tag_seq)
 
@@ -156,11 +174,7 @@ class Dataset(object):
         """Returns word types, char types and tag types.
 
         Returns the word types, character types and tag types for the current
-        loaded dataset (self.raw_dataframe)
-
-        Preconditions:
-            the first column of the data set contains the word types, and the
-            last column contains the tag types.
+        loaded dataset.
 
         Returns:
             a three-tuple containing the word types, chararcter types and
@@ -178,34 +192,9 @@ class Dataset(object):
         # Tag types
         tag_types = list(set([t for s in self.tag_seq for t in s]))
 
-        # Post processing
-        # TODO: there has to be a simpler way to do this
-        word_types.insert(0, constants.PAD) # make PAD the 0th index
-        word_types.insert(1, constants.UNK) # make UNK the 1st index
-        # word_types.insert(2, constants.START) # make START the 2nd index
-        # word_types.insert(3, constants.END) # make END the 3rd index
-        char_types.insert(0, constants.PAD)
-        char_types.insert(1, constants.UNK)
-        # char_types.insert(2, constants.START)
-        # char_types.insert(3, constants.END)
-        tag_types.insert(0, constants.PAD)
-
         self.word_types = word_types
         self.char_types = char_types
         self.tag_types = tag_types
-
-    def _map_type_to_idx(self):
-        """Returns type to index mappings.
-
-        Returns dictionaries mapping each word, char and tag type to a unique
-        index.
-
-        Returns:
-            three-tuple of word, char and tag type to index mappings
-        """
-        self.word_type_to_idx = Preprocessor.type_to_idx(self.word_types)
-        self.char_type_to_idx  = Preprocessor.type_to_idx(self.char_types)
-        self.tag_type_to_idx = Preprocessor.type_to_idx(self.tag_types)
 
     def _tag_idx_sequence_to_categorical(self, idx_seq):
         """One-hot encodes a given class vector.
@@ -222,8 +211,7 @@ class Dataset(object):
             one-hot endcoded matrix representation of idx_sequence.
         """
         # convert to one-hot encoding
-        one_hots = [to_categorical(s, len(self.tag_type_to_idx)) for s in
-            idx_seq]
+        one_hots = [to_categorical(s, len(self.tag_type_to_idx)) for s in idx_seq]
         one_hots = np.array(one_hots)
 
         return one_hots

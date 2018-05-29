@@ -2,7 +2,6 @@ import pytest
 
 from utils_models import *
 from config import Config
-from metrics import Metrics
 from sequence_processor import SequenceProcessor
 
 PATH_TO_DUMMY_CONFIG = 'saber/test/resources/dummy_config.ini'
@@ -79,7 +78,7 @@ def test_attributes_after_initilization_of_metrics(multi_task_lstm_crf_single_mo
     assert metrics_.y_train.shape == data_partitions_single_model[idx][4].shape
     assert metrics_.y_valid.shape == data_partitions_single_model[idx][5].shape
 
-    assert metrics_.tag_type_to_idx == ds_.tag_type_to_idx
+    assert metrics_.idx_to_tag_type == ds_.idx_to_tag_type
     assert metrics_.output_dir == PATH_TO_METRICS_OUTPUT
     assert metrics_.current_epoch == 0
 

@@ -2,7 +2,6 @@ import pytest
 import numpy
 
 from config import Config
-from dataset import Dataset
 from sequence_processor import SequenceProcessor
 
 PATH_TO_DUMMY_CONFIG = 'saber/test/resources/dummy_config.ini'
@@ -44,8 +43,8 @@ def test_model_attributes_after_creation_of_model(multi_task_lstm_crf_single_mod
     assert multi_task_lstm_crf_single_model.config.character_embedding_dimension == 30
     assert multi_task_lstm_crf_single_model.config.dataset_folder == [PATH_TO_DUMMY_DATASET]
     assert multi_task_lstm_crf_single_model.config.debug == False
-    assert multi_task_lstm_crf_single_model.config.dropout_rate == 0.3
-    assert multi_task_lstm_crf_single_model.config.freeze_token_embeddings == True
+    assert multi_task_lstm_crf_single_model.config.dropout_rate == {'input': 0.25, 'output':0.25, 'recurrent': 0.25, 'word_embed': 0.1}
+    assert multi_task_lstm_crf_single_model.config.trainable_token_embeddings == False
     assert multi_task_lstm_crf_single_model.config.gradient_normalization == None
     assert multi_task_lstm_crf_single_model.config.k_folds == 2
     assert multi_task_lstm_crf_single_model.config.learning_rate == 0.01
@@ -59,6 +58,6 @@ def test_model_attributes_after_creation_of_model(multi_task_lstm_crf_single_mod
     assert multi_task_lstm_crf_single_model.config.verbose == False
 
     # assert type(multi_task_lstm_crf_single_model.ds) == []
-    assert type(multi_task_lstm_crf_single_model.token_embedding_matrix) == numpy.ndarray
+    assert isinstance(multi_task_lstm_crf_single_model.token_embedding_matrix, numpy.ndarray)
     # assert type(multi_task_lstm_crf_single_model.model) == []
     # assert len(multi_task_lstm_crf_single_model.model) == 1
