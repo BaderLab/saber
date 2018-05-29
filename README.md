@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/BaderLab/Saber.svg?branch=master)](https://travis-ci.org/BaderLab/Saber)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/d122e87152d84f959ee6d97b71d616cb)](https://www.codacy.com/app/JohnGiorgi/Saber?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=BaderLab/Saber&amp;utm_campaign=Badge_Grade)
 [![Coverage Status](https://coveralls.io/repos/github/BaderLab/Saber/badge.svg?branch=master)](https://coveralls.io/github/BaderLab/Saber?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/saber-baderlab/badge/?version=latest)](http://saber-baderlab.readthedocs.io/en/latest/?badge=latest)
 [![spaCy](https://img.shields.io/badge/spaCy-v2-09a3d5.svg)](https://spacy.io)
