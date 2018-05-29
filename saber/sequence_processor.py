@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import time
 import json
@@ -6,18 +7,17 @@ from pprint import pprint
 from itertools import chain
 
 import numpy as np
+import tensorflow as tf
 from spacy import displacy
-from keras.models import load_model
-from keras_contrib.layers.crf import CRF
 
 import constants
 from dataset import Dataset
-from metrics import Metrics
 from preprocessor import Preprocessor
 from utils_generic import make_dir
 from utils_models import create_train_session_dir
 from utils_models import setup_model_checkpointing
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 print('Saber version: {0}'.format('0.1-dev'))
 
 # TODO (johngiorgi): READ: https://jeffknupp.com/blog/2014/06/18/improve-your-python-python-classes-and-object-oriented-programming/
@@ -100,7 +100,7 @@ class SequenceProcessor(object):
             displacy.render(annotation, jupyter=jupyter, style='ent',
                             manual=True, options=constants.OPTIONS)
 
-        return json.dumps(annotation, ensure_ascii=False)
+        return annotation
 
     def evaluate(self, X, y):
         score = self.model.evaluate(X, y, batch_size=1)
@@ -199,7 +199,8 @@ class SequenceProcessor(object):
         start_time = time.time()
         # setup the chosen model
         if self.config.model_name == 'MT-LSTM-CRF':
-            print('[INFO] Building the multi-task LSTM-CRF model... ', end='', flush=True)
+            print('[INFO] Building the multi-task BiLSTM-CRF model... ', end='',
+                  flush=True)
             from models.multi_task_lstm_crf import MultiTaskLSTMCRF
             model_ = MultiTaskLSTMCRF(config=self.config,
                                       ds=self.ds,
@@ -271,23 +272,19 @@ class SequenceProcessor(object):
             ds.load_data_and_labels()
             ds.get_types()
 
-        # get combined set of word types from all datasets
-        comb_word_types = []
-        comb_char_types = []
-        comb_tag_types = []
+         # get combined set of word types from all datasets
+        combined_types = {'word': [], 'char': []}
         for ds in compound_ds:
-            comb_word_types.extend(ds.word_types)
-            comb_char_types.extend(ds.char_types)
-            comb_tag_types.extend(ds.tag_types)
-        comb_word_types = list(set(comb_word_types))
-        comb_char_types = list(set(comb_char_types))
-        comb_tag_types = list(set(comb_tag_types))
+            combined_types['word'].extend(ds.word_types)
+            combined_types['char'].extend(ds.char_types)
 
-        # compute type to index mappings that will be shared across datasets
-        type_to_idx = {}
-        type_to_idx['word'] = Preprocessor.type_to_idx(comb_word_types)
-        type_to_idx['char'] = Preprocessor.type_to_idx(comb_char_types)
-        type_to_idx['tag'] = Preprocessor.type_to_idx(comb_tag_types)
+        # compute word to index mappings that will be shared across datasets
+        type_to_idx = {'word': {}, 'char': {}}
+        for type in type_to_idx:
+            combined_types[type] = list(set(combined_types[type]))
+
+            type_to_idx[type] = Preprocessor.type_to_idx(combined_types[type], \
+                initial_mapping={constants.PAD: 0, constants.UNK: 1})
 
         # load all the datasets
         for ds in compound_ds:
@@ -335,7 +332,7 @@ class SequenceProcessor(object):
 
         # open pre-trained token embedding file for reading
         with open(self.config.token_pretrained_embedding_filepath, 'r') as pte:
-            for line in pte:
+            for i, line in enumerate(pte):
                 # split line, get word and its embedding
                 values = line.split()
                 word = values[0]
@@ -343,6 +340,10 @@ class SequenceProcessor(object):
 
                 # update our embedding index
                 embedding_index[word] = coefs
+
+                # if debug, load a small, arbitrary number of word embeddings
+                if i >= 10000 and self.config.debug:
+                    break
 
         return embedding_index
 
@@ -362,8 +363,10 @@ class SequenceProcessor(object):
             token embedding for the ith word in the models word to idx mapping.
         """
         # initialize the embeddings matrix
-        token_embedding_matrix = np.zeros((len(self.ds[0].word_type_to_idx),
-                                           embedding_size))
+        token_embedding_matrix = np.zeros(
+            (len(self.ds[0].word_type_to_idx),
+            embedding_size)
+        )
 
         # lookup embeddings for every word in the dataset
         for word, i in self.ds[0].word_type_to_idx.items():
