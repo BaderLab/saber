@@ -105,7 +105,7 @@ To build Saber with Docker from the project root directory:
 docker build -t saber .
 ```
 
-To run: `docker run --rm -p 5000:5000 --name saber1 -dt saber` (use `-it` instead of `-dt` to try it interactively) 
+To run: `docker run --rm -p 5000:5000 --name saber1 -dt saber` (use `-it` instead of `-dt` to try it interactively)
 
 
 There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a POST request with a `json` payload, e.g.:
@@ -137,7 +137,7 @@ curl -XPOST --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ub
 First, with your virtual environment activated run:
 
 ```
-$ pip install jupyter
+$ pip install jupyter lab
 ```
 
 > Note, you only need to install this once!
@@ -145,7 +145,7 @@ $ pip install jupyter
 Then `cd` into `saber` and run:
 
 ```
-jupyter notebook
+jupyter lab
 ```
 
 Check out the `lightning_tour.ipynb` notebook for an overview.
