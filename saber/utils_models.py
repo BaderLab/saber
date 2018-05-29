@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 from time import strftime
 
@@ -64,7 +65,7 @@ def create_train_session_dir(dataset_folder, output_folder):
     Creates the following directory structure:
     .
     ├── output_folder
-    |   └── <first_dataset_name_second_dataset_name>
+    |   └── <first_dataset_name_second_dataset_name_nth_dataset_name>
     |       └── <first_dataset_name>
     |           └── train_session_<month>_<day>_<hr>:<min>
     |       └── <second_dataset_name>
@@ -77,7 +78,7 @@ def create_train_session_dir(dataset_folder, output_folder):
     collapsed into a single directory.
 
     Returns:
-        a list directory paths to the subdirectories
+        a list of directory paths to the subdirectories
         train_session_<month>_<day>_<hr>:<min>, one for each dataset in
         dataset_folder
     """
@@ -120,9 +121,9 @@ def setup_model_checkpointing(output_dir):
     # acc
     checkpointers = []
 
-    for dir in output_dir:
+    for dir_ in output_dir:
         # set up model checkpointing
-        metric_filepath = os.path.join(dir, 'model_weights_best.hdf5')
+        metric_filepath = os.path.join(dir_, 'model_weights_best.hdf5')
         checkpointers.append(
             ModelCheckpoint(filepath=metric_filepath,
                             monitor='val_loss',
@@ -239,13 +240,14 @@ def get_data_partitions(datasets, train_valid_indices, fold):
 
     return data_partition
 
-def get_metrics(datasets, data_partitions, output_dir):
+def get_metrics(datasets, data_partitions, output_dir, fold=1):
     """Creates Keras Metrics Callback objects, one for each dataset.
 
     Args:
         datasets (list): a list of Dataset objects
         data_paritions (tuple): six-tuple containing train/valid data for all ds
         output_dir (str): path to directory to save metric output files
+        fold (int): the current fold in k-fold cross-val
 
     Returns:
         a list of Metric objects, one for each dataset in datasets.
@@ -266,7 +268,8 @@ def get_metrics(datasets, data_partitions, output_dir):
         metrics_acc.append(metrics.Metrics([X_word_train, X_char_train],
                                            [X_word_valid, X_char_valid],
                                            y_train, y_valid,
-                                           tag_type_to_idx = ds.tag_type_to_idx,
-                                           output_dir=output_dir[i]))
+                                           idx_to_tag_type = ds.idx_to_tag_type,
+                                           output_dir=output_dir[i],
+                                           fold=fold))
 
     return metrics_acc
