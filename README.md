@@ -1,91 +1,146 @@
-[![Build Status](https://travis-ci.org/BaderLab/Saber.svg?branch=master)](https://travis-ci.org/BaderLab/Saber)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/d122e87152d84f959ee6d97b71d616cb)](https://www.codacy.com/app/JohnGiorgi/Saber?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=BaderLab/Saber&amp;utm_campaign=Badge_Grade)
-[![Coverage Status](https://coveralls.io/repos/github/BaderLab/Saber/badge.svg?branch=master)](https://coveralls.io/github/BaderLab/Saber?branch=master)
-[![Documentation Status](https://readthedocs.org/projects/saber-baderlab/badge/?version=latest)](http://saber-baderlab.readthedocs.io/en/latest/?badge=latest)
-[![spaCy](https://img.shields.io/badge/spaCy-v2-09a3d5.svg)](https://spacy.io)
-[![MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+<h1 align="center">
+  <br>
+  Saber
+  <br>
+</h1>
 
-# Saber
+<p align="center"><b>Saber</b> (<b>S</b>equence <b>A</b>nnotator for <b>B</b>iomedical <b>E</b>ntities and <b>R</b>elations) is a deep-learning based tool for <b>information extraction</b> in the biomedical domain.
+</p>
 
-**Saber** (**S**equence **A**nnotator for **B**iomedical **E**ntities and **R**elations) is a deep-learning based tool for **information extraction** in the biomedical domain.
+<p align="center">
+  <a href="https://travis-ci.org/BaderLab/Saber">
+    <img src="https://travis-ci.org/BaderLab/Saber.svg?branch=master"
+         alt="Travis CI">
+  </a>
+  <a href="https://www.codacy.com/app/JohnGiorgi/Saber?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=BaderLab/Saber&amp;utm_campaign=Badge_Grade">
+    <img src="https://api.codacy.com/project/badge/Grade/d122e87152d84f959ee6d97b71d616cb" alt='Codacy Status'/>
+  </a>
+  <a href='https://coveralls.io/github/BaderLab/Saber?branch=master'>
+    <img src='https://coveralls.io/repos/github/BaderLab/Saber/badge.svg?branch=master' alt='Coverage Status'/>
+  </a>
+  <a href='https://baderlab-saber.readthedocs.io/en/latest/?badge=latest'>
+    <img src='https://readthedocs.org/projects/baderlab-saber/badge/?version=latest' alt='Documentation Status'/>
+  </a>
+  <a href='https://spacy.io'>
+    <img src='https://img.shields.io/badge/spaCy-v2-09a3d5.svg' alt='Spacy Version'/>
+  </a>
+  <a href='https://opensource.org/licenses/MIT'>
+    <img src='https://img.shields.io/badge/License-MIT-blue.svg' alt='License'/>
+  </a>
+</p>
 
-### Requirements
+<p align="center">
+  <a href="#installation">Installation</a> •
+  <a href="#quickstart">Quickstart</a> •
+  <a href="#resources">Resources</a>
+</p>
 
-Requires `Python >= 3.5`.
+## Installation
 
-### Quickstart
+To clone and run this application, you will need `python >= 3.5`.
 
-First, clone the repository:
+> If not already installed, we recommend installing `python3` via [Miniconda3](https://conda.io/miniconda.html).
 
-```
+From your command line:
+
+```bash
+# Clone this repository
 $ git clone https://github.com/BaderLab/Saber.git
+
+# Go into the repository
+$ cd Saber
+
+# OPTIONAL: activate your virtual environment (see below for help)
+$ source activate saber
+
+# Install dependencies
+(saber) $ pip install -r requirements.txt
 ```
 
-When using pip it is generally recommended to install packages in a virtual environment to avoid modifying system state.
+### Creating and activating virtual environments
+
+When using `pip` it is generally recommended to install packages in a virtual environment to avoid modifying system state. To create a virtual environment named `saber`:
 
 #### Using virtualenv or venv
 
-To create the virtual environment.
-
 Using [virtualenv](https://virtualenv.pypa.io/en/stable/):
 
-```
-$ virtualenv /path/to/new/venv
+```bash
+$ virtualenv /path/to/new/venv/saber
 ```
 
 Using [venv](https://docs.python.org/3/library/venv.html):
 
-```
-$ python3 -m venv /path/to/new/venv
+```bash
+$ python3 -m venv /path/to/new/venv/saber
 ```
 
 Next, you need to activate the environment.
 
-On Windows (cmd.exe), run:
+```bash
+$ source /path/to/new/venv/saber/bin/activate
 
-```
-$ \path\to\new\venv\Scripts\activate.bat
-```
-
-On Unix or MacOS (bash/zsh), run:
-
-```
-$ source /path/to/new/venv/bin/activate
+# Notice your command prompt has changed to indicate that the environment is active
+(saber) $
 ```
 
 #### Using Conda
 
-If you use Conda/Miniconda, you can create an environment by running:
+If you use [Conda](https://conda.io/docs/)/[Miniconda](https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh), you can create an environment named `saber` by running:
 
-
-```
-$ conda create -n myenv python=3
+```bash
+$ conda create -n saber python=3
 ```
 
 To activate the environment:
 
-```
-$ source activate myenv
-```
+```bash
+$ source activate saber
 
-#### Installing requirements
-
-With your **virtual environment activated**, install all requirements:
-
-```
-$ pip install -r requirements.txt
+# Again, your command prompt should change to indicate that the environment is active
+(saber) $
 ```
 
-### Usage
+> Note, you do not need to name the environment `saber`.
 
-You can interact with Saber as a command line tool, web-service or via the Juypter notebooks. If you created a virtual environment, **remember to activate it first**.
+### Quickstart
+
+You can interact with Saber as a module, command line tool, web-service or via the Juypter notebooks. If you created a virtual environment, **remember to activate it first**.
+
+> Note: the following examples assume you are in the project directory `Saber/saber`.
+
+#### Python module
+
+Saber exposes its functionality through the `SequenceProcessor` class. Here is a simple example where we load a pretrained model and use it to annotate raw text for protein and gene entities.
+
+```python
+from config import Config
+from sequence_processor import SequenceProcessor
+
+# Load the parameters from the config file (if not specified, default config)
+# file at './config.ini' is used.
+config = Config()
+
+# Create a `SequenceProcessor` object. This object coordinates
+# training/prediction/loading of models and datasets.
+sp = SequenceProcessor(config)
+
+# Load the protein and gene entity model.
+sp.load('../pretrained_models/PRGE')
+
+# Text to annotate
+raw_text = 'The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.'
+
+# Preform a prediction on raw text, get resulting annotation
+annotation = sp.predict(abstract)
+```
 
 #### Command line tool
 
 All hyper-parameters are specified in a configuration file. The configuration file can be specified when running Saber:
 
-```
-$ python main.py --config_filepath path/to/config.ini
+```bash
+(saber) $ python main.py --config_filepath path/to/config.ini
 ```
 
 If not specified, the default configuration file at `saber/config.ini` is used.
@@ -94,20 +149,21 @@ If not specified, the default configuration file at `saber/config.ini` is used.
 
 #### Web-service
 
-To run Saber as a web-service, `cd` into the directory `saber` and run:
+To use Saber as a **local** web-service, run:
 
-```
-$ python app.py
-```
-
-To build Saber with Docker from the project root directory:
-
-```
-docker build -t saber .
+``` bash
+(saber) $ python app.py
 ```
 
-To run: `docker run --rm -p 5000:5000 --name saber1 -dt saber` (use `-it` instead of `-dt` to try it interactively)
+To build & run Saber with __Docker__:
 
+``` bash
+# Build docker
+(saber) $ docker build -t saber .
+
+# Run docker (use `-it` instead of `-dt` to try it interactively)
+(saber) $ docker run --rm -p 5000:5000 --name saber1 -dt saber
+```
 
 There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a POST request with a `json` payload, e.g.:
 
@@ -131,14 +187,16 @@ For example, running the web-service locally and using `cURL`:
 curl -XPOST --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}' 'http://localhost:5000/annotate/text'
 ```
 
-> Currently, the pre-trained 'PRGE' model in the `pretrained_models/` folder powers the web-service.
-
 #### Juypter notebooks
 
-First, with your virtual environment activated run:
+First, install [Jupyter lab](https://github.com/jupyterlab/jupyterlab) (make sure to activate your virtual environment first if you created one):
 
-```
-$ pip install jupyter lab
+```bash
+# If you use pip, you can install it as:
+(saber) $ pip install jupyterlab
+
+# If you use conda, you can install as:
+(saber) $ conda install -c conda-forge jupyterlab
 ```
 
 > Note, you only need to install this once!
@@ -146,17 +204,17 @@ $ pip install jupyter lab
 Then `cd` into `saber` and run:
 
 ```
-jupyter lab
+(saber) $ jupyter lab
 ```
 
 Check out the `lightning_tour.ipynb` notebook for an overview.
 
-### Resources
+## Resources
 
-#### Datasets
+### Datasets
 
-Corpora are collected in the `datasets` folder for convenience. Many of the corpora in the IOB and IOBES tag format were originally collected by [Crichton _et al_., 2017](https://doi.org/10.1186/s12859-017-1776-8), [here](https://github.com/cambridgeltl/MTL-Bioinformatics-2016).
+Corpora are collected in the `datasets` folder for convenience. Many of the corpora in the BIO and IOBES tag format were originally collected by [Crichton _et al_., 2017](https://doi.org/10.1186/s12859-017-1776-8), [here](https://github.com/cambridgeltl/MTL-Bioinformatics-2016).
 
-#### Word embeddings
+### Word embeddings
 
 You can provide your own pre-trained word embeddings with the `token_pretrained_embedding_filepath` argument (either at the command line or in the configuration file.) [Pyysalo _et al_. 2013](https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf) provide word embeddings that work quite well in the biomedical domain, which can be downloaded [here](http://bio.nlplab.org).
