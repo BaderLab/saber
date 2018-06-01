@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 import sys
 import argparse
@@ -6,21 +5,18 @@ import configparser
 
 from preprocessor import Preprocessor
 
-# TODO: (johngiorgi): use the supported datatypes functions for bools: https://docs.python.org/3.6/library/configparser.html#supported-datatypes
-# TODO: (johngiorgi): not clear if the post processing is neccecary
-
 class Config(object):
     def __init__(self, config_filepath='./config.ini', cli=False):
         # a parsed python configparser object
         self.config = None
 
         # parse cli arguments (if they exist)
-        cli_arguments = {}
+        self.cli_arguments = {}
         if cli:
-            cli_arguments = self.parse_cli_args()
+            self.parse_cli_args()
         self.parse_config_args(config_filepath)
         # harmonize cli and config arguments and apply post processing
-        self.process_parameters(cli_arguments)
+        self.process_parameters(self.cli_arguments)
 
     def parse_config_args(self, config_filepath):
         """Returns a parsed config file object.
