@@ -5,7 +5,7 @@ from sequence_processor import SequenceProcessor
 def main():
     """Saber main method."""
     # create and collect model and training parameters
-    config = Config()
+    config = Config(cli=True)
 
     # currently performs training by default
     sp = SequenceProcessor(config)
