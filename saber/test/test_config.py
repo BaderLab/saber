@@ -4,7 +4,7 @@ from config import Config
 
 # constants for dummy config/CL arguments to perform testing on
 PATH_TO_DUMMY_CONFIG = 'saber/test/resources/dummy_config.ini'
-DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS = {
+DUMMY_PARAMETERS_NO_CLI_ARGS = {
 'model_name': 'MT-LSTM-CRF',
 'train_model': True,
 'load_pretrained_model': False,
@@ -27,7 +27,7 @@ DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS = {
 'debug': False,
 'trainable_token_embeddings': False,
 'replace_rare_tokens': False}
-DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS = {
+DUMMY_PARAMETERS_WITH_CLI_ARGS = {
 'model_name': 'MT-LSTM-CRF',
 'train_model': True,
 'load_pretrained_model': False,
@@ -80,9 +80,8 @@ def config_with_cli_args():
 def test_parse_config_args_no_cli_args(config_no_cli_args, config_with_cli_args):
     """Asserts the Config.config object contains the expected values after
     call to Config.parse_config_args(), with and without CLI args."""
-    config_no_cli_args_ = config_no_cli_args.config
-    config_with_cli_args_ = config_with_cli_args.config
-
+    configs = [config_no_cli_args.config, config_with_cli_args.config]
+    dummies = [DUMMY_PARAMETERS_NO_CLI_ARGS, DUMMY_PARAMETERS_WITH_CLI_ARGS]
     config_sections = ['mode', 'data', 'model', 'training', 'advanced']
 
     # Check that all arguments in the config object are as expected. For the
@@ -90,46 +89,29 @@ def test_parse_config_args_no_cli_args(config_no_cli_args, config_with_cli_args)
     # appear in the config file). For the special case of None, we cheat by
     # setting the expected value equal to the actual value. None's occur due to
     # post processing, which we aren't testing here.
-    for section in config_sections:
-        # checks for config argument with no CLI args
-        for k, v in config_no_cli_args_[section].items():
-            expected = DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS[k]
-            # special case of lists
-            if isinstance(expected, list):
-                expected = ' '.join(expected)
-            # TODO: this is a cop-out, figure out how to check dictionaries
-            elif isinstance(expected, dict):
-                expected = v
-            # special case of None
-            elif expected is None:
-                expected = v
+    for config, dummy in zip(configs, dummies):
+        for section in config_sections:
+            for k, v in config[section].items():
+                expected = dummy[k]
+                # special case of lists
+                if isinstance(expected, list):
+                    expected = ' '.join(expected)
+                # special case of listsdictionaries
+                elif isinstance(expected, dict):
+                    expected = ', '.join([str(x) for x in expected.values()])
+                # special case of None
+                elif expected is None or k in DUMMY_COMMAND_LINE_ARGS:
+                    expected = v
 
-            assert v == str(expected)
-
-        # checks for config argument with CLI args
-        for k, v in config_with_cli_args_[section].items():
-            expected = DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS[k]
-            # special case of lists
-            if isinstance(expected, list):
-                expected = ' '.join(expected)
-            # TODO: this is a cop-out, figure out how to check dictionaries
-            elif isinstance(expected, dict):
-                expected = v
-            # special case of None
-            elif expected is None:
-                expected = v
-            # special case of CLI overriding config file args
-            elif k in DUMMY_COMMAND_LINE_ARGS:
-                expected = v
-
-            assert v == str(expected)
+                print(section, k)
+                assert v == str(expected)
 
 def test_process_parameters_no_command_line_args(config_no_cli_args):
     """Asserts that the parameters are of the expected value/type after a
     call to process_parameters, with NO command line arguments.
     """
     # check that we get the values we expected
-    for k, v in DUMMY_PARAMETERS_NO_COMMAND_LINE_ARGS.items():
+    for k, v in DUMMY_PARAMETERS_NO_CLI_ARGS.items():
         assert v == getattr(config_no_cli_args, k)
 
 def test_process_parameters_with_cli_args(config_with_cli_args):
@@ -139,5 +121,5 @@ def test_process_parameters_with_cli_args(config_with_cli_args):
     """
     # check that we get the values we expected, specifically, check that
     # our command line arguments have overwritten our config arguments
-    for k, v in DUMMY_PARAMETERS_WITH_COMMAND_LINE_ARGS.items():
+    for k, v in DUMMY_PARAMETERS_WITH_CLI_ARGS.items():
         assert v == getattr(config_with_cli_args, k)

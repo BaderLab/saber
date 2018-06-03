@@ -1,4 +1,5 @@
 import pytest
+import numpy
 
 from utils_models import *
 from config import Config

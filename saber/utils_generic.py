@@ -1,8 +1,11 @@
+"""A collection of generic helper/utility functions.
+"""
 import os
 import errno
 import codecs
+from setuptools.archive_util import unpack_archive
 
-"""A collection of generic helper/utility functions."""
+import constants
 
 # https://stackoverflow.com/questions/273192/how-can-i-create-a-directory-if-it-does-not-exist#273227
 def make_dir(directory_filepath):
@@ -17,6 +20,17 @@ def make_dir(directory_filepath):
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise
+
+def decompress_model(filepath):
+    """Decompresses a bz2 compressed Saber model.
+
+    If filepath is not a directory, decompresses the identically named bz2 Saber
+    model at filepath.
+    """
+    if not os.path.isdir(filepath):
+        print('[INFO] Unzipping pretrained model... '.format(), end='', flush=True)
+        unpack_archive(filepath + '.tar.bz2', constants.PRETRAINED_MODEL_BASE_DIR)
+        print('Done.')
 
 def bin_to_txt(filepath, output_dir=os.getcwd()):
     """Converts word embeddings given in the binary C format (w2v) to a simple
