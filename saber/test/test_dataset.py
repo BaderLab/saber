@@ -112,14 +112,12 @@ def test_type_to_idx_mapping_after_loading_dataset(loaded_dummy_dataset):
 
     # ensure that type to index mapping contains the expected keys
     # TODO: Figure out how to perform this test
-    '''
-    assert all(key in DUMMY_WORD_TYPES for key in
+    '''assert all(key in DUMMY_WORD_TYPES for key in
         loaded_dummy_dataset.word_type_to_idx.keys())
     assert all(key in DUMMY_CHAR_TYPES for key in
         loaded_dummy_dataset.char_type_to_idx.keys())
     assert all(key in DUMMY_TAG_TYPES for key in
-        loaded_dummy_dataset.tag_type_to_idx.keys())
-    '''
+        loaded_dummy_dataset.tag_type_to_idx.keys())'''
 
     # ensure that index mapping is a contigous sequence of numbers starting at 0
     # and ending at len(mapping) - 1 (inclusive)
@@ -138,11 +136,11 @@ def test_type_to_idx_mapping_after_loading_dataset(loaded_dummy_dataset):
         len(loaded_dummy_dataset.tag_type_to_idx) - 1
 
     # assert special tokens are mapped to the correct indices
-    loaded_dummy_dataset.word_type_to_idx[constants.PAD] == 0
-    loaded_dummy_dataset.word_type_to_idx[constants.UNK] == 1
-    loaded_dummy_dataset.char_type_to_idx[constants.UNK] == 0
-    loaded_dummy_dataset.char_type_to_idx[constants.UNK] == 1
-    loaded_dummy_dataset.tag_type_to_idx[constants.PAD] == 0
+    assert loaded_dummy_dataset.word_type_to_idx[constants.PAD] == 0
+    assert loaded_dummy_dataset.word_type_to_idx[constants.UNK] == 1
+    assert loaded_dummy_dataset.char_type_to_idx[constants.PAD] == 0
+    assert loaded_dummy_dataset.char_type_to_idx[constants.UNK] == 1
+    assert loaded_dummy_dataset.tag_type_to_idx[constants.PAD] == 0
 
 def test_train_idx_sequences_after_loading_dataset(loaded_dummy_dataset):
     """Asserts that train_word_idx_seq, train_char_idx_seq and train_tag_idx_seq
