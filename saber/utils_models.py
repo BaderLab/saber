@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+"""A collection of model helper/utility functions.
+"""
 import os
 from time import strftime
 
@@ -8,10 +9,6 @@ from sklearn.model_selection import KFold
 
 import metrics
 from utils_generic import make_dir
-
-"""
-A collection of model helper/utility functions.
-"""
 
 # TODO (johngiorgi) add verbosity parameter for printing model summary
 
@@ -83,7 +80,7 @@ def create_train_session_dir(dataset_folder, output_folder):
         dataset_folder
     """
     # acc
-    ts_output_dir = []
+    ts_output_dirnames = []
 
     # get a list of the dataset(s) name(s)
     ds_names = [os.path.basename(os.path.normpath(x)) for x in dataset_folder]
@@ -96,17 +93,17 @@ def create_train_session_dir(dataset_folder, output_folder):
     else:
         ds_dirs = ds_names
 
-    for dir in ds_dirs:
+    for dirname in ds_dirs:
         # create a subdirectory for each datasets name
-        ds_dir = os.path.join(output_folder, dir)
+        ds_dirname = os.path.join(output_folder, dirname)
         # create a subdirectory for each train session
-        ts_dir = strftime("train_session_%a_%b_%d_%I:%M").lower()
+        ts_dirname = strftime("train_session_%a_%b_%d_%I:%M").lower()
         # create the full directory path
-        ds_ts_dir = os.path.join(ds_dir, ts_dir)
-        ts_output_dir.append(ds_ts_dir)
-        make_dir(ds_ts_dir)
+        ds_ts_dirname = os.path.join(ds_dirname, ts_dirname)
+        ts_output_dirnames.append(ds_ts_dirname)
+        make_dir(ds_ts_dirname)
 
-    return ts_output_dir
+    return ts_output_dirnames
 
 def setup_model_checkpointing(output_dir):
     """Sets up per epoch model checkpointing.

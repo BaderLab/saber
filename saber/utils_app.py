@@ -1,20 +1,25 @@
+"""A collection of web-service helper/utility functions.
+"""
 import os.path
-from setuptools.archive_util import unpack_archive
 
 import xml.etree.ElementTree as ET
 from urllib.request import urlopen
 
+import constants
+import utils_generic
 from config import Config
 from sequence_processor import SequenceProcessor
-from constants import PRETRAINED_MODEL_BASE_DIR
-
-"""
-A collection of web-service helper/utility functions.
-"""
 
 def get_pubmed_xml(pmid):
     """Uses the Entrez Utilities Web Service API to fetch XML representation of
-    pubmed document."""
+    pubmed document.
+
+    Args:
+        pmid (int): the PubMed ID of the abstract to fetch
+
+    Returns:
+        response from Entrez Utilities Web Service API
+    """
     api_endpoint = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?retmode=xml&db=pubmed&id='
     response = urlopen(api_endpoint + str(pmid)).read()
 
@@ -22,14 +27,23 @@ def get_pubmed_xml(pmid):
         root = get_root(response)
         response_pmid = root.find('PubmedArticle').find('MedlineCitation').find('PMID').text
         # ensure that requested and returned pubmed ids are the same
-        assert int(response_pmid) == pmid, 'Requested PubMed ID and PubMed ID returned by Entrez Utilities Web Service API do not match.'
+        if not int(response_pmid) == pmid:
+            raise AssertionError('''Requested PubMed ID and PubMed ID returned
+            by Entrez Utilities Web Service API do not match.''')
         return response
     except:
         return None
 
 def get_pubmed_text(pmid):
     """Returns the abstract title for a given pubmed id using the the Entrez
-    Utilities Web Service API."""
+    Utilities Web Service API.
+
+    Args:
+        pmid (int): the PubMed ID of the abstract to fetch
+
+    Returns:
+        two-tuple containing the abstract title and text for PubMed ID pmid
+    """
     xml = get_pubmed_xml(pmid)
     root = get_root(xml)
     # recurse down the xml tree to abstractText
@@ -47,17 +61,6 @@ def get_root(xml):
         return ET.fromstring(xml)
     except:
         return None
-
-def decompress_model(filepath):
-    """Decompresses a bz2 compressed Saber model.
-
-    If filepath is not a directory, decompresses the identically named bz2 Saber
-    model at filepath.
-    """
-    if not os.path.isdir(filepath):
-        print('[INFO] Unzipping pretrained model... '.format(), end='', flush=True)
-        unpack_archive(filepath + '.tar.bz2', PRETRAINED_MODEL_BASE_DIR)
-        print('Done.')
 
 def load_models(ents):
     """Loads a model for each corresponding entity in ents.
@@ -78,9 +81,9 @@ def load_models(ents):
 
     for k, v in ents.items():
         if v:
-            path_to_model = os.path.join(PRETRAINED_MODEL_BASE_DIR, k)
+            path_to_model = os.path.join(constants.PRETRAINED_MODEL_BASE_DIR, k)
             # decompress the pre-trained model if this is not already done
-            decompress_model(path_to_model)
+            utils_generic.decompress_model(path_to_model)
 
             # create and load the pre-trained models
             sp = SequenceProcessor(config)
