@@ -1,6 +1,5 @@
 import numpy
 import pytest
-import json
 
 from config import Config
 from sequence_processor import SequenceProcessor
@@ -128,7 +127,6 @@ def test_X_input_sequences_after_loading_single_dataset(sp_sing_ds_no_embed):
     datasets."""
     # shortens assert statments
     ds = sp_sing_ds_no_embed.ds[0]
-    model = sp_sing_ds_no_embed
     # check type
     assert isinstance(ds.train_word_idx_seq, numpy.ndarray)
     # check shape
@@ -164,7 +162,7 @@ def test_X_input_sequences_after_loading_compound_dataset(sp_compound_ds_no_embe
     # the same checks for each in a loop
     for ds in sp_compound_ds_no_embed.ds:
         # check type
-        assert type(ds.train_word_idx_seq) == numpy.ndarray
+        assert isinstance(ds.train_word_idx_seq, numpy.ndarray)
         # check shape
         assert ds.train_word_idx_seq.shape[0] == DUMMY_TRAIN_SENT_NUM
 
@@ -175,7 +173,7 @@ def test_y_output_sequences_after_loading_compound_dataset(sp_compound_ds_no_emb
     # for testing purposes, the datasets are identical so we can simply peform
     # the same checks for each in a loop
     for ds in sp_compound_ds_no_embed.ds:
-        assert type(ds.train_tag_idx_seq) == numpy.ndarray
+        assert isinstance(ds.train_tag_idx_seq, numpy.ndarray)
         # check value
         assert ds.train_tag_idx_seq.shape[0] == DUMMY_TRAIN_SENT_NUM
         assert ds.train_tag_idx_seq.shape[-1] == DUMMY_TAG_TYPE_COUNT
@@ -218,11 +216,11 @@ def test_predict_blank_or_invalid(sp_single_ds_no_embed_with_model):
     empty_list_test = []
     false_bool_test = False
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         sp_single_ds_no_embed_with_model.predict(blank_text_test)
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         sp_single_ds_no_embed_with_model.predict(none_test)
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         sp_single_ds_no_embed_with_model.predict(empty_list_test)
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         sp_single_ds_no_embed_with_model.predict(false_bool_test)
