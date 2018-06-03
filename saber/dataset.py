@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 import os
 import glob
-import codecs
 
 import numpy as np
 from keras.utils import to_categorical
@@ -77,17 +75,17 @@ class Dataset(object):
             # generate type to index mappings
             self.word_type_to_idx = Preprocessor.type_to_idx(
                 types=self.word_types,
-                initial_mapping={constants.PAD: 0, constants.UNK: 1}
+                initial_mapping=constants.initial_mapping_words
             )
             self.char_type_to_idx = Preprocessor.type_to_idx(
                 types=self.char_types,
-                initial_mapping={constants.PAD: 0, constants.UNK: 1}
+                initial_mapping=constants.initial_mapping_words
             )
 
         # generate un-shared type to index mappings
         self.tag_type_to_idx = Preprocessor.type_to_idx(
             types=self.tag_types,
-            initial_mapping={constants.PAD: 0}
+            initial_mapping=constants.initial_mapping_tags
         )
         # create reverse mapping of indices to tags, save computation downstream
         self.idx_to_tag_type = {v: k for k, v in self.tag_type_to_idx.items()}
@@ -137,9 +135,10 @@ class Dataset(object):
         # global accumulators
         word_seq, tag_seq = [], []
 
-        with codecs.open(self.trainset_filepath, 'r', encoding='utf-8') as ds:
-            # local accumulators
-            words, tags = [], []
+        with open(self.trainset_filepath, 'r') as ds:
+            # local accumulators, seed with special sentence start token
+            words = []
+            tags = []
 
             for line in ds:
                 line = line.rstrip() # right strip
@@ -149,7 +148,9 @@ class Dataset(object):
                     if len(words) != 0:
                         word_seq.append(words)
                         tag_seq.append(tags)
-                        words, tags = [], []
+
+                        words = []
+                        tags = []
 
                 # accumulate each word in a sequence
                 else:
