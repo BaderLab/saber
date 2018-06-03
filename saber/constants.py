@@ -16,8 +16,14 @@ PAD = '<PAD>' # sequence pad token
 START = '<START>' # start-of-sentence token
 END = '<END>' # end-of-sentence token
 
+OUTSIDE_TAG = 'O' # 'outside' tag of the IOB, BIO, and IOBES tag formats
+
 PAD_VALUE = 0 # value of sequence pad
 NUM_RARE = 1 # tokens that occur less than NUM_RARE times are replaced UNK
+
+# mapping of special tokens to contants
+initial_mapping_words = {PAD: 0, UNK: 1}
+initial_mapping_tags = {PAD: 0}
 
 # train and test filename patterns
 TRAIN_FILE_EXT = 'train.*'
