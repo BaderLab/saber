@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-import json
 import utils_app
 
 from flask import request
@@ -8,9 +6,9 @@ from flask import Flask
 app = Flask(__name__)
 
 ENTITIES = {'ANAT': False,
-            'CHED': True,
+            'CHED': False,
             'DISO': False,
-            'LIVB': True,
+            'LIVB': False,
             'PRGE': True,
             'TRIG': False
             }
