@@ -1,4 +1,5 @@
 import os
+import time
 from statistics import mean
 from operator import itemgetter
 
@@ -106,17 +107,17 @@ class Metrics(Callback):
         y_true = y.argmax(axis=-1) # get class label
         y_true = np.asarray(y_true).ravel() # flatten to 1D array
         # predicted labels
-        y_pred = self.model.predict(X).argmax(axis=-1)
+        y_pred = self.model.predict(X, batch_size=256).argmax(axis=-1)
         y_pred = np.asarray(y_pred).ravel()
 
         # sanity check
-        assert y_true.shape == y_pred.shape, """y_true and y_pred have different
-        shapes"""
+        if not y_true.shape == y_pred.shape:
+            raise AssertionError("y_true and y_pred have different shapes")
 
         return y_true, y_pred
 
     @staticmethod
-    def get_precision_recall_f1_support(self, y_true, y_pred):
+    def get_precision_recall_f1_support(y_true, y_pred):
         """Returns precision, recall, f1 and support.
 
         For given gold (y_true) and predicited (y_pred) labels, returns the
@@ -177,21 +178,28 @@ class Metrics(Callback):
         macro_f1 = mean([v[2] for v in performance_scores.values()])
         total_support = TP_total + FN_total
 
-        performance_scores['MACRO_AVG'] = (macro_p, macro_r, macro_f1, total_support)
+        performance_scores['MACRO_AVG'] = \
+            (macro_p, macro_r, macro_f1, total_support)
         performance_scores['MICRO_AVG'] = \
-            utils_models.precision_recall_f1_support(TP_total, FP_total, FN_total)
+            utils_models.precision_recall_f1_support(TP_total, FP_total, \
+                FN_total)
 
         return performance_scores
 
     @staticmethod
-    def print_performance_scores(self, performance_scores, title=None):
+    def print_performance_scores(performance_scores, title=None):
         """Prints an ASCII table of performance scores.
 
         Args:
             performance_scores: a dictionary of label, score pairs where label
-                                is a sequence tag and scores is a 4-tuple
+                                is a class tag and scores is a 4-tuple
                                 containing precision, recall, f1 and support
             title (str): the title of the table (uppercased).
+
+        Preconditions:
+            assumes the values of performance_scores are 4-tuples, where the
+            first three items are float representaions of a percentage and the
+            last item is an count integer.
         """
         # create table, give it a title a column names
         table = PrettyTable()
@@ -208,11 +216,10 @@ class Metrics(Callback):
         # create and add the rows
         for label, scores in performance_scores.items():
             row = [label]
-            # convert scores to formatted percentage strings, don't include
-            # support
-            row_scores = list(scores)
-            for i in range(len(row_scores) - 1):
-                row_scores[i] = str(round(row_scores[i] * 100, 2)) + '%'
+            # convert scores to formatted percentage strings
+            support = scores[-1]
+            per_metrics = ['{:.2%}'.format(x) for x in scores[:-1]]
+            row_scores = per_metrics + [support]
 
             row.extend(row_scores)
             table.add_row(row)

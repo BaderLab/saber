@@ -35,6 +35,8 @@
   <a href="#resources">Resources</a>
 </p>
 
+
+
 ## Installation
 
 To clone and run this application, you will need `python >= 3.5`.
@@ -131,8 +133,8 @@ sp.load('../pretrained_models/PRGE')
 # Text to annotate
 raw_text = 'The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.'
 
-# Preform a prediction on raw text, get resulting annotation
-annotation = sp.predict(abstract)
+# Perform prediction on raw text, get resulting annotation
+annotation = sp.predict(raw_text)
 ```
 
 #### Command line tool
@@ -144,6 +146,15 @@ All hyper-parameters are specified in a configuration file. The configuration fi
 ```
 
 If not specified, the default configuration file at `saber/config.ini` is used.
+
+Alternatively, you can supply arguments at the command line. Each command line argument has an identical name to those found in `saber/config.ini`. For example:
+
+```bash
+(saber) $ python main.py --dataset_folder path/to/dataset --k_folds 10
+```
+
+Would run overwrite the arguments for `dataset_folder` and `k_folds` found in
+the config file.
 
 > Note: At this time, the command-line tool simply trains the model.
 
@@ -165,7 +176,7 @@ To build & run Saber with __Docker__:
 (saber) $ docker run --rm -p 5000:5000 --name saber1 -dt saber
 ```
 
-There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a POST request with a `json` payload, e.g.:
+There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a `POST` request with a `json` payload, e.g.:
 
 ```
 {
@@ -192,10 +203,10 @@ curl -XPOST --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ub
 First, install [Jupyter lab](https://github.com/jupyterlab/jupyterlab) (make sure to activate your virtual environment first if you created one):
 
 ```bash
-# If you use pip, you can install it as:
+# If you use pip, you can install it as
 (saber) $ pip install jupyterlab
 
-# If you use conda, you can install as:
+# If you use conda, you can install as
 (saber) $ conda install -c conda-forge jupyterlab
 ```
 
@@ -217,4 +228,17 @@ Corpora are collected in the `datasets` folder for convenience. Many of the corp
 
 ### Word embeddings
 
-You can provide your own pre-trained word embeddings with the `token_pretrained_embedding_filepath` argument (either at the command line or in the configuration file.) [Pyysalo _et al_. 2013](https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf) provide word embeddings that work quite well in the biomedical domain, which can be downloaded [here](http://bio.nlplab.org).
+When training new models, you can (and should) provide your own pre-trained word embeddings with the `token_pretrained_embedding_filepath` argument (either at the command line or in the configuration file). [Pyysalo _et al_. 2013](https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf) provide word embeddings that work quite well in the biomedical domain, which can be downloaded [here](http://bio.nlplab.org).
+
+Once downloaded, you will need to convert them from `.bin` to `.txt` format:
+
+```bash
+(saber) $ cd saber
+(saber) $ pip install gensim
+(saber) $ python
+>> from utils_generic import bin_to_txt
+>> path_to_embeddings = '/path/to/wikipedia-pubmed-and-PMC-w2v.bin'
+>> bin_to_txt('wikipedia-pubmed-and-PMC-w2v.bin', output_dir='../word_embeddings')
+```
+
+> Note: you do not (and should not) have to download word embeddings if you only plan on using Saber's pretrained models.
