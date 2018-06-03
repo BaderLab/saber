@@ -9,7 +9,6 @@ from keras_contrib.layers.crf import CRF
 from keras.layers import Bidirectional
 from keras.layers import Concatenate
 from keras.layers import Dense
-from keras.layers import Dropout
 from keras.layers import Embedding
 from keras.models import Input
 from keras.layers import Lambda
@@ -98,16 +97,12 @@ class MultiTaskLSTMCRF(object):
         fwd_state = LSTM(
             units=NUM_UNITS_CHAR_LSTM // 2,
             return_state=True,
-            dropout=self.config.dropout_rate['input'],
-            recurrent_dropout=self.config.dropout_rate['recurrent'],
             implementation=IMPLEMENTATION)
 
         bwd_state = LSTM(
             units=NUM_UNITS_CHAR_LSTM // 2,
             return_state=True,
             go_backwards=True,
-            dropout=self.config.dropout_rate['input'],
-            recurrent_dropout=self.config.dropout_rate['recurrent'],
             implementation=IMPLEMENTATION)
 
         # Word-level BiLSTM
@@ -119,13 +114,14 @@ class MultiTaskLSTMCRF(object):
             implementation=IMPLEMENTATION))
 
         word_BiLSTM_2 = Bidirectional(LSTM(
-            units=NUM_UNITS_WORD_LSTM // 4,
+            units=NUM_UNITS_WORD_LSTM // 2,
             return_sequences=True,
             dropout=self.config.dropout_rate['input'],
             recurrent_dropout=self.config.dropout_rate['recurrent'],
             implementation=IMPLEMENTATION))
 
         # Feedforward after BiLSTM networks
+        '''
         feedforward_af_word_lstm = TimeDistributed(Dense(
             units=NUM_UNITS_DENSE,
             activation=self.config.activation_function,
@@ -133,6 +129,7 @@ class MultiTaskLSTMCRF(object):
             # value to avoid dead neurons
             bias_initializer= initializers.Constant(value=0.01) if \
                 self.config.activation_function == 'relu' else 'zeros'))
+        '''
 
         # get all unique tag types across all datasets
         all_tag_types = [ds.tag_type_to_idx.keys() for ds in self.ds]
@@ -150,7 +147,6 @@ class MultiTaskLSTMCRF(object):
             # Word-level embedding layers
             word_ids = Input(shape=(None, ), dtype='int32')
             word_embeddings_shared = word_embeddings(word_ids)
-            word_embeddings_shared = TimestepDropout(self.config.dropout_rate['word_embed'])(word_embeddings_shared)
 
             # Character-level embedding layers
             char_ids = Input(shape=(None, None), dtype='int32')
@@ -170,25 +166,23 @@ class MultiTaskLSTMCRF(object):
 
             # Concatenate word- and char-level embeddings + dropout
             model = Concatenate(axis=-1)([word_embeddings_shared, char_embeddings_shared])
-            # Spatial dropout applies the same dropout mask to all timesteps
-            # which is neccecary to implement variational dropout
-            # (https://arxiv.org/pdf/1512.05287.pdf)
-            model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
+            # model = TimestepDropout(self.config.dropout_rate['word_embed'])(model)
 
-            # Word-level BiLSTM + dropout
+            # Word-level BiLSTM + dropout. Spatial dropout applies the same
+            # dropout mask to all timesteps which is neccecary to implement
+            # variational dropout (https://arxiv.org/pdf/1512.05287.pdf)
             model = word_BiLSTM_1(model)
             model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
 
-            # model = word_BiLSTM_2(model)
-            # model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
+            model = word_BiLSTM_2(model)
+            model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
 
             # Feedforward after word-level BiLSTM + dropout
-            model = feedforward_af_word_lstm(model)
-            model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
+            # model = feedforward_af_word_lstm(model)
+            # model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
 
-            # Feedforward before CRF + dropout
+            # Feedforward before CRF
             model = feedforward_bf_crf(model)
-            model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
 
             # CRF output layer
             crf = CRF(len(ds.tag_type_to_idx))
