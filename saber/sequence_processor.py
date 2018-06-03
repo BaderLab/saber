@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 import os
 import time
-import json
 import pickle
 from pprint import pprint
 from itertools import chain
 
 import numpy as np
-import tensorflow as tf
 from spacy import displacy
 
 import constants
+import utils_generic
 from dataset import Dataset
 from preprocessor import Preprocessor
-from utils_generic import make_dir
 from utils_models import create_train_session_dir
 from utils_models import setup_model_checkpointing
 
@@ -49,20 +47,22 @@ class SequenceProcessor(object):
 
     def predict(self, text, model=0, jupyter=False, *args, **kwargs):
         """Performs prediction for a given model and returns results."""
-        assert text, "Argument text must be a valid string!"
+        if not isinstance(text, str) or not text:
+            raise ValueError("Argument 'text' must be a valid, non-empty string!")
+
         ds_ = self.ds[model]
         model_ = self.model.model[model]
 
         # get reverse mapping of indices to tags
         idx2tag = ds_.idx_to_tag_type
         # process raw input text
-        transformed_text = self.preprocessor.transform(text,
-                                                       ds_.word_type_to_idx,
-                                                       ds_.char_type_to_idx)
+        transformed_text = self.preprocessor.transform(text, \
+            ds_.word_type_to_idx, ds_.char_type_to_idx)
 
         # perform prediction, convert to tag sequence
         y_pred = model_.predict([transformed_text['word2idx'],
-                                 transformed_text['char2idx']]).argmax(-1)
+                                 transformed_text['char2idx']],
+                                 batch_size=256).argmax(-1)
         idx_pred_seq = np.asarray(y_pred).ravel()
         # TODO: clean this up, need to drop pads.
         tag_pred_seq = [idx2tag[idx] for idx in idx_pred_seq if
@@ -71,9 +71,6 @@ class SequenceProcessor(object):
         chunk_pred_seq = self.preprocessor.chunk_entities(tag_pred_seq)
         # flatten the token offsets
         offsets = list(chain.from_iterable(transformed_text['offsets']))
-
-        # TODO: this should be moved to a unit test
-        # assert len(tag_pred_seq) == len(offsets)
 
         # accumulator for predicted entities
         ents = []
@@ -116,14 +113,16 @@ class SequenceProcessor(object):
             model (int): which model in self.model.model to save, defaults to 0
         """
         # create the pretrained model folder
-        make_dir(os.path.join(filepath))
+        utils_generic.make_dir(os.path.join(filepath))
 
         # create a dictionary containg everything we need to save the model
         model_attributes = {}
 
         model_attributes['config'] = self.config
         model_attributes['token_embeddings'] = self.token_embedding_matrix
-        model_attributes['ds'] = self.ds[model]
+        # TODO: I don't really want to save all the datasets. But I
+        # need the tag_type_to_idx objects.
+        model_attributes['ds'] = self.ds
 
         # create filepaths
         weights_filepath = os.path.join(filepath, 'model_weights.hdf5')
@@ -142,6 +141,8 @@ class SequenceProcessor(object):
         Args:
             filepath (str): directory path to saved pretrained folder
         """
+        #
+        utils_generic.decompress_model(filepath)
         # create filepaths
         weights_filepath = os.path.join(filepath, 'model_weights.hdf5')
         attributes_filepath = os.path.join(filepath, 'model_attributes.pickle')
@@ -152,7 +153,7 @@ class SequenceProcessor(object):
         self.config.token_embedding_dimension = model_attributes['config'].token_embedding_dimension
         self.config.character_embedding_dimension = model_attributes['config'].character_embedding_dimension
 
-        self.ds = [model_attributes['ds']]
+        self.ds = model_attributes['ds']
         self.token_embedding_matrix = model_attributes['token_embeddings']
 
         # create model based on saved models attributes
@@ -162,9 +163,6 @@ class SequenceProcessor(object):
         self.model.model[0].load_weights(weights_filepath)
         # https://github.com/keras-team/keras/issues/6124
         self.model.model[0]._make_predict_function()
-
-    def __getattr__(self, name):
-        return getattr(self.model, name)
 
     def load_dataset(self):
         """Coordinates the loading of a dataset."""
@@ -184,6 +182,61 @@ class SequenceProcessor(object):
 
         elapsed_time = time.time() - start_time
         print('Done ({0:.2f} seconds).'.format(elapsed_time))
+
+    def _load_single_dataset(self):
+        """Loads a single dataset.
+
+        Creates and loads a single dataset object for a dataset at
+        self.dataset_folder[0].
+
+        Returns:
+            a list containing a single dataset object.
+        """
+        ds = Dataset(filepath=self.config.dataset_folder[0],
+                     replace_rare_tokens=self.config.replace_rare_tokens)
+        ds.load_dataset()
+
+        return [ds]
+
+    def _load_compound_dataset(self):
+        """Loads a compound dataset.
+
+        Creates and loads a 'compound' dataset. Compound datasets are specified
+        by multiple individual datasets, and share multiple attributes
+        (such as word/char type to index mappings). Loads such a dataset for
+        each dataset at self.dataset_folder[0].
+
+        Returns:
+            A list containing multiple compound dataset objects.
+        """
+        # accumulate datasets
+        compound_ds = [Dataset(filepath=ds, \
+            replace_rare_tokens=self.config.replace_rare_tokens) for ds in
+            self.config.dataset_folder]
+
+        for ds in compound_ds:
+            ds.load_data_and_labels()
+            ds.get_types()
+
+         # get combined set of word types from all datasets
+        combined_types = {'word': [], 'char': []}
+        for ds in compound_ds:
+            combined_types['word'].extend(ds.word_types)
+            combined_types['char'].extend(ds.char_types)
+
+        # compute word to index mappings that will be shared across datasets
+        type_to_idx = {'word': {}, 'char': {}}
+        for type_ in type_to_idx:
+            combined_types[type_] = list(set(combined_types[type_]))
+
+            type_to_idx[type_] = Preprocessor.type_to_idx(combined_types[type_], \
+                initial_mapping=constants.initial_mapping_words)
+
+        # load all the datasets
+        for ds in compound_ds:
+            ds.load_dataset(type_to_idx)
+
+        return compound_ds
 
     def load_embeddings(self):
         """Coordinates the loading of pre-trained token embeddings."""
@@ -236,61 +289,6 @@ class SequenceProcessor(object):
         self.model.fit_(checkpointer, train_session_dir)
         # train_history = pd.DataFrame(train_history.history)
         # return train_history
-
-    def _load_single_dataset(self):
-        """Loads a single dataset.
-
-        Creates and loads a single dataset object for a dataset at
-        self.dataset_folder[0].
-
-        Returns:
-            a list containing a single dataset object.
-        """
-        ds = Dataset(filepath=self.config.dataset_folder[0],
-                     replace_rare_tokens=self.config.replace_rare_tokens)
-        ds.load_dataset()
-
-        return [ds]
-
-    def _load_compound_dataset(self):
-        """Loads a compound dataset.
-
-        Creates and loads a 'compound' dataset. Compound datasets are specified
-        by multiple individual datasets, and share multiple attributes
-        (such as word/char type to index mappings). Loads such a dataset for
-        each dataset at self.dataset_folder[0].
-
-        Returns:
-            A list containing multiple compound dataset objects.
-        """
-        # accumulate datasets
-        compound_ds = [Dataset(filepath=ds, \
-            replace_rare_tokens=self.config.replace_rare_tokens) for ds in
-            self.config.dataset_folder]
-
-        for ds in compound_ds:
-            ds.load_data_and_labels()
-            ds.get_types()
-
-         # get combined set of word types from all datasets
-        combined_types = {'word': [], 'char': []}
-        for ds in compound_ds:
-            combined_types['word'].extend(ds.word_types)
-            combined_types['char'].extend(ds.char_types)
-
-        # compute word to index mappings that will be shared across datasets
-        type_to_idx = {'word': {}, 'char': {}}
-        for type in type_to_idx:
-            combined_types[type] = list(set(combined_types[type]))
-
-            type_to_idx[type] = Preprocessor.type_to_idx(combined_types[type], \
-                initial_mapping={constants.PAD: 0, constants.UNK: 1})
-
-        # load all the datasets
-        for ds in compound_ds:
-            ds.load_dataset(type_to_idx)
-
-        return compound_ds
 
     def _load_token_embeddings(self):
         """Coordinates the loading of pre-trained token embeddings.
@@ -376,3 +374,6 @@ class SequenceProcessor(object):
                 token_embedding_matrix[i] = token_embedding
 
         return token_embedding_matrix
+
+    def __getattr__(self, name):
+        return getattr(self.model, name)
