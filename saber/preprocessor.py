@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 import re
 from collections import Counter
+from itertools import chain
 
 import en_core_web_sm
 from keras.preprocessing.sequence import pad_sequences
 
-from constants import UNK
-from constants import START
-from constants import END
-from constants import PAD_VALUE
-from constants import NUM_RARE
+import constants
 
 class Preprocessor(object):
     """A class for processing text data."""
@@ -17,15 +13,26 @@ class Preprocessor(object):
         # load Spacy english model (core, small), disable NER pipeline
         self.nlp = en_core_web_sm.load(disable=['ner'])
 
-    def transform(self, text, w2i, c2i):
-        """
+    def transform(self, text, word2idx, char2idx):
+        """Returns a dictionary of processed text, sentences, offsets, and
+        integer sequences.
+
+        Args:
+            text (str): raw text
+            word2idx (dict): mapping from words (keys) to unique integers (values)
+            char2idx (dict): mapping from chars (keys) to unique integers (values)
+
+        Returns:
+            a dictionary containing the processed raw text, sentences, token
+            offsets, etc.
+
         """
         text_ = self.sterilize(text)
         # get sentences and token offsets
         sentences, offsets = self._process_text(text_)
 
-        word_idx_sequence = self.get_type_idx_sequence(sentences, w2i, type_='word')
-        char_idx_sequence = self.get_type_idx_sequence(sentences, c2i, type_='char')
+        word_idx_sequence = self.get_type_idx_sequence(sentences, word2idx, type_='word')
+        char_idx_sequence = self.get_type_idx_sequence(sentences, char2idx, type_='char')
 
         transformed_text = {
             'text': text_,
@@ -61,31 +68,19 @@ class Preprocessor(object):
         doc = self.nlp(text) # process text with spacy
 
         # accumulators
-        # word_types = set()
-        # char_types = set()
         sentences = []
         offsets = []
 
-        # TODO (johngiorgi): Do I need word types?
-        # collect token sequence and word types
+        # collect token sequence
         for sent in doc.sents:
             token_seq = []
             token_offset_seq = []
             for token in sent:
-                # word_types.add(token.text)
                 token_seq.append(token.text)
                 token_offset_seq.append((token.idx, token.idx + len(token.text)))
             # sentences.append([START] + token_seq + [END])
             sentences.append(token_seq)
             offsets.append(token_offset_seq)
-
-        # TODO (johngiorgi): Do I need character types?
-        # collect characters types
-        # for word in word_types:
-        #    char_types.update(list(word))
-
-        # sanity check
-        # assert [len(s) for s in sentences] == [len(o) for o in offsets], 'sentences of offsets differ in size.'
 
         return sentences, offsets
 
@@ -116,9 +111,9 @@ class Preprocessor(object):
         """
         if initial_mapping is not None:
             # if a type in initial_mapping already exists in types, remove it
-            for type in initial_mapping:
-                if type in types:
-                    types.remove(type)
+            for type_ in initial_mapping:
+                if type_ in types:
+                    types.remove(type_)
             mapping = {e: i + len(initial_mapping) for i, e in enumerate(types)}
             mapping.update(initial_mapping)
             return mapping
@@ -151,20 +146,19 @@ class Preprocessor(object):
 
         # Word type
         if type_ == 'word':
-            type_seq = [[type_to_idx.get(x, type_to_idx[UNK]) for x in s] \
-                for s in seq]
+            type_seq = [[type_to_idx.get(x, type_to_idx[constants.UNK]) for x \
+                in s] for s in seq]
         # Tag type
         elif type_ == 'tag':
             type_seq = [[type_to_idx.get(x) for x in s] for s in seq]
         # Char type
         elif type_ == 'char':
             # get index sequence of chars
-            type_seq = [[[type_to_idx.get(c, type_to_idx[UNK]) for c in w] \
-                for w in s] for s in seq]
+            type_seq = [[[type_to_idx.get(c, type_to_idx[constants.UNK]) for \
+                c in w] for w in s] for s in seq]
 
-            # TODO (johngiorgi): this can't be the most efficient sol'n to
             # get the length of the longest character sequence
-            max_len = max([len(x) for x in max(type_seq, key=(lambda x: len(x)))])
+            max_len = len(max(list(chain.from_iterable(type_seq)), key=len))
 
             # create a sequence of padded character vectors
             for i, char_seq in enumerate(type_seq):
@@ -172,13 +166,13 @@ class Preprocessor(object):
                                             sequences=char_seq,
                                             padding="post",
                                             truncating='post',
-                                            value=PAD_VALUE)
+                                            value=constants.PAD_VALUE)
 
         # pad sequences
         type_seq = pad_sequences(sequences=type_seq,
                                  padding='post',
                                  truncating='post',
-                                 value=PAD_VALUE)
+                                 value=constants.PAD_VALUE)
 
         return type_seq
 
@@ -219,7 +213,7 @@ class Preprocessor(object):
         return chunks
 
     @staticmethod
-    def replace_rare_tokens(sentences, count=NUM_RARE):
+    def replace_rare_tokens(sentences, count=constants.NUM_RARE):
         """
         Replaces rare tokens in sentences with an special unknown token.
 
@@ -237,11 +231,11 @@ class Preprocessor(object):
         for sent in sentences:
             c.update(sent)
 
-        # replace rare words with UNK token
+        # replace rare words with constants.UNK token
         for i, sent in enumerate(sentences):
             for j, token in enumerate(sent):
                 if c[token] <= count:
-                    sentences[i][j] = UNK
+                    sentences[i][j] = constants.UNK
 
         return sentences
 
