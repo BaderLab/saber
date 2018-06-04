@@ -19,7 +19,7 @@ DUMMY_PARAMETERS_NO_CLI_ARGS = {
 'learning_rate': 0.01,
 'decay': 0.05,
 'gradient_normalization': None,
-'dropout_rate': {'input': 0.25, 'output':0.25, 'recurrent': 0.25, 'word_embed': 0.1},
+'dropout_rate': {'input': 0.3, 'output':0.3, 'recurrent': 0.1},
 'batch_size': 1,
 'k_folds': 2,
 'maximum_number_of_epochs': 10,
@@ -42,7 +42,7 @@ DUMMY_PARAMETERS_WITH_CLI_ARGS = {
 'learning_rate': 0.05,
 'decay': 0.5,
 'gradient_normalization': 1.0,
-'dropout_rate': {'input': 0.25, 'output':0.25, 'recurrent': 0.25, 'word_embed': 0.1},
+'dropout_rate': {'input': 0.3, 'output':0.3, 'recurrent': 0.1},
 'batch_size': 1,
 'k_folds': 2,
 'maximum_number_of_epochs': 10,
@@ -103,7 +103,6 @@ def test_parse_config_args_no_cli_args(config_no_cli_args, config_with_cli_args)
                 elif expected is None or k in DUMMY_COMMAND_LINE_ARGS:
                     expected = v
 
-                print(section, k)
                 assert v == str(expected)
 
 def test_process_parameters_no_command_line_args(config_no_cli_args):
