@@ -1,6 +1,7 @@
 """A collection of model helper/utility functions.
 """
 import os
+from shutil import copyfile
 from time import strftime
 
 from keras import optimizers
@@ -56,7 +57,7 @@ def compile_model(model,
     model.compile(optimizer=optimizer_, loss=loss_function)
     if verbose: print(model.summary())
 
-def create_train_session_dir(dataset_folder, output_folder):
+def prepare_output_directory(dataset_folder, output_folder, config_filepath=None):
     """Creates an output directory for each dataset in dataset_folder
 
     Creates the following directory structure:
@@ -72,7 +73,8 @@ def create_train_session_dir(dataset_folder, output_folder):
 
     In the case of only a single dataset,
     <first_dataset_name_second_dataset_name> and <first_dataset_name> are
-    collapsed into a single directory.
+    collapsed into a single directory. Also saves a copy of the config file
+    used to train the model to the top level of this directory.
 
     Returns:
         a list of directory paths to the subdirectories
@@ -80,30 +82,37 @@ def create_train_session_dir(dataset_folder, output_folder):
         dataset_folder
     """
     # acc
-    ts_output_dirnames = []
+    train_sess_output_dirnames = []
 
-    # get a list of the dataset(s) name(s)
+    # create a directory path composed of all dataset names
     ds_names = [os.path.basename(os.path.normpath(x)) for x in dataset_folder]
+    top_level_dir = os.path.join(output_folder, '_'.join(ds_names))
+    make_dir(top_level_dir)
 
+    # create list of subdirectories, one for each dataset
     if len(ds_names) > 1:
-        # create a directory path composed of all dataset names
-        top_level_ds_dir = os.path.join(output_folder, '_'.join(ds_names))
-        # create list of subdirectories, one for each dataset
-        ds_dirs = [os.path.join(top_level_ds_dir, ds) for ds in ds_names]
+        ds_dirs = [os.path.join(top_level_dir, ds) for ds in ds_names]
     else:
         ds_dirs = ds_names
 
     for dirname in ds_dirs:
         # create a subdirectory for each datasets name
         ds_dirname = os.path.join(output_folder, dirname)
+
         # create a subdirectory for each train session
         ts_dirname = strftime("train_session_%a_%b_%d_%I:%M").lower()
+
         # create the full directory path
         ds_ts_dirname = os.path.join(ds_dirname, ts_dirname)
-        ts_output_dirnames.append(ds_ts_dirname)
+        train_sess_output_dirnames.append(ds_ts_dirname)
         make_dir(ds_ts_dirname)
 
-    return ts_output_dirnames
+        # copy config file to top level directory
+        if config_filepath is not None:
+            cf_copy = os.path.join(ds_ts_dirname, os.path.normpath(config_filepath))
+            copyfile(config_filepath, cf_copy)
+
+    return train_sess_output_dirnames
 
 def setup_model_checkpointing(output_dir):
     """Sets up per epoch model checkpointing.

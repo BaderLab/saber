@@ -12,7 +12,7 @@ import constants
 import utils_generic
 from dataset import Dataset
 from preprocessor import Preprocessor
-from utils_models import create_train_session_dir
+from utils_models import prepare_output_directory
 from utils_models import setup_model_checkpointing
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -279,8 +279,9 @@ class SequenceProcessor(object):
             dataframe.
         """
         # setup model checkpointing
-        train_session_dir = create_train_session_dir(self.config.dataset_folder,
-                                                     self.config.output_folder)
+        train_session_dir = prepare_output_directory(self.config.dataset_folder,
+                                                     self.config.output_folder,
+                                                     self.config.config_filepath)
         checkpointer = setup_model_checkpointing(train_session_dir)
 
         # fit

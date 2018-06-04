@@ -6,7 +6,11 @@ import configparser
 from preprocessor import Preprocessor
 
 class Config(object):
+    """"
+    """
     def __init__(self, config_filepath='./config.ini', cli=False):
+        # filepath to config file
+        self.config_filepath = config_filepath
         # a parsed python configparser object
         self.config = None
 
@@ -96,6 +100,7 @@ class Config(object):
 
         # overwrite any parameters in the config if specfied at CL
         for key, value in cli_arguments.items():
+            print(key)
             if value is not None:
                 parameters[key] = value
 
@@ -104,12 +109,12 @@ class Config(object):
         parameters['dataset_folder'] = [Preprocessor.sterilize(ds) for ds in
             parameters['dataset_folder']]
 
-        # convert dropout rates to floats
+        # build dictionary for dropout rates
         parameters['dropout_rate'] = {
             'input': float(parameters['dropout_rate'][0]),
             'output': float(parameters['dropout_rate'][1]),
-            'recurrent': float(parameters['dropout_rate'][2]),
-            'word_embed':float(parameters['dropout_rate'][3])
+            'recurrent': float(parameters['dropout_rate'][2])
+            # 'word_embed': float(parameters['dropout_rate'][3])
         }
 
         # normalize all str arguments (expect directory/file paths)
