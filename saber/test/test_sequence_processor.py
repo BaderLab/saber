@@ -85,7 +85,7 @@ def test_attributes_after_initilization_of_model(sp_no_ds_no_embed):
     assert sp_no_ds_no_embed.config.character_embedding_dimension == 30
     assert sp_no_ds_no_embed.config.dataset_folder == [PATH_TO_DUMMY_DATASET]
     assert sp_no_ds_no_embed.config.debug == False
-    assert sp_no_ds_no_embed.config.dropout_rate == {'input': 0.25, 'output':0.25, 'recurrent': 0.25, 'word_embed': 0.1}
+    assert sp_no_ds_no_embed.config.dropout_rate == {'input': 0.3, 'output':0.3, 'recurrent': 0.1}
     assert sp_no_ds_no_embed.config.trainable_token_embeddings == False
     assert sp_no_ds_no_embed.config.gradient_normalization == None
     assert sp_no_ds_no_embed.config.k_folds == 2

@@ -59,7 +59,7 @@ def metrics_single_model(multi_task_lstm_crf_single_model, data_partitions_singl
     ds_ = model_.ds
 
     # create the output folder for metrics object
-    train_session_dir = create_train_session_dir(model_.config.dataset_folder,
+    train_session_dir = prepare_output_directory(model_.config.dataset_folder,
                                                  model_.config.output_folder)
 
     return get_metrics(datasets=ds_,
