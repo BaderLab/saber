@@ -43,7 +43,7 @@ def test_model_attributes_after_creation_of_model(multi_task_lstm_crf_single_mod
     assert multi_task_lstm_crf_single_model.config.character_embedding_dimension == 30
     assert multi_task_lstm_crf_single_model.config.dataset_folder == [PATH_TO_DUMMY_DATASET]
     assert multi_task_lstm_crf_single_model.config.debug == False
-    assert multi_task_lstm_crf_single_model.config.dropout_rate == {'input': 0.25, 'output':0.25, 'recurrent': 0.25, 'word_embed': 0.1}
+    assert multi_task_lstm_crf_single_model.config.dropout_rate == {'input': 0.3, 'output':0.3, 'recurrent': 0.1}
     assert multi_task_lstm_crf_single_model.config.trainable_token_embeddings == False
     assert multi_task_lstm_crf_single_model.config.gradient_normalization == None
     assert multi_task_lstm_crf_single_model.config.k_folds == 2
