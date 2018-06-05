@@ -76,6 +76,13 @@ def prepare_output_directory(dataset_folder, output_folder, config_filepath=None
     collapsed into a single directory. Also saves a copy of the config file
     used to train the model to the top level of this directory.
 
+    Args:
+        dataset_folder (str): a list of directory paths to CoNLL formatted
+            datasets
+        output_folder (str): the top-level output folder
+        config_filepath (str): optional, if not None, the config file used
+            to train a model is copied to the top-level of the output directory.
+
     Returns:
         a list of directory paths to the subdirectories
         train_session_<month>_<day>_<hr>:<min>, one for each dataset in
