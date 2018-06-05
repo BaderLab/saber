@@ -134,7 +134,7 @@ sp.load('../pretrained_models/PRGE')
 raw_text = 'The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.'
 
 # Perform prediction on raw text, get resulting annotation
-annotation = sp.predict(raw_text)
+annotation = sp.annotate(raw_text)
 ```
 
 #### Command line tool
