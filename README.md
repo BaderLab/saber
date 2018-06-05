@@ -35,7 +35,9 @@
   <a href="#resources">Resources</a>
 </p>
 
-
+<p align="center">
+  <img src="img/saber_main_img.png" alt="Size Limit example">
+</p>
 
 ## Installation
 
