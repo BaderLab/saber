@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from statistics import mean
@@ -227,7 +228,12 @@ class Metrics(Callback):
         print(table)
 
     def _write_metrics_to_disk(self):
-        """
+        """Write performance metrics to disk as json-formatted .txt file.
+
+        At the end of each epoch, writes a json-formatted .txt file to disk
+        (name epoch_<epoch_number>.txt). File contains performance scores
+        per label as well as the best-achieved macro and micro averages thus
+        far for the current epoch.
         """
         # create evaluation output directory
         fold = 'fold_{}'.format(self.current_fold + 1)
@@ -238,23 +244,23 @@ class Metrics(Callback):
         eval_filename = 'epoch_{0:03d}.txt'.format(self.current_epoch + 1)
         eval_filepath = os.path.join(eval_dirname, eval_filename)
 
-        # write performance metrics for current epoch to file
-        micro_avg_per_epoch = [x['MICRO_AVG'] for x in self.valid_performance_metrics_per_epoch]
+        # get best epoch based on macro / micro averages
         macro_avg_per_epoch = [x['MACRO_AVG'] for x in self.valid_performance_metrics_per_epoch]
+        micro_avg_per_epoch = [x['MICRO_AVG'] for x in self.valid_performance_metrics_per_epoch]
 
-        best_micro_avg_val_score = max(micro_avg_per_epoch, key=itemgetter(2))
         best_macro_avg_val_score = max(macro_avg_per_epoch, key=itemgetter(2))
+        best_micro_avg_val_score = max(micro_avg_per_epoch, key=itemgetter(2))
         best_micro_epoch = micro_avg_per_epoch.index(best_micro_avg_val_score)
         best_macro_epoch = macro_avg_per_epoch.index(best_macro_avg_val_score)
-        best_micro_val_score = self.valid_performance_metrics_per_epoch[best_micro_epoch]
-        best_macro_val_score = self.valid_performance_metrics_per_epoch[best_macro_epoch]
 
+        performance_metrics = {}
+        performance_metrics['performance_scores'] = \
+            self.valid_performance_metrics_per_epoch[self.current_epoch]
+        performance_metrics['best_epoch_macro_avg'] = \
+            {'epoch': best_macro_epoch, 'scores': best_macro_avg_val_score}
+        performance_metrics['best_epoch_micro_avg'] = \
+            {'epoch': best_micro_epoch, 'scores': best_micro_avg_val_score}
+
+        # write performance metrics for current epoch to file
         with open(eval_filepath, 'a') as f:
-            f.write(str(self.valid_performance_metrics_per_epoch[self.current_epoch]))
-            f.write('\n')
-            f.write('Best performing epoch based on macro average: {}\n'.format(best_macro_epoch + 1))
-            f.write(str(best_macro_val_score))
-            f.write('\n')
-            f.write('Best performing epoch based on micro average: {}\n'.format(best_micro_epoch + 1))
-            f.write(str(best_micro_val_score))
-            f.write('\n')
+            f.write(json.dumps(performance_metrics))
