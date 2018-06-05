@@ -198,8 +198,8 @@ def test_predict(sp_single_ds_no_embed_with_model):
     multi_sentence_text = "This is a simple text. With multiple sentences"
     multi_sentence_annotation = {'text': multi_sentence_text, 'ents': [], 'title': None}
 
-    simple_prediction = sp_single_ds_no_embed_with_model.predict(simple_text)
-    multi_sentence_prediction = sp_single_ds_no_embed_with_model.predict(multi_sentence_text)
+    simple_prediction = sp_single_ds_no_embed_with_model.annotate(simple_text)
+    multi_sentence_prediction = sp_single_ds_no_embed_with_model.annotate(multi_sentence_text)
     # wipe the predicted entities as these are stochastic.
     simple_prediction['ents'] = []
     multi_sentence_prediction['ents'] = []
@@ -217,10 +217,10 @@ def test_predict_blank_or_invalid(sp_single_ds_no_embed_with_model):
     false_bool_test = False
 
     with pytest.raises(ValueError):
-        sp_single_ds_no_embed_with_model.predict(blank_text_test)
+        sp_single_ds_no_embed_with_model.annotate(blank_text_test)
     with pytest.raises(ValueError):
-        sp_single_ds_no_embed_with_model.predict(none_test)
+        sp_single_ds_no_embed_with_model.annotate(none_test)
     with pytest.raises(ValueError):
-        sp_single_ds_no_embed_with_model.predict(empty_list_test)
+        sp_single_ds_no_embed_with_model.annotate(empty_list_test)
     with pytest.raises(ValueError):
-        sp_single_ds_no_embed_with_model.predict(false_bool_test)
+        sp_single_ds_no_embed_with_model.annotate(false_bool_test)

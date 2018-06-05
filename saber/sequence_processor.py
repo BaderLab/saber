@@ -45,19 +45,18 @@ class SequenceProcessor(object):
 
         if self.config.verbose: pprint(self.config)
 
-    def predict(self, text, model=0, jupyter=False, *args, **kwargs):
+    def annotate(self, text, model_idx=0, jupyter=False, *args, **kwargs):
         """Performs prediction for a given model and returns results."""
         if not isinstance(text, str) or not text:
             raise ValueError("Argument 'text' must be a valid, non-empty string!")
 
-        ds_ = self.ds[model]
-        model_ = self.model.model[model]
+        ds_ = self.ds[model_idx]
+        model_ = self.model.model[model_idx]
 
         # get reverse mapping of indices to tags
         idx2tag = ds_.idx_to_tag_type
         # process raw input text
-        transformed_text = self.preprocessor.transform(text, \
-            ds_.word_type_to_idx, ds_.char_type_to_idx)
+        transformed_text = self.transform(text, model_idx)
 
         # perform prediction, convert to tag sequence
         y_pred = model_.predict([transformed_text['word2idx'],
@@ -98,6 +97,34 @@ class SequenceProcessor(object):
                             manual=True, options=constants.OPTIONS)
 
         return annotation
+
+    def transform(self, text, ds_idx=0):
+        """Processes raw text, returns a dictionary of useful values.
+
+        For the given raw text, returns a dictionary containing the following:
+            - 'text': raw text, with minimal processing
+            - 'sentences': a list of lists, contains the tokens in each sentence
+            - 'offsets': A list of list of tuples containing the start and end
+                indices of every token in 'text'.
+            - 'word2idx': 2-D numpy array containing the token index of every
+                token in 'text'. Index is chosen based on the mapping of
+                self.ds[model]
+            - 'char2idx': 3-D numpy array containing the character index of
+                every character in 'text'. Index is chosen based on the mapping
+                of self.ds[model]
+
+        Args:
+            text (str): raw text to process
+            ds_idx (int): which ds (in list self.ds) to use for the mapping of
+                token and character indices.
+        """
+        ds_ = self.ds[ds_idx]
+
+        transformed_text = self.preprocessor.transform(text, \
+            ds_.word_type_to_idx, ds_.char_type_to_idx)
+
+        return transformed_text
+
 
     def evaluate(self, X, y):
         score = self.model.evaluate(X, y, batch_size=1)
