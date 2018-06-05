@@ -100,7 +100,6 @@ class Config(object):
 
         # overwrite any parameters in the config if specfied at CL
         for key, value in cli_arguments.items():
-            print(key)
             if value is not None:
                 parameters[key] = value
 
