@@ -4,8 +4,8 @@ git+https://www.github.com/keras-team/keras-contrib.git
 # Spacy small english language model
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
 h5py==2.8.0
-Keras==2.1.5
-numpy==1.14.2
+keras==2.2.0
+numpy==1.14.5
 PTable==0.9.2
 scikit-learn==0.19.1
 spacy==2.0.11
