@@ -3,9 +3,10 @@
 import os
 import errno
 import codecs
+import tarfile
 from setuptools.archive_util import unpack_archive
 
-import constants
+from .. import constants
 
 # https://stackoverflow.com/questions/273192/how-can-i-create-a-directory-if-it-does-not-exist#273227
 def make_dir(directory_filepath):
@@ -26,11 +27,41 @@ def decompress_model(filepath):
 
     If filepath is not a directory, decompresses the identically named bz2 Saber
     model at filepath.
+
+    Args:
+        filepath (str): path to a pre-trained Saber model (zipped or unzipped)
     """
     if not os.path.isdir(filepath):
+        head, _ = os.path.split(os.path.abspath(filepath))
+
         print('[INFO] Unzipping pretrained model... '.format(), end='', flush=True)
-        unpack_archive(filepath + '.tar.bz2', constants.PRETRAINED_MODEL_BASE_DIR)
+        unpack_archive(filepath + '.tar.bz2', extract_dir=head)
         print('Done.')
+
+def compress_model(dir):
+    """Compresses a given directory using bz2 compression.
+
+    Args:
+        dir (str): path to directory to compress.
+
+    Returns:
+        True if compression completed without error.
+
+    Raises:
+        ValueError: if no file or directory at 'dir' exists or if 'dir'.tar.bz2
+            already exists.
+    """
+    output_filepath = '{dir}.tar.bz2'.format(dir=dir)
+
+    if os.path.exists(output_filepath):
+        raise ValueError("{} already exists".format(output_filepath))
+    if not os.path.exists(dir):
+        raise ValueError("File or directory at 'dir' does not exist")
+
+    with tarfile.open(output_filepath, 'w:bz2') as tar:
+        tar.add(dir, arcname=os.path.sep)
+
+    return True
 
 def bin_to_txt(filepath, output_dir=os.getcwd()):
     """Converts word embeddings given in the binary C format (w2v) to a simple

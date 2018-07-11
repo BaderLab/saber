@@ -1,14 +1,16 @@
 """A collection of web-service helper/utility functions.
 """
+from __future__ import absolute_import
 import os.path
 
 import xml.etree.ElementTree as ET
 from urllib.request import urlopen
 
-import constants
-import utils_generic
-from config import Config
-from sequence_processor import SequenceProcessor
+from ..config import Config
+from .. import constants
+from .generic_utils import decompress_model
+from ..config import Config
+from ..sequence_processor import SequenceProcessor
 
 def get_pubmed_xml(pmid):
     """Uses the Entrez Utilities Web Service API to fetch XML representation of
@@ -83,7 +85,7 @@ def load_models(ents):
         if v:
             path_to_model = os.path.join(constants.PRETRAINED_MODEL_BASE_DIR, k)
             # decompress the pre-trained model if this is not already done
-            utils_generic.decompress_model(path_to_model)
+            decompress_model(path_to_model)
 
             # create and load the pre-trained models
             sp = SequenceProcessor(config)
