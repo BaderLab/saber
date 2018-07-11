@@ -8,18 +8,12 @@ from keras import optimizers
 from keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import KFold
 
-import metrics
-from utils_generic import make_dir
+from ..metrics import Metrics
+from .generic_utils import make_dir
 
 # TODO (johngiorgi) add verbosity parameter for printing model summary
 
-def compile_model(model,
-                  loss_function,
-                  optimizer,
-                  lr=0.01,
-                  decay=0.0,
-                  clipnorm=None,
-                  verbose=False):
+def compile_model(model, loss_function, optimizer, lr=0.01, decay=0.0, clipnorm=None):
     """Compiles a model specified with Keras.
 
     See https://keras.io/optimizers/ for more info on each optmizer.
@@ -55,7 +49,6 @@ def compile_model(model,
         optimizer_ = optimizers.Nadam(clipnorm=clipnorm)
 
     model.compile(optimizer=optimizer_, loss=loss_function)
-    if verbose: print(model.summary())
 
 def prepare_output_directory(dataset_folder, output_folder, config_filepath=None):
     """Creates an output directory for each dataset in dataset_folder
@@ -85,14 +78,14 @@ def prepare_output_directory(dataset_folder, output_folder, config_filepath=None
 
     Returns:
         a list of directory paths to the subdirectories
-        train_session_<month>_<day>_<hr>:<min>, one for each dataset in
+        train_session_<month>_<day>_<hr>_<min>, one for each dataset in
         dataset_folder
     """
     # acc
     train_sess_output_dirnames = []
 
     # create a directory path composed of all dataset names
-    ds_names = [os.path.basename(os.path.normpath(x)) for x in dataset_folder]
+    ds_names = [os.path.basename(x) for x in dataset_folder]
     top_level_dir = os.path.join(output_folder, '_'.join(ds_names))
     make_dir(top_level_dir)
 
@@ -107,7 +100,7 @@ def prepare_output_directory(dataset_folder, output_folder, config_filepath=None
         ds_dirname = os.path.join(output_folder, dirname)
 
         # create a subdirectory for each train session
-        ts_dirname = strftime("train_session_%a_%b_%d_%I:%M").lower()
+        ts_dirname = strftime("train_session_%a_%b_%d_%I_%M").lower()
 
         # create the full directory path
         ds_ts_dirname = os.path.join(ds_dirname, ts_dirname)
@@ -116,7 +109,7 @@ def prepare_output_directory(dataset_folder, output_folder, config_filepath=None
 
         # copy config file to top level directory
         if config_filepath is not None:
-            cf_copy = os.path.join(ds_ts_dirname, os.path.normpath(config_filepath))
+            cf_copy = os.path.join(ds_ts_dirname, os.path.basename(config_filepath))
             copyfile(config_filepath, cf_copy)
 
     return train_sess_output_dirnames
@@ -125,7 +118,10 @@ def setup_model_checkpointing(output_dir):
     """Sets up per epoch model checkpointing.
 
     Sets up model checkpointing by creating a Keras CallBack for each
-    output directory in output_dir (correspondings to invidivual datasets).
+    output directory in output_dir (correspondings to individual datasets).
+
+    Args:
+        output_dir (lst): a list of output directories, one for each dataset
 
     Returns:
         checkpointer: a Keras CallBack object for per epoch model
@@ -170,7 +166,7 @@ def precision_recall_f1_support(true_positives, false_positives, false_negatives
 
     return precision, recall, f1, support
 
-def get_train_valid_indices(datasets, k_folds):
+def get_train_valid_indices(training_data, k_folds):
     """Get train and valid indicies for all k-folds for all datasets.
 
     For all datatsets ds, gets k_folds number of train and valid indicies.
@@ -182,30 +178,25 @@ def get_train_valid_indices(datasets, k_folds):
 
     Args:
         datasets (list): a list of Dataset objects
-        k_folds (int): number of k folds to preform in cross-validation
+        k_folds (int): number of k folds to be preformed in cross-validation
 
     Returns:
-        compound_train_valid_indices: a list of list of two-tuples, where
-        compound_train_valid_indices[i][j] is a tuple containing the train
-        and valid indicies (in that order) for the ith dataset and jth
+        a list of list of two-tuples, where index [i][j] is a tuple containing
+        the train and valid indicies (in that order) for the ith dataset and jth
         k-fold.
     """
-    # acc
-    compound_train_valid_indices = []
+    # global acc
+    train_valid_indices = []
     # Sklearn KFold object
     kf = KFold(n_splits=k_folds, random_state=42)
 
-    for ds in datasets:
-        X = ds.train_word_idx_seq
-        # acc
-        dataset_train_valid_indices = []
-        for train_idx, valid_idx in kf.split(X):
-            dataset_train_valid_indices.append((train_idx, valid_idx))
-        compound_train_valid_indices.append(dataset_train_valid_indices)
+    for i in training_data:
+        X, _ = training_data[i]['X_train']
+        train_valid_indices.append([(ti, vi) for ti, vi in kf.split(X)])
 
-    return compound_train_valid_indices
+    return train_valid_indices
 
-def get_data_partitions(datasets, train_valid_indices, fold):
+def get_data_partitions(training_data, train_valid_indices, fold):
     """Get train and valid partitions for all k-folds for all datasets.
 
     For all datasets, gets the train and valid partitions for
@@ -227,33 +218,33 @@ def get_data_partitions(datasets, train_valid_indices, fold):
     Returns:
         six-tuple containing train and valid data for all datasets.
     """
-    # acc
-    data_partition = []
+    # TODO: this seems like a sub-par solution
+    # acc, p = partition, s = split
+    partitioned_data = {p: {s: None for s in training_data[p]} for p in
+        training_data}
 
-    for i, ds in enumerate(datasets):
-        X_word = ds.train_word_idx_seq
-        X_char = ds.train_char_idx_seq
-        y = ds.train_tag_idx_seq
-        # train_valid_indices[i][fold] is a two-tuple, where index
-        # 0 contains the train indices and index 1 the valid
-        # indicies
-        X_word_train = X_word[train_valid_indices[i][fold][0]]
-        X_word_valid = X_word[train_valid_indices[i][fold][-1]]
-        X_char_train = X_char[train_valid_indices[i][fold][0]]
-        X_char_valid = X_char[train_valid_indices[i][fold][-1]]
-        y_train = y[train_valid_indices[i][fold][0]]
-        y_valid = y[train_valid_indices[i][fold][-1]]
+    for i in training_data:
+        # train_valid_indices[i][fold] is a two-tuple, where index 0 contains
+        # the train indices and index 1 the valid indicies
+        train_indices, valid_indices = train_valid_indices[i][fold]
+        # get training data for dataset i
+        X_word, X_char = training_data[i]['X_train']
+        # get labels for dataset i
+        y = training_data[i]['y_train']
 
-        data_partition.append((X_word_train,
-                               X_word_valid,
-                               X_char_train,
-                               X_char_valid,
-                               y_train,
-                               y_valid))
+        # create and accumulate train/valid partitions
+        X_word_train, X_word_valid = X_word[train_indices], X_word[valid_indices]
+        X_char_train, X_char_valid = X_char[train_indices], X_char[valid_indices]
+        y_train, y_valid = y[train_indices], y[valid_indices]
 
-    return data_partition
+        partitioned_data[i]['X_train'] = [X_word_train, X_char_train]
+        partitioned_data[i]['X_valid'] = [X_word_valid, X_char_valid]
+        partitioned_data[i]['y_train'] = y_train
+        partitioned_data[i]['y_valid'] = y_valid
 
-def get_metrics(datasets, data_partitions, output_dir, fold=1):
+    return partitioned_data
+
+def get_metrics(datasets, training_data, output_dir, criteria='exact', fold=None):
     """Creates Keras Metrics Callback objects, one for each dataset.
 
     Args:
@@ -266,23 +257,15 @@ def get_metrics(datasets, data_partitions, output_dir, fold=1):
         a list of Metric objects, one for each dataset in datasets.
     """
     # acc
-    metrics_acc = []
+    metrics = []
 
     for i, ds in enumerate(datasets):
-        # data_partitions[i] is a four-tuple where index 0 contains X_train
-        # data partition, index 1 X_valid data partition, ..., for dataset i
-        X_word_train = data_partitions[i][0]
-        X_word_valid = data_partitions[i][1]
-        X_char_train = data_partitions[i][2]
-        X_char_valid = data_partitions[i][3]
-        y_train = data_partitions[i][4]
-        y_valid = data_partitions[i][5]
+        metrics_ = Metrics(
+            training_data=training_data[i],
+            idx_to_tag=ds.idx_to_tag,
+            output_dir=output_dir[i],
+            criteria=criteria,
+            fold=fold)
+        metrics.append(metrics_)
 
-        metrics_acc.append(metrics.Metrics([X_word_train, X_char_train],
-                                           [X_word_valid, X_char_valid],
-                                           y_train, y_valid,
-                                           idx_to_tag_type = ds.idx_to_tag_type,
-                                           output_dir=output_dir[i],
-                                           fold=fold))
-
-    return metrics_acc
+    return metrics
