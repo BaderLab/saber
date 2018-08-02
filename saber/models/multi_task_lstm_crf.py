@@ -1,28 +1,23 @@
-# -*- coding: utf-8 -*-
-import random
-
-import numpy as np
-
 from keras import initializers
 import keras.backend as K
 from keras_contrib.layers.crf import CRF
 from keras.layers import Bidirectional
 from keras.layers import Concatenate
 from keras.layers import Dense
+from keras.layers import Dropout
 from keras.layers import Embedding
 from keras.models import Input
 from keras.layers import Lambda
 from keras.layers import LSTM
-from keras.layers import GRU
 from keras.models import Model
 from keras.layers import SpatialDropout1D
 from keras.layers import TimeDistributed
+from keras.utils import multi_gpu_model
+import tensorflow as tf
 
-import utils_models
-from models.layers.timestep_dropout import TimestepDropout
+from ..utils import model_utils
 
 # https://stackoverflow.com/questions/48615003/multi-task-learning-in-keras
-# https://machinelearningmastery.com/keras-functional-api-deep-learning/
 # https://medium.com/@literallywords/stratified-k-fold-with-keras-e57c487b1416
 
 # TODO (johngiorgi): I need to stratify the K-folds, but sklearns implementation
@@ -30,14 +25,13 @@ from models.layers.timestep_dropout import TimestepDropout
 # TODO (johngiorgi): It might be best that the outer most loop (k_folds) just
 # generate test/train indicies directly
 # TODO (johngiorgi): https://machinelearningmastery.com/dropout-regularization-deep-learning-models-keras/
-# TODO (johngiorgi): make sure this process is shuffling the data
 # TODO (johngiorgi): https://machinelearningmastery.com/reshape-input-data-long-short-term-memory-networks-keras/
 
 NUM_UNITS_WORD_LSTM = 200
 NUM_UNITS_CHAR_LSTM = 200
 NUM_UNITS_DENSE = NUM_UNITS_WORD_LSTM // 2
-# see: https://keras.io/layers/recurrent/#lstm
-# note, only implementation 1 allows for proper variational dropout
+# Note, it appears that only implementation 1 allows for proper variational
+# dropout. See: https://keras.io/layers/recurrent/#lstm
 IMPLEMENTATION = 1
 
 class MultiTaskLSTMCRF(object):
@@ -51,213 +45,152 @@ class MultiTaskLSTMCRF(object):
         self.ds = ds
         # token embeddings tied to this instance
         self.token_embedding_matrix = token_embedding_matrix
-
-        # metric(s) object tied to this instance, one per dataset
-        self.metrics = []
         # model(s) tied to this instance
         self.model = []
-        self.crf = []
 
     def specify_(self):
-        """Specifies a multi-task bidirectional LSTM-CRF for sequence tagging
-        using Keras.
+        """Specifies a multi-task BiLSTM-CRF for sequence tagging using Keras.
 
         Implements a hybrid long short-term memory network-condition random
         field (LSTM-CRF) multi-task model for sequence tagging.
 
         Returns:
-            model: a list of keras models, sharing (excluding the crf layer)
-                   some number of layers.
-            crf: a list of task-specific crf layers implemented using
-                 keras.contrib, one for each model.
+            model: a list of keras models, all sharing some number of layers.
         """
         # Specify any shared layers outside the for loop
-
         # Word-level embedding layer
         if self.token_embedding_matrix is None:
-            word_embeddings = Embedding(
-                input_dim=len(self.ds[0].word_type_to_idx),
-                output_dim=self.config.token_embedding_dimension,
-                mask_zero=True)
+            word_embeddings = Embedding(input_dim=len(self.ds[0].type_to_idx['word']),
+                                        output_dim=self.config.word_embed_dim,
+                                        mask_zero=True,
+                                        name="word_embedding_layer")
         else:
-            word_embeddings = Embedding(
-                input_dim=len(self.ds[0].word_type_to_idx),
-                output_dim=self.token_embedding_matrix.shape[1],
-                mask_zero=True,
-                weights=[self.token_embedding_matrix],
-                trainable=self.config.trainable_token_embeddings)
+            word_embeddings = Embedding(input_dim=len(self.ds[0].type_to_idx['word']),
+                                        output_dim=self.token_embedding_matrix.shape[1],
+                                        mask_zero=True,
+                                        weights=[self.token_embedding_matrix],
+                                        trainable=self.config.fine_tune_word_embeddings,
+                                        name="word_embedding_layer")
 
         # Character-level embedding layer
-        char_embeddings = Embedding(
-            input_dim=len(self.ds[0].char_type_to_idx),
-            output_dim=self.config.character_embedding_dimension,
-            mask_zero=True)
+        char_embeddings = Embedding(input_dim=len(self.ds[0].type_to_idx['char']),
+                                    output_dim=self.config.char_embed_dim,
+                                    mask_zero=True,
+                                    name="char_embedding_layer")
 
         # Char-level BiLSTM
-        fwd_state = LSTM(
-            units=NUM_UNITS_CHAR_LSTM // 2,
-            return_state=True,
-            implementation=IMPLEMENTATION)
-
-        bwd_state = LSTM(
-            units=NUM_UNITS_CHAR_LSTM // 2,
-            return_state=True,
-            go_backwards=True,
-            implementation=IMPLEMENTATION)
+        char_BiLSTM = Bidirectional(LSTM(units=NUM_UNITS_CHAR_LSTM // 2,
+                                         return_sequences=False,
+                                         dropout=self.config.dropout_rate['input'],
+                                         recurrent_dropout=self.config.dropout_rate['recurrent'],
+                                         implementation=IMPLEMENTATION),
+                                    name="char_BiLSTM")
 
         # Word-level BiLSTM
-        word_BiLSTM_1 = Bidirectional(LSTM(
-            units=NUM_UNITS_WORD_LSTM // 2,
-            return_sequences=True,
-            dropout=self.config.dropout_rate['input'],
-            recurrent_dropout=self.config.dropout_rate['recurrent'],
-            implementation=IMPLEMENTATION))
+        word_BiLSTM_1 = Bidirectional(LSTM(units=NUM_UNITS_WORD_LSTM // 2,
+                                           return_sequences=True,
+                                           dropout=self.config.dropout_rate['input'],
+                                           recurrent_dropout=self.config.dropout_rate['recurrent'],
+                                           implementation=IMPLEMENTATION),
+                                      name="word_BiLSTM_1")
 
-        word_BiLSTM_2 = Bidirectional(LSTM(
-            units=NUM_UNITS_WORD_LSTM // 2,
-            return_sequences=True,
-            dropout=self.config.dropout_rate['input'],
-            recurrent_dropout=self.config.dropout_rate['recurrent'],
-            implementation=IMPLEMENTATION))
-
-        # Feedforward after BiLSTM networks
-        '''
-        feedforward_af_word_lstm = TimeDistributed(Dense(
-            units=NUM_UNITS_DENSE,
-            activation=self.config.activation_function,
-            # if activation function is relu, initialize bias to small constant
-            # value to avoid dead neurons
-            bias_initializer= initializers.Constant(value=0.01) if \
-                self.config.activation_function == 'relu' else 'zeros'))
-        '''
+        word_BiLSTM_2 = Bidirectional(LSTM(units=NUM_UNITS_WORD_LSTM // 2,
+                                           return_sequences=True,
+                                           dropout=self.config.dropout_rate['input'],
+                                           recurrent_dropout=self.config.dropout_rate['recurrent'],
+                                           implementation=IMPLEMENTATION),
+                                      name="word_BiLSTM_2")
 
         # get all unique tag types across all datasets
-        all_tag_types = [ds.tag_type_to_idx.keys() for ds in self.ds]
+        all_tag_types = [ds.type_to_idx['tag'] for ds in self.ds]
         all_tag_types = set(x for l in all_tag_types for x in l)
 
-        # Feedforward before CRF, maps each time step to a vector with
-        feedforward_bf_crf = TimeDistributed(Dense(
+        # Feedforward before CRF, maps each time step to a vector
+        feedforward_map = TimeDistributed(Dense(
             units=len(all_tag_types),
-            activation=self.config.activation_function,
-            bias_initializer = initializers.Constant(value=0.01) if \
-                self.config.activation_function == 'relu' else 'zeros'))
+            activation=self.config.activation,
+            # if activation function is relu, initialize bias to small constant
+            # value to avoid dead neurons
+            bias_initializer=initializers.Constant(value=0.01) if \
+                self.config.activation == 'relu' else 'zeros'), name='feedforward_map')
 
         # Specify model, taking into account the shared layers
         for ds in self.ds:
-            # Word-level embedding layers
-            word_ids = Input(shape=(None, ), dtype='int32')
+            # Word-level embedding.
+            word_ids = Input(shape=(None, ), name='word_id_inputs', dtype='int32')
             word_embeddings_shared = word_embeddings(word_ids)
 
-            # Character-level embedding layers
-            char_ids = Input(shape=(None, None), dtype='int32')
+            # Character-level embedding
+            char_ids = Input(shape=(None, None), name='char_id_inputs', dtype='int32')
             char_embeddings_shared = char_embeddings(char_ids)
             s = K.shape(char_embeddings_shared)
             # Shape = (batch size, max sentence length, char embedding dimension)
-            char_embeddings_shared = Lambda(lambda x: K.reshape(
-                x, shape=(-1, s[-2], self.config.character_embedding_dimension)))(char_embeddings_shared)
+            char_emb_shape = (-1, s[-2], self.config.char_embed_dim)
+            char_embeddings_shared = Lambda(lambda x: K.reshape(x, shape=char_emb_shape))(char_embeddings_shared)
 
-            # Character-level BiLSTM
-            fwd_state_shared = fwd_state(char_embeddings_shared)[-2]
-            bwd_state_shared = bwd_state(char_embeddings_shared)[-2]
-            char_embeddings_shared = Concatenate(axis=-1)([fwd_state_shared, bwd_state_shared])
+            # Character-level BiLSTM + dropout. Spatial dropout applies the
+            # same dropout mask to all timesteps which is necessary to implement
+            # variational dropout (https://arxiv.org/pdf/1512.05287.pdf)
+            char_embeddings_shared = char_BiLSTM(char_embeddings_shared)
             # Shape = (batch size, max sentence length, char BiLSTM hidden size)
-            char_embeddings_shared = Lambda(lambda x: K.reshape(
-                x, shape=(-1, s[1], NUM_UNITS_CHAR_LSTM)))(char_embeddings_shared)
+            char_lstm_shape = (-1, s[1], NUM_UNITS_CHAR_LSTM)
+            char_embeddings_shared = Lambda(lambda x: K.reshape(x, shape=char_lstm_shape))(char_embeddings_shared)
+            if self.config.variational_dropout:
+                print('using variational dropout...', end=' ')
+                char_embeddings_shared = SpatialDropout1D(self.config.dropout_rate['output'])(char_embeddings_shared)
 
             # Concatenate word- and char-level embeddings + dropout
             model = Concatenate(axis=-1)([word_embeddings_shared, char_embeddings_shared])
-            # model = TimestepDropout(self.config.dropout_rate['word_embed'])(model)
+            model = Dropout(self.config.dropout_rate['output'])(model)
 
-            # Word-level BiLSTM + dropout. Spatial dropout applies the same
-            # dropout mask to all timesteps which is neccecary to implement
-            # variational dropout (https://arxiv.org/pdf/1512.05287.pdf)
+            # Word-level BiLSTM + dropout
             model = word_BiLSTM_1(model)
-            model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
+            if self.config.variational_dropout:
+                model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
 
             model = word_BiLSTM_2(model)
-            model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
-
-            # Feedforward after word-level BiLSTM + dropout
-            # model = feedforward_af_word_lstm(model)
-            # model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
+            if self.config.variational_dropout:
+                model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
 
             # Feedforward before CRF
-            model = feedforward_bf_crf(model)
+            model = feedforward_map(model)
 
             # CRF output layer
-            crf = CRF(len(ds.tag_type_to_idx))
+            crf = CRF(len(ds.type_to_idx['tag']), name='crf_classifier')
             output_layer = crf(model)
 
-            # Fully specified model
-            self.model.append(Model(inputs=[word_ids, char_ids],
-                                    outputs=[output_layer]))
-            self.crf.append(crf)
+            # Fully specified model.
+            # Instantiate the base model (or "template" model). We recommend doing this with under
+            # a CPU device scope, so that the model's weights are hosted on CPU memory. Otherwise
+            # they may end up hosted on a GPU, which would complicate weight sharing.
+            # https://github.com/keras-team/keras/blob/bf1378f39d02b7d0b53ece5458f9275ac8208046/keras/utils/multi_gpu_utils.py
+            # if self.config.gpus >= 2:
+            with tf.device('/cpu:0'):
+                model = Model(inputs=[word_ids, char_ids], outputs=[output_layer])
+            # Else, allow Keras to decide where to put model weights
+            # else:
+            #    model = Model(inputs=[word_ids, char_ids], outputs=[output_layer])
+            self.model.append(model)
 
-        return self.model, self.crf
+        return self.model
 
     def compile_(self):
-        """Compiles a bidirectional multi-task LSTM-CRF for sequence tagging
-        using Keras."""
-        for model, crf in zip(self.model, self.crf):
-            utils_models.compile_model(model=model,
-                                       loss_function=crf.loss_function,
-                                       optimizer=self.config.optimizer,
-                                       lr=self.config.learning_rate,
-                                       decay=self.config.decay,
-                                       clipnorm=self.config.gradient_normalization,
-                                       verbose=self.config.verbose)
+        """Compiles a bi-directional multi-task LSTM-CRF for sequence tagging using Keras."""
+        for i in range(len(self.model)):
+            # Parallize the model if multiple GPUs are available
+            # https://github.com/keras-team/keras/pull/9226
+            crf_loss_function = self.model[i].layers[-1].loss_function
 
-    def fit_(self, checkpointer, output_dir):
-        """Fits a bidirectional multi-task LSTM-CRF for for sequence tagging
-        using Keras.
+            try:
+                self.model[i] = multi_gpu_model(self.model[i])
+                print('using multiple GPUs...', end=' ')
+            except:
+                print('using single CPU or GPU...', end=' ')
 
-        Args:
-            checkpointer: Keras ModelCheckpoint object which allows for per
-                epoch model checkpointing.
-            output_dir: a list of filepaths to save model output to, one for
-                each model.
-        """
-        # get train/valid indicies for each dataset
-        train_valid_indices = utils_models.get_train_valid_indices(self.ds, self.config.k_folds)
-
-        ## FOLDS
-        for fold in range(self.config.k_folds):
-            # get the train/valid partitioned data for all datasets
-            data_partitions = utils_models.get_data_partitions(self.ds, \
-                train_valid_indices, fold)
-            # create the Keras Callback object for computing/storing metrics
-            metrics_current_fold = utils_models.get_metrics(self.ds, \
-                data_partitions, output_dir, fold)
-
-            ## EPOCHS
-            for epoch in range(self.config.maximum_number_of_epochs):
-                print('[INFO] Fold: {}/{}; Global epoch: {}/{}'.format(fold + 1, \
-                    self.config.k_folds, epoch + 1, self.config.maximum_number_of_epochs))
-
-                ## DATASETS/MODELS
-                # get a random ordering of the dataset/model indices
-                ds_idx = random.sample(range(0, len(self.ds)), len(self.ds))
-                for i in ds_idx:
-                    # mainly for cleanliness
-                    X_word_train = np.array(data_partitions[i][0])
-                    X_word_valid = np.array(data_partitions[i][1])
-                    X_char_train = np.array(data_partitions[i][2])
-                    X_char_valid = np.array(data_partitions[i][3])
-                    y_train = np.array(data_partitions[i][4])
-                    y_valid = np.array(data_partitions[i][5])
-
-                    self.model[i].fit(x=[X_word_train, X_char_train], \
-                        y=[y_train], batch_size=self.config.batch_size, epochs=1, \
-                        callbacks=[checkpointer[i], metrics_current_fold[i]], \
-                        validation_data=([X_word_valid, X_char_valid], [y_valid]), \
-                        verbose=1)
-
-            self.metrics.append(metrics_current_fold)
-
-            # End of a k-fold, so clear the model, specify and compile again.
-            # Do not clear the last model.
-            if fold < self.config.k_folds - 1:
-                self.model = []
-                self.crf = []
-                self.specify_()
-                self.compile_()
+            # need to grab the loss function from models CRF instance
+            model_utils.compile_model(model=self.model[i],
+                                      loss_function=crf_loss_function,
+                                      optimizer=self.config.optimizer,
+                                      lr=self.config.learning_rate,
+                                      decay=self.config.decay,
+                                      clipnorm=self.config.grad_norm)
