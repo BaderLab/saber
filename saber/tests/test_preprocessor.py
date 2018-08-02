@@ -1,7 +1,7 @@
 import pytest
 
-import constants
-from preprocessor import Preprocessor
+from .. import constants
+from ..preprocessor import Preprocessor
 
 @pytest.fixture
 def preprocessor():

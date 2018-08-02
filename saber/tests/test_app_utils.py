@@ -1,16 +1,27 @@
-import utils_app
+"""Any and all unit tests for the app_utils (saber/utils/app_utils.py).
+"""
+import pytest
+from ..utils import app_utils
 
 ENTITIES = {'ANAT': False,
             'CHED': True,
             'DISO': False,
             'LIVB': True,
             'PRGE': True,
-            'TRIG': False
-            }
+            'TRIG': False,
+           }
+
+def test_get_pubmed_xml_errors():
+    """Asserts that call to app_utils.get_pubmed_xml raises a ValueError error when an invalid
+    value for argument 'pmid' is passed."""
+    invalid_pmids = [["test"], "test", 0.0, 0, -1, (42,)]
+
+    for pmid in invalid_pmids:
+        with pytest.raises(ValueError):
+            app_utils.get_pubmed_xml(pmid)
 
 def test_harmonize_entities():
-    """Asserts that utils_web_service.harmonize_entities() returns the expected
-    results."""
+    """Asserts that app_utils.harmonize_entities() returns the expected results."""
     # single bool test
     one_on_test = {'PRGE': True}
     one_on_expected = {'ANAT': False, 'CHED': False, 'DISO': False,
@@ -25,8 +36,8 @@ def test_harmonize_entities():
                         'LIVB': False, 'PRGE': False, 'TRIG': False}
 
     assert one_on_expected == \
-        utils_app.harmonize_entities(ENTITIES, one_on_test)
+        app_utils.harmonize_entities(ENTITIES, one_on_test)
     assert multi_on_expected == \
-        utils_app.harmonize_entities(ENTITIES, multi_on_test)
+        app_utils.harmonize_entities(ENTITIES, multi_on_test)
     assert none_on_expected == \
-        utils_app.harmonize_entities(ENTITIES, none_on_test)
+        app_utils.harmonize_entities(ENTITIES, none_on_test)
