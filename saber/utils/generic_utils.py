@@ -77,8 +77,7 @@ def bin_to_txt(filepath, output_dir=os.getcwd()):
     from gensim.models.keyedvectors import KeyedVectors
 
     # load word vectors provided in C binary format
-    word_vectors = KeyedVectors.load_word2vec_format(filepath, \
-        binary=True)
+    word_vectors = KeyedVectors.load_word2vec_format(filepath, binary=True)
     vocab = word_vectors.vocab
 
     # create a new filepath
