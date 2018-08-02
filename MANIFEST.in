@@ -1,0 +1,11 @@
+# Include the README(s)
+recursive-include *.md
+
+# Include the license file
+include LICENSE.txt
+
+# Include the config file(s)
+recursive-include *.ini
+
+# exclude pretrained_models
+recursive-exclude pretrained_models
