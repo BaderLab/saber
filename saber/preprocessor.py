@@ -1,11 +1,14 @@
+"""Contains the Preprocessor class, which handles low level NLP tasks such as tokenization and
+sentence segmentation.
+"""
 import re
 from collections import Counter
-from itertools import chain
 
 import en_core_web_sm
+import numpy as np
 from keras.preprocessing.sequence import pad_sequences
 
-import constants
+from . import constants
 
 class Preprocessor(object):
     """A class for processing text data."""
@@ -13,30 +16,40 @@ class Preprocessor(object):
         # load Spacy english model (core, small), disable NER pipeline
         self.nlp = en_core_web_sm.load(disable=['ner'])
 
-    def transform(self, text, word2idx, char2idx):
-        """Returns a dictionary of processed text, sentences, offsets, and
-        integer sequences.
+    def transform(self, text, word2idx, char2idx, sterilize=True):
+        """Returns a dictionary collected from processeing `text`, including sentences, offsets,
+        and integer sequences.
+
+        For the given raw text (`text`), returns a dictionary containing the following:
+            - 'text': raw text, with minimal processing
+            - 'sentences': a list of lists, contains the tokens in each sentence
+            - 'offsets': A list of list of tuples containing the start and end indices of every
+                token in 'text'
+            - 'word2idx': 2-D numpy array containing the token index of every token in 'text'.
+                Index is chosen based on the mapping `word2idx`
+            - 'char2idx': 3-D numpy array containing the character index of
+                every character in 'text'. Index is chosen based on the mapping `char2idx`
 
         Args:
             text (str): raw text
             word2idx (dict): mapping from words (keys) to unique integers (values)
             char2idx (dict): mapping from chars (keys) to unique integers (values)
+            sterilize (bool): True if text should be sterilized
 
         Returns:
-            a dictionary containing the processed raw text, sentences, token
-            offsets, etc.
-
+            a dictionary containing the processed raw text, sentences, token offsets, etc.
         """
-        text_ = self.sterilize(text)
+        text = self.sterilize(text) if sterilize else text
+
         # get sentences and token offsets
-        sentences, offsets = self._process_text(text_)
+        sentences, offsets = self._process_text(text)
 
         word_idx_sequence = self.get_type_idx_sequence(sentences, word2idx, type_='word')
         char_idx_sequence = self.get_type_idx_sequence(sentences, char2idx, type_='char')
 
         transformed_text = {
-            'text': text_,
-            'sentences': sentences,
+            'text': text,
+            'sent': sentences,
             'offsets': offsets,
             'word2idx': word_idx_sequence,
             'char2idx': char_idx_sequence
@@ -47,17 +60,16 @@ class Preprocessor(object):
     def _process_text(self, text):
         """Returns sentences and character offsets of tokens in text.
 
-        For the given text, uses Spacy to return a two-tuple of the sentences
-        and character offsets (relative to their position in text) of each token
-        in text.
+        For the given `text`, uses Spacy to return a two-tuple of the sentences and token
+        offsets (relative to their position in `text`) of each token in `text`.
 
         Args:
-            text (str): raw text to process
+            text (str): raw text to process.
 
         Returns:
-            a two-tuple, containing the sentences in text (as a list of lists)
-            and the character offsets for every token in text (relative to
-            their position in text, as a list of lists).
+            two-tuple, containing the sentences in `text` (as a list of lists) and the token
+            offsets for every token in text (relative to their position in `text`, as a list of
+            lists).
 
         Example:
             >>> preprocessor = Preprocessor()
@@ -78,7 +90,6 @@ class Preprocessor(object):
             for token in sent:
                 token_seq.append(token.text)
                 token_offset_seq.append((token.idx, token.idx + len(token.text)))
-            # sentences.append([START] + token_seq + [END])
             sentences.append(token_seq)
             offsets.append(token_offset_seq)
 
@@ -86,25 +97,21 @@ class Preprocessor(object):
 
     @staticmethod
     def type_to_idx(types, initial_mapping=None, offset=0):
-        """Returns a dictionary of element:index pairs for each element in
-        types.
+        """Returns a dictionary of element:index pairs for each element in types.
 
-        Given a list, returns a dictionary of length len(sequence) + offset
-        where the keys are elements of types and the values are unique
-        integers.
+        Given a list `types`, returns a dictionary of length len(types) + offset where the keys are
+        elements of `types` and the values are unique integer ids.
 
         Args:
-            types (list): A list of unique types (word, char, or tag)
-            initial_mapping (dict): An initial mapping of types to integers. If
-                not none, the mapping of types to integers will update this
-                dictionary, with the integer count begginning at
-                len(initial_mapping)
-            offset (int): Used when computing the mapping. An offset a 1 means
-                    we begin computing the mapping at 1, useful if we want to
-                    use 0 as a padding value. Has no effect if initial_mapping
-                    is not None.
+            types (list): A list of unique types (words, characters, or tags)
+            initial_mapping (dict): An initial mapping of types to integers. If not None, the
+                mapping of types to integers will update this dictionary, with the integer count
+                begginning at len(initial_mapping).
+            offset (int): Used when computing the mapping. An offset a 1 means we begin computing
+                the mapping at 1, useful if we want to use 0 as a padding value. Has no effect if
+                initial_mapping is not None.
         Returns:
-            a mapping from elements in the sequence to numbered indices
+            a mapping from elements in the `types` to unique integer ids
 
         Preconditions:
             assumes that all elements in sequence are unique
@@ -117,32 +124,34 @@ class Preprocessor(object):
             mapping = {e: i + len(initial_mapping) for i, e in enumerate(types)}
             mapping.update(initial_mapping)
             return mapping
-        else:
-            # offset accounts for sequence pad
-            return {e: i + offset for i, e in enumerate(types)}
+        # offset accounts for sequence pad
+        return {e: i + offset for i, e in enumerate(types)}
 
     @staticmethod
     def get_type_idx_sequence(seq, type_to_idx, type_='word'):
-        """Returns sequence of indices corresponding to data set sentences.
+        """Maps `seq` to a correspoding sequence of indices using `type_to_idx` map.
 
-        Returns the sequence of indices corresponding to the type order in
-        sentences, where type_ can be "word", "char", or "tag" correpsonding to
-        word, char and tag types of the Dataset instance.
+        Maps `seq`, which contains a sequence of elements (words, characters, or tags), for each
+        sentence in a corpora, to a corresponding sequence where all elements have been mapped to
+        indicies based on the provided `type_to_idx` map. Sentences are either truncated or
+        right-padded to match a length of constants.MAX_SENT_LEN, and words (character sequences)
+        are truncated or right-padded to match a length of constants.MAX_CHAR_LEN.
 
         Args:
-            seq: list of lists where each list represents a sentence for the
-            Dataset instance and each sublist contains ordered (word, tag) pairs
-            type_to_idx:
+            seq (list): list of lists where each list represents a sentence and each inner list
+            contains either words, characters or tags
+            type_to_idx (dict): a mapping from unique elements in `seq` to unique integer ids
+            type_ (str): one of 'word', 'char', 'tag', specifying that `seq` is a sequence of
+                words, characters or tags respectively
 
         Returns:
-            a list, containing a sequence of idx's corresponding to the type
-            order in sentences.
+            `seq`, where all elements have been mapped to unique integer ids based on `type_to_idx`
 
-        Preconditions:
-            assumes that the first column of the data set contains the word
-            types, and the last column contains the tag types.
+        Raises:
+            ValueError, if `type_` is not one of 'word', 'char', 'tag'
         """
-        assert type_ in ['word', 'char', 'tag'], "Argument type must be one 'word', 'char' or 'type'"
+        if type_ not in ['word', 'char', 'tag']:
+            raise ValueError("Argument `type_` must be one 'word', 'char' or 'type'")
 
         # Word type
         if type_ == 'word':
@@ -157,43 +166,39 @@ class Preprocessor(object):
             type_seq = [[[type_to_idx.get(c, type_to_idx[constants.UNK]) for \
                 c in w] for w in s] for s in seq]
 
-            # get the length of the longest character sequence
-            max_len = len(max(list(chain.from_iterable(type_seq)), key=len))
-
             # create a sequence of padded character vectors
             for i, char_seq in enumerate(type_seq):
-                type_seq[i] = pad_sequences(maxlen=max_len,
+                type_seq[i] = pad_sequences(maxlen=constants.MAX_CHAR_LEN,
                                             sequences=char_seq,
                                             padding="post",
                                             truncating='post',
                                             value=constants.PAD_VALUE)
 
         # pad sequences
-        type_seq = pad_sequences(sequences=type_seq,
+        type_seq = pad_sequences(maxlen=constants.MAX_SENT_LEN,
+                                 sequences=type_seq,
                                  padding='post',
                                  truncating='post',
                                  value=constants.PAD_VALUE)
 
-        return type_seq
+        return np.asarray(type_seq)
 
     @staticmethod
     def chunk_entities(seq):
         """Chunks enities in the BIO or BIOES format.
 
-        For a given sequence of entities in the BIO or BIOES format, returns
-        the chunked entities. Note that invalid tag sequences will not be
-        returned as chunks.
+        For a given sequence of entities in the BIO or BIOES format, returns the chunked entities.
+        Note that invalid tag sequences will not be returned as chunks.
 
         Args:
             seq (list): sequence of labels.
 
         Returns:
-            list: list of [chunk_type, chunk_start (inclusive),
-                chunk_end (exclusive)].
+            list: list of [chunk_type, chunk_start (inclusive), chunk_end (exclusive)].
 
         Example:
             >>> seq = ['B-PRGE', 'I-PRGE', 'O', 'B-PRGE']
-            >>> get_entities(seq)
+            >>> chunk_entities(seq)
             [('PRGE', 0, 2), ('PRGE', 3, 4)]
         """
         i = 0
@@ -215,41 +220,51 @@ class Preprocessor(object):
     @staticmethod
     def replace_rare_tokens(sentences, count=constants.NUM_RARE):
         """
-        Replaces rare tokens in sentences with an special unknown token.
+        Replaces rare tokens in sentences with a special unknown token.
+
+        Returns `sentences`, a list of list where each inner list is a sentence represented as a
+        list of strings (tokens), where all tokens appearing less than `count` number of times have
+        been replaced with a special unknown token.
 
         Args:
-            sentences: list of lists where each inner list is a sentence
-                represented as a list of strings (tokens)
+            sentences (list): list of lists where each inner list is a sentence
+                represented as a list of strings (tokens).
+            count (int): threshold for token to be considered rare, tokens appearing `count` times
+                or less are replaced with a special unknown token.
 
         Returns:
-            sentences, where all rare tokens have been replaced by a special
-                unknown token
+            sentences, where all rare tokens have been replaced by a special unknown token
         """
-        c = Counter()
+        token_count = Counter()
 
         # create a token count across all sentences
         for sent in sentences:
-            c.update(sent)
+            token_count.update(sent)
 
         # replace rare words with constants.UNK token
         for i, sent in enumerate(sentences):
             for j, token in enumerate(sent):
-                if c[token] <= count:
+                if token_count[token] <= count:
                     sentences[i][j] = constants.UNK
 
         return sentences
 
     @staticmethod
-    def sterilize(text):
+    def sterilize(text, lower=False):
         """Sterilize input text.
 
-        For given input text, remove proceeding and preeceding spaces, and replace
-        spans of multiple spaces with a single space.
+        For given input `text`, removes proceeding and preeceding spaces, and replaces spans of
+        multiple spaces with a single space. Optionally, lowercases `text`.
 
         Args:
             text (str): text to sterilize
+            lower (bool): True if text should be lower cased
 
         Returns:
-            sterilized message
+            `text`, where proceeding/preeceding spaces have been removed, spans of multiple spaces
+            have been replaced with a single space, and optionally, the text has been lowercased
         """
-        return re.sub('\s+', ' ', text.strip())
+        sterilized_text = re.sub(r'\s+', ' ', text.strip())
+        sterilized_text = sterilized_text.lower() if lower else sterilized_text
+
+        return sterilized_text

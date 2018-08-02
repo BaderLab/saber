@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+"""Contains the SequenceProcessor class, which exposes most of Sabers functionality.
+"""
+import itertools
 import os
 import time
 import pickle
@@ -8,27 +10,29 @@ from itertools import chain
 import numpy as np
 from spacy import displacy
 
-import constants
-import utils_generic
-from dataset import Dataset
-from preprocessor import Preprocessor
-from utils_models import prepare_output_directory
-from utils_models import setup_model_checkpointing
+from . import constants
+from .config import Config
+from .dataset import Dataset
+from .preprocessor import Preprocessor
+from .trainer import Trainer
+from .utils import generic_utils
+from .utils.model_utils import prepare_output_directory
+from .utils.model_utils import setup_checkpoint_callback
+from .utils.model_utils import setup_tensorboard_callback
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-print('Saber version: {0}'.format('0.1-dev'))
-
-# TODO (johngiorgi): READ: https://jeffknupp.com/blog/2014/06/18/improve-your-python-python-classes-and-object-oriented-programming/
-# TODO (johngiorgi): make model checkpointing a config param
-# TODO (johngiorgi): make a debug mode that doesn't load token embeddings and
-# loads only some lines of dataset
-# TODO (johngiorgi): use proper error handeling for load_ds / load_token methods
+print('Saber version: {0}'.format(constants.__version__))
 
 class SequenceProcessor(object):
-    """A class for handeling the loading, saving, training, and specifying of
-    sequence processing models."""
+    """A class for handeling the loading, saving, training, and specifying of sequence processing
+    models.
 
-    def __init__(self, config):
+    Args:
+        config (Config): A Config object which contains a set of harmonzied arguments provided in
+            a .ini file and, optionally, from the command line. If not provided, a new instance of
+            Config is used.
+    """
+    def __init__(self, config=Config()):
         # hyperparameters
         self.config = config
 
@@ -43,44 +47,57 @@ class SequenceProcessor(object):
         # preprocessor
         self.preprocessor = Preprocessor()
 
-        if self.config.verbose: pprint(self.config)
+        if self.config.verbose:
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
+            pprint(self.config.args)
 
-    def annotate(self, text, model_idx=0, jupyter=False, *args, **kwargs):
-        """Performs prediction for a given model and returns results."""
+    def annotate(self, text, model_idx=0, jupyter=False):
+        """Performs prediction for a given model and returns results.
+
+        For the model at self.model.model[model_idx], coordinates a prediction step on `text`.
+        Returns a dictionary containing the cleaned `text` (`text`), and any annotations made by the
+        model (`ents`). This dictionary can easily be converted to a json. Optionally,
+        renders and HTMl visilization of the annotations made by the model, for use in a jupyter
+        notebook.
+
+        text (str): raw text to annotate
+        model_idx (int): index of model to use for prediction, defaults to 0
+        jupyter (bool): if True, annotations made by the model are rendered in HTML, which can be
+            visualized in a jupter notebook.
+
+        Returns:
+            dictionary containing the processed input text ('text') and any annotations made by the
+            model ('ents').
+
+        Raises:
+            ValueError if `text` is invalid (not a string, or empty/falsey).
+        """
         if not isinstance(text, str) or not text:
             raise ValueError("Argument 'text' must be a valid, non-empty string!")
 
-        ds_ = self.ds[model_idx]
-        model_ = self.model.model[model_idx]
+        # model and its corresponding dataset
+        ds = self.ds[model_idx]
+        model = self.model.model[model_idx]
 
-        # get reverse mapping of indices to tags
-        idx2tag = ds_.idx_to_tag_type
-        # process raw input text
+        # process raw input text, collect input to ML model
         transformed_text = self.transform(text, model_idx)
+        model_input = [transformed_text['word2idx'], transformed_text['char2idx']]
 
-        # perform prediction, convert to tag sequence
-        y_pred = model_.predict([transformed_text['word2idx'],
-                                 transformed_text['char2idx']],
-                                 batch_size=256).argmax(-1)
-        idx_pred_seq = np.asarray(y_pred).ravel()
-        # TODO: clean this up, need to drop pads.
-        tag_pred_seq = [idx2tag[idx] for idx in idx_pred_seq if
-                        idx2tag[idx] != constants.PAD]
-        # chunk the predicted entities
-        chunk_pred_seq = self.preprocessor.chunk_entities(tag_pred_seq)
+        # perform prediction, convert from one-hot to predicted indices, flatten results
+        y_pred = model.predict(model_input, batch_size=constants.PRED_BATCH_SIZE)
+        y_pred = np.asarray(y_pred.argmax(-1)).ravel()
+        # convert predictions to tags and chunk
+        pred_tag_seq = [ds.idx_to_tag[idx] for idx in y_pred if ds.idx_to_tag[idx] != constants.PAD]
+        pred_chunk_seq = self.preprocessor.chunk_entities(pred_tag_seq)
         # flatten the token offsets
         offsets = list(chain.from_iterable(transformed_text['offsets']))
 
-        # accumulator for predicted entities
+        # accumulate for predicted entities
         ents = []
-
-        for chunk in chunk_pred_seq:
-            # get token indicies of the labeled chunk
-            chunk_start = chunk[1]
-            chunk_end = chunk[-1] - 1
-            # character indicies of the labeled chunk
-            start, end = offsets[chunk_start][0], offsets[chunk_end][-1]
+        for chunk in pred_chunk_seq:
             # create the entity
+            # chunks look like (label, start, end)
+            start, end = offsets[chunk[1]][0], offsets[chunk[-1] - 1][-1]
             ents.append({'start': start,
                          'end': end,
                          'text': transformed_text['text'][start:end],
@@ -93,8 +110,8 @@ class SequenceProcessor(object):
         }
 
         if jupyter:
-            displacy.render(annotation, jupyter=jupyter, style='ent',
-                            manual=True, options=constants.OPTIONS)
+            displacy.render(annotation, jupyter=jupyter, style='ent', manual=True,
+                            options=constants.OPTIONS)
 
         return annotation
 
@@ -105,7 +122,7 @@ class SequenceProcessor(object):
             - 'text': raw text, with minimal processing
             - 'sentences': a list of lists, contains the tokens in each sentence
             - 'offsets': A list of list of tuples containing the start and end
-                indices of every token in 'text'.
+                indices of every token in 'text'
             - 'word2idx': 2-D numpy array containing the token index of every
                 token in 'text'. Index is chosen based on the mapping of
                 self.ds[model]
@@ -118,40 +135,34 @@ class SequenceProcessor(object):
             ds_idx (int): which ds (in list self.ds) to use for the mapping of
                 token and character indices.
         """
-        ds_ = self.ds[ds_idx]
+        ds = self.ds[ds_idx]
+        return self.preprocessor.transform(text, ds.type_to_idx['word'], ds.type_to_idx['char'])
 
-        transformed_text = self.preprocessor.transform(text, \
-            ds_.word_type_to_idx, ds_.char_type_to_idx)
-
-        return transformed_text
-
-
-    def evaluate(self, X, y):
-        score = self.model.evaluate(X, y, batch_size=1)
-        return score
-
-    def save(self, filepath, model=0):
+    def save(self, filepath, compress=True, model=0):
         """Coordinates the saving of Saber models.
 
         Saves the necessary files for model persistance to filepath.
 
         Args:
             filepath (str): directory path to save model folder to
+            compress (bool): True if model should be saved as tarball
             model (int): which model in self.model.model to save, defaults to 0
+
+        Returns:
+            True if model was saved without error.
         """
-        # create the pretrained model folder
-        utils_generic.make_dir(os.path.join(filepath))
+        # create the pretrained model folder (if it does not exist)
+        generic_utils.make_dir(os.path.join(filepath))
 
         # create a dictionary containg everything we need to save the model
-        model_attributes = {}
-
-        model_attributes['config'] = self.config
-        model_attributes['token_embeddings'] = self.token_embedding_matrix
-        # TODO: I don't really want to save all the datasets. But I
-        # need the tag_type_to_idx objects.
+        model_attributes = {'config': self.config,
+                            'embeddings':self.token_embedding_matrix,
+                           }
+        # TODO: Don't really want to save all the datasets. But I need the tag_type_to_idx objects.
         model_attributes['ds'] = self.ds
 
         # create filepaths
+        # TODO: change these to look for any *.hdf5 and *.pickle files
         weights_filepath = os.path.join(filepath, 'model_weights.hdf5')
         attributes_filepath = os.path.join(filepath, 'model_attributes.pickle')
 
@@ -159,6 +170,11 @@ class SequenceProcessor(object):
         self.model.model[model].save_weights(weights_filepath)
         # save attributes
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
+
+        if compress:
+            generic_utils.compress_model(filepath)
+
+        return True
 
     def load(self, filepath):
         """Coordinates the saving of Saber models.
@@ -169,37 +185,43 @@ class SequenceProcessor(object):
             filepath (str): directory path to saved pretrained folder
         """
         #
-        utils_generic.decompress_model(filepath)
+        generic_utils.decompress_model(filepath)
         # create filepaths
         weights_filepath = os.path.join(filepath, 'model_weights.hdf5')
         attributes_filepath = os.path.join(filepath, 'model_attributes.pickle')
 
         # load attributes
-        model_attributes = pickle.load(open(attributes_filepath, "rb" ))
-        # TODO: come up with a much better solution than this.
-        self.config.token_embedding_dimension = model_attributes['config'].token_embedding_dimension
-        self.config.character_embedding_dimension = model_attributes['config'].character_embedding_dimension
+        model_attributes = pickle.load(open(attributes_filepath, "rb"))
+        # these attributes must be carrie over from pre-trained model
+        self.config.word_embed_dim = model_attributes['config'].word_embed_dim
+        self.config.char_embed_dim = model_attributes['config'].char_embed_dim
 
         self.ds = model_attributes['ds']
-        self.token_embedding_matrix = model_attributes['token_embeddings']
+        self.token_embedding_matrix = model_attributes['embeddings']
 
-        # create model based on saved models attributes
-        self.create_model()
+        # specify model based on saved models attributes
+        self.create_model(compile=False)
 
-        # load weights
-        self.model.model[0].load_weights(weights_filepath)
+        # load weights, compile model
+        # by_name loads only those layers with the same name, allows us to load a model even
+        # if the architecture has changed slightly
+        self.model.model[0].load_weights(weights_filepath, by_name=True)
+        self.model.compile_()
+        # TEMP: It is likely than an update will render this uneccesary
         # https://github.com/keras-team/keras/issues/6124
         self.model.model[0]._make_predict_function()
 
+        return self
+
     def load_dataset(self):
         """Coordinates the loading of a dataset."""
-        assert len(self.config.dataset_folder) > 0, '''You must provide at
+        assert self.config.dataset_folder, '''You must provide at
         least one dataset via the dataset_folder parameter'''
 
         start_time = time.time()
-        # Datasets may be 'single' or 'compound' (more than one), loading
-        # differs slightly. Consider a dataset single if there is only one
-        # filepath in self.config.dataset_folder'] and compound otherwise.
+        # Datasets may be 'single' or 'compound' (more than one), loading differs slightly. Consider
+        # a dataset single if there is only one filepath in self.config.dataset_folder'] and
+        # compound otherwise.
         if len(self.config.dataset_folder) == 1:
             print('[INFO] Loading (single) dataset... ', end='', flush=True)
             self.ds = self._load_single_dataset()
@@ -210,11 +232,12 @@ class SequenceProcessor(object):
         elapsed_time = time.time() - start_time
         print('Done ({0:.2f} seconds).'.format(elapsed_time))
 
+        return self
+
     def _load_single_dataset(self):
         """Loads a single dataset.
 
-        Creates and loads a single dataset object for a dataset at
-        self.dataset_folder[0].
+        Creates and loads a single dataset object for a dataset at self.config.dataset_folder[0].
 
         Returns:
             a list containing a single dataset object.
@@ -228,136 +251,168 @@ class SequenceProcessor(object):
     def _load_compound_dataset(self):
         """Loads a compound dataset.
 
-        Creates and loads a 'compound' dataset. Compound datasets are specified
-        by multiple individual datasets, and share multiple attributes
-        (such as word/char type to index mappings). Loads such a dataset for
-        each dataset at self.dataset_folder[0].
+        Creates and loads a 'compound' dataset. Compound datasets are specified by multiple
+        individual datasets, and share multiple attributes (such as word/char type to index
+        mappings). Loads such a dataset for each dataset at self.dataset_folder[0].
 
         Returns:
             A list containing multiple compound dataset objects.
         """
         # accumulate datasets
-        compound_ds = [Dataset(filepath=ds, \
-            replace_rare_tokens=self.config.replace_rare_tokens) for ds in
-            self.config.dataset_folder]
+        compound_ds = [Dataset(filepath=ds, replace_rare_tokens=self.config.replace_rare_tokens)
+                       for ds in self.config.dataset_folder]
 
         for ds in compound_ds:
             ds.load_data_and_labels()
             ds.get_types()
 
-         # get combined set of word types from all datasets
+        # get combined set of word and char types from all datasets
         combined_types = {'word': [], 'char': []}
-        for ds in compound_ds:
-            combined_types['word'].extend(ds.word_types)
-            combined_types['char'].extend(ds.char_types)
+        word_types = [ds.types['word'] for ds in compound_ds]
+        char_types = [ds.types['char'] for ds in compound_ds]
+        combined_types['word'] = list(set(list(itertools.chain.from_iterable(word_types))))
+        combined_types['char'] = list(set(list(itertools.chain.from_iterable(char_types))))
 
         # compute word to index mappings that will be shared across datasets
         type_to_idx = {'word': {}, 'char': {}}
-        for type_ in type_to_idx:
-            combined_types[type_] = list(set(combined_types[type_]))
+        type_to_idx['word'] = Preprocessor.type_to_idx(combined_types['word'], \
+            initial_mapping=constants.INITIAL_MAPPING_WORDS)
+        type_to_idx['char'] = Preprocessor.type_to_idx(combined_types['char'], \
+            initial_mapping=constants.INITIAL_MAPPING_WORDS)
 
-            type_to_idx[type_] = Preprocessor.type_to_idx(combined_types[type_], \
-                initial_mapping=constants.initial_mapping_words)
-
-        # load all the datasets
+        # finally, load all the datasets, providing pre-populated type_to_idx mappings
         for ds in compound_ds:
             ds.load_dataset(type_to_idx)
 
         return compound_ds
 
     def load_embeddings(self):
-        """Coordinates the loading of pre-trained token embeddings."""
-        assert self.ds, 'You must load a dataset before loading token embeddings'
-        assert self.config.token_pretrained_embedding_filepath is not None, 'Token embedding filepath must be provided in the config file or at the command line'
+        """Coordinates the loading of pre-trained token embeddings.
+
+        Raises:
+            MissingStepException: if no dataset has been loaded.
+            ValueError: If 'self.config.pretrained_embeddings' is None.
+        """
+        if not self.ds:
+            raise MissingStepException('You must load a dataset before loading word embeddings')
+        if self.config.pretrained_embeddings is None:
+            raise ValueError(('Word embedding filepath must be provided in the config file or at ',
+                              'the command line'))
 
         self._load_token_embeddings()
 
-    def create_model(self):
-        """Specifies and compiles chosen model (self.config.model_name)."""
-        assert self.config.model_name in ['MT-LSTM-CRF'], 'Model name is not valid.'
+        return self
+
+    def create_model(self, compile_model=True):
+        """Specifies and compiles chosen model (self.config.model_name).
+
+        For a chosen model (provided at the command line or in the configuration file and saved as
+        `self.config.model_name`), load this models class class. Then 'specify' and 'compile'
+        the Keras model(s) it contains.
+
+        Raises:
+            ValueError if model name at `self.config.model_name` is not valid
+        """
+        if self.config.model_name not in ['mt-lstm-crf']:
+            raise ValueError('Model name is not valid. Check the argument value for `model_name`')
 
         start_time = time.time()
         # setup the chosen model
-        if self.config.model_name == 'MT-LSTM-CRF':
-            print('[INFO] Building the multi-task BiLSTM-CRF model... ', end='',
-                  flush=True)
-            from models.multi_task_lstm_crf import MultiTaskLSTMCRF
-            model_ = MultiTaskLSTMCRF(config=self.config,
-                                      ds=self.ds,
-                                      token_embedding_matrix=self.token_embedding_matrix)
+        if self.config.model_name == 'mt-lstm-crf':
+            print('[INFO] Building the multi-task BiLSTM-CRF model...', end='', flush=True)
+            from .models.multi_task_lstm_crf import MultiTaskLSTMCRF
+            model = MultiTaskLSTMCRF(config=self.config, ds=self.ds,
+                                     token_embedding_matrix=self.token_embedding_matrix)
 
         # specify and compile the chosen model
-        model_.specify_()
-        model_.compile_()
+        model.specify_()
+        if compile_model:
+            model.compile_()
+
         # update this objects model attribute with instance of model class
-        self.model = model_
+        self.model = model
 
         elapsed_time = time.time() - start_time
         print('Done ({0:.2f} seconds).'.format(elapsed_time))
 
+        # print model summaries if verbose argument was passed
+        if self.config.verbose:
+            for model in self.model.model:
+                model.summary()
+
+        return self
+
     def fit(self):
         """Fit the specified model.
 
-        For the given model (self.model), sets up per epoch checkpointing
-        and fits the model.
+        For the given model(s) (self.model), sets up per epoch checkpointing and fits the model.
 
         Returns:
-            train_hist, the history of the model training as a pandas
-            dataframe.
+            a list, containing one or more model instances (subclass of
+            BaseModel) with trained Keras models.
         """
-        # setup model checkpointing
+        # setup callbacks
+        callbacks = {'checkpoint': None, 'tensorboard': None}
         train_session_dir = prepare_output_directory(self.config.dataset_folder,
                                                      self.config.output_folder,
-                                                     self.config.config_filepath)
-        checkpointer = setup_model_checkpointing(train_session_dir)
+                                                     self.config.filepath)
+        # model checkpointing
+        callbacks['checkpoint'] = setup_checkpoint_callback(train_session_dir)
+        # tensorboard
+        if self.config.tensorboard:
+            callbacks['tensorboard'] = setup_tensorboard_callback(train_session_dir)
+
+        trainer = Trainer(self.config, self.ds, self.model)
+        trainer.train(callbacks, train_session_dir)
+
+        return self
 
         # fit
         # train_history = self.model.fit_(checkpointer=checkpointer)
         # don't get history for now
-        self.model.fit_(checkpointer, train_session_dir)
+        # self.model.fit_(checkpointer, train_session_dir)
         # train_history = pd.DataFrame(train_history.history)
         # return train_history
 
     def _load_token_embeddings(self):
         """Coordinates the loading of pre-trained token embeddings.
 
-        Coordinates the loading of pre-trained token embeddings by reading in
-        the file containing the token embeddings and created an embedding matrix
-        whos ith row corresponds to the token embedding for the ith word in the
-        models word to idx mapping.
+        Coordinates the loading of pre-trained token embeddings by reading in the file containing
+        the token embeddings and created an embedding matrix whos ith row corresponds to the token
+        embedding for the ith word in the models word to idx mapping.
         """
         start_time = time.time()
         print('[INFO] Loading embeddings... ', end='', flush=True)
 
         # prepare the embedding indicies
-        embedding_index = self._prepare_token_embedding_layer()
-        embedding_dimension = len(list(embedding_index.values())[0])
+        embedding_idx = self._prepare_token_embedding_layer()
+        embedding_dim = len(list(embedding_idx.values())[0])
         # create the embedding matrix, update attribute
-        embedding_matrix = self._prepare_token_embedding_matrix(embedding_index, embedding_dimension)
+        embedding_matrix = self._prepare_token_embedding_matrix(embedding_idx, embedding_dim)
         self.token_embedding_matrix = embedding_matrix
 
         elapsed_time = time.time() - start_time
         print('Done ({0:.2f} seconds)'.format(elapsed_time))
         print('{s}Found {t} word vectors of dimension {d}'.format(
             s=' ' * 7,
-            t=len(embedding_index),
-            d=embedding_dimension))
+            t=len(embedding_idx),
+            d=embedding_dim))
 
     def _prepare_token_embedding_layer(self):
         """Creates an embedding index using pretrained token embeddings.
 
-        For the models given pretrained token embeddings, creates and returns a
-        dictionary mapping words to known embeddings.
+        For the models given pretrained token embeddings, creates and returns a dictionary mapping
+        words to known embeddings.
 
         Returns:
-            embedding_index (dict): mapping of words to pre-trained token
+            embedding_idx (dict): mapping of words to pre-trained token
                 embeddings
         """
         # acc
-        embedding_index = {}
+        embedding_idx = {}
 
         # open pre-trained token embedding file for reading
-        with open(self.config.token_pretrained_embedding_filepath, 'r') as pte:
+        with open(self.config.pretrained_embeddings, 'r') as pte:
             for i, line in enumerate(pte):
                 # split line, get word and its embedding
                 values = line.split()
@@ -365,43 +420,44 @@ class SequenceProcessor(object):
                 coefs = np.asarray(values[1:], dtype='float32')
 
                 # update our embedding index
-                embedding_index[word] = coefs
+                embedding_idx[word] = coefs
 
                 # if debug, load a small, arbitrary number of word embeddings
                 if i >= 10000 and self.config.debug:
                     break
 
-        return embedding_index
+        return embedding_idx
 
-    def _prepare_token_embedding_matrix(self,
-                                        embedding_index,
-                                        embedding_size):
+    def _prepare_token_embedding_matrix(self, embedding_idx, embedding_dim):
         """Creates an embedding matrix using pretrained token embeddings.
 
-        For the models word to index mappings, and word to pre-trained token
-        embeddings, creates a matrix which maps all words in the models dataset
-        to a pre-trained token embedding. If the token embedding does not exist
-        in the pre-trained token embeddings file, the word will be mapped to
-        an embedding of all zeros.
+        For the models word to index mappings, and word to pre-trained token embeddings, creates a
+        matrix which maps all words in the models dataset to a pre-trained token embedding. If the
+        token embedding does not exist in the pre-trained token embeddings file, the word will be
+        mapped to an embedding of all zeros.
+
+        Args:
+            embedding_idx (dict): dictionary mapping words to their dense embeddings
+            embedding_size (int): dimension of dense embeddings
 
         Returns:
-            token_embedding_matrix: a matrix whos ith row corresponds to the
-            token embedding for the ith word in the models word to idx mapping.
+            matrix whos ith row corresponds to the word embedding for the ith word in the models
+            word to idx mapping.
         """
         # initialize the embeddings matrix
-        token_embedding_matrix = np.zeros(
-            (len(self.ds[0].word_type_to_idx),
-            embedding_size)
-        )
+        word_types = len(self.ds[0].type_to_idx['word'])
+        token_embedding_matrix = np.zeros((word_types, embedding_dim))
 
         # lookup embeddings for every word in the dataset
-        for word, i in self.ds[0].word_type_to_idx.items():
-            token_embedding = embedding_index.get(word)
+        for word, i in self.ds[0].type_to_idx['word'].items():
+            token_embedding = embedding_idx.get(word)
             if token_embedding is not None:
                 # words not found in embedding index will be all-zeros.
                 token_embedding_matrix[i] = token_embedding
 
         return token_embedding_matrix
 
-    def __getattr__(self, name):
-        return getattr(self.model, name)
+# https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
+class MissingStepException(Exception):
+    """Execption subclass for signalling to user that some required previous step was missed."""
+    pass
