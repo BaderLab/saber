@@ -6,6 +6,7 @@ from time import strftime
 
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint
+from keras.callbacks import TensorBoard
 from sklearn.model_selection import KFold
 
 from ..metrics import Metrics
@@ -13,7 +14,7 @@ from .generic_utils import make_dir
 
 # TODO (johngiorgi) add verbosity parameter for printing model summary
 
-def compile_model(model, loss_function, optimizer, lr=0.01, decay=0.0, clipnorm=None):
+def compile_model(model, loss_function, optimizer, lr=0.01, decay=0.0, clipnorm=0.0):
     """Compiles a model specified with Keras.
 
     See https://keras.io/optimizers/ for more info on each optmizer.
@@ -25,7 +26,6 @@ def compile_model(model, loss_function, optimizer, lr=0.01, decay=0.0, clipnorm=
         lr (float): learning rate to use during training
         decay (float): per epoch decay rate
         clipnorm (float): gradient normalization threshold
-        verbose (bool): if True, prints model summary after compilation
     """
     # The parameters of these optimizers can be freely tuned.
     if optimizer == 'sgd':
@@ -114,7 +114,7 @@ def prepare_output_directory(dataset_folder, output_folder, config_filepath=None
 
     return train_sess_output_dirnames
 
-def setup_model_checkpointing(output_dir):
+def setup_checkpoint_callback(output_dir):
     """Sets up per epoch model checkpointing.
 
     Sets up model checkpointing by creating a Keras CallBack for each
@@ -124,8 +124,7 @@ def setup_model_checkpointing(output_dir):
         output_dir (lst): a list of output directories, one for each dataset
 
     Returns:
-        checkpointer: a Keras CallBack object for per epoch model
-                      checkpointing.
+        checkpointer: a Keras CallBack object for per epoch model checkpointing.
     """
     # acc
     checkpointers = []
@@ -140,6 +139,30 @@ def setup_model_checkpointing(output_dir):
                             save_weights_only=True))
 
     return checkpointers
+
+def setup_tensorboard_callback(output_dir):
+    """Setup logs for use with TensorBoard.
+
+    This callback writes a log for TensorBoard, which allows you to visualize dynamic graphs of
+    your training and test metrics, as well as activation histograms for the different layers in
+    your model. Logs are saved as `tensorboard_logs` at the top level of each directory in
+    `output_dir`.
+
+    Args:
+        output_dir (lst): a list of output directories, one for each dataset
+
+    Returns:
+        a list of Keras CallBack object for logging TensorBoard visulizations.
+
+    Example:
+        >>> tensorboard --logdir=/path_to_tensorboard_logs
+    """
+    tensorboards = []
+    for dir_ in output_dir:
+        tensorboard_dir = os.path.join(dir_, 'tensorboard_logs')
+        tensorboards.append(TensorBoard(log_dir=tensorboard_dir))
+
+    return tensorboards
 
 def precision_recall_f1_support(true_positives, false_positives, false_negatives):
     """Returns the precision, recall, F1 and support from TP, FP and FN counts.
@@ -156,34 +179,30 @@ def precision_recall_f1_support(true_positives, false_positives, false_negatives
     Returns:
         four-tuple containing (precision, recall, f1, support)
     """
-    precision = true_positives / (true_positives + false_positives) \
-        if true_positives > 0 else 0.
-    recall = true_positives / (true_positives + false_negatives) \
-        if true_positives > 0 else 0.
-    f1 = 2 * precision * recall / (precision + recall) \
-        if (precision + recall) > 0 else 0.
+    precision = true_positives / (true_positives + false_positives) if true_positives > 0 else 0.
+    recall = true_positives / (true_positives + false_negatives) if true_positives > 0 else 0.
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.
     support = true_positives + false_negatives
 
     return precision, recall, f1, support
 
 def get_train_valid_indices(training_data, k_folds):
-    """Get train and valid indicies for all k-folds for all datasets.
+    """Get `k_folds` number of sets of train/valid indices for all datasets in `training_data`.
 
-    For all datatsets ds, gets k_folds number of train and valid indicies.
-    Returns a list of list of two-tuples, where the outer list is of length
-    len(ds) and the inner list is of length k_folds and contains two-tuples
-    corresponding to train indicies and valid indicies respectively. The train
-    indicies for the ith dataset and jth fold would be
-    compound_train_valid_indices[i][j][0].
+    For all datatsets in `training_data`, gets `k_folds` number of train and valid indices. Returns
+    a list of list of two-tuples, where the outer list is of length len(training_data) and the inner
+    list is of length `k_folds` and contains two-tuples corresponding to train and valid indicies
+    respectively. For example, the train indicies for the ith dataset and jth fold would be
+    train_valid_indices[i][j][0].
 
     Args:
-        datasets (list): a list of Dataset objects
-        k_folds (int): number of k folds to be preformed in cross-validation
+        training_data (dict): a list containing i dictionaries, one for each datasets, which
+            in turn contain the keys 'X_train', 'X_valid', 'y_train', 'y_valid'.
+        k_folds (int): number of folds to compute indices for
 
     Returns:
-        a list of list of two-tuples, where index [i][j] is a tuple containing
-        the train and valid indicies (in that order) for the ith dataset and jth
-        k-fold.
+        a list of list of two-tuples, where index [i][j] is a tuple containing the train and valid
+        indicies (in that order) for the ith dataset and jth k-fold.
     """
     # global acc
     train_valid_indices = []
@@ -216,7 +235,7 @@ def get_data_partitions(training_data, train_valid_indices, fold):
 
 
     Returns:
-        six-tuple containing train and valid data for all datasets.
+        a list of six-tuples containing train and valid data for all datasets.
     """
     # TODO: this seems like a sub-par solution
     # acc, p = partition, s = split

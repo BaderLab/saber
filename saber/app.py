@@ -1,19 +1,13 @@
-import utils_app
-
+"""Simple web service which exposes Saber's functionality via a RESTful API.
+"""
+#!/usr/bin/env python3
 from flask import request
 from flask import jsonify
 from flask import Flask
 app = Flask(__name__)
 
-ENTITIES = {'ANAT': False,
-            'CHED': False,
-            'DISO': False,
-            'LIVB': False,
-            'PRGE': True,
-            'TRIG': False
-            }
-
-MODELS = utils_app.load_models(ENTITIES)
+from .utils import app_utils
+from .config import Config
 
 @app.route('/annotate/text', methods=['POST'])
 def annotate_text():
@@ -32,7 +26,7 @@ def annotate_text():
     # decide which entities to annotate
     ents = ENTITIES
     if requested_ents is not None:
-        ents = utils_app.harmonize_entities(ents, requested_ents)
+        ents = app_utils.harmonize_entities(ents, requested_ents)
 
     annotation = predict(text, ents)
 
@@ -54,10 +48,10 @@ def annotate_pmid():
     # decide which entities to annotate
     ents = ENTITIES
     if requested_ents is not None:
-        ents = utils_app.harmonize_entities(ents, requested_ents)
+        ents = app_utils.harmonize_entities(ents, requested_ents)
 
     # use Entrez Utilities Web Service API to get the abtract text
-    _, abstract = utils_app.get_pubmed_text(pmid)
+    _, abstract = app_utils.get_pubmed_text(pmid)
 
     annotation = predict(abstract, ents)
 
@@ -78,7 +72,7 @@ def predict(text, ents):
 
     for k, v in ents.items():
         if v:
-            annotations.append(MODELS[k].predict(text))
+            annotations.append(MODELS[k].annotate(text))
 
     if len(annotations) == 1:
         final_annotation = annotations[0]
@@ -94,4 +88,9 @@ def predict(text, ents):
     return final_annotation
 
 if __name__ == '__main__':
+    # Load the pre-trained models
+    ENTITIES = {'ANAT': False, 'CHED': False, 'DISO': False, 'LIVB': False,
+                'PRGE': True, 'TRIG': False}
+    MODELS = app_utils.load_models(ENTITIES)
+
     app.run(host='0.0.0.0')
