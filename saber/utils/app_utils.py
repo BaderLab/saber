@@ -1,68 +1,77 @@
 """A collection of web-service helper/utility functions.
 """
-from __future__ import absolute_import
 import os.path
+import traceback
 
 import xml.etree.ElementTree as ET
+from urllib.error import HTTPError
 from urllib.request import urlopen
 
-from ..config import Config
 from .. import constants
-from .generic_utils import decompress_model
 from ..config import Config
+from .generic_utils import decompress_model
 from ..sequence_processor import SequenceProcessor
 
+# TODO: Need better error handeling here
+
 def get_pubmed_xml(pmid):
-    """Uses the Entrez Utilities Web Service API to fetch XML representation of
-    pubmed document.
+    """Uses the Entrez Utilities Web Service API to fetch XML representation of pubmed document.
 
     Args:
         pmid (int): the PubMed ID of the abstract to fetch
 
     Returns:
         response from Entrez Utilities Web Service API
+
+    Raises:
+        ValueError if 'pmid' is not an integer
+        ValueError if 'pmid' has value less than 1
+        AssertionError if the requested PubMed ID, 'pmid' and the return PubMedID do not match.
     """
-    api_endpoint = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?retmode=xml&db=pubmed&id='
-    response = urlopen(api_endpoint + str(pmid)).read()
+    if not isinstance(pmid, int):
+        pmid_type = type(pmid)
+        raise ValueError("Argument 'pmid' must be of type {}, not {}.".format(int, pmid_type))
+    if pmid < 1:
+        raise ValueError("Argument 'pmid' must have a value of 1 or greater. Got {}".format(pmid))
 
     try:
+        request = '{}{}'.format(constants.EUTILS_API_ENDPOINT, pmid)
+        response = urlopen(request).read()
+    except HTTPError:
+        traceback.print_exc()
+        print("HTTP Error 400: Bad Request was returned. Check that the supplied value for 'pmid' "
+              "({}) is a valid PubMed ID.".format(pmid))
+    else:
         root = get_root(response)
         response_pmid = root.find('PubmedArticle').find('MedlineCitation').find('PMID').text
         # ensure that requested and returned pubmed ids are the same
         if not int(response_pmid) == pmid:
-            raise AssertionError('''Requested PubMed ID and PubMed ID returned
-            by Entrez Utilities Web Service API do not match.''')
-        return response
-    except:
-        return None
+            raise AssertionError(('Requested PubMed ID and PubMed ID returned by Entrez Utilities '
+                                  'Web Service API do not match.'))
+
+    return response
 
 def get_pubmed_text(pmid):
-    """Returns the abstract title for a given pubmed id using the the Entrez
-    Utilities Web Service API.
+    """Returns the abstract title and text for a given pubmed id using the the Entrez Utilities Web
+    Service API.
 
     Args:
         pmid (int): the PubMed ID of the abstract to fetch
 
     Returns:
-        two-tuple containing the abstract title and text for PubMed ID pmid
+        two-tuple containing the abstract title and text for PubMed ID 'pmid'
     """
     xml = get_pubmed_xml(pmid)
     root = get_root(xml)
     # recurse down the xml tree to abstractText
-    try:
-        abstract_title = root.find('PubmedArticle').find('MedlineCitation').find('Article').find('ArticleTitle').text
-        abstract_text = root.find('PubmedArticle').find('MedlineCitation').find('Article').find('Abstract').find('AbstractText').text
-        return (abstract_title, abstract_text)
-    except:
-        return None
+    abstract_title = root.find('PubmedArticle').find('MedlineCitation').find('Article').find('ArticleTitle').text
+    abstract_text = root.find('PubmedArticle').find('MedlineCitation').find('Article').find('Abstract').find('AbstractText').text
+
+    return abstract_title, abstract_text
 
 def get_root(xml):
-    """Return root of given XML string. Returns None if string could not be
-    parsed."""
-    try:
-        return ET.fromstring(xml)
-    except:
-        return None
+    """Return root of given XML string."""
+    return ET.fromstring(xml)
 
 def load_models(ents):
     """Loads a model for each corresponding entity in ents.
