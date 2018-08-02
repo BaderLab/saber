@@ -41,6 +41,8 @@
 
 ## Installation
 
+**Disclaimer: Currently a pre-alpha, work in progress!**
+
 To clone and run this application, you will need `python>=3.6`. If not already installed, `python>=3.6` can be installed via:
 
  - the [official installer](https://www.python.org/downloads/)
