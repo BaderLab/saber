@@ -3,7 +3,7 @@
 import os
 import errno
 import codecs
-import tarfile
+import shutil
 from setuptools.archive_util import unpack_archive
 
 # https://stackoverflow.com/questions/273192/how-can-i-create-a-directory-if-it-does-not-exist#273227
@@ -36,28 +36,32 @@ def decompress_model(filepath):
         unpack_archive(filepath + '.tar.bz2', extract_dir=head)
         print('Done.')
 
-def compress_model(dir_name):
+def compress_model(dir_path):
     """Compresses a given directory using bz2 compression.
 
     Args:
-        dir_name (str): path to directory to compress.
+        dir_path (str): path to directory to compress.
 
     Returns:
         True if compression completed without error.
 
     Raises:
-        ValueError: if no file or directory at 'dir_name' exists or if 'dir_name'.tar.bz2 already
-            exists.
+        ValueError: if no directory at 'dir_path' exists or if 'dir_path'.tar.bz2 already exists.
     """
-    output_filepath = '{}.tar.bz2'.format(dir_name)
+    # clean/normalize dir_path
+    dir_path = os.path.abspath(os.path.normcase(os.path.normpath(dir_path)))
 
+    output_filepath = '{}.tar.bz2'.format(dir_path)
     if os.path.exists(output_filepath):
-        raise ValueError("{} already exists".format(output_filepath))
-    if not os.path.exists(dir_name):
-        raise ValueError("File or directory at `dir_name` does not exist")
+        raise ValueError("{} already exists.".format(output_filepath))
+    if not os.path.exists(dir_path):
+        raise ValueError("File or directory at `dir_path` does not exist.")
 
-    with tarfile.open(output_filepath, 'w:bz2') as tar:
-        tar.add(dir_name, arcname=os.path.sep)
+    # create bz2 compressed directory, remove uncompressed directory
+    root_dir = os.path.abspath(''.join(os.path.split(dir_path)[:-1]))
+    base_dir = os.path.basename(dir_path)
+    shutil.make_archive(base_name=dir_path, format='bztar', root_dir=root_dir, base_dir=base_dir)
+    shutil.rmtree(dir_path)
 
     return True
 
