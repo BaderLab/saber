@@ -136,7 +136,7 @@ class MultiTaskLSTMCRF(object):
             char_lstm_shape = (-1, s[1], NUM_UNITS_CHAR_LSTM)
             char_embeddings_shared = Lambda(lambda x: K.reshape(x, shape=char_lstm_shape))(char_embeddings_shared)
             if self.config.variational_dropout:
-                print('using variational dropout...', end=' ')
+                print(' using variational dropout...', end=' ')
                 char_embeddings_shared = SpatialDropout1D(self.config.dropout_rate['output'])(char_embeddings_shared)
 
             # Concatenate word- and char-level embeddings + dropout
