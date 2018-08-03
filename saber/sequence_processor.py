@@ -195,7 +195,7 @@ class SequenceProcessor(object):
         self.config.char_embed_dim = model_attributes['char_embedding_dim']
         self.token_embedding_matrix = model_attributes['embedding_matrix']
 
-        # create a new dataset instance
+        # create a new dataset instance, load the required attributes for model prediction
         # TEMP: this is an ugly hack, need way around having to provide a filepath
         dummy_ds = os.path.abspath('saber/tests/resources/dummy_dataset_1')
         self.ds = [Dataset(dummy_ds)]
@@ -208,9 +208,6 @@ class SequenceProcessor(object):
         # by_name loads allows us to load a model even if when architecture has changed slightly
         self.model.model[0].load_weights(weights_filepath, by_name=True)
         self.model.compile_()
-        # TEMP: It is likely than an update will render this uneccesary
-        # https://github.com/keras-team/keras/issues/6124
-        self.model.model[0]._make_predict_function()
 
         return self
 
