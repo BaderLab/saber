@@ -6,8 +6,6 @@ import codecs
 import tarfile
 from setuptools.archive_util import unpack_archive
 
-from .. import constants
-
 # https://stackoverflow.com/questions/273192/how-can-i-create-a-directory-if-it-does-not-exist#273227
 def make_dir(directory_filepath):
     """Creates a directory (directory_filepath) if it does not exist.
@@ -18,8 +16,8 @@ def make_dir(directory_filepath):
     # create output directory if it does not exist
     try:
         os.makedirs(directory_filepath)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
+    except OSError as err:
+        if err.errno != errno.EEXIST:
             raise
 
 def decompress_model(filepath):
@@ -38,28 +36,28 @@ def decompress_model(filepath):
         unpack_archive(filepath + '.tar.bz2', extract_dir=head)
         print('Done.')
 
-def compress_model(dir):
+def compress_model(dir_name):
     """Compresses a given directory using bz2 compression.
 
     Args:
-        dir (str): path to directory to compress.
+        dir_name (str): path to directory to compress.
 
     Returns:
         True if compression completed without error.
 
     Raises:
-        ValueError: if no file or directory at 'dir' exists or if 'dir'.tar.bz2
-            already exists.
+        ValueError: if no file or directory at 'dir_name' exists or if 'dir_name'.tar.bz2 already
+            exists.
     """
-    output_filepath = '{dir}.tar.bz2'.format(dir=dir)
+    output_filepath = '{}.tar.bz2'.format(dir_name)
 
     if os.path.exists(output_filepath):
         raise ValueError("{} already exists".format(output_filepath))
-    if not os.path.exists(dir):
-        raise ValueError("File or directory at 'dir' does not exist")
+    if not os.path.exists(dir_name):
+        raise ValueError("File or directory at `dir_name` does not exist")
 
     with tarfile.open(output_filepath, 'w:bz2') as tar:
-        tar.add(dir, arcname=os.path.sep)
+        tar.add(dir_name, arcname=os.path.sep)
 
     return True
 
@@ -85,9 +83,9 @@ def bin_to_txt(filepath, output_dir=os.getcwd()):
     output_filepath = os.path.join(output_dir, base_name + '.txt')
 
     # write contents of input_file to new file output_filepath in txt format
-    with codecs.open(output_filepath, 'w+', encoding='utf-8') as f:
+    with codecs.open(output_filepath, 'w+', encoding='utf-8') as out_file:
         for word in vocab:
             vector = word_vectors[word]
-            f.write("%s %s\n" %(word, " ".join(str(v) for v in vector)))
+            out_file.write("%s %s\n" %(word, " ".join(str(v) for v in vector)))
 
     print('[INFO] Converted C binary file saved to {}'.format(output_filepath))
