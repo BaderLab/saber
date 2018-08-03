@@ -153,19 +153,17 @@ class SequenceProcessor(object):
         """
         # create the pretrained model folder (if it does not exist)
         generic_utils.make_dir(os.path.join(filepath))
-
-        # create a dictionary containg everything we need to save the model
-        model_attributes = {'config': self.config,
-                            'embeddings':self.token_embedding_matrix,
-                           }
-        # TODO: Don't really want to save all the datasets. But I need the tag_type_to_idx objects.
-        model_attributes['ds'] = self.ds
-
         # create filepaths
-        # TODO: change these to look for any *.hdf5 and *.pickle files
         weights_filepath = os.path.join(filepath, 'model_weights.hdf5')
         attributes_filepath = os.path.join(filepath, 'model_attributes.pickle')
 
+        # create a dictionary containg everything we need to save the model
+        model_attributes = {'embedding_matrix':self.token_embedding_matrix,
+                            'word_embedding_dim': self.config.word_embed_dim,
+                            'char_embedding_dim': self.config.char_embed_dim,
+                            'type_to_idx': self.ds[model].type_to_idx,
+                            'idx_to_tag': self.ds[model].idx_to_tag,
+                           }
         # save weights
         self.model.model[model].save_weights(weights_filepath)
         # save attributes
@@ -177,34 +175,37 @@ class SequenceProcessor(object):
         return True
 
     def load(self, filepath):
-        """Coordinates the saving of Saber models.
+        """Coordinates the loading of Saber models.
 
-        Loads the necessary files for model creation from filepath.
+        Loads the necessary files for model creation from filepath. Creates and compiles a
+        Keras model based on these files.
 
         Args:
-            filepath (str): directory path to saved pretrained folder
+            filepath (str): directory path to saved pre-trained model folder
         """
-        #
         generic_utils.decompress_model(filepath)
+
         # create filepaths
         weights_filepath = os.path.join(filepath, 'model_weights.hdf5')
         attributes_filepath = os.path.join(filepath, 'model_attributes.pickle')
 
-        # load attributes
+        # load attributes, these attributes must be carried over from saved model
         model_attributes = pickle.load(open(attributes_filepath, "rb"))
-        # these attributes must be carrie over from pre-trained model
-        self.config.word_embed_dim = model_attributes['config'].word_embed_dim
-        self.config.char_embed_dim = model_attributes['config'].char_embed_dim
+        self.config.word_embed_dim = model_attributes['word_embedding_dim']
+        self.config.char_embed_dim = model_attributes['char_embedding_dim']
+        self.token_embedding_matrix = model_attributes['embedding_matrix']
 
-        self.ds = model_attributes['ds']
-        self.token_embedding_matrix = model_attributes['embeddings']
+        # create a new dataset instance
+        # TEMP: this is an ugly hack, need way around having to provide a filepath
+        dummy_ds = os.path.abspath('saber/tests/resources/dummy_dataset_1')
+        self.ds = [Dataset(dummy_ds)]
+        self.ds[-1].type_to_idx = model_attributes['type_to_idx']
+        self.ds[-1].idx_to_tag = model_attributes['idx_to_tag']
 
         # specify model based on saved models attributes
-        self.create_model(compile=False)
-
+        self.create_model(compile_model=False)
         # load weights, compile model
-        # by_name loads only those layers with the same name, allows us to load a model even
-        # if the architecture has changed slightly
+        # by_name loads allows us to load a model even if when architecture has changed slightly
         self.model.model[0].load_weights(weights_filepath, by_name=True)
         self.model.compile_()
         # TEMP: It is likely than an update will render this uneccesary
