@@ -1,7 +1,6 @@
 """A collection of model helper/utility functions.
 """
 import os
-from shutil import copyfile
 from time import strftime
 
 from keras import optimizers
