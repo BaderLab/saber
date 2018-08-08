@@ -103,12 +103,11 @@ def test_attributes_after_initilization_of_model(sp_no_ds_no_embed, dummy_config
     assert sp_no_ds_no_embed.config.grad_norm == 1.0
     assert sp_no_ds_no_embed.config.k_folds == 2
     assert sp_no_ds_no_embed.config.learning_rate == 0.0
-    assert not sp_no_ds_no_embed.config.load_pretrained_model
     assert sp_no_ds_no_embed.config.epochs == 50
     assert sp_no_ds_no_embed.config.model_name == 'mt-lstm-crf'
     assert sp_no_ds_no_embed.config.optimizer == 'nadam'
     assert sp_no_ds_no_embed.config.output_folder == abspath('../output')
-    assert sp_no_ds_no_embed.config.pretrained_model_weights is None
+    assert sp_no_ds_no_embed.config.pretrained_model_weights is ''
     assert not sp_no_ds_no_embed.config.replace_rare_tokens
     assert sp_no_ds_no_embed.config.word_embed_dim == 200
     assert sp_no_ds_no_embed.config.pretrained_embeddings == PATH_TO_DUMMY_TOKEN_EMBEDDINGS
