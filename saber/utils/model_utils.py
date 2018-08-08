@@ -50,7 +50,7 @@ def compile_model(model, loss_function, optimizer, lr=0.01, decay=0.0, clipnorm=
 
     model.compile(optimizer=optimizer_, loss=loss_function)
 
-def prepare_output_directory(dataset_folder, output_folder, config_filepath=None):
+def prepare_output_directory(dataset_folder, output_folder, config=None):
     """Creates an output directory for each dataset in dataset_folder
 
     Creates the following directory structure:
@@ -108,9 +108,8 @@ def prepare_output_directory(dataset_folder, output_folder, config_filepath=None
         make_dir(ds_ts_dirname)
 
         # copy config file to top level directory
-        if config_filepath is not None:
-            cf_copy = os.path.join(ds_ts_dirname, os.path.basename(config_filepath))
-            copyfile(config_filepath, cf_copy)
+        if config is not None:
+            config.save(ds_ts_dirname)
 
     return train_sess_output_dirnames
 
