@@ -56,12 +56,11 @@ def test_model_attributes_after_creation_of_model(multi_task_lstm_crf_single_mod
     assert multi_task_lstm_crf_single_model.config.grad_norm == 1.0
     assert multi_task_lstm_crf_single_model.config.k_folds == 2
     assert multi_task_lstm_crf_single_model.config.learning_rate == 0.0
-    assert not multi_task_lstm_crf_single_model.config.load_pretrained_model
     assert multi_task_lstm_crf_single_model.config.epochs == 50
     assert multi_task_lstm_crf_single_model.config.model_name == 'mt-lstm-crf'
     assert multi_task_lstm_crf_single_model.config.optimizer == 'nadam'
     assert multi_task_lstm_crf_single_model.config.output_folder == abspath('../output')
-    assert multi_task_lstm_crf_single_model.config.pretrained_model_weights is None
+    assert multi_task_lstm_crf_single_model.config.pretrained_model_weights == ''
     assert not multi_task_lstm_crf_single_model.config.replace_rare_tokens
     assert multi_task_lstm_crf_single_model.config.word_embed_dim == 200
     assert multi_task_lstm_crf_single_model.config.pretrained_embeddings == PATH_TO_DUMMY_TOKEN_EMBEDDINGS

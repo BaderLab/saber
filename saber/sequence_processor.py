@@ -293,7 +293,7 @@ class SequenceProcessor(object):
         """
         if not self.ds:
             raise MissingStepException('You must load a dataset before loading word embeddings')
-        if self.config.pretrained_embeddings is None:
+        if not self.config.pretrained_embeddings:
             raise ValueError(('Word embedding filepath must be provided in the config file or at ',
                               'the command line'))
 
@@ -353,7 +353,7 @@ class SequenceProcessor(object):
         callbacks = {'checkpoint': None, 'tensorboard': None}
         train_session_dir = prepare_output_directory(self.config.dataset_folder,
                                                      self.config.output_folder,
-                                                     self.config.filepath)
+                                                     self.config)
         # model checkpointing
         callbacks['checkpoint'] = setup_checkpoint_callback(train_session_dir)
         # tensorboard
