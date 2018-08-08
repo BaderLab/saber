@@ -23,17 +23,14 @@ class Config(object):
     def __init__(self, filepath='./config.ini', cli=False):
         # filepath to config file
         self.filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filepath)
-        # a parsed configparser object
-        self.config = None
-
         # parse args provided in configuration file
-        self.config = self._parse_config_args(self.filepath)
+        self.config = self._parse_config(self.filepath)
         # parse cli arguments (if they exist)
         self.cli_args = self._parse_cli_args() if cli else {}
         # harmonize cli and config arguments and apply post processing
         self.args = self._process_args(self.cli_args)
 
-    def _parse_config_args(self, filepath):
+    def _parse_config(self, filepath):
         """Returns a parsed configparser object for config file at 'filepath'.
 
         Args:
@@ -71,7 +68,6 @@ class Config(object):
             args['model_name'] = self.config['mode']['model_name']
             args['train_model'] = self.config['mode'].getboolean('train_model')
             args['save_model'] = self.config['mode'].getboolean('save_model')
-            args['load_pretrained_model'] = self.config['mode'].getboolean('load_pretrained_model')
 
             # data
             args['dataset_folder'] = self.config['data']['dataset_folder'].split(',')
@@ -114,7 +110,9 @@ class Config(object):
         else:
             # overwrite any parameters in the config if specfied at CL
             for key, value in cli_args.items():
-                if value is not None:
+                # is not False is needed to prevent the store_true args from overriding the
+                # corresponding config file args when the are not passed at the CL.
+                if value is not None and value is not False:
                     args[key] = value
 
             # post-processing
@@ -148,13 +146,10 @@ class Config(object):
         args['dataset_folder'] = [os.path.abspath(Preprocessor.sterilize(ds))
                                   for ds in args['dataset_folder']]
         args['output_folder'] = os.path.abspath(args['output_folder'])
-
-        # Normalize empty path arguments to None
-        args['pretrained_model_weights'] = None if args['pretrained_model_weights'] == '' \
-            else os.path.abspath(args['pretrained_model_weights'])
-
-        args['pretrained_embeddings'] = None if args['pretrained_embeddings'] == '' \
-            else os.path.abspath(args['pretrained_embeddings'])
+        if args['pretrained_model_weights']:
+            args['pretrained_model_weights'] = os.path.abspath(args['pretrained_model_weights'])
+        if args['pretrained_embeddings']:
+            args['pretrained_embeddings'] = os.path.abspath(args['pretrained_embeddings'])
 
         # build dictionary for dropout rates
         args['dropout_rate'] = {
@@ -214,8 +209,6 @@ class Config(object):
         parser.add_argument('--learning_rate', required=False, type=float,
                             help=('float >= 0. Learning rate. Note that for certain optimizers '
                                   'this value is ignored'))
-        parser.add_argument('--load_pretrained_model', required=False, action='store_true',
-                            help='TODO')
         parser.add_argument('--epochs', required=False, type=int,
                             help=('Integer. Number of epochs to train the model. An epoch is an '
                                   'iteration over all data provided.'))
@@ -248,3 +241,37 @@ class Config(object):
         cli_args = parser.parse_args()
 
         return vars(cli_args)
+
+    def save(self, filepath):
+        """Saves the harmonzied args sourced from the .ini file and the command line to filepath.
+
+        Saves a config.ini file at filepath, containing the harmonized arguments (`self.args`)
+        sourced from the original config file at `self.config` and any arguments supplied at the
+        command line. Returns True if the config.ini file was successfully created.
+
+        Args:
+            filepath (str): filepath to save the config.ini file.
+
+        Returns:
+            True if the config.ini was successfully written to disk.
+        """
+        path_to_save_config = os.path.join(filepath, 'config.ini')
+        with open(path_to_save_config, 'w') as config_file:
+            for section in self.config.sections():
+                # write config file section header
+                config_file.write('[{}]\n'.format(section))
+                # for each argument in the section, write the argument and its value to the file
+                for arg in self.config[section]:
+                    # need to un-process processed arguments
+                    if isinstance(self.args[arg], list):
+                        harmonized_arg = ', '.join(self.args[arg])
+                    elif isinstance(self.args[arg], dict):
+                        values = [str(v) for v in self.args[arg].values()]
+                        harmonized_arg = ', '.join(values)
+                    else:
+                        harmonized_arg = self.args[arg]
+
+                    config_file.write('{} = {}\n'.format(arg, harmonized_arg))
+                config_file.write('\n')
+
+        return True
