@@ -15,7 +15,7 @@ def main():
     sp.load_dataset()
 
     # if pretrained token embeddings are provided, load them
-    if config.pretrained_embeddings is not None:
+    if config.pretrained_embeddings:
         sp.load_embeddings()
     sp.create_model()
     sp.fit()
