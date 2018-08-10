@@ -160,7 +160,7 @@ curl -X POST 'http://localhost:5000/annotate/text' \
 --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}'
 ```
 
-Full documentation for the Saber API can be found [here]('http://localhost:5000/annotate/text').
+Full documentation for the Saber API can be found [here]('https://baderlab.github.io/saber-api-docs/').
 
 #### Command line tool
 
