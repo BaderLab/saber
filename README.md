@@ -139,7 +139,7 @@ To build & run Saber with __Docker__:
 
 There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a `POST` request with a `json` payload, e.g.:
 
-```
+```json
 {
   "text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."
 }
@@ -147,7 +147,7 @@ There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both e
 
 Or:
 
-```
+```json
 {
   "pmid": 11835401
 }
@@ -155,9 +155,12 @@ Or:
 
 For example, running the web-service locally and using `cURL`:
 
+```bash
+curl -X POST 'http://localhost:5000/annotate/text' \
+--data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}'
 ```
-curl -XPOST --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}' 'http://localhost:5000/annotate/text'
-```
+
+Full documentation for the Saber API can be found [here]('http://localhost:5000/annotate/text').
 
 #### Command line tool
 
