@@ -1,13 +1,20 @@
 """Simple web service which exposes Saber's functionality via a RESTful API.
 """
 #!/usr/bin/env python3
-from flask import request
-from flask import jsonify
 from flask import Flask
-app = Flask(__name__)
+from flask import jsonify
+from flask import redirect
+from flask import request
 
 from .utils import app_utils
-from .config import Config
+
+app = Flask(__name__)
+
+@app.route('/')
+def serve_api_docs():
+    """Flask view that redirects to the Saber API docs from route '/'.
+    """
+    return redirect('https://baderlab.github.io/saber-api-docs/')
 
 @app.route('/annotate/text', methods=['POST'])
 def annotate_text():
@@ -91,6 +98,6 @@ if __name__ == '__main__':
     # Load the pre-trained models
     ENTITIES = {'ANAT': False, 'CHED': False, 'DISO': False, 'LIVB': False,
                 'PRGE': True, 'TRIG': False}
-    MODELS = app_utils.load_models(ENTITIES)
+    # MODELS = app_utils.load_models(ENTITIES)
 
     app.run(host='0.0.0.0')
