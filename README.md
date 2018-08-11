@@ -49,7 +49,7 @@ To clone and run this application, you will need `python>=3.6`. If not already i
  - [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
  - [Miniconda3](https://conda.io/miniconda.html) / [Anaconda3](https://www.anaconda.com/download/)
 
-> In some cases, you may need to specify `python3` at the command line (not `python`) to ensure you use the installed `python >= 3.6` and not your systems default `python` installation. Use `python --version` to check.
+> Use `python --version` at the command line to make sure installation was succseful. Note: you may need to use `python3` (not just `python`) at the command line depending on your install method.
 
 From your command line:
 
@@ -60,14 +60,14 @@ $ git clone https://github.com/BaderLab/Saber.git
 # Go into the repository
 $ cd Saber
 
-# OPTIONAL: activate your virtual environment (see below for help)
+# (OPTIONAL) Activate your virtual environment (see below for help)
 $ source activate saber
 
 # Install dependencies
 (saber) $ pip install -r requirements.txt
 ```
 
-### Creating and activating virtual environments
+### (OPTIONAL) Creating and activating virtual environments
 
 When using `pip` it is generally recommended to install packages in a virtual environment to avoid modifying system state. To create a virtual environment named `saber`:
 
@@ -115,9 +115,9 @@ $ source activate saber
 
 ### Quickstart
 
-You can interact with Saber as a web-service, command line tool, module, or via the Juypter notebooks. If you created a virtual environment, **remember to activate it first**.
+You can interact with Saber as a web-service, command line tool, python package, or via the Juypter notebooks. If you created a virtual environment, **remember to activate it first**.
 
-> Note: the following examples assume you are in the project directory `Saber/saber`.
+> Note: the following examples assume you are in the project directory, `Saber`.
 
 #### Web-service
 
@@ -137,7 +137,7 @@ To build & run Saber with __Docker__:
 (saber) $ docker run --rm -p 5000:5000 --name saber1 -dt saber
 ```
 
-There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a `POST` request with a `json` payload, e.g.:
+There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a `POST` request with a JSON payload, e.g.:
 
 ```json
 {
@@ -184,13 +184,12 @@ Would overwrite the arguments for `dataset_folder` and `k_folds` found in the co
 
 #### Python module
 
-Saber exposes its functionality through the `SequenceProcessor` class. Here is a simple example where we load a pretrained model and use it to annotate raw text for protein and gene entities.
+Saber exposes its functionality through the `SequenceProcessor` class. Here is a simple example where we load a pre-trained model and use it to annotate raw text for protein and gene entities.
 
 ```python
 from saber.sequence_processor import SequenceProcessor
 
-# Create a SequenceProcessor object, which coordinates
-# training/prediction/loading of models and datasets
+# Create a SequenceProcessor object, which coordinates training/prediction/loading of models and datasets
 sp = SequenceProcessor()
 
 # Load the protein and gene entity model
@@ -205,7 +204,7 @@ annotation = sp.annotate(raw_text)
 
 #### Juypter notebooks
 
-First, install [Jupyter lab](https://github.com/jupyterlab/jupyterlab) (make sure to activate your virtual environment first if you created one):
+First, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) (make sure to activate your virtual environment first if you created one):
 
 ```bash
 # If you use pip, you can install it as
@@ -233,6 +232,10 @@ Check out the `lightning_tour.ipynb` notebook for an overview.
 
 ## Resources
 
+### Documentation
+
+Documentation for the Saber API can be found [here](https://baderlab.github.io/saber-api-docs/).
+
 ### Datasets
 
 Corpora are collected in [here](https://github.com/BaderLab/Biomedical-Corpora) for convenience. Many of the corpora in the BIO and IOBES tag format were originally collected by [Crichton _et al_., 2017](https://doi.org/10.1186/s12859-017-1776-8), [here](https://github.com/cambridgeltl/MTL-Bioinformatics-2016).
@@ -252,7 +255,7 @@ Once downloaded, you will need to convert them from `.bin` to `.txt` format:
 >> bin_to_txt('wikipedia-pubmed-and-PMC-w2v.bin', output_dir='path/to/word_embeddings')
 ```
 
-> Note: you do not (and should not) have to download word embeddings if you only plan on using Saber's pretrained models.
+> Note: you do not need to download pre-trained word embeddings if you only plan on using Saber's pre-trained models.
 
 ## Running tests
 
