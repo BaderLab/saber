@@ -1,8 +1,8 @@
 """A collection of web-service helper/utility functions.
 """
+import logging
 import os.path
 import traceback
-
 import xml.etree.ElementTree as ET
 from urllib.error import HTTPError
 from urllib.request import urlopen
@@ -13,6 +13,7 @@ from .generic_utils import decompress_model
 from ..sequence_processor import SequenceProcessor
 
 # TODO: Need better error handeling here
+log = logging.getLogger(__name__)
 
 def get_pubmed_xml(pmid):
     """Uses the Entrez Utilities Web Service API to fetch XML representation of pubmed document.
@@ -29,25 +30,32 @@ def get_pubmed_xml(pmid):
         AssertionError if the requested PubMed ID, 'pmid' and the return PubMedID do not match.
     """
     if not isinstance(pmid, int):
-        pmid_type = type(pmid)
-        raise ValueError("Argument 'pmid' must be of type {}, not {}.".format(int, pmid_type))
+        err_msg = "Argument 'pmid' must be of type {}, not {}.".format(int, type(pmid))
+        log.error('ValueError %s', err_msg)
+        raise ValueError(err_msg)
     if pmid < 1:
-        raise ValueError("Argument 'pmid' must have a value of 1 or greater. Got {}".format(pmid))
+        err_msg = "Argument 'pmid' must have a value of 1 or greater. Got {}".format(pmid)
+        log.error('ValueError %s', err_msg)
+        raise ValueError(err_msg)
 
     try:
         request = '{}{}'.format(constants.EUTILS_API_ENDPOINT, pmid)
         response = urlopen(request).read()
     except HTTPError:
+        err_msg = ("HTTP Error 400: Bad Request was returned. Check that the supplied value for "
+                   "'pmid' ({}) is a valid PubMed ID.".format(pmid))
         traceback.print_exc()
-        print("HTTP Error 400: Bad Request was returned. Check that the supplied value for 'pmid' "
-              "({}) is a valid PubMed ID.".format(pmid))
+        log.error('HTTPError %s', err_msg)
+        print(err_msg)
     else:
         root = get_root(response)
         response_pmid = root.find('PubmedArticle').find('MedlineCitation').find('PMID').text
         # ensure that requested and returned pubmed ids are the same
         if not int(response_pmid) == pmid:
-            raise AssertionError(('Requested PubMed ID and PubMed ID returned by Entrez Utilities '
-                                  'Web Service API do not match.'))
+            err_msg = ('Requested PubMed ID and PubMed ID returned by Entrez Utilities Web Service '
+                       'API do not match.')
+            log.error('AssertionError %s', err_msg)
+            raise AssertionError(err_msg)
 
     return response
 

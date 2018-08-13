@@ -1,12 +1,13 @@
 """A collection of generic helper/utility functions.
 """
-import os
-import errno
 import codecs
+import errno
+import logging
+import os
 import shutil
 from setuptools.archive_util import unpack_archive
 
-from .. import constants
+log = logging.getLogger(__name__)
 
 # https://stackoverflow.com/questions/273192/how-can-i-create-a-directory-if-it-does-not-exist#273227
 def make_dir(directory_filepath):
@@ -55,9 +56,13 @@ def compress_model(dir_path):
 
     output_filepath = '{}.tar.bz2'.format(dir_path)
     if os.path.exists(output_filepath):
-        raise ValueError("{} already exists.".format(output_filepath))
+        err_msg = "{} already exists.".format(output_filepath)
+        log.error('ValueError %s', err_msg)
+        raise ValueError(err_msg)
     if not os.path.exists(dir_path):
-        raise ValueError("File or directory at `dir_path` does not exist.")
+        err_msg = "File or directory at 'dir_path' does not exist."
+        log.error('ValueError %s', err_msg)
+        raise ValueError(err_msg)
 
     # create bz2 compressed directory, remove uncompressed directory
     root_dir = os.path.abspath(''.join(os.path.split(dir_path)[:-1]))
