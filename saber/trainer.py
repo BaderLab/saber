@@ -146,8 +146,9 @@ class Trainer(object):
                     random_state=42,
                     shuffle=False)
         except KeyError:
-            self.log(("ValueError raised because 'data' argument passed to Trainer."
-                     "_split_train_valid() did not contain the keys 'X_train' and 'y_train'"))
+            self.log.error(("ValueError raised because 'data' argument passed to Trainer."
+                            "_split_train_valid() did not contain the keys 'X_train' and "
+                            "'y_train'"))
             raise ValueError("'data' must contain the keys 'X_train' and 'y_train'")
 
         data['X_train'] = [X_train_word, X_train_char]
