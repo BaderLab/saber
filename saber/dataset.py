@@ -1,8 +1,9 @@
 """Contains the Dataset class, which handles the loading and storage of datasets.
 """
-import itertools
-import os.path
 from glob import glob
+import itertools
+import logging
+import os.path
 
 import numpy as np
 from keras.utils import to_categorical
@@ -21,6 +22,7 @@ class Dataset(object):
         can be found at constants.NUM_RARE.
     """
     def __init__(self, filepath, sep='\t', replace_rare_tokens=True):
+        self.log = logging.getLogger(__name__)
         # collect filepaths for each partition in a dictionary
         self.partition_filepaths = self.get_filepaths(filepath)
 
@@ -74,8 +76,8 @@ class Dataset(object):
 
         # must supply a train file
         if not train_partition:
-            error_msg = "[ERROR] Must supply at least one file, train.* at {}".format(filepath)
-            raise ValueError(error_msg)
+            self.log.error('ValueError raised because %s did not contain file train.*', filepath)
+            raise ValueError("Must supply at least one file, train.* at {}".format(filepath))
         partition_filepaths['train'] = train_partition[0]
 
         # optionally, valid and test files can be supplied
