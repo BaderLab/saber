@@ -1,12 +1,11 @@
 """Contains the SequenceProcessor class, which exposes most of Sabers functionality.
 """
 import itertools
-import os
-import pickle
-import time
-from pprint import pprint
-
 import logging
+import pickle
+from pprint import pprint
+import os
+import time
 
 import numpy as np
 from spacy import displacy
@@ -17,13 +16,10 @@ from .dataset import Dataset
 from .preprocessor import Preprocessor
 from .trainer import Trainer
 from .utils import generic_utils
-from .utils.model_utils import prepare_output_directory
-from .utils.model_utils import setup_checkpoint_callback
-from .utils.model_utils import setup_tensorboard_callback
+from .utils import model_utils
 
 class SequenceProcessor(object):
-    """A class for handeling the loading, saving, training, and specifying of sequence processing
-    models.
+    """A class for handeling the loading, saving and training of sequence models.
 
     Args:
         config (Config): A Config object which contains a set of harmonzied arguments provided in
@@ -53,7 +49,7 @@ class SequenceProcessor(object):
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
     def annotate(self, text, model_idx=0, jupyter=False):
-        """Performs prediction for a given model and returns results.
+        """Uses a trained model to annotate `text`, returns the results in a dictionary.
 
         For the model at self.model.model[model_idx], coordinates a prediction step on `text`.
         Returns a dictionary containing the cleaned `text` (`text`), and any annotations made by the
@@ -74,7 +70,9 @@ class SequenceProcessor(object):
             ValueError if `text` is invalid (not a string, or empty/falsey).
         """
         if not isinstance(text, str) or not text:
-            raise ValueError("Argument 'text' must be a valid, non-empty string!")
+            err_msg = "Argument 'text' must be a valid, non-empty string!"
+            self.log.error("ValueError: %s", err_msg)
+            raise ValueError(err_msg)
 
         # model and its corresponding dataset
         ds = self.ds[model_idx]
@@ -301,16 +299,13 @@ class SequenceProcessor(object):
             ValueError: If 'self.config.pretrained_embeddings' is None.
         """
         if not self.ds:
-            self.log.error(("A MissingStepException was raised because the user called "
-                            "SequenceProcessor.load_embeddings() before calling SequenceProcessor."
-                            "load_dataset()"))
-            raise MissingStepException('You must load a dataset before loading word embeddings')
+            err_msg = "You need to call 'load_dataset()' before calling 'load_embeddings()'"
+            self.log.error('MissingStepException: %s', err_msg)
+            raise MissingStepException(err_msg)
         if not self.config.pretrained_embeddings:
-            self.log.error(("ValueError was raised because user called "
-                            "SequenceProcessor.load_embeddings() without specifying a value for "
-                            "the 'pretrained_embedding argument'"))
-            raise ValueError(('Pre-trained embedding filepath must be provided in the config file '
-                              'or at the command line'))
+            err_msg = "'pretrained_embeddings' argument was empty'"
+            self.log.error('ValueError: %s', err_msg)
+            raise ValueError(err_msg)
 
         self._load_token_embeddings()
 
@@ -327,7 +322,9 @@ class SequenceProcessor(object):
             ValueError if model name at `self.config.model_name` is not valid
         """
         if self.config.model_name not in ['mt-lstm-crf']:
-            raise ValueError('Model name is not valid. Check the argument value for `model_name`')
+            err_msg = "Model name is not valid. Check the argument value for 'model_name'"
+            self.log.error('ValueError: %s ', err_msg)
+            raise ValueError(err_msg)
 
         start_time = time.time()
         # setup the chosen model
@@ -368,14 +365,14 @@ class SequenceProcessor(object):
         """
         # setup callbacks
         callbacks = {'checkpoint': None, 'tensorboard': None}
-        train_session_dir = prepare_output_directory(self.config.dataset_folder,
-                                                     self.config.output_folder,
-                                                     self.config)
+        train_session_dir = model_utils.prepare_output_directory(self.config.dataset_folder,
+                                                                 self.config.output_folder,
+                                                                 self.config)
         # model checkpointing
-        callbacks['checkpoint'] = setup_checkpoint_callback(train_session_dir)
+        callbacks['checkpoint'] = model_utils.setup_checkpoint_callback(train_session_dir)
         # tensorboard
         if self.config.tensorboard:
-            callbacks['tensorboard'] = setup_tensorboard_callback(train_session_dir)
+            callbacks['tensorboard'] = model.utils.setup_tensorboard_callback(train_session_dir)
 
         trainer = Trainer(self.config, self.ds, self.model)
         trainer.train(callbacks, train_session_dir)
