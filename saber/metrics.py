@@ -2,9 +2,10 @@
 for a Keras model.
 """
 import json
+import logging
+from operator import itemgetter
 import os
 from statistics import mean
-from operator import itemgetter
 
 import numpy as np
 from prettytable import PrettyTable
@@ -29,7 +30,11 @@ class Metrics(Callback):
             'exact' for exact-boundary matching (default)
         fold (int): current fold, if using k-fold cross validation, defaults to 0.
     """
+    # define this at the class level because some methods are static
+    log = logging.getLogger(__name__)
+
     def __init__(self, training_data, idx_to_tag, output_dir, criteria='exact', fold=None):
+
         self.training_data = training_data
 
         # inversed mapping from idx: tag
@@ -107,7 +112,7 @@ class Metrics(Callback):
                                                  criteria=self.criteria)
 
         # TEMP: Check CoNLLEval script
-        self.conll_eval(y_true_tag, y_pred_tag)
+        # self.conll_eval(y_true_tag, y_pred_tag)
 
         return performance_scores
 
@@ -150,7 +155,9 @@ class Metrics(Callback):
 
         # sanity check
         if not y_true.shape == y_pred.shape:
-            raise AssertionError("y_true and y_pred have different shapes")
+            err_msg = "'y_true' and 'y_pred' have different shapes"
+            Metrics.log.error('AssertionError: %s', err_msg)
+            raise AssertionError(err_msg)
 
         return y_true, y_pred
 
@@ -190,8 +197,10 @@ class Metrics(Callback):
             # either retain or discard left or right boundaries depending on
             # matching criteria
             if criteria not in ['exact', 'left', 'right']:
-                raise ValueError(("Expected criteria to be one of 'exact', 'left', or 'right'."
-                                  "Got: {}".format(criteria)))
+                err_msg = ("Expected criteria to be one of 'exact', 'left', or 'right'. "
+                           "Got: {}").format(criteria)
+                Metrics.log.error("ValueError %s", err_msg)
+                raise ValueError(err_msg)
             if criteria == 'exact':
                 y_true_lab = [chunk for chunk in y_true if chunk[0] == lab]
                 y_pred_lab = [chunk for chunk in y_pred if chunk[0] == lab]
