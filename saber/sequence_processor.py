@@ -1,11 +1,11 @@
 """Contains the SequenceProcessor class, which exposes most of Sabers functionality.
 """
-import itertools
 import os
 import time
 import pickle
 from pprint import pprint
 from itertools import chain
+import logging
 
 import numpy as np
 from spacy import displacy
@@ -20,9 +20,6 @@ from .utils.model_utils import prepare_output_directory
 from .utils.model_utils import setup_checkpoint_callback
 from .utils.model_utils import setup_tensorboard_callback
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-print('Saber version: {0}'.format(constants.__version__))
-
 class SequenceProcessor(object):
     """A class for handeling the loading, saving, training, and specifying of sequence processing
     models.
@@ -32,9 +29,11 @@ class SequenceProcessor(object):
             a .ini file and, optionally, from the command line. If not provided, a new instance of
             Config is used.
     """
-    def __init__(self, config=Config()):
+    def __init__(self, config=None):
+        self.log = logging.getLogger(__name__)
+
         # hyperparameters
-        self.config = config
+        self.config = config if config is not None else Config()
 
         # dataset(s) tied to this instance
         self.ds = []
@@ -48,8 +47,9 @@ class SequenceProcessor(object):
         self.preprocessor = Preprocessor()
 
         if self.config.verbose:
-            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
+            print('Hyperparameters and model details:')
             pprint(self.config.args)
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
     def annotate(self, text, model_idx=0, jupyter=False):
         """Performs prediction for a given model and returns results.
@@ -221,11 +221,13 @@ class SequenceProcessor(object):
         # a dataset single if there is only one filepath in self.config.dataset_folder'] and
         # compound otherwise.
         if len(self.config.dataset_folder) == 1:
-            print('[INFO] Loading (single) dataset... ', end='', flush=True)
+            print('Loading (single) dataset... ', end='', flush=True)
             self.ds = self._load_single_dataset()
+            self.log.info('Loaded single dataset at: %s', self.config.dataset_folder)
         else:
-            print('[INFO] Loading (compound) dataset... ', end='', flush=True)
+            print('Loading (compound) dataset... ', end='', flush=True)
             self.ds = self._load_compound_dataset()
+            self.log.info('Loaded multiple datasets at: %s', self.config.dataset_folder)
 
         elapsed_time = time.time() - start_time
         print('Done ({0:.2f} seconds).'.format(elapsed_time))
@@ -292,10 +294,16 @@ class SequenceProcessor(object):
             ValueError: If 'self.config.pretrained_embeddings' is None.
         """
         if not self.ds:
+            self.log.error(("A MissingStepException was raised because the user called "
+                            "SequenceProcessor.load_embeddings() before calling SequenceProcessor."
+                            "load_dataset()"))
             raise MissingStepException('You must load a dataset before loading word embeddings')
         if not self.config.pretrained_embeddings:
-            raise ValueError(('Word embedding filepath must be provided in the config file or at ',
-                              'the command line'))
+            self.log.error(("ValueError was raised because user called "
+                            "SequenceProcessor.load_embeddings() without specifying a value for "
+                            "the 'pretrained_embedding argument'"))
+            raise ValueError(('Pre-trained embedding filepath must be provided in the config file '
+                              'or at the command line'))
 
         self._load_token_embeddings()
 
@@ -317,7 +325,7 @@ class SequenceProcessor(object):
         start_time = time.time()
         # setup the chosen model
         if self.config.model_name == 'mt-lstm-crf':
-            print('[INFO] Building the multi-task BiLSTM-CRF model...', end='', flush=True)
+            print('Building the multi-task BiLSTM-CRF model... ', end='', flush=True)
             from .models.multi_task_lstm_crf import MultiTaskLSTMCRF
             model = MultiTaskLSTMCRF(config=self.config, ds=self.ds,
                                      token_embedding_matrix=self.token_embedding_matrix)
@@ -332,6 +340,7 @@ class SequenceProcessor(object):
 
         elapsed_time = time.time() - start_time
         print('Done ({0:.2f} seconds).'.format(elapsed_time))
+        self.log.info('%s model was built successfully', self.config.model_name.upper())
 
         # print model summaries if verbose argument was passed
         if self.config.verbose:
@@ -380,7 +389,7 @@ class SequenceProcessor(object):
         embedding for the ith word in the models word to idx mapping.
         """
         start_time = time.time()
-        print('[INFO] Loading embeddings... ', end='', flush=True)
+        print('Loading embeddings... ', end='', flush=True)
 
         # prepare the embedding indicies
         embedding_idx = self._prepare_token_embedding_layer()
@@ -391,10 +400,8 @@ class SequenceProcessor(object):
 
         elapsed_time = time.time() - start_time
         print('Done ({0:.2f} seconds)'.format(elapsed_time))
-        print('{s}Found {t} word vectors of dimension {d}'.format(
-            s=' ' * 7,
-            t=len(embedding_idx),
-            d=embedding_dim))
+        print('Found {} word vectors of dimension {}'.format(len(embedding_idx), embedding_dim))
+        self.log.info('Loaded %i word vectors of dimension %i', len(embedding_idx), embedding_dim)
 
     def _prepare_token_embedding_layer(self):
         """Creates an embedding index using pretrained token embeddings.
