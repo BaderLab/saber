@@ -107,10 +107,10 @@ class Config(object):
         # Configparser throws a KeyError when you try to key into a configparser object that does
         # not exist, catch it here, provide hint to the user
         except KeyError as key:
-            print(('KeyError raised for key {}. This may have happened because there is no .ini '
-                   'file at: {}').format(key, self.filepath))
-            self.log.error(("KeyError was raised in 'Config._process_args()'. This likely because "
-                            "there is no .ini file at %s", self.filepath))
+            err_msg = ('KeyError raised for key {}. This may have happened because there is no '
+                       '.ini file at: {}').format(key, self.filepath)
+            self.log.error('KeyError %s', err_msg)
+            print(err_msg)
         else:
             # overwrite any parameters in the config if specfied at CL
             for key, value in cli_args.items():
