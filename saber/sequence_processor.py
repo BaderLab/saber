@@ -345,6 +345,7 @@ class SequenceProcessor(object):
         # print model summaries if verbose argument was passed
         if self.config.verbose:
             for model in self.model.model:
+                print('Model architecture:')
                 model.summary()
 
         return self
