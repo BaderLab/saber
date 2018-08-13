@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
+"""A simple script to train a model with Saber.
+
+Run the script with:
+```
+python -m saber.train
+```
+e.g.
+```
+python -m saber.train --dataset_folder ./datasets/NCBI_disease_BIO --epochs 25
+```
+"""
 import logging
 import os
-import sys
-import traceback
 
 from saber.config import Config
 from saber.sequence_processor import SequenceProcessor
@@ -34,4 +43,4 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         print("\nQutting Saber...")
-        logging.warn('Saber was terminated early due to KeyboardInterrupt')
+        logging.warning('Saber was terminated early due to KeyboardInterrupt')
