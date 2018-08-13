@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
+import logging
 import os
+import sys
+import traceback
 
 from saber.config import Config
 from saber.sequence_processor import SequenceProcessor
@@ -27,4 +30,8 @@ def main():
         sp.save(saved_model_dir)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nQutting Saber...")
+        logging.warn('Saber was terminated early due to KeyboardInterrupt')
