@@ -1,3 +1,5 @@
+import logging
+
 from keras import initializers
 import keras.backend as K
 from keras_contrib.layers.crf import CRF
@@ -47,6 +49,8 @@ class MultiTaskLSTMCRF(object):
         self.token_embedding_matrix = token_embedding_matrix
         # model(s) tied to this instance
         self.model = []
+
+        self.log = logging.getLogger(__name__)
 
     def specify_(self):
         """Specifies a multi-task BiLSTM-CRF for sequence tagging using Keras.
@@ -136,7 +140,7 @@ class MultiTaskLSTMCRF(object):
             char_lstm_shape = (-1, s[1], NUM_UNITS_CHAR_LSTM)
             char_embeddings_shared = Lambda(lambda x: K.reshape(x, shape=char_lstm_shape))(char_embeddings_shared)
             if self.config.variational_dropout:
-                print(' using variational dropout...', end=' ')
+                self.log.info('Used variational dropout')
                 char_embeddings_shared = SpatialDropout1D(self.config.dropout_rate['output'])(char_embeddings_shared)
 
             # Concatenate word- and char-level embeddings + dropout
@@ -183,9 +187,10 @@ class MultiTaskLSTMCRF(object):
 
             try:
                 self.model[i] = multi_gpu_model(self.model[i])
-                print('using multiple GPUs...', end=' ')
+                self.log.info('Compiling the model on multiple GPUs')
+            # awfully bad practice but this was the example given by Keras documentation
             except:
-                print('using single CPU or GPU...', end=' ')
+                self.log.info('Compiling the model on a single CPU or GPU')
 
             # need to grab the loss function from models CRF instance
             model_utils.compile_model(model=self.model[i],
