@@ -76,8 +76,9 @@ class Dataset(object):
 
         # must supply a train file
         if not train_partition:
-            self.log.error('ValueError raised because %s did not contain file train.*', filepath)
-            raise ValueError("Must supply at least one file, train.* at {}".format(filepath))
+            err_msg = "Must supply at least one file, train.* at {}".format(filepath)
+            self.log.error('ValueError %s', err_msg)
+            raise ValueError(err_msg)
         partition_filepaths['train'] = train_partition[0]
 
         # optionally, valid and test files can be supplied
