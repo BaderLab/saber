@@ -10,8 +10,10 @@ print('Saber version: {0}'.format(constants.__version__))
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # If applicable, delete the existing log file to generate a fresh log file during each execution
-if os.path.isfile("saber.log"):
+try:
     os.remove("saber.log")
+except OSError:
+    pass
 
 # Create the Logger
 logging.basicConfig(filename="saber.log",
