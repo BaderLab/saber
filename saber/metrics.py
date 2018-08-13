@@ -155,9 +155,9 @@ class Metrics(Callback):
 
         # sanity check
         if not y_true.shape == y_pred.shape:
-            Metrics.log.error(("AssertionError raised because 'y_pred' and 'y_true' in "
-                               "'Metrics._get_y_true_and_pred()' have different shapes"))
-            raise AssertionError("y_true and y_pred have different shapes")
+            err_msg = "'y_true' and 'y_pred' have different shapes"
+            Metrics.log.error('AssertionError: %s', err_msg)
+            raise AssertionError(err_msg)
 
         return y_true, y_pred
 
@@ -197,10 +197,10 @@ class Metrics(Callback):
             # either retain or discard left or right boundaries depending on
             # matching criteria
             if criteria not in ['exact', 'left', 'right']:
-                Metrics.log.error(("ValueError raised because 'criteria' in 'Metrics.get_precision_"
-                                   "recall_f1_support()' is not one of 'exact', 'left', 'right'"))
-                raise ValueError(("Expected criteria to be one of 'exact', 'left', or 'right'."
-                                  "Got: {}".format(criteria)))
+                err_msg = ("Expected criteria to be one of 'exact', 'left', or 'right'. "
+                           "Got: {}").format(criteria)
+                Metrics.log.error("ValueError %s", err_msg)
+                raise ValueError(err_msg)
             if criteria == 'exact':
                 y_true_lab = [chunk for chunk in y_true if chunk[0] == lab]
                 y_pred_lab = [chunk for chunk in y_pred if chunk[0] == lab]
