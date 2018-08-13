@@ -155,10 +155,9 @@ class Preprocessor(object):
             ValueError, if `type_` is not one of 'word', 'char', 'tag'
         """
         if type_ not in ['word', 'char', 'tag']:
-            Preprocessor.log.error(("ValueError was raised because 'type_' argument value in call "
-                                    "to 'Preprocessor.get_type_idx_sequence()' was not one of "
-                                    "'word', 'char' or 'type'"))
-            raise ValueError("Argument `type_` must be one 'word', 'char' or 'type'")
+            err_msg = "Argument `type_` must be one 'word', 'char' or 'type'"
+            Preprocessor.log.error('ValueError: %s', err_msg)
+            raise ValueError(err_msg)
 
         # Word type
         if type_ == 'word':
