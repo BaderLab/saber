@@ -1,11 +1,11 @@
 """Contains the SequenceProcessor class, which exposes most of Sabers functionality.
 """
-import os
-import time
+import itertools
+import logging
 import pickle
 from pprint import pprint
-from itertools import chain
-import logging
+import os
+import time
 
 import numpy as np
 from spacy import displacy
@@ -90,7 +90,7 @@ class SequenceProcessor(object):
         pred_tag_seq = [ds.idx_to_tag[idx] for idx in y_pred if ds.idx_to_tag[idx] != constants.PAD]
         pred_chunk_seq = self.preprocessor.chunk_entities(pred_tag_seq)
         # flatten the token offsets
-        offsets = list(chain.from_iterable(transformed_text['offsets']))
+        offsets = list(itertools.chain.from_iterable(transformed_text['offsets']))
 
         # accumulate for predicted entities
         ents = []
