@@ -1,9 +1,10 @@
 """Contains the Config class, which is used for parsing and representing all general arguments,
 model hyperparameters, and training details.
 """
-import os
 import argparse
 import configparser
+import logging
+import os
 
 from .preprocessor import Preprocessor
 
@@ -21,6 +22,8 @@ class Config(object):
         cli (bool): True if command line arguments will be supplied, defaults to False.
     """
     def __init__(self, filepath='./config.ini', cli=False):
+        self.log = logging.getLogger(__name__)
+
         # filepath to config file
         self.filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filepath)
         # parse args provided in configuration file
@@ -104,9 +107,10 @@ class Config(object):
         # Configparser throws a KeyError when you try to key into a configparser object that does
         # not exist, catch it here, provide hint to the user
         except KeyError as key:
-            print('[ERROR] KeyError raised for key {}.'.format(key))
-            print(('[WARN] This may have happened because there is no .ini file at: '
-                   '{}'.format(self.filepath)))
+            print(('KeyError raised for key {}. This may have happened because there is no .ini '
+                   'file at: {}').format(key, self.filepath))
+            self.log.error(("KeyError was raised in 'Config._process_args()'. This likely because "
+                            "there is no .ini file at %s", self.filepath))
         else:
             # overwrite any parameters in the config if specfied at CL
             for key, value in cli_args.items():
@@ -121,6 +125,8 @@ class Config(object):
             # use parameters dictionary to update instance attributes
             for arg, value in args.items():
                 setattr(self, arg, value)
+
+        self.log.debug('Hyperparameters and model details %s', args)
 
         return args
 
@@ -168,7 +174,7 @@ class Config(object):
         """
         parser = argparse.ArgumentParser(description='Saber CLI.')
 
-        parser.add_argument('--filepath', required=False, type=str,
+        parser.add_argument('--filepath', required=False, default='./config.ini', type=str,
                             help=('Path to the .ini file containing any arguments. Defaults to '
                                   './config.ini.'))
         parser.add_argument('--activation', required=False, type=str,
