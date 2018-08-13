@@ -1,8 +1,8 @@
 """Contains the Trainer class, which coordinates the training of Keras ML models for Saber.
 """
+import logging
 import random
-import keras.backend as K
-import numpy as np
+
 from sklearn.model_selection import train_test_split
 
 from .utils import model_utils
@@ -25,6 +25,7 @@ class Trainer(object):
         self.model = model
         # metric(s) object tied to this instance, one per dataset
         # self.metrics = []
+        self.log = logging.getLogger(__name__)
 
     def _specify(self):
         """Calls self.model.specify_() function, which specifies the models architecture."""
@@ -145,7 +146,9 @@ class Trainer(object):
                     random_state=42,
                     shuffle=False)
         except KeyError:
-            raise ValueError("'data' must contain the keys 'X_train' and 'y_train'")
+            err_msg = "'data' must contain the keys 'X_train' and 'y_train'"
+            self.log.error('ValueError: %s', err_msg)
+            raise ValueError(err_msg)
 
         data['X_train'] = [X_train_word, X_train_char]
         data['X_valid'] = [X_valid_word, X_valid_char]
@@ -169,12 +172,14 @@ class Trainer(object):
             output_dir (lst): a list of output directories, one for each dataset
             callbacks: a Keras CallBack object for per epoch model checkpointing.
         """
+        print('Using train/test/valid strategy...')
+        self.log.info('Using a train/test/valid strategy for training')
         # if validation data is provided, use it, otherwise take 10% of
         # train set as validation data
         for i, ds in enumerate(self.ds):
             if training_data[i]['X_valid'] is None:
-                print(("[INFO] No validation set was provided, using 10%% of training set selected "
-                       "at random as the validation data."))
+                print(('No validation set was provided, using 10% of training set selected '
+                       'at random as the validation data'))
                 training_data[i] = self._split_train_valid(training_data[i])
 
         # get list of Keras Callback objects for computing/storing metrics
@@ -185,7 +190,7 @@ class Trainer(object):
 
         # Epochs
         for epoch in range(self.config.epochs):
-            print('[INFO] Global epoch: {}/{}'.format(epoch + 1, self.config.epochs))
+            print('Global epoch: {}/{}'.format(epoch + 1, self.config.epochs))
             # Dataset / Models
             # get a random ordering of the dataset/model indices
             ds_idx = random.sample(range(0, len(self.ds)), len(self.ds))
@@ -213,6 +218,8 @@ class Trainer(object):
             output_dir (lst): a list of output directories, one for each dataset
             callbacks: a Keras CallBack object for per epoch model checkpointing.
         """
+        print('Using {}-fold cross-validation strategy...'.format(self.config.k_folds))
+        self.log.info('Using a %s-fold cross-validation strategy for training', self.config.k_folds)
         # get train/valid indicies for each fold and dataset
         train_valid_indices = \
             model_utils.get_train_valid_indices(training_data=training_data,
@@ -234,10 +241,10 @@ class Trainer(object):
 
             # Epochs
             for epoch in range(self.config.epochs):
-                print('[INFO] Fold: {}/{}; Global epoch: {}/{}'.format(fold + 1,
-                                                                       self.config.k_folds,
-                                                                       epoch + 1,
-                                                                       self.config.epochs))
+                print('Fold: {}/{}; Global epoch: {}/{}'.format(fold + 1,
+                                                                self.config.k_folds,
+                                                                epoch + 1,
+                                                                self.config.epochs))
 
                 # Datasets / Models
                 # get a random ordering of the dataset/model indices
