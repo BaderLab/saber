@@ -1,6 +1,7 @@
 """Contains the Preprocessor class, which handles low level NLP tasks such as tokenization and
 sentence segmentation.
 """
+import logging
 import re
 from collections import Counter
 
@@ -12,6 +13,9 @@ from . import constants
 
 class Preprocessor(object):
     """A class for processing text data."""
+    # define this at the class level because most methods are static
+    log = logging.getLogger(__name__)
+
     def __init__(self):
         # load Spacy english model (core, small), disable NER pipeline
         self.nlp = en_core_web_sm.load(disable=['ner'])
@@ -151,6 +155,9 @@ class Preprocessor(object):
             ValueError, if `type_` is not one of 'word', 'char', 'tag'
         """
         if type_ not in ['word', 'char', 'tag']:
+            Preprocessor.log.error(("ValueError was raised because 'type_' argument value in call "
+                                    "to 'Preprocessor.get_type_idx_sequence()' was not one of "
+                                    "'word', 'char' or 'type'"))
             raise ValueError("Argument `type_` must be one 'word', 'char' or 'type'")
 
         # Word type
