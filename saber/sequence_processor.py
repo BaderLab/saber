@@ -7,6 +7,7 @@ from pprint import pprint
 import os
 import time
 
+from gensim.models import KeyedVectors
 import numpy as np
 from spacy import displacy
 
@@ -292,8 +293,12 @@ class SequenceProcessor(object):
 
         return compound_ds
 
-    def load_embeddings(self):
+    def load_embeddings(self, binary=True):
         """Coordinates the loading of pre-trained token embeddings.
+
+        Args:
+            binary (bool): True if pre-trained embeddings are in C binary format, False if they are
+                in C text format.
 
         Raises:
             MissingStepException: if no dataset has been loaded.
@@ -308,7 +313,7 @@ class SequenceProcessor(object):
             self.log.error('ValueError: %s', err_msg)
             raise ValueError(err_msg)
 
-        self._load_token_embeddings()
+        self._load_token_embeddings(binary)
 
         return self
 
@@ -387,57 +392,52 @@ class SequenceProcessor(object):
         # train_history = pd.DataFrame(train_history.history)
         # return train_history
 
-    def _load_token_embeddings(self):
+    def _load_token_embeddings(self, binary=True):
         """Coordinates the loading of pre-trained token embeddings.
 
         Coordinates the loading of pre-trained token embeddings by reading in the file containing
-        the token embeddings and created an embedding matrix whos ith row corresponds to the token
+        the token embeddings and creating a embedding matrix whos ith row corresponds to the token
         embedding for the ith word in the models word to idx mapping.
+
+        Args:
+            binary (bool): True if pre-trained embeddings are in C binary format, False if they are
+                in C text format.
         """
-        start_time = time.time()
+        start = time.time()
         print('Loading embeddings... ', end='', flush=True)
 
         # prepare the embedding indicies
-        embedding_idx = self._prepare_token_embedding_layer()
+        embedding_idx = self._prepare_token_embedding_layer(binary)
         embedding_dim = len(list(embedding_idx.values())[0])
         # create the embedding matrix, update attribute
         embedding_matrix = self._prepare_token_embedding_matrix(embedding_idx, embedding_dim)
         self.token_embedding_matrix = embedding_matrix
 
-        elapsed_time = time.time() - start_time
-        print('Done ({0:.2f} seconds)'.format(elapsed_time))
+        end = time.time() - start
+        print('Done ({0:.2f} seconds)'.format(end))
         print('Found {} word vectors of dimension {}'.format(len(embedding_idx), embedding_dim))
         self.log.info('Loaded %i word vectors of dimension %i', len(embedding_idx), embedding_dim)
 
-    def _prepare_token_embedding_layer(self):
+    def _prepare_token_embedding_layer(self, binary=True):
         """Creates an embedding index using pretrained token embeddings.
 
-        For the models given pretrained token embeddings, creates and returns a dictionary mapping
-        words to known embeddings.
+        For the pretrained word embeddings given at `self.config.pretrained_embeddings`, creates
+        and returns a dictionary mapping words to embeddings, or word vectors. Note that if
+        `self.config.debug` is True, only the first 10K vectors are loaded.
+
+        Args:
+            binary (bool): True if pre-trained embeddings are in C binary format, False if they are
+                in C text format.
 
         Returns:
-            embedding_idx (dict): mapping of words to pre-trained token
-                embeddings
+            embed_idx (dict): mapping of words to pre-trained word embeddings
         """
-        # acc
-        embedding_idx = {}
-
-        # open pre-trained token embedding file for reading
-        with open(self.config.pretrained_embeddings, 'r') as pte:
-            for i, line in enumerate(pte):
-                # split line, get word and its embedding
-                values = line.split()
-                word = values[0]
-                coefs = np.asarray(values[1:], dtype='float32')
-
-                # update our embedding index
-                embedding_idx[word] = coefs
-
-                # if debug, load a small, arbitrary number of word embeddings
-                if i >= 10000 and self.config.debug:
-                    break
-
-        return embedding_idx
+        limit = 10000 if self.config.debug else None
+        vectors = KeyedVectors.load_word2vec_format(self.config.pretrained_embeddings,
+                                                    binary=binary,
+                                                    limit=limit)
+        embed_idx = {word: vectors[word] for word in vectors.vocab}
+        return embed_idx
 
     def _prepare_token_embedding_matrix(self, embedding_idx, embedding_dim):
         """Creates an embedding matrix using pretrained token embeddings.
