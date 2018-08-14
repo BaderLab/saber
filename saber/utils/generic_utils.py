@@ -1,6 +1,5 @@
 """A collection of generic helper/utility functions.
 """
-import codecs
 import errno
 import logging
 import os
