@@ -38,7 +38,7 @@ TRAIN_FILE = 'train.*'
 VALID_FILE = 'valid.*'
 TEST_FILE = 'test.*'
 # relative path to pretrained model directory
-PRETRAINED_MODEL_BASE_DIR = './pretrained_models'
+PRETRAINED_MODEL_DIR = 'pretrained_models'
 
 # MODEL SETTINGS
 # batch size to use when performing model prediction
