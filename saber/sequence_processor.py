@@ -299,7 +299,7 @@ class SequenceProcessor(object):
         Args:
             binary (bool): True if pre-trained embeddings are in C binary format, False if they are
                 in C text format.
-                
+
         Raises:
             MissingStepException: if no dataset has been loaded.
             ValueError: If 'self.config.pretrained_embeddings' is None.
@@ -422,17 +422,20 @@ class SequenceProcessor(object):
         """Creates an embedding index using pretrained token embeddings.
 
         For the pretrained word embeddings given at `self.config.pretrained_embeddings`, creates
-        and returns a dictionary mapping words to embeddings, or word vectors.
+        and returns a dictionary mapping words to embeddings, or word vectors. Note that if
+        `self.config.debug` is True, only the first 10K vectors are loaded.
 
         Args:
             binary (bool): True if pre-trained embeddings are in C binary format, False if they are
                 in C text format.
 
         Returns:
-            embedding_idx (dict): mapping of words to pre-trained word embeddings
+            embed_idx (dict): mapping of words to pre-trained word embeddings
         """
+        limit = 10000 if self.config.debug else None
         vectors = KeyedVectors.load_word2vec_format(self.config.pretrained_embeddings,
-                                                    binary=binary)
+                                                    binary=binary,
+                                                    limit=limit)
         embed_idx = {word: vectors[word] for word in vectors.vocab}
         return embed_idx
 
