@@ -293,9 +293,13 @@ class SequenceProcessor(object):
 
         return compound_ds
 
-    def load_embeddings(self):
+    def load_embeddings(self, binary=True):
         """Coordinates the loading of pre-trained token embeddings.
 
+        Args:
+            binary (bool): True if pre-trained embeddings are in C binary format, False if they are
+                in C text format.
+                
         Raises:
             MissingStepException: if no dataset has been loaded.
             ValueError: If 'self.config.pretrained_embeddings' is None.
@@ -309,7 +313,7 @@ class SequenceProcessor(object):
             self.log.error('ValueError: %s', err_msg)
             raise ValueError(err_msg)
 
-        self._load_token_embeddings()
+        self._load_token_embeddings(binary)
 
         return self
 
@@ -388,18 +392,22 @@ class SequenceProcessor(object):
         # train_history = pd.DataFrame(train_history.history)
         # return train_history
 
-    def _load_token_embeddings(self):
+    def _load_token_embeddings(self, binary=True):
         """Coordinates the loading of pre-trained token embeddings.
 
         Coordinates the loading of pre-trained token embeddings by reading in the file containing
         the token embeddings and creating a embedding matrix whos ith row corresponds to the token
         embedding for the ith word in the models word to idx mapping.
+
+        Args:
+            binary (bool): True if pre-trained embeddings are in C binary format, False if they are
+                in C text format.
         """
         start = time.time()
         print('Loading embeddings... ', end='', flush=True)
 
         # prepare the embedding indicies
-        embedding_idx = self._prepare_token_embedding_layer()
+        embedding_idx = self._prepare_token_embedding_layer(binary)
         embedding_dim = len(list(embedding_idx.values())[0])
         # create the embedding matrix, update attribute
         embedding_matrix = self._prepare_token_embedding_matrix(embedding_idx, embedding_dim)
