@@ -118,15 +118,13 @@ def test_token_embeddings_load(sp_sing_ds_no_embed, sp_compound_ds_no_embed):
     """Asserts that pre-trained token embeddings are loaded correctly when
     SequenceProcessor.load_embeddings() is called"""
     # load embeddings for each model
-    sp_sing_ds_no_embed.load_embeddings()
-    sp_compound_ds_no_embed.load_embeddings()
-
-    print(sp_compound_ds_no_embed.token_embedding_matrix)
+    sp_sing_ds_no_embed.load_embeddings(binary=False)
+    sp_compound_ds_no_embed.load_embeddings(binary=False)
 
     # check type
     assert isinstance(sp_sing_ds_no_embed.token_embedding_matrix, numpy.ndarray)
     assert isinstance(sp_compound_ds_no_embed.token_embedding_matrix, numpy.ndarray)
-    # check value
+    # check shape
     assert sp_sing_ds_no_embed.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
     assert sp_compound_ds_no_embed.token_embedding_matrix.shape == DUMMY_EMBEDDINGS_MATRIX_SHAPE
 
