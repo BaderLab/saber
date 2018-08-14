@@ -141,10 +141,11 @@ class SequenceProcessor(object):
         """Coordinates the saving of Saber models.
 
         Saves the necessary files for model persistance to filepath. Filepath defaults to
-        `self.config.output_folder/pretrained_models/self.config.saved_model_dir`
+        "`self.config.output_folder`/pretrained_models/dataset_names"
 
         Args:
-            filepath (str): directory path to save model folder to
+            filepath (str): directory path to save model folder, defaults to
+                "`self.config.output_folder`/pretrained_models/dataset_names"
             compress (bool): True if model should be saved as tarball
             model (int): which model in self.model.model to save, defaults to 0
 
