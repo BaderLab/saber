@@ -242,16 +242,29 @@ Corpora are collected in [here](https://github.com/BaderLab/Biomedical-Corpora) 
 
 ### Word embeddings
 
-When training new models, you can (and should) provide your own pre-trained word embeddings with the `pretrained_embeddings` argument (either at the command line or in the configuration file). [Pyysalo _et al_. 2013](https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf) provide word embeddings that work quite well in the biomedical domain, which can be downloaded [here](http://bio.nlplab.org). Alternatively, from the command line call:
+When training new models, you can (and should) provide your own pre-trained word embeddings with the `pretrained_embeddings` argument (either at the command line or in the configuration file). Saber expects all word embeddings to be in the `word2vec` file format. [Pyysalo _et al_. 2013](https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf) provide word embeddings that work quite well in the biomedical domain, which can be downloaded [here](http://bio.nlplab.org). Alternatively, from the command line call:
 
 ```bash
 
 mkdir saber/word_embeddings
 cd saber/word_embeddings
+# Note: this file is over 4GB
 wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin
 ```
 
 > Note: you do not need to download pre-trained word embeddings if you only plan on using Saber's pre-trained models.
+
+#### GloVe
+
+To use [GloVe](https://nlp.stanford.edu/projects/glove/) embeddings, just convert them to the [word2vec](https://code.google.com/archive/p/word2vec/) format first:
+
+```bash
+(saber) $ python
+>>> from gensim.scripts.glove2word2vec import glove2word2vec
+>>> glove_input_file = 'glove.txt'
+>>> word2vec_output_file = 'word2vec.txt'
+>>> glove2word2vec(glove_input_file, word2vec_output_file)
+```
 
 ## Running tests
 
