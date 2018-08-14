@@ -242,25 +242,20 @@ Corpora are collected in [here](https://github.com/BaderLab/Biomedical-Corpora) 
 
 ### Word embeddings
 
-When training new models, you can (and should) provide your own pre-trained word embeddings with the `token_pretrained_embedding_filepath` argument (either at the command line or in the configuration file). [Pyysalo _et al_. 2013](https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf) provide word embeddings that work quite well in the biomedical domain, which can be downloaded [here](http://bio.nlplab.org).
-
-Once downloaded, you will need to convert them from `.bin` to `.txt` format:
+When training new models, you can (and should) provide your own pre-trained word embeddings with the `pretrained_embeddings` argument (either at the command line or in the configuration file). [Pyysalo _et al_. 2013](https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf) provide word embeddings that work quite well in the biomedical domain, which can be downloaded [here](http://bio.nlplab.org). Alternatively, from the command line call:
 
 ```bash
-(saber) $ cd saber
-(saber) $ pip install gensim
-(saber) $ python
->> from generic_utils import bin_to_txt
->> path_to_embeddings = '/path/to/wikipedia-pubmed-and-PMC-w2v.bin'
->> bin_to_txt('wikipedia-pubmed-and-PMC-w2v.bin', output_dir='path/to/word_embeddings')
+
+mkdir saber/word_embeddings
+cd saber/word_embeddings
+wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin
 ```
 
 > Note: you do not need to download pre-trained word embeddings if you only plan on using Saber's pre-trained models.
 
 ## Running tests
 
-Sabers test suite can be found in `Saber/saber/tests`. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in the ``requirements.txt`` (see [Installation](#Installation) for more help). Additionally, you will
-need to install ``pytest``:
+Sabers test suite can be found in `Saber/saber/tests`. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in the ``requirements.txt`` (see [Installation](#Installation) for more help). Additionally, you will need to install ``pytest``:
 
 ```bash
 (saber) $ pip install pytest
