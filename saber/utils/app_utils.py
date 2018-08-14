@@ -98,16 +98,16 @@ def load_models(ents):
     models = {} # acc for models
     config = Config() # parse config
 
-    for k, v in ents.items():
-        if v:
-            path_to_model = os.path.join(constants.PRETRAINED_MODEL_DIR, k)
+    for ent, value in ents.items():
+        if value:
+            path_to_model = os.path.abspath(os.path.join(constants.PRETRAINED_MODEL_DIR, ent))
             # decompress the pre-trained model if this is not already done
             decompress_model(path_to_model)
 
             # create and load the pre-trained models
             sp = SequenceProcessor(config)
             sp.load(path_to_model)
-            models[k] = sp
+            models[ent] = sp
 
     return models
 
