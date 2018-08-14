@@ -11,7 +11,6 @@ python -m saber.train --dataset_folder ./datasets/NCBI_disease_BIO --epochs 25
 ```
 """
 import logging
-import os
 
 from saber.config import Config
 from saber.sequence_processor import SequenceProcessor
@@ -30,17 +29,16 @@ def main():
     if config.pretrained_embeddings:
         sp.load_embeddings()
     sp.create_model()
-    sp.fit()
 
-    # save the model
-    if config.save_model:
-        ds_names = [os.path.basename(x) for x in config.dataset_folder]
-        saved_model_dir = os.path.join(config.output_folder, '_'.join(ds_names))
-        sp.save(saved_model_dir)
-
-if __name__ == '__main__':
     try:
-        main()
+        sp.fit()
     except KeyboardInterrupt:
         print("\nQutting Saber...")
         logging.warning('Saber was terminated early due to KeyboardInterrupt')
+    finally:
+        # save the model
+        if config.save_model:
+            sp.save()
+
+if __name__ == '__main__':
+    main()
