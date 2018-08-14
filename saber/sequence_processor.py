@@ -137,19 +137,24 @@ class SequenceProcessor(object):
         ds = self.ds[ds_idx]
         return self.preprocessor.transform(text, ds.type_to_idx['word'], ds.type_to_idx['char'])
 
-    def save(self, filepath, compress=True, model=0):
+    def save(self, filepath=None, compress=True, model=0):
         """Coordinates the saving of Saber models.
 
-        Saves the necessary files for model persistance to filepath.
+        Saves the necessary files for model persistance to filepath. Filepath defaults to
+        "`self.config.output_folder`/pretrained_models/dataset_names"
 
         Args:
-            filepath (str): directory path to save model folder to
+            filepath (str): directory path to save model folder, defaults to
+                "`self.config.output_folder`/pretrained_models/dataset_names"
             compress (bool): True if model should be saved as tarball
             model (int): which model in self.model.model to save, defaults to 0
 
         Returns:
             True if model was saved without error.
         """
+        if filepath is None:
+            filepath = generic_utils.get_pretrained_model_dir(self.config)
+
         # create the pretrained model folder (if it does not exist)
         generic_utils.make_dir(os.path.join(filepath))
         # create filepaths
@@ -171,6 +176,8 @@ class SequenceProcessor(object):
         if compress:
             generic_utils.compress_model(filepath)
 
+        print('Model saved to {}'.format(filepath))
+        self.log.info('Model was saved to %s', filepath)
         return True
 
     def load(self, filepath):
