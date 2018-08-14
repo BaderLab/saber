@@ -18,7 +18,6 @@ from saber.sequence_processor import SequenceProcessor
 def main():
     """Coordinates a complete training cycle, including reading in a config, loading dataset(s),
     training the model, and saving the models weights."""
-
     # create and collect model and training parameters
     config = Config(cli=True)
 
