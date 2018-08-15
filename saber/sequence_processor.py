@@ -156,8 +156,7 @@ class SequenceProcessor(object):
         if filepath is None:
             filepath = generic_utils.get_pretrained_model_dir(self.config)
 
-        # create the pretrained model folder (if it does not exist)
-        generic_utils.make_dir(os.path.join(filepath))
+        generic_utils.make_dir(filepath)
         # create filepaths
         weights_filepath = os.path.join(filepath, 'model_weights.hdf5')
         attributes_filepath = os.path.join(filepath, 'model_attributes.pickle')
@@ -173,6 +172,8 @@ class SequenceProcessor(object):
         self.model.model[model].save_weights(weights_filepath)
         # save attributes
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
+        # save config file
+        self.config.save(filepath)
 
         if compress:
             generic_utils.compress_model(filepath)
