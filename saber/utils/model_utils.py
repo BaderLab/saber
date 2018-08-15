@@ -6,6 +6,8 @@ from time import strftime
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint
 from keras.callbacks import TensorBoard
+from keras.utils import to_categorical
+import numpy as np
 from sklearn.model_selection import KFold
 
 from ..metrics import Metrics
@@ -237,8 +239,7 @@ def get_data_partitions(training_data, train_valid_indices, fold):
     """
     # TODO: this seems like a sub-par solution
     # acc, p = partition, s = split
-    partitioned_data = {p: {s: None for s in training_data[p]} for p in
-        training_data}
+    partitioned_data = {p: {s: None for s in training_data[p]} for p in training_data}
 
     for i in training_data:
         # train_valid_indices[i][fold] is a two-tuple, where index 0 contains
@@ -286,3 +287,23 @@ def get_metrics(datasets, training_data, output_dir, criteria='exact', fold=None
         metrics.append(metrics_)
 
     return metrics
+
+def idx_seq_to_categorical(idx_seq, num_classes=None):
+    """One-hot encodes a given class vector.
+
+    Converts a class matrix of integers, `idx_seq`, of shape (num examples, sequence length) to a
+    one-hot encoded matrix of shape (num_examples, sequence length, num_classes).
+
+    Args:
+        idx_seq: class matrix of integers of shape (num examples, sequence length), representing a
+            sequence of tags
+
+    Returns:
+        numpy array, one-hot encoded matrix representation of `idx_seq` of shape
+            (num examples, sequence length, num_classes)
+    """
+    # convert to one-hot encoding
+    one_hots = [to_categorical(s, num_classes) for s in idx_seq]
+    one_hots = np.array(one_hots)
+
+    return one_hots
