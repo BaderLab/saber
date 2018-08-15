@@ -103,7 +103,7 @@ class Preprocessor(object):
     def type_to_idx(types, initial_mapping=None, offset=0):
         """Returns a dictionary of element:index pairs for each element in types.
 
-        Given a list `types`, returns a dictionary of length len(types) + offset where the keys are
+        Given a list `types`, returns a dictionary of length len(types) + offset, where the keys are
         elements of `types` and the values are unique integer ids.
 
         Args:

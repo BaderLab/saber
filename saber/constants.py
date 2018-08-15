@@ -25,8 +25,7 @@ PAD_VALUE = 0 # value of sequence pad
 NUM_RARE = 1 # tokens that occur less than NUM_RARE times are replaced UNK
 
 # mapping of special tokens to contants
-INITIAL_MAPPING_WORDS = {PAD: 0, UNK: 1}
-INITIAL_MAPPING_TAGS = {PAD: 0}
+INITIAL_MAPPING = {'word': {PAD: 0, UNK: 1}, 'tag':  {PAD: 0}}
 
 # keys into dictionaries containing information for different partitions of a
 # dataset
