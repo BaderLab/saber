@@ -1,6 +1,6 @@
 """Contains the SequenceProcessor class, which exposes most of Sabers functionality.
 """
-import itertools
+from itertools import chain
 import logging
 import pickle
 from pprint import pprint
@@ -90,7 +90,7 @@ class SequenceProcessor(object):
         pred_tag_seq = [ds.idx_to_tag[idx] for idx in y_pred if ds.idx_to_tag[idx] != constants.PAD]
         pred_chunk_seq = self.preprocessor.chunk_entities(pred_tag_seq)
         # flatten the token offsets
-        offsets = list(itertools.chain.from_iterable(transformed_text['offsets']))
+        offsets = list(chain.from_iterable(transformed_text['offsets']))
 
         # accumulate for predicted entities
         ents = []
@@ -166,8 +166,7 @@ class SequenceProcessor(object):
                             'word_embedding_dim': self.config.word_embed_dim,
                             'char_embedding_dim': self.config.char_embed_dim,
                             'type_to_idx': self.ds[model].type_to_idx,
-                            'idx_to_tag': self.ds[model].idx_to_tag,
-                           }
+                            'idx_to_tag': self.ds[model].idx_to_tag,}
         # save weights
         self.model.model[model].save_weights(weights_filepath)
         # save attributes
@@ -193,11 +192,9 @@ class SequenceProcessor(object):
         """
         generic_utils.decompress_model(filepath)
 
-        # create filepaths
+        # load attributes, these attributes must be carried over from saved model
         weights_filepath = os.path.join(filepath, 'model_weights.hdf5')
         attributes_filepath = os.path.join(filepath, 'model_attributes.pickle')
-
-        # load attributes, these attributes must be carried over from saved model
         model_attributes = pickle.load(open(attributes_filepath, "rb"))
         self.config.word_embed_dim = model_attributes['word_embedding_dim']
         self.config.char_embed_dim = model_attributes['char_embedding_dim']
@@ -207,12 +204,11 @@ class SequenceProcessor(object):
         # TEMP: this is an ugly hack, need way around having to provide a filepath
         dummy_ds = os.path.abspath('saber/tests/resources/dummy_dataset_1')
         self.ds = [Dataset(dummy_ds)]
-        self.ds[-1].type_to_idx = model_attributes['type_to_idx']
-        self.ds[-1].idx_to_tag = model_attributes['idx_to_tag']
+        self.ds[0].type_to_idx = model_attributes['type_to_idx']
+        self.ds[0].idx_to_tag = model_attributes['idx_to_tag']
 
-        # specify model based on saved models attributes
+        # specify model based on saved models attributes, load weights and compile
         self.create_model(compile_model=False)
-        # load weights, compile model
         # by_name loads allows us to load a model even if when architecture has changed slightly
         self.model.model[0].load_weights(weights_filepath, by_name=True)
         self.model.compile_()
@@ -221,73 +217,88 @@ class SequenceProcessor(object):
 
     def load_dataset(self):
         """Coordinates the loading of a dataset."""
-        assert self.config.dataset_folder, '''You must provide at
-        least one dataset via the dataset_folder parameter'''
+        start = time.time()
+        if not self.config.dataset_folder:
+            err_msg = "Must provide at least one dataset via the 'dataset_folder' parameter"
+            self.log.error('AssertionError %s', err_msg)
+            raise AssertionError(err_msg)
 
-        start_time = time.time()
-        # Datasets may be 'single' or 'compound' (more than one), loading differs slightly. Consider
-        # a dataset single if there is only one filepath in self.config.dataset_folder'] and
-        # compound otherwise.
+        # if not None, then pre-trained model has been loaded, use its type mapping
+        type_to_idx = None if not self.ds else self.ds[0].type_to_idx
+        # Datasets may be 'single' or 'compound' (more than one). Consider a dataset single if
+        # there is only one filepath in self.config.dataset_folder' and compound otherwise.
         if len(self.config.dataset_folder) == 1:
             print('Loading (single) dataset... ', end='', flush=True)
-            self.ds = self._load_single_dataset()
+            self.ds = self._load_single_dataset(type_to_idx)
             self.log.info('Loaded single dataset at: %s', self.config.dataset_folder)
         else:
             print('Loading (compound) dataset... ', end='', flush=True)
-            self.ds = self._load_compound_dataset()
+            self.ds = self._load_compound_dataset(type_to_idx)
             self.log.info('Loaded multiple datasets at: %s', self.config.dataset_folder)
 
-        elapsed_time = time.time() - start_time
-        print('Done ({0:.2f} seconds).'.format(elapsed_time))
+        end = time.time() - start
+        print('Done ({0:.2f} seconds).'.format(end))
 
         return self
 
-    def _load_single_dataset(self):
+    def _load_single_dataset(self, type_to_idx=None):
         """Loads a single dataset.
 
         Creates and loads a single dataset object for a dataset at self.config.dataset_folder[0].
 
+        Args:
+            type_to_idx (dict): a mapping of types ('word', 'char') to unique integer ids, when
+                provided, these are used in the loading of the dataset at
+                `self.config.dataset_folder[0]`
+
         Returns:
             a list containing a single dataset object.
         """
-        ds = Dataset(filepath=self.config.dataset_folder[0],
+        ds = Dataset(self.config.dataset_folder[0],
                      replace_rare_tokens=self.config.replace_rare_tokens)
-        ds.load_dataset()
+        if type_to_idx is not None:
+            ds.load_data_and_labels()
+            ds.get_types()
+
+        ds.load_dataset(type_to_idx)
 
         return [ds]
 
-    def _load_compound_dataset(self):
+    def _load_compound_dataset(self, type_to_idx):
         """Loads a compound dataset.
 
         Creates and loads a 'compound' dataset. Compound datasets are specified by multiple
-        individual datasets, and share multiple attributes (such as word/char type to index
-        mappings). Loads such a dataset for each dataset at self.dataset_folder[0].
+        individual datasets, and share multiple attributes (such as 'word' and 'char' type to index
+        mappings). Loads such a dataset for each dataset at self.dataset_folder.
+
+        Args:
+            type_to_idx (dict): a mapping of types ('word', 'char') to unique integer ids, when
+                provided, these are used in the loading of the dataset at
+                `self.config.dataset_folder[0]`
 
         Returns:
             A list containing multiple compound dataset objects.
         """
         # accumulate datasets
-        compound_ds = [Dataset(filepath=ds, replace_rare_tokens=self.config.replace_rare_tokens)
-                       for ds in self.config.dataset_folder]
+        compound_ds = [Dataset(ds, self.config.replace_rare_tokens) for ds in
+                       self.config.dataset_folder]
 
         for ds in compound_ds:
             ds.load_data_and_labels()
             ds.get_types()
 
-        # get combined set of word and char types from all datasets
-        combined_types = {'word': [], 'char': []}
-        word_types = [ds.types['word'] for ds in compound_ds]
-        char_types = [ds.types['char'] for ds in compound_ds]
-        combined_types['word'] = list(set(list(itertools.chain.from_iterable(word_types))))
-        combined_types['char'] = list(set(list(itertools.chain.from_iterable(char_types))))
+        if type_to_idx is None:
+            # get combined set of word and char types from all datasets
+            combined_types = {'word': [ds.types['word'] for ds in compound_ds],
+                              'char': [ds.types['char'] for ds in compound_ds]}
+            combined_types['word'] = list(set(chain.from_iterable(combined_types['word'])))
+            combined_types['char'] = list(set(chain.from_iterable(combined_types['char'])))
 
-        # compute word to index mappings that will be shared across datasets
-        type_to_idx = {'word': {}, 'char': {}}
-        type_to_idx['word'] = Preprocessor.type_to_idx(combined_types['word'], \
-            initial_mapping=constants.INITIAL_MAPPING_WORDS)
-        type_to_idx['char'] = Preprocessor.type_to_idx(combined_types['char'], \
-            initial_mapping=constants.INITIAL_MAPPING_WORDS)
-
+            # compute word to index mappings that will be shared across datasets
+            type_to_idx = {'word': Preprocessor.type_to_idx(combined_types['word'],
+                                                            constants.INITIAL_MAPPING['word']),
+                           'char': Preprocessor.type_to_idx(combined_types['char'],
+                                                            constants.INITIAL_MAPPING['word'])}
         # finally, load all the datasets, providing pre-populated type_to_idx mappings
         for ds in compound_ds:
             ds.load_dataset(type_to_idx)
@@ -353,10 +364,10 @@ class SequenceProcessor(object):
         print('Done ({0:.2f} seconds).'.format(elapsed_time))
         self.log.info('%s model was built successfully', self.config.model_name.upper())
 
-        # print model summaries if verbose argument was passed
         if self.config.verbose:
-            for model in self.model.model:
-                print('Model architecture:')
+            for i, model in enumerate(self.model.model):
+                ds_name = os.path.basename(self.config.dataset_folder[i])
+                print('Model architecture for dataset {}:'.format(ds_name))
                 model.summary()
 
         return self
@@ -379,7 +390,7 @@ class SequenceProcessor(object):
         callbacks['checkpoint'] = model_utils.setup_checkpoint_callback(train_session_dir)
         # tensorboard
         if self.config.tensorboard:
-            callbacks['tensorboard'] = model.utils.setup_tensorboard_callback(train_session_dir)
+            callbacks['tensorboard'] = model_utils.setup_tensorboard_callback(train_session_dir)
 
         trainer = Trainer(self.config, self.ds, self.model)
         trainer.train(callbacks, train_session_dir)
