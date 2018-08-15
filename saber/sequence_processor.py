@@ -280,7 +280,7 @@ class SequenceProcessor(object):
             A list containing multiple compound dataset objects.
         """
         # accumulate datasets
-        compound_ds = [Dataset(ds, self.config.replace_rare_tokens) for ds in
+        compound_ds = [Dataset(ds, replace_rare_tokens=self.config.replace_rare_tokens) for ds in
                        self.config.dataset_folder]
 
         for ds in compound_ds:
