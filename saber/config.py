@@ -22,7 +22,7 @@ class Config(object):
         filepath (str): path to a .ini file, defaults to ./config.ini
         cli (bool): True if command line arguments will be supplied, defaults to False.
     """
-    def __init__(self, filepath='./config.ini', cli=False):
+    def __init__(self, filepath='config.ini', cli=False):
         self.log = logging.getLogger(__name__)
         # filepath to config file
         self.filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filepath)
@@ -250,7 +250,7 @@ class Config(object):
 
         Saves a config.ini file at filepath, containing the harmonized arguments sourced from the
         original config file at `self.config` and any arguments supplied at the command line.
-    
+
         Args:
             dir_path (str): directory path to save the config.ini file.
         """
