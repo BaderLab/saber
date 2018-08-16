@@ -49,6 +49,13 @@ PRED_BATCH_SIZE = 256
 MAX_SENT_LEN = 100
 # max length of a character sequence (word)
 MAX_CHAR_LEN = 25
+# number of units in the LSTM layers
+UNITS_WORD_LSTM = 200
+UNITS_CHAR_LSTM = 200
+UNITS_DENSE = UNITS_WORD_LSTM // 2
+
+# possible models
+MODELS = ['mt-lstm-crf',]
 
 # RESTful API
 # endpoint for Entrez Utilities Web Service API
