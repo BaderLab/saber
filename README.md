@@ -203,7 +203,7 @@ sp.save('pretrained_models/GENIA')
 # Load a model
 del sp
 sp = SequenceProcessor()
-sp.load('pretrained_models/CRAFT')
+sp.load('pretrained_models/GENIA')
 
 # Perform prediction on raw text, get resulting annotation
 raw_text = 'The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.'
