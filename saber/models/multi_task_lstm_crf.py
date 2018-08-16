@@ -20,7 +20,7 @@ from keras.layers import TimeDistributed
 from keras.utils import multi_gpu_model
 import tensorflow as tf
 
-from . import constants
+from .. import constants
 from ..utils import model_utils
 
 # TODO (johngiorgi): I should to stratify the K-folds...
@@ -150,7 +150,7 @@ class MultiTaskLSTMCRF(object):
             # character-level embedding
             char_ids = Input(shape=(None, None), dtype='int32', name='char_id_inputs')
             char_embeddings = char_embeddings(char_ids)
-            
+
             # character-level BiLSTM + dropout. Spatial dropout applies the same dropout mask to all
             # timesteps which is necessary to implement variational dropout
             # (https://arxiv.org/pdf/1512.05287.pdf)
