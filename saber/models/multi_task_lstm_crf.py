@@ -16,6 +16,7 @@ from keras.models import Input
 from keras.layers import Lambda
 from keras.layers import LSTM
 from keras.models import Model
+from keras.models import model_from_json
 from keras.layers import SpatialDropout1D
 from keras.layers import TimeDistributed
 from keras.utils import multi_gpu_model
@@ -63,6 +64,31 @@ class MultiTaskLSTMCRF(object):
         self.model = []
 
         self.log = logging.getLogger(__name__)
+
+    def save(self, weights_filepath, model_filepath, model=0):
+        """Save a model to disk.
+
+        Args:
+            weights_filepath (str): filepath to the models wieghts (.hdf5 file)
+            model_filepath (str): filepath to the models architecture (.json file)
+            model (int): which model from `self.model` to save
+        """
+        with open(model_filepath, 'w') as f:
+            model_json = self.model[model].to_json()
+            json.dump(json.loads(model_json), f, sort_keys=True, indent=4)
+            self.model[model].save_weights(weights_filepath)
+
+    def load(self, weights_filepath, model_filepath):
+        """Load a model from disk.
+
+        Args:
+            weights_filepath (str): filepath to the models wieghts (.hdf5 file)
+            model_filepath (str): filepath to the models architecture (.json file)
+        """
+        with open(model_filepath) as f:
+            model = model_from_json(f.read(), custom_objects={'CRF': CRF})
+            model.load_weights(weights_filepath)
+            self.model.append(model)
 
     def specify_(self):
         """Specifies a multi-task BiLSTM-CRF for sequence tagging using Keras.
