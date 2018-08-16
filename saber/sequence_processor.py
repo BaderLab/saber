@@ -207,9 +207,13 @@ class SequenceProcessor(object):
         self.model.load(weights_filepath, model_filepath)
         self.model.compile_()
 
-    def load_dataset(self):
+    def load_dataset(self, filepath=None):
         """Coordinates the loading of a dataset."""
         start = time.time()
+
+        if filepath is not None:
+            self.config.dataset_folder = filepath
+
         if not self.config.dataset_folder:
             err_msg = "Must provide at least one dataset via the 'dataset_folder' parameter"
             self.log.error('AssertionError %s', err_msg)
@@ -217,8 +221,7 @@ class SequenceProcessor(object):
 
         # if not None, then pre-trained model has been loaded, use its type mapping
         type_to_idx = None if not self.ds else self.ds[0].type_to_idx
-        # Datasets may be 'single' or 'compound' (more than one). Consider a dataset single if
-        # there is only one filepath in self.config.dataset_folder' and compound otherwise.
+        # datasets may be 'single' or 'compound' (more than one)
         if len(self.config.dataset_folder) == 1:
             print('Loading (single) dataset... ', end='', flush=True)
             self.ds = self._load_single_dataset(type_to_idx)
@@ -357,7 +360,7 @@ class SequenceProcessor(object):
                 ds_name = os.path.basename(self.config.dataset_folder[i])
                 print('Model architecture for dataset {}:'.format(ds_name))
                 model.summary()
-r
+
     def fit(self):
         """Fit the specified model.
 
