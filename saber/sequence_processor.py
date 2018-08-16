@@ -143,7 +143,7 @@ class SequenceProcessor(object):
                             'idx_to_tag': self.ds[model_idx].idx_to_tag,
                            }
         # save weights, model architecture, dataset it was trained on, and configuration file
-        self.model.save(weights_filepath, model_filepath, model)
+        self.model.save(weights_filepath, model_filepath, model_idx)
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
         self.config.save(directory)
 
