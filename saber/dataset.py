@@ -43,22 +43,22 @@ class Dataset(object):
                         'test': {'word': None, 'char': None, 'tag': None},}
 
     def get_filepaths(self, filepath):
-        """Collects train set, and valid/test set filepaths, if they exists.
+        """Collects 'train' (and, if they exist) 'valid'/'test' parition filepaths from `filepath`.
 
-        Looks for train, valid and test partitions at filepath/train.*, filepath/valid.* and
-        filepath/test.* respectively. Train set must be provided, valid and test sets are optional.
+        Looks for 'train', 'valid' and 'test' partitions at 'filepath/train.*', 'filepath/valid.*'
+        and 'filepath/test.*' respectively. Train set must be provided, valid and test sets are
+        optional.
 
         Args:
             filepath (str): path to dataset (corpus)
 
         Returns:
-            a dictionary with keys 'train', 'valid', 'test' and corresponding values containing the
+            a dictionary with keys 'train', and optionally, 'valid' and 'test' containing the
             filepaths to the train, valid and test paritions of the dataset at 'filepath'.
 
         Raises:
             ValueError when no file at filepath/train.* is found.
         """
-        # acc for each partitions filepath
         partition_filepaths = {}
         # search for partition filepaths
         train_partition = glob(os.path.join(filepath, constants.TRAIN_FILE))
