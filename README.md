@@ -170,9 +170,9 @@ All hyper-parameters are specified in a configuration file. The configuration fi
 (saber) $ python -m saber.train --config_filepath path/to/config.ini
 ```
 
-If not specified, the default configuration file at `saber/config.ini` is used.
+> If not specified, the default configuration file at `saber/config.ini` is used.
 
-Alternatively, you can supply arguments at the command line. Each command line argument has an identical name to those found in `saber/config.ini`. For example:
+Alternatively, you can supply arguments at the command line. Each command line argument has a name identical to those found in `saber/config.ini`. For example:
 
 ```bash
 (saber) $ python -m saber.train --dataset_folder path/to/dataset --k_folds 10
@@ -215,29 +215,21 @@ sp.fit()
 ```
 #### Juypter notebooks
 
-First, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) (make sure to activate your virtual environment first if you created one):
+First, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) by following the instructions [here](https://github.com/jupyterlab/jupyterlab#installation) (make sure to activate your virtual environment first if you created one!
 
-```bash
-# If you use pip, you can install it as
-(saber) $ pip install jupyterlab
-
-# If you use conda, you can install as
-(saber) $ conda install -c conda-forge jupyterlab
-```
-
-> Note, you only need to install this once!
-
-This is a temporary work-around, but you must also `pip install .` for the notebooks to work:
+This is a _temporary_ work-around, but you must also run:
 
 ```
-(saber) $ pip install .
+(saber) $ pip install --upgrade .
 ```
 
-Then `cd` into `saber` and run:
+for the notebooks to work. Finally, run:
 
 ```
 (saber) $ jupyter lab
 ```
+
+> Note: if you activated a virtual enviornment make sure you see **Python [conda env:saber]** in the top right of the Jupyter notebook.
 
 Check out the `lightning_tour.ipynb` notebook for an overview.
 
@@ -279,7 +271,7 @@ To use [GloVe](https://nlp.stanford.edu/projects/glove/) embeddings, just conver
 
 ## Running tests
 
-Sabers test suite can be found in `Saber/saber/tests`. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in the ``requirements.txt`` (see [Installation](#Installation) for more help). Additionally, you will need to install ``pytest``:
+Sabers test suite can be found in `saber/tests`. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in the ``requirements.txt`` (see [Installation](#Installation) for more help). Additionally, you will need to install ``pytest``:
 
 ```bash
 (saber) $ pip install pytest
