@@ -30,7 +30,7 @@ class SequenceProcessor(object):
     def __init__(self, config=None):
         self.log = logging.getLogger(__name__)
 
-        # hyperparameters
+        # hyperparameters and model details
         self.config = config if config is not None else Config()
 
         # dataset(s) tied to this instance
@@ -145,33 +145,28 @@ class SequenceProcessor(object):
         "`self.config.output_folder`/pretrained_models/dataset_names"
 
         Args:
-            filepath (str): directory path to save model folder, defaults to
+            filepath (str): directory path to save model folder, if not provided, defaults to
                 "`self.config.output_folder`/pretrained_models/dataset_names"
-            compress (bool): True if model should be saved as tarball
+            compress (bool): True if model should be saved as tarball, defaults to True
             model (int): which model in self.model.model to save, defaults to 0
-
-        Returns:
-            True if model was saved without error.
         """
+        # if no filepath is provided, get a 'default' one from dataset names
         if filepath is None:
             filepath = generic_utils.get_pretrained_model_dir(self.config)
-
         generic_utils.make_dir(filepath)
-        # create filepaths
-        weights_filepath = os.path.join(filepath, 'model_weights.hdf5')
-        attributes_filepath = os.path.join(filepath, 'model_attributes.pickle')
+        # create filepaths to objects to be saved
+        weights_filepath = os.path.join(filepath, constants.WEIGHTS_FILEPATH)
+        model_filepath = os.path.join(filepath, constants.MODEL_FILEPATH)
+        attributes_filepath = os.path.join(filepath, constants.ATTRIBUTES_FILEPATH)
 
-        # create a dictionary containg everything we need to save the model
-        model_attributes = {'embedding_matrix':self.token_embedding_matrix,
-                            'word_embedding_dim': self.config.word_embed_dim,
-                            'char_embedding_dim': self.config.char_embed_dim,
-                            'type_to_idx': self.ds[model].type_to_idx,
-                            'idx_to_tag': self.ds[model].idx_to_tag,}
-        # save weights
-        self.model.model[model].save_weights(weights_filepath)
-        # save attributes
+        # create a dictionary containg anything else we need to save the model
+        model_attributes = {'type_to_idx': self.ds[model].type_to_idx,
+                            'idx_to_tag': self.ds[model].idx_to_tag,
+                           }
+
+        # save weights, model architecture, dataset it was trained on, and configuration file
+        self.model.save(weights_filepath, model_filepath, model)
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
-        # save config file
         self.config.save(filepath)
 
         if compress:
@@ -179,7 +174,6 @@ class SequenceProcessor(object):
 
         print('Model saved to {}'.format(filepath))
         self.log.info('Model was saved to %s', filepath)
-        return True
 
     def load(self, filepath):
         """Coordinates the loading of Saber models.
@@ -193,13 +187,12 @@ class SequenceProcessor(object):
         generic_utils.decompress_model(filepath)
 
         # load attributes, these attributes must be carried over from saved model
-        weights_filepath = os.path.join(filepath, 'model_weights.hdf5')
-        attributes_filepath = os.path.join(filepath, 'model_attributes.pickle')
-        model_attributes = pickle.load(open(attributes_filepath, "rb"))
-        self.config.word_embed_dim = model_attributes['word_embedding_dim']
-        self.config.char_embed_dim = model_attributes['char_embedding_dim']
-        self.token_embedding_matrix = model_attributes['embedding_matrix']
+        weights_filepath = os.path.join(filepath, constants.WEIGHTS_FILEPATH)
+        model_filepath = os.path.join(filepath, constants.MODEL_FILEPATH)
+        attributes_filepath = os.path.join(filepath, constants.ATTRIBUTES_FILEPATH)
 
+        # load any attributes carried over from saved model
+        model_attributes = pickle.load(open(attributes_filepath, "rb"))
         # create a new dataset instance, load the required attributes for model prediction
         # TEMP: this is an ugly hack, need way around having to provide a filepath
         dummy_ds = os.path.abspath('saber/tests/resources/dummy_dataset_1')
@@ -207,13 +200,12 @@ class SequenceProcessor(object):
         self.ds[0].type_to_idx = model_attributes['type_to_idx']
         self.ds[0].idx_to_tag = model_attributes['idx_to_tag']
 
-        # specify model based on saved models attributes, load weights and compile
-        self.create_model(compile_model=False)
-        # by_name loads allows us to load a model even if when architecture has changed slightly
-        self.model.model[0].load_weights(weights_filepath, by_name=True)
-        self.model.compile_()
+        if self.config.model_name == 'mt-lstm-crf':
+            from .models.multi_task_lstm_crf import MultiTaskLSTMCRF
+            self.model = MultiTaskLSTMCRF(self.config, self.ds)
 
-        return self
+        self.model.load(weights_filepath, model_filepath)
+        self.model.compile_()
 
     def load_dataset(self):
         """Coordinates the loading of a dataset."""
@@ -238,8 +230,6 @@ class SequenceProcessor(object):
 
         end = time.time() - start
         print('Done ({0:.2f} seconds).'.format(end))
-
-        return self
 
     def _load_single_dataset(self, type_to_idx=None):
         """Loads a single dataset.
@@ -327,8 +317,6 @@ class SequenceProcessor(object):
 
         self._load_token_embeddings(binary)
 
-        return self
-
     def create_model(self, compile_model=True):
         """Specifies and compiles chosen model (self.config.model_name).
 
@@ -369,9 +357,7 @@ class SequenceProcessor(object):
                 ds_name = os.path.basename(self.config.dataset_folder[i])
                 print('Model architecture for dataset {}:'.format(ds_name))
                 model.summary()
-
-        return self
-
+r
     def fit(self):
         """Fit the specified model.
 
@@ -394,15 +380,6 @@ class SequenceProcessor(object):
 
         trainer = Trainer(self.config, self.ds, self.model)
         trainer.train(callbacks, train_session_dir)
-
-        return self
-
-        # fit
-        # train_history = self.model.fit_(checkpointer=checkpointer)
-        # don't get history for now
-        # self.model.fit_(checkpointer, train_session_dir)
-        # train_history = pd.DataFrame(train_history.history)
-        # return train_history
 
     def _load_token_embeddings(self, binary=True):
         """Coordinates the loading of pre-trained token embeddings.
