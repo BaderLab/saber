@@ -2,9 +2,9 @@
 """
 from itertools import chain
 import logging
+import os
 import pickle
 from pprint import pprint
-import os
 import time
 
 from gensim.models import KeyedVectors
@@ -49,38 +49,38 @@ class SequenceProcessor(object):
             pprint(self.config.args)
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
-    def annotate(self, text, model_idx=0, jupyter=False):
+    def annotate(self, text, model=0, jupyter=False):
         """Uses a trained model to annotate `text`, returns the results in a dictionary.
 
-        For the model at self.model.model[model_idx], coordinates a prediction step on `text`.
-        Returns a dictionary containing the cleaned `text` (`text`), and any annotations made by the
+        For the model at self.model.model[model], coordinates a prediction step on `text`.
+        Returns a dictionary containing the cleaned text (`text`), and any annotations made by the
         model (`ents`). This dictionary can easily be converted to a json. Optionally,
-        renders and HTMl visilization of the annotations made by the model, for use in a jupyter
+        renders a HTMl visilization of the annotations made by the model, for use in a jupyter
         notebook.
 
         text (str): raw text to annotate
-        model_idx (int): index of model to use for prediction, defaults to 0
+        model (int): index of model to use for prediction, defaults to 0
         jupyter (bool): if True, annotations made by the model are rendered in HTML, which can be
             visualized in a jupter notebook.
 
         Returns:
-            dictionary containing the processed input text ('text') and any annotations made by the
-            model ('ents').
+            dictionary containing the processed input text (`text`) and any annotations made by the
+            model (`ents`).
 
         Raises:
             ValueError if `text` is invalid (not a string, or empty/falsey).
         """
         if not isinstance(text, str) or not text:
-            err_msg = "Argument 'text' must be a valid, non-empty string!"
+            err_msg = "Argument 'text' must be a valid, non-empty string."
             self.log.error("ValueError: %s", err_msg)
             raise ValueError(err_msg)
 
         # model and its corresponding dataset
-        ds = self.ds[model_idx]
-        model = self.model.model[model_idx]
+        ds = self.ds[model]
+        model = self.model.model[model]
 
         # process raw input text, collect input to ML model
-        transformed_text = self.transform(text, model_idx)
+        transformed_text = self._transform(text, model)
         model_input = [transformed_text['word2idx'], transformed_text['char2idx']]
 
         # perform prediction, convert from one-hot to predicted indices, flatten results
@@ -92,11 +92,11 @@ class SequenceProcessor(object):
         # flatten the token offsets
         offsets = list(chain.from_iterable(transformed_text['offsets']))
 
-        # accumulate for predicted entities
+        # accumulate predicted entities
         ents = []
         for chunk in pred_chunk_seq:
             # create the entity
-            # chunks look like (label, start, end)
+            # chunks are tuples (label, start, end), offsets is a lists of lists of tuples
             start, end = offsets[chunk[1]][0], offsets[chunk[-1] - 1][-1]
             ents.append({'start': start,
                          'end': end,
@@ -115,38 +115,15 @@ class SequenceProcessor(object):
 
         return annotation
 
-    def transform(self, text, ds_idx=0):
-        """Processes raw text, returns a dictionary of useful values.
-
-        For the given raw text, returns a dictionary containing the following:
-            - 'text': raw text, with minimal processing
-            - 'sentences': a list of lists, contains the tokens in each sentence
-            - 'offsets': A list of list of tuples containing the start and end
-                indices of every token in 'text'
-            - 'word2idx': 2-D numpy array containing the token index of every
-                token in 'text'. Index is chosen based on the mapping of
-                self.ds[model]
-            - 'char2idx': 3-D numpy array containing the character index of
-                every character in 'text'. Index is chosen based on the mapping
-                of self.ds[model]
-
-        Args:
-            text (str): raw text to process
-            ds_idx (int): which ds (in list self.ds) to use for the mapping of
-                token and character indices.
-        """
-        ds = self.ds[ds_idx]
-        return self.preprocessor.transform(text, ds.type_to_idx['word'], ds.type_to_idx['char'])
-
     def save(self, filepath=None, compress=True, model=0):
         """Coordinates the saving of Saber models.
 
         Saves the necessary files for model persistance to filepath. Filepath defaults to
-        "`self.config.output_folder`/pretrained_models/dataset_names"
+        "self.config.output_folder/constants.PRETRAINED_MODEL_DIR/<dataset_names>"
 
         Args:
             filepath (str): directory path to save model folder, if not provided, defaults to
-                "`self.config.output_folder`/pretrained_models/dataset_names"
+                "self.config.output_folder/constants.PRETRAINED_MODEL_DIR/<dataset_names>"
             compress (bool): True if model should be saved as tarball, defaults to True
             model (int): which model in self.model.model to save, defaults to 0
         """
@@ -163,7 +140,6 @@ class SequenceProcessor(object):
         model_attributes = {'type_to_idx': self.ds[model].type_to_idx,
                             'idx_to_tag': self.ds[model].idx_to_tag,
                            }
-
         # save weights, model architecture, dataset it was trained on, and configuration file
         self.model.save(weights_filepath, model_filepath, model)
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
@@ -178,8 +154,8 @@ class SequenceProcessor(object):
     def load(self, filepath):
         """Coordinates the loading of Saber models.
 
-        Loads the necessary files for model creation from filepath. Creates and compiles a
-        Keras model based on these files.
+        Loads a Saber model saved to `filepath`. Creates and compiles a new model with identical
+        architecture and weights.
 
         Args:
             filepath (str): directory path to saved pre-trained model folder
@@ -208,18 +184,23 @@ class SequenceProcessor(object):
         self.model.compile_()
 
     def load_dataset(self, filepath=None):
-        """Coordinates the loading of a dataset."""
+        """Coordinates the loading of a dataset.
+
+        Args:
+            filepath (str): path to a dataset folder, if not None, overwrites
+                `self.config.dataset_folder`
+        """
         start = time.time()
 
         if filepath is not None:
-            self.config.dataset_folder = filepath
+            self.config.dataset_folder = [filepath]
 
         if not self.config.dataset_folder:
             err_msg = "Must provide at least one dataset via the 'dataset_folder' parameter"
             self.log.error('AssertionError %s', err_msg)
             raise AssertionError(err_msg)
 
-        # if not None, then pre-trained model has been loaded, use its type mapping
+        # if not None, assume pre-trained model has been loaded, use its type mapping
         type_to_idx = None if not self.ds else self.ds[0].type_to_idx
         # datasets may be 'single' or 'compound' (more than one)
         if len(self.config.dataset_folder) == 1:
@@ -234,71 +215,7 @@ class SequenceProcessor(object):
         end = time.time() - start
         print('Done ({0:.2f} seconds).'.format(end))
 
-    def _load_single_dataset(self, type_to_idx=None):
-        """Loads a single dataset.
-
-        Creates and loads a single dataset object for a dataset at self.config.dataset_folder[0].
-
-        Args:
-            type_to_idx (dict): a mapping of types ('word', 'char') to unique integer ids, when
-                provided, these are used in the loading of the dataset at
-                `self.config.dataset_folder[0]`
-
-        Returns:
-            a list containing a single dataset object.
-        """
-        ds = Dataset(self.config.dataset_folder[0],
-                     replace_rare_tokens=self.config.replace_rare_tokens)
-        if type_to_idx is not None:
-            ds.load_data_and_labels()
-            ds.get_types()
-
-        ds.load_dataset(type_to_idx)
-
-        return [ds]
-
-    def _load_compound_dataset(self, type_to_idx):
-        """Loads a compound dataset.
-
-        Creates and loads a 'compound' dataset. Compound datasets are specified by multiple
-        individual datasets, and share multiple attributes (such as 'word' and 'char' type to index
-        mappings). Loads such a dataset for each dataset at self.dataset_folder.
-
-        Args:
-            type_to_idx (dict): a mapping of types ('word', 'char') to unique integer ids, when
-                provided, these are used in the loading of the dataset at
-                `self.config.dataset_folder[0]`
-
-        Returns:
-            A list containing multiple compound dataset objects.
-        """
-        # accumulate datasets
-        compound_ds = [Dataset(ds, replace_rare_tokens=self.config.replace_rare_tokens) for ds in
-                       self.config.dataset_folder]
-
-        for ds in compound_ds:
-            ds.load_data_and_labels()
-            ds.get_types()
-
-        if type_to_idx is None:
-            # get combined set of word and char types from all datasets
-            combined_types = {'word': [ds.types['word'] for ds in compound_ds],
-                              'char': [ds.types['char'] for ds in compound_ds]}
-            combined_types['word'] = list(set(chain.from_iterable(combined_types['word'])))
-            combined_types['char'] = list(set(chain.from_iterable(combined_types['char'])))
-
-            # compute word to index mappings that will be shared across datasets
-            type_to_idx = {'word': Preprocessor.type_to_idx(combined_types['word'],
-                                                            constants.INITIAL_MAPPING['word']),
-                           'char': Preprocessor.type_to_idx(combined_types['char'],
-                                                            constants.INITIAL_MAPPING['word'])}
-        # finally, load all the datasets, providing pre-populated type_to_idx mappings
-        for ds in compound_ds:
-            ds.load_dataset(type_to_idx)
-
-        return compound_ds
-
-    def load_embeddings(self, binary=True):
+    def load_embeddings(self, filepath=None, binary=True):
         """Coordinates the loading of pre-trained token embeddings.
 
         Args:
@@ -307,8 +224,11 @@ class SequenceProcessor(object):
 
         Raises:
             MissingStepException: if no dataset has been loaded.
-            ValueError: If 'self.config.pretrained_embeddings' is None.
+            ValueError: If 'self.config.pretrained_embeddings' is None and filepath is None.
         """
+        if filepath is not None:
+            self.config.pretrained_embeddings = filepath
+
         if not self.ds:
             err_msg = "You need to call 'load_dataset()' before calling 'load_embeddings()'"
             self.log.error('MissingStepException: %s', err_msg)
@@ -320,7 +240,7 @@ class SequenceProcessor(object):
 
         self._load_token_embeddings(binary)
 
-    def create_model(self, compile_model=True):
+    def create_model(self, model_name=None, compile_model=True):
         """Specifies and compiles chosen model (self.config.model_name).
 
         For a chosen model (provided at the command line or in the configuration file and saved as
@@ -330,8 +250,12 @@ class SequenceProcessor(object):
         Raises:
             ValueError if model name at `self.config.model_name` is not valid
         """
+        if model_name is not None:
+            self.config.model_name = model_name.lower().strip()
+
         if self.config.model_name not in ['mt-lstm-crf']:
-            err_msg = "Model name is not valid. Check the argument value for 'model_name'"
+            err_msg = ("'model_name' must be one of: {}, "
+                       "got {}").format(constants.MODELS, self.config.model_name)
             self.log.error('ValueError: %s ', err_msg)
             raise ValueError(err_msg)
 
@@ -383,6 +307,70 @@ class SequenceProcessor(object):
 
         trainer = Trainer(self.config, self.ds, self.model)
         trainer.train(callbacks, train_session_dir)
+
+    def _load_single_dataset(self, type_to_idx=None):
+        """Loads a single dataset.
+
+        Creates and loads a single dataset object for a dataset at self.config.dataset_folder[0].
+
+        Args:
+            type_to_idx (dict): a mapping of types ('word', 'char') to unique integer ids, when
+                provided, these are used in the loading of the dataset at
+                `self.config.dataset_folder[0]`
+
+        Returns:
+            a list containing a single dataset object.
+        """
+        ds = Dataset(self.config.dataset_folder[0],
+                     replace_rare_tokens=self.config.replace_rare_tokens)
+        if type_to_idx is not None:
+            ds.load_data_and_labels()
+            ds.get_types()
+
+        ds.load_dataset(type_to_idx)
+
+        return [ds]
+
+    def _load_compound_dataset(self, type_to_idx):
+        """Loads a compound dataset.
+
+        Creates and loads a 'compound' dataset. Compound datasets are specified by multiple
+        individual datasets, and share multiple attributes (such as 'word' and 'char' type to index
+        mappings). Loads such a dataset for each dataset at self.dataset_folder.
+
+        Args:
+            type_to_idx (dict): a mapping of types ('word', 'char') to unique integer ids, when
+                provided, these are used in the loading of the datasets at
+                `self.config.dataset_folder`
+
+        Returns:
+            A list containing multiple compound dataset objects.
+        """
+        # accumulate datasets
+        compound_ds = [Dataset(ds, replace_rare_tokens=self.config.replace_rare_tokens) for ds in
+                       self.config.dataset_folder]
+
+        for ds in compound_ds:
+            ds.load_data_and_labels()
+            ds.get_types()
+
+        if type_to_idx is None:
+            # get combined set of word and char types from all datasets
+            combined_types = {'word': [ds.types['word'] for ds in compound_ds],
+                              'char': [ds.types['char'] for ds in compound_ds]}
+            combined_types['word'] = list(set(chain.from_iterable(combined_types['word'])))
+            combined_types['char'] = list(set(chain.from_iterable(combined_types['char'])))
+
+            # compute word to index mappings that will be shared across datasets
+            type_to_idx = {'word': Preprocessor.type_to_idx(combined_types['word'],
+                                                            constants.INITIAL_MAPPING['word']),
+                           'char': Preprocessor.type_to_idx(combined_types['char'],
+                                                            constants.INITIAL_MAPPING['word'])}
+        # finally, load all the datasets, providing pre-populated type_to_idx mappings
+        for ds in compound_ds:
+            ds.load_dataset(type_to_idx)
+
+        return compound_ds
 
     def _load_token_embeddings(self, binary=True):
         """Coordinates the loading of pre-trained token embeddings.
@@ -459,6 +447,29 @@ class SequenceProcessor(object):
                 token_embedding_matrix[i] = token_embedding
 
         return token_embedding_matrix
+
+    def _transform(self, text, model=0):
+        """Processes raw text, returns a dictionary of useful values.
+
+        For the given raw text, returns a dictionary containing the following:
+            - 'text': raw text, with minimal processing
+            - 'sentences': a list of lists, contains the tokens in each sentence
+            - 'offsets': A list of list of tuples containing the start and end
+                indices of every token in 'text'
+            - 'word2idx': 2-D numpy array containing the token index of every
+                token in 'text'. Index is chosen based on the mapping of
+                self.ds[model]
+            - 'char2idx': 3-D numpy array containing the character index of
+                every character in 'text'. Index is chosen based on the mapping
+                of self.ds[model]
+
+        Args:
+            text (str): raw text to process
+            model (int): index of dataset in `self.ds` to use for mapping of word/character
+                indices.
+        """
+        ds = self.ds[model]
+        return self.preprocessor.transform(text, ds.type_to_idx['word'], ds.type_to_idx['char'])
 
 # https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
 class MissingStepException(Exception):

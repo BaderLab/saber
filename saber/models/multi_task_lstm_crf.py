@@ -20,13 +20,10 @@ from keras.layers import TimeDistributed
 from keras.utils import multi_gpu_model
 import tensorflow as tf
 
+from . import constants
 from ..utils import model_utils
 
 # TODO (johngiorgi): I should to stratify the K-folds...
-
-NUM_UNITS_WORD_LSTM = 200
-NUM_UNITS_CHAR_LSTM = 200
-NUM_UNITS_DENSE = NUM_UNITS_WORD_LSTM // 2
 
 class MultiTaskLSTMCRF(object):
     """A Keras implementation of a BiLSTM-CRF for sequence labeling.
@@ -64,7 +61,10 @@ class MultiTaskLSTMCRF(object):
         self.log = logging.getLogger(__name__)
 
     def save(self, weights_filepath, model_filepath, model=0):
-        """Save a model to disk.
+        """Save a models to disk.
+
+        Saves a model to disk, by saving its architecture as a json file at `model_filepath`
+        and its weights as a hdf5 file at `model_filepath`.
 
         Args:
             weights_filepath (str): filepath to the models wieghts (.hdf5 file)
@@ -78,6 +78,9 @@ class MultiTaskLSTMCRF(object):
 
     def load(self, weights_filepath, model_filepath):
         """Load a model from disk.
+
+        Loads a model from disk by loading its architecture from a json file at `model_filepath`
+        and its weights from a hdf5 file at `model_filepath`.
 
         Args:
             weights_filepath (str): filepath to the models wieghts (.hdf5 file)
@@ -93,9 +96,6 @@ class MultiTaskLSTMCRF(object):
 
         Implements a hybrid long short-term memory network-condition random
         field (LSTM-CRF) multi-task model for sequence tagging.
-
-        Returns:
-            model: a list of keras models, all sharing some number of layers.
         """
         # specify any shared layers outside the for loop
         # word-level embedding layer
@@ -117,14 +117,14 @@ class MultiTaskLSTMCRF(object):
                                     mask_zero=True,
                                     name="char_embedding_layer")
         # char-level BiLSTM
-        char_BiLSTM = TimeDistributed(Bidirectional(LSTM(NUM_UNITS_CHAR_LSTM // 2)))
+        char_BiLSTM = TimeDistributed(Bidirectional(LSTM(constants.UNITS_CHAR_LSTM // 2)))
         # word-level BiLSTM
-        word_BiLSTM_1 = Bidirectional(LSTM(units=NUM_UNITS_WORD_LSTM // 2,
+        word_BiLSTM_1 = Bidirectional(LSTM(units=constants.UNITS_WORD_LSTM // 2,
                                            return_sequences=True,
                                            dropout=self.config.dropout_rate['input'],
                                            recurrent_dropout=self.config.dropout_rate['recurrent']),
                                       name="word_BiLSTM_1")
-        word_BiLSTM_2 = Bidirectional(LSTM(units=NUM_UNITS_WORD_LSTM // 2,
+        word_BiLSTM_2 = Bidirectional(LSTM(units=constants.UNITS_WORD_LSTM // 2,
                                            return_sequences=True,
                                            dropout=self.config.dropout_rate['input'],
                                            recurrent_dropout=self.config.dropout_rate['recurrent']),
@@ -150,6 +150,7 @@ class MultiTaskLSTMCRF(object):
             # character-level embedding
             char_ids = Input(shape=(None, None), dtype='int32', name='char_id_inputs')
             char_embeddings = char_embeddings(char_ids)
+            
             # character-level BiLSTM + dropout. Spatial dropout applies the same dropout mask to all
             # timesteps which is necessary to implement variational dropout
             # (https://arxiv.org/pdf/1512.05287.pdf)
@@ -159,7 +160,7 @@ class MultiTaskLSTMCRF(object):
                 char_embeddings = SpatialDropout1D(self.config.dropout_rate['output'])(char_embeddings)
 
             # concatenate word- and char-level embeddings + dropout
-            model = Concatenate(axis=-1)([word_embeddings, char_embeddings])
+            model = Concatenate()([word_embeddings, char_embeddings])
             model = Dropout(self.config.dropout_rate['output'])(model)
 
             # word-level BiLSTM + dropout
