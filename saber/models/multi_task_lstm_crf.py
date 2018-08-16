@@ -5,7 +5,6 @@ import json
 import logging
 
 from keras import initializers
-import keras.backend as K
 from keras_contrib.layers.crf import CRF
 from keras.layers import Bidirectional
 from keras.layers import Concatenate
@@ -13,7 +12,6 @@ from keras.layers import Dense
 from keras.layers import Dropout
 from keras.layers import Embedding
 from keras.models import Input
-from keras.layers import Lambda
 from keras.layers import LSTM
 from keras.models import Model
 from keras.models import model_from_json
