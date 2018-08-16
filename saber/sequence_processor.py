@@ -49,17 +49,17 @@ class SequenceProcessor(object):
             pprint(self.config.args)
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
-    def annotate(self, text, model=0, jupyter=False):
+    def annotate(self, text, model_idx=0, jupyter=False):
         """Uses a trained model to annotate `text`, returns the results in a dictionary.
 
-        For the model at self.model.model[model], coordinates a prediction step on `text`.
+        For the model at self.model.model[model_idx], coordinates a prediction step on `text`.
         Returns a dictionary containing the cleaned text (`text`), and any annotations made by the
         model (`ents`). This dictionary can easily be converted to a json. Optionally,
         renders a HTMl visilization of the annotations made by the model, for use in a jupyter
         notebook.
 
         text (str): raw text to annotate
-        model (int): index of model to use for prediction, defaults to 0
+        model_idx (int): index of model to use for prediction, defaults to 0
         jupyter (bool): if True, annotations made by the model are rendered in HTML, which can be
             visualized in a jupter notebook.
 
@@ -76,11 +76,11 @@ class SequenceProcessor(object):
             raise ValueError(err_msg)
 
         # model and its corresponding dataset
-        ds = self.ds[model]
-        model = self.model.model[model]
+        ds = self.ds[model_idx]
+        model = self.model.model[model_idx]
 
         # process raw input text, collect input to ML model
-        transformed_text = self._transform(text, model)
+        transformed_text = self._transform(text, model_idx)
         model_input = [transformed_text['word2idx'], transformed_text['char2idx']]
 
         # perform prediction, convert from one-hot to predicted indices, flatten results
@@ -115,57 +115,60 @@ class SequenceProcessor(object):
 
         return annotation
 
-    def save(self, filepath=None, compress=True, model=0):
+    def save(self, directory=None, compress=True, model_idx=0):
         """Coordinates the saving of Saber models.
 
-        Saves the necessary files for model persistance to filepath. Filepath defaults to
+        Saves the necessary files for model persistance to directory. `directory` defaults to
         "self.config.output_folder/constants.PRETRAINED_MODEL_DIR/<dataset_names>"
 
         Args:
-            filepath (str): directory path to save model folder, if not provided, defaults to
+            directory (str): directory path to save model folder, if not provided, defaults to
                 "self.config.output_folder/constants.PRETRAINED_MODEL_DIR/<dataset_names>"
             compress (bool): True if model should be saved as tarball, defaults to True
-            model (int): which model in self.model.model to save, defaults to 0
+            model_idx (int): which model in self.model.model to save, defaults to 0
         """
         # if no filepath is provided, get a 'default' one from dataset names
-        if filepath is None:
-            filepath = generic_utils.get_pretrained_model_dir(self.config)
-        generic_utils.make_dir(filepath)
+        if directory is None:
+            directory = generic_utils.get_pretrained_model_dir(self.config)
+        directory = os.path.abspath(os.path.normpath(directory))
+        generic_utils.make_dir(directory)
+
         # create filepaths to objects to be saved
-        weights_filepath = os.path.join(filepath, constants.WEIGHTS_FILEPATH)
-        model_filepath = os.path.join(filepath, constants.MODEL_FILEPATH)
-        attributes_filepath = os.path.join(filepath, constants.ATTRIBUTES_FILEPATH)
+        weights_filepath = os.path.join(directory, constants.WEIGHTS_FILEPATH)
+        model_filepath = os.path.join(directory, constants.MODEL_FILEPATH)
+        attributes_filepath = os.path.join(directory, constants.ATTRIBUTES_FILEPATH)
 
         # create a dictionary containg anything else we need to save the model
-        model_attributes = {'type_to_idx': self.ds[model].type_to_idx,
-                            'idx_to_tag': self.ds[model].idx_to_tag,
+        model_attributes = {'type_to_idx': self.ds[model_idx].type_to_idx,
+                            'idx_to_tag': self.ds[model_idx].idx_to_tag,
                            }
         # save weights, model architecture, dataset it was trained on, and configuration file
         self.model.save(weights_filepath, model_filepath, model)
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
-        self.config.save(filepath)
+        self.config.save(directory)
 
         if compress:
-            generic_utils.compress_model(filepath)
+            generic_utils.compress_model(directory)
 
-        print('Model saved to {}'.format(filepath))
-        self.log.info('Model was saved to %s', filepath)
+        print('Model saved to {}'.format(directory))
+        self.log.info('Model was saved to %s', directory)
 
-    def load(self, filepath):
+    def load(self, directory):
         """Coordinates the loading of Saber models.
 
         Loads a Saber model saved to `filepath`. Creates and compiles a new model with identical
         architecture and weights.
 
         Args:
-            filepath (str): directory path to saved pre-trained model folder
+            directory (str): directory path to saved pre-trained model folder
         """
-        generic_utils.decompress_model(filepath)
+        directory = generic_utils.clean_path(directory)
+        generic_utils.decompress_model(directory)
 
         # load attributes, these attributes must be carried over from saved model
-        weights_filepath = os.path.join(filepath, constants.WEIGHTS_FILEPATH)
-        model_filepath = os.path.join(filepath, constants.MODEL_FILEPATH)
-        attributes_filepath = os.path.join(filepath, constants.ATTRIBUTES_FILEPATH)
+        weights_filepath = os.path.join(directory, constants.WEIGHTS_FILEPATH)
+        model_filepath = os.path.join(directory, constants.MODEL_FILEPATH)
+        attributes_filepath = os.path.join(directory, constants.ATTRIBUTES_FILEPATH)
 
         # load any attributes carried over from saved model
         model_attributes = pickle.load(open(attributes_filepath, "rb"))
@@ -183,17 +186,19 @@ class SequenceProcessor(object):
         self.model.load(weights_filepath, model_filepath)
         self.model.compile_()
 
-    def load_dataset(self, filepath=None):
+    def load_dataset(self, directory=None):
         """Coordinates the loading of a dataset.
 
         Args:
-            filepath (str): path to a dataset folder, if not None, overwrites
+            directory (str): path to a dataset folder, if not None, overwrites
                 `self.config.dataset_folder`
         """
         start = time.time()
 
-        if filepath is not None:
-            self.config.dataset_folder = [filepath]
+        if directory is not None:
+            directory = directory if isinstance(directory, list) else [directory]
+            directory = [generic_utils.clean_path(d) for d in directory]
+            self.config.dataset_folder = directory
 
         if not self.config.dataset_folder:
             err_msg = "Must provide at least one dataset via the 'dataset_folder' parameter"
@@ -219,6 +224,8 @@ class SequenceProcessor(object):
         """Coordinates the loading of pre-trained token embeddings.
 
         Args:
+            filepath (str): path to pre-trained embeddings file, if not None, overwrites
+                `self.config.pretrained_embeddings`
             binary (bool): True if pre-trained embeddings are in C binary format, False if they are
                 in C text format.
 
@@ -227,6 +234,7 @@ class SequenceProcessor(object):
             ValueError: If 'self.config.pretrained_embeddings' is None and filepath is None.
         """
         if filepath is not None:
+            filepath = generic_utils.clean_path(filepath)
             self.config.pretrained_embeddings = filepath
 
         if not self.ds:
@@ -448,7 +456,7 @@ class SequenceProcessor(object):
 
         return token_embedding_matrix
 
-    def _transform(self, text, model=0):
+    def _transform(self, text, model_idx=0):
         """Processes raw text, returns a dictionary of useful values.
 
         For the given raw text, returns a dictionary containing the following:
@@ -458,17 +466,17 @@ class SequenceProcessor(object):
                 indices of every token in 'text'
             - 'word2idx': 2-D numpy array containing the token index of every
                 token in 'text'. Index is chosen based on the mapping of
-                self.ds[model]
+                self.ds[model_idx]
             - 'char2idx': 3-D numpy array containing the character index of
                 every character in 'text'. Index is chosen based on the mapping
-                of self.ds[model]
+                of self.ds[model_idx]
 
         Args:
             text (str): raw text to process
-            model (int): index of dataset in `self.ds` to use for mapping of word/character
+            model_idx (int): index of dataset in `self.ds` to use for mapping of word/character
                 indices.
         """
-        ds = self.ds[model]
+        ds = self.ds[model_idx]
         return self.preprocessor.transform(text, ds.type_to_idx['word'], ds.type_to_idx['char'])
 
 # https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
