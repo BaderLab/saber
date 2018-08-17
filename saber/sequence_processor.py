@@ -197,7 +197,7 @@ class SequenceProcessor(object):
 
         if directory is not None:
             directory = directory if isinstance(directory, list) else [directory]
-            directory = [generic_utils.clean_path(d) for d in directory]
+            directory = [generic_utils.clean_path(dir) for dir in directory]
             self.config.dataset_folder = directory
 
         if not self.config.dataset_folder:
