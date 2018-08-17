@@ -49,7 +49,7 @@ To clone and run this application, you will need `python>=3.6`. If not already i
  - [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
  - [Miniconda3](https://conda.io/miniconda.html) / [Anaconda3](https://www.anaconda.com/download/)
 
-> Use `python --version` at the command line to make sure installation was succseful. Note: you may need to use `python3` (not just `python`) at the command line depending on your install method.
+> Use `python --version` at the command line to make sure installation was successful. Note: you may need to use `python3` (not just `python`) at the command line depending on your install method.
 
 From your command line:
 
@@ -194,6 +194,8 @@ sp = SequenceProcessor()
 
 # Load a dataset and create a model (provide a list of datasets to use multi-task learning!)
 sp.load_dataset('path/to/datasets/GENIA')
+# (Optional) Load pre-trained word embeddings. See 'Resources' below for a good set of embeddings for biomedical text
+sp.load_embeddings('path/to/pretrained_embeddings)
 sp.create_model()
 
 # Train and save a model
