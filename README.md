@@ -113,13 +113,13 @@ $ source activate saber
 
 > Note: you do not need to name the environment `saber`.
 
-### Quickstart
+## Quickstart
 
 You can interact with Saber as a web-service, command line tool, python package, or via the Juypter notebooks. If you created a virtual environment, **remember to activate it first**.
 
 > Note: the following examples assume you are in the project directory, `Saber`.
 
-#### Web-service
+### Web-service
 
 To use Saber as a **local** web-service, run:
 
@@ -162,7 +162,7 @@ curl -X POST 'http://localhost:5000/annotate/text' \
 
 > Full documentation for the Saber API can be found [here](https://baderlab.github.io/saber-api-docs/).
 
-#### Command line tool
+### Command line tool
 
 All hyper-parameters are specified in a configuration file. The configuration file can be specified when running Saber:
 
@@ -182,14 +182,14 @@ Would overwrite the arguments for `dataset_folder` and `k_folds` found in the co
 
 > Note: At this time, the command-line tool simply trains the model.
 
-##### Preparing a corpus for training
+#### Preparing a corpus for training
 
 Any corpus used for training must be in a CoNLL format with a BIO tag scheme (see [Datasets](#datasets)):
 
 - To use k-fold cross-validation, simply provide a `train.*` file at `dataset_folder`.
 - To use a train/valid/test strategy, provide `train.*` and `test.*` files at `dataset_folder`. Optionally, you can provide a `valid.*` file. If not provided, a random 10% of examples from `train.*` are used as the validation set.
 
-#### Python module
+### Python module
 
 Saber exposes its functionality through the `SequenceProcessor` class. Here is just about everything Saber does in one script:
 
@@ -220,7 +220,7 @@ annotation = sp.annotate(raw_text)
 sp.load_dataset('path/to/datasets/CRAFT')
 sp.fit()
 ```
-#### Juypter notebooks
+### Juypter notebooks
 
 First, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) by following the instructions [here](https://github.com/jupyterlab/jupyterlab#installation) (make sure to activate your virtual environment first if you created one!
 
