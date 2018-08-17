@@ -182,7 +182,12 @@ Would overwrite the arguments for `dataset_folder` and `k_folds` found in the co
 
 > Note: At this time, the command-line tool simply trains the model.
 
-Any dataset used for training must be in a CoNLL format with a BIO tag scheme (see Datasets). To use cross-validation, simply provide a `train.*` at `dataset_folder`. To use a simple train/valid/test strategy, provide `train.*` and `test.*` files at `dataset_folder`. Optionally, you can provide a `valid.*` file. If not provided, a random 10% of examples from `train.*` are used as the validation set.
+##### Preparing a corpus for training
+
+Any corpus used for training must be in a CoNLL format with a BIO tag scheme (see [Datasets](#datasets)):
+
+- To use k-fold cross-validation, simply provide a `train.*` file at `dataset_folder`.
+- To use a train/valid/test strategy, provide `train.*` and `test.*` files at `dataset_folder`. Optionally, you can provide a `valid.*` file. If not provided, a random 10% of examples from `train.*` are used as the validation set.
 
 #### Python module
 
