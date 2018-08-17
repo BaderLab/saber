@@ -188,7 +188,7 @@ class Config(object):
                                   "matching and 'exact' for exact-boundary matching."))
         parser.add_argument('--dataset_folder', required=False, nargs='*',
                             help=("Path to the dataset folder. Expects a file 'train.*' to be "
-                                  "present. Optionally, 'valid.*' and 'train.*' may be provided."
+                                  "present. Optionally, 'valid.*' and 'test.*' may be provided. "
                                   "Multiple datasets can be provided, sperated by a space"))
         parser.add_argument('--debug', required=False, action='store_true',
                             help=('If provided, only a small proportion of the dataset, and any '
@@ -198,7 +198,7 @@ class Config(object):
                                   'certain optimizers this value is ignored. Defaults to 0.'))
         parser.add_argument('--dropout_rate', required=False, nargs=3, type=float,
                             metavar=('input', 'output', 'recurrent'),
-                            help=('Expectes three values, seperated by a space, which specify the '
+                            help=('Expects three values, seperated by a space, which specify the '
                                   'fraction of units to drop for input, output and recurrent '
                                   'connections respectively. Values must be between 0 and 1.'))
         parser.add_argument('--fine_tune_word_embeddings', required=False, action='store_true',
@@ -207,7 +207,7 @@ class Config(object):
         parser.add_argument('--grad_norm', required=False, type=float,
                             help='Tau threshold value for gradient normalization, defaults to 1.')
         parser.add_argument('--k_folds', required=False, type=int,
-                            help=('Number of folds to preform in cross-validation, defaults to 5.'
+                            help=('Number of folds to preform in cross-validation, defaults to 5. '
                                   "Argument is ignored if 'test.*' file present in dataset_folder"))
         parser.add_argument('--learning_rate', required=False, type=float,
                             help=('float >= 0. Learning rate. Note that for certain optimizers '
@@ -216,29 +216,34 @@ class Config(object):
                             help=('Integer. Number of epochs to train the model. An epoch is an '
                                   'iteration over all data provided.'))
         parser.add_argument('--model_name', required=False, type=str,
-                            help=('Which model architecture to use. Currently, only MT-LSTM-CRF is '
-                                  'provided.'))
+                            help="Which model architecture to use. Must be one of ['MT-LSTM-CRF, ']")
         parser.add_argument('--optimizer', required=False, type=str,
                             help=("Name of the optimization function to use during training. All "
-                                  'optimizers implemented in Keras are supported. Defaults to '
+                                  "optimizers implemented in Keras are supported. Defaults to "
                                   "'nadam'."))
         parser.add_argument('--output_folder', required=False, type=str,
-                            help='Path to the top-level of the directory to save all output files.')
+                            help='Path to top-level directory to save all output files.')
         parser.add_argument('--pretrained_model_weights', required=False, type=str, help='TODO')
         parser.add_argument('--replace_rare_tokens', required=False, action='store_true',
                             help=('If True, word types that occur less than 1 time in the training '
                                   'dataset will be replaced with a special unknown token.'))
-        parser.add_argument('--save_model', required=False, action='store_true', help='TODO')
-        parser.add_argument('--tensorboard', required=False, action='store_true', help='TODO')
+        parser.add_argument('--save_model', required=False, action='store_true',
+                            help=('True if the model should be saved when training is complete. '
+                                  'Defaults to False.'))
+        parser.add_argument('--tensorboard', required=False, action='store_true',
+                            help=('True if tensorboard logs should be saved during training (note '
+                                  'these can be very large). Defaults to False.'))
         parser.add_argument('--word_embed_dim', required=False, type=int,
                             help='Dimension of dense embeddings to be learned for each word.')
         parser.add_argument('--pretrained_embeddings', required=False, type=str,
-                            help='Filepath to pretrained word embeddings.')
+                            help='Filepath to pre-trained word embeddings.')
         parser.add_argument('--train_model', required=False, action='store_true', help='TODO')
         parser.add_argument('--variational_dropout', required=False, action='store_true',
-                            help=('Pass this flag if variational dropout should be used. NOTE THAT'
-                                  'THIS IS TEMPORARY'))
-        parser.add_argument('--verbose', required=False, action='store_true', help='TODO')
+                            help=('Pass this flag if variational dropout should be used. NOTE THAT '
+                                  'THIS IS TEMPORARY.'))
+        parser.add_argument('--verbose', required=False, action='store_true',
+                            help=('True to display more information, such has model details, '
+                                  'hyperparameters, and architecture. Defaults to False.'))
 
         # parse cli args, return dictionary representation of these args
         cli_args = parser.parse_args()
