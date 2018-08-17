@@ -46,7 +46,7 @@ class SequenceProcessor(object):
 
         if self.config.verbose:
             print('Hyperparameters and model details:')
-            pprint(self.config.args)
+            pprint({arg: getattr(self.config, arg) for arg in constants.CONFIG_ARGS})
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
     def annotate(self, text, model_idx=0, jupyter=False):

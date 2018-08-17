@@ -61,3 +61,12 @@ MODELS = ['mt-lstm-crf',]
 # endpoint for Entrez Utilities Web Service API
 EUTILS_API_ENDPOINT = ('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?retmode=xml&db='
                        'pubmed&id=')
+
+# CONFIG
+
+CONFIG_ARGS = ['model_name', 'train_model', 'dataset_folder', 'output_folder',
+               'pretrained_model_weights', 'pretrained_embeddings', 'word_embed_dim',
+               'char_embed_dim', 'optimizer', 'activation', 'learning_rate', 'decay', 'grad_norm',
+               'dropout_rate', 'batch_size', 'k_folds', 'epochs', 'criteria', 'verbose',
+               'debug', 'tensorboard', 'replace_rare_tokens', 'fine_tune_word_embeddings',
+               'variational_dropout']
