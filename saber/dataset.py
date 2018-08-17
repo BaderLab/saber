@@ -93,23 +93,32 @@ class Dataset(object):
                 (at type_to_idx['word']) and a mapping of char types to indices
                 (at type_to_idx['char']) shared between datasets.
         """
-        # if not None, this is a compound dataset (word/char indx mappings shared across datasets)
-        if type_to_idx is not None:
-            self.type_to_idx.update(type_to_idx)
-        else:
+        tag_map = constants.INITIAL_MAPPING['tag']
+        # if None, not transfer learning and loading a single dataset
+        if type_to_idx is None:
             self.load_data_and_labels()
             self.get_types()
+
             # generate type to index mappings
             self.type_to_idx['word'] = Preprocessor.type_to_idx(self.types['word'],
                                                                 constants.INITIAL_MAPPING['word'])
             self.type_to_idx['char'] = Preprocessor.type_to_idx(self.types['char'],
                                                                 constants.INITIAL_MAPPING['word'])
+        # if not None, transfer learning or loading a compound dataset or both
+        else:
+            self.type_to_idx.update(type_to_idx)
+            print('in else')
+            # if 'tag' exists, we are transfer learning, use mapping as starting point
+            if 'tag' in type_to_idx:
+                tag_map = type_to_idx['tag']
+                print('in else, if')
 
-        # generate un-shared type to index mappings
-        self.type_to_idx['tag'] = Preprocessor.type_to_idx(self.types['tag'],
-                                                           constants.INITIAL_MAPPING['tag'])
+        # tag to idx maps are not shared in compound datasets, and are extending during TL
+        self.type_to_idx['tag'] = Preprocessor.type_to_idx(self.types['tag'], tag_map)
+
         # create reverse mapping of indices to tags, save computation downstream
         self.idx_to_tag = {v: k for k, v in self.type_to_idx['tag'].items()}
+        # use type to idx mapping to get final representation for training
         self.get_idx_seq()
 
     def load_data_and_labels(self):
