@@ -170,9 +170,9 @@ All hyper-parameters are specified in a configuration file. The configuration fi
 (saber) $ python -m saber.train --config_filepath path/to/config.ini
 ```
 
-If not specified, the default configuration file at `saber/config.ini` is used.
+> If not specified, the default configuration file at `saber/config.ini` is used.
 
-Alternatively, you can supply arguments at the command line. Each command line argument has an identical name to those found in `saber/config.ini`. For example:
+Alternatively, you can supply arguments at the command line. Each command line argument has a name identical to those found in `saber/config.ini`. For example:
 
 ```bash
 (saber) $ python -m saber.train --dataset_folder path/to/dataset --k_folds 10
@@ -184,49 +184,52 @@ Would overwrite the arguments for `dataset_folder` and `k_folds` found in the co
 
 #### Python module
 
-Saber exposes its functionality through the `SequenceProcessor` class. Here is a simple example where we load a pre-trained model and use it to annotate raw text for protein and gene entities.
+Saber exposes its functionality through the `SequenceProcessor` class. Here is just about everything Saber does in one script:
 
 ```python
 from saber.sequence_processor import SequenceProcessor
 
-# Create a SequenceProcessor object, which coordinates training/prediction/loading of models and datasets
+# First, create a SequenceProcessor object, which exposes Sabers functionality
 sp = SequenceProcessor()
 
-# Load the protein and gene entity model
-sp.load('path/to/pretrained_models/PRGE')
+# Load a dataset and create a model (provide a list of datasets to use multi-task learning!)
+sp.load_dataset('path/to/datasets/GENIA')
+sp.create_model()
 
-# Text to annotate
-raw_text = 'The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.'
+# Train and save a model
+sp.fit()
+sp.save('pretrained_models/GENIA')
+
+# Load a model
+del sp
+sp = SequenceProcessor()
+sp.load('pretrained_models/GENIA')
 
 # Perform prediction on raw text, get resulting annotation
+raw_text = 'The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.'
 annotation = sp.annotate(raw_text)
-```
 
+# Use transfer learning to continue training on a new dataset
+sp.load_dataset('path/to/datasets/CRAFT')
+sp.fit()
+```
 #### Juypter notebooks
 
-First, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) (make sure to activate your virtual environment first if you created one):
+First, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) by following the instructions [here](https://github.com/jupyterlab/jupyterlab#installation) (make sure to activate your virtual environment first if you created one!
 
-```bash
-# If you use pip, you can install it as
-(saber) $ pip install jupyterlab
-
-# If you use conda, you can install as
-(saber) $ conda install -c conda-forge jupyterlab
-```
-
-> Note, you only need to install this once!
-
-This is a temporary work-around, but you must also `pip install .` for the notebooks to work:
+This is a _temporary_ work-around, but you must also run:
 
 ```
-(saber) $ pip install .
+(saber) $ pip install --upgrade .
 ```
 
-Then `cd` into `saber` and run:
+for the notebooks to work. Finally, run:
 
 ```
 (saber) $ jupyter lab
 ```
+
+> Note: if you activated a virtual enviornment make sure you see **Python [conda env:saber]** in the top right of the Jupyter notebook.
 
 Check out the `lightning_tour.ipynb` notebook for an overview.
 
@@ -268,7 +271,7 @@ To use [GloVe](https://nlp.stanford.edu/projects/glove/) embeddings, just conver
 
 ## Running tests
 
-Sabers test suite can be found in `Saber/saber/tests`. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in the ``requirements.txt`` (see [Installation](#Installation) for more help). Additionally, you will need to install ``pytest``:
+Sabers test suite can be found in `saber/tests`. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in the ``requirements.txt`` (see [Installation](#Installation) for more help). Additionally, you will need to install ``pytest``:
 
 ```bash
 (saber) $ pip install pytest

@@ -125,15 +125,14 @@ def config_with_cli_args():
     config = Config(filepath=PATH_TO_DUMMY_CONFIG, cli=False)
     # this is a bit of a hack, but need to simulate providing commands at the command line
     config.cli_args = DUMMY_COMMAND_LINE_ARGS
-    config.args = config._process_args(DUMMY_COMMAND_LINE_ARGS)
+    config._process_args(DUMMY_COMMAND_LINE_ARGS)
     return config
 
 def test_process_args_no_cli_args(config_no_cli_args):
     """Asserts the Config.config object contains the expected attributes after initializing a Config
     object without CLI args."""
     # check filepath attribute
-    assert config_no_cli_args.filepath == os.path.join(os.path.dirname( \
-        os.path.os.path.abspath(__file__)), PATH_TO_DUMMY_CONFIG)
+    assert config_no_cli_args.filepath == os.path.join(os.path.dirname(os.path.os.path.abspath(__file__)), PATH_TO_DUMMY_CONFIG)
     # check that the config file contains the same values as DUMMY_ARGS_NO_PROCESSING
     config = config_no_cli_args.config
     for section in CONFIG_SECTIONS:
@@ -141,9 +140,6 @@ def test_process_args_no_cli_args(config_no_cli_args):
             assert value == DUMMY_ARGS_NO_PROCESSING[arg]
     # check cli_args attribute
     assert config_no_cli_args.cli_args == {}
-    # check args attribute
-    for arg, value in config_no_cli_args.args.items():
-        assert value == DUMMY_ARGS_NO_CLI_ARGS[arg]
 
 def test_process_args_with_cli_args(config_with_cli_args):
     """Asserts the Config.config object contains the expected attributes after initializing a Config
@@ -158,9 +154,6 @@ def test_process_args_with_cli_args(config_with_cli_args):
             assert value == DUMMY_ARGS_NO_PROCESSING[arg]
     # check cli_args attribute
     assert config_with_cli_args.cli_args == DUMMY_COMMAND_LINE_ARGS
-    # check args attribute
-    for arg, value in config_with_cli_args.args.items():
-        assert value == DUMMY_ARGS_WITH_CLI_ARGS[arg]
 
 def test_config_attributes_no_cli_args(config_no_cli_args):
     """Asserts that the class attributes of a Config object are of the expected value/type after
@@ -186,10 +179,8 @@ def test_save_no_cli_args(config_no_cli_args, tmpdir):
     config_no_cli_args.save(tmpdir)
     # load the saved config
     saved_config = load_saved_config(tmpdir)
-
     # need to 'unprocess' the args to check them against the saved config file
     unprocessed_args = unprocess_args(DUMMY_ARGS_NO_CLI_ARGS)
-
     # ensure the saved config file matches the original arguments used to create it
     for section in CONFIG_SECTIONS:
         for arg, value in saved_config[section].items():
@@ -203,10 +194,8 @@ def test_save_with_cli_args(config_with_cli_args, tmpdir):
     config_with_cli_args.save(tmpdir)
     # load the saved config
     saved_config = load_saved_config(tmpdir)
-
     # need to 'unprocess' the args to check them against the saved config file
     unprocessed_args = unprocess_args(DUMMY_ARGS_WITH_CLI_ARGS)
-
     # ensure the saved config file matches the original arguments used to create it
     for section in CONFIG_SECTIONS:
         for arg, value in saved_config[section].items():
