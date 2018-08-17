@@ -49,7 +49,7 @@ To clone and run this application, you will need `python>=3.6`. If not already i
  - [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
  - [Miniconda3](https://conda.io/miniconda.html) / [Anaconda3](https://www.anaconda.com/download/)
 
-> Use `python --version` at the command line to make sure installation was successful. Note: you may need to use `python3` (not just `python`) at the command line depending on your install method.
+> Use `python --version` at the command line to make sure installation was succseful. Note: you may need to use `python3` (not just `python`) at the command line depending on your install method.
 
 From your command line:
 
@@ -160,7 +160,7 @@ curl -X POST 'http://localhost:5000/annotate/text' \
 --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}'
 ```
 
-Full documentation for the Saber API can be found [here](https://baderlab.github.io/saber-api-docs/).
+> Full documentation for the Saber API can be found [here](https://baderlab.github.io/saber-api-docs/).
 
 #### Command line tool
 
@@ -182,6 +182,8 @@ Would overwrite the arguments for `dataset_folder` and `k_folds` found in the co
 
 > Note: At this time, the command-line tool simply trains the model.
 
+Any dataset used for training must be in a CoNLL format with a BIO tag scheme (see Datasets). To use cross-validation, simply provide a `train.*` at `dataset_folder`. To use a simple train/valid/test strategy, provide `train.*` and `test.*` files at `dataset_folder`. Optionally, you can provide a `valid.*` file. If not provided, a random 10% of examples from `train.*` are used as the validation set.
+
 #### Python module
 
 Saber exposes its functionality through the `SequenceProcessor` class. Here is just about everything Saber does in one script:
@@ -194,8 +196,6 @@ sp = SequenceProcessor()
 
 # Load a dataset and create a model (provide a list of datasets to use multi-task learning!)
 sp.load_dataset('path/to/datasets/GENIA')
-# (Optional) Load pre-trained word embeddings. See 'Resources' below for a good set of embeddings for biomedical text
-sp.load_embeddings('path/to/pretrained_embeddings)
 sp.create_model()
 
 # Train and save a model
@@ -243,7 +243,22 @@ Documentation for the Saber API can be found [here](https://baderlab.github.io/s
 
 ### Datasets
 
-Corpora are collected in [here](https://github.com/BaderLab/Biomedical-Corpora) for convenience. Many of the corpora in the BIO and IOBES tag format were originally collected by [Crichton _et al_., 2017](https://doi.org/10.1186/s12859-017-1776-8), [here](https://github.com/cambridgeltl/MTL-Bioinformatics-2016).
+Currently, Saber requires corpora to be in a **CoNLL** format with a BIO tag scheme, e.g.:
+
+```
+Selegiline	B-CHED
+-	O
+induced	O
+postural	B-DISO
+hypotension	I-DISO
+...
+```
+
+Corpora in such a format are collected in [here](https://github.com/BaderLab/Biomedical-Corpora) for convenience.
+
+> Many of the corpora in the BIO and IOBES tag format were originally collected by [Crichton _et al_., 2017](https://doi.org/10.1186/s12859-017-1776-8), [here](https://github.com/cambridgeltl/MTL-Bioinformatics-2016).
+
+Corpora in the **Standoff** format can be converted to **CoNLL** format using [this](https://github.com/spyysalo/standoff2conll) tool. Corpora in **PubTator** format can be converted to **Standoff** first using [this](https://github.com/spyysalo/pubtator) tool.
 
 ### Word embeddings
 
