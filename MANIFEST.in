@@ -1,11 +1,14 @@
 # Include the README(s)
-recursive-include *.md
+recursive-include . *.md
 
 # Include the license file
 include LICENSE.txt
 
-# Include the config file(s)
-recursive-include *.ini
+# Include requirements.txt
+include requirements.txt
 
-# exclude pretrained_models
-recursive-exclude pretrained_models
+# Include the config file(s)
+recursive-include saber *.ini
+
+# Include pretrained model(s)
+recursive-include pretrained_models *.tar.bz2
