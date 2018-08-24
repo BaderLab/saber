@@ -15,17 +15,19 @@ setuptools.setup(
     python_requires='>=3.6',
     packages=setuptools.find_packages(),
     classifiers=(
-        "Programming Language :: Python :: 3",
+        "Development Status :: 3 - Alpha",
+        "Framework :: Flask",
         "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3.6"
         "Operating System :: OS Independent",
     ),
     install_requires=[
-        'flask>=1.0.2',
+        'keras>=2.2.0',
+        'tensorflow>=1.9.0',
         'gensim>=3.4.0'
-        'keras>=2.2.2',
-        'PTable',
         'scikit-learn>=0.19.1',
         'spacy>=2.0.11',
-        'tensorflow>=1.9.0',
+        'Flask>=1.0.2',
+        'PTable>=0.9.2',
     ],
 )
