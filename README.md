@@ -49,23 +49,48 @@ To clone and run this application, you will need `python>=3.6`. If not already i
  - [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
  - [Miniconda3](https://conda.io/miniconda.html) / [Anaconda3](https://www.anaconda.com/download/)
 
-> Use `python --version` at the command line to make sure installation was succseful. Note: you may need to use `python3` (not just `python`) at the command line depending on your install method.
+> Use `python --version` at the command line to make sure installation was successful. Note: you may need to use `python3` (not just `python`) at the command line depending on your install method.
 
-From your command line:
+(OPTIONAL) Activate your virtual environment (see [below](#optional-creating-and-activating-virtual-environments) for help):
 
 ```bash
-# Clone this repository
-$ git clone https://github.com/BaderLab/Saber.git
-
-# Go into the repository
-$ cd Saber
-
-# (OPTIONAL) Activate your virtual environment (see below for help)
 $ source activate saber
-
-# Install dependencies
-(saber) $ pip install -r requirements.txt
+# Notice your command prompt has changed to indicate that the environment is active
+(saber) $
 ```
+
+The preferred way to install Saber is by pointing `pip` the GitHub repository
+
+```bash
+(saber) $ pip install git+https://github.com/BaderLab/Saber.git
+```
+
+or by cloning the repository and then using `pip` to install the package
+
+```bash
+(saber) $ git clone https://github.com/BaderLab/Saber.git
+(saber) $ cd Saber
+# don't forget the '.'!
+(saber) $ pip install .
+```
+
+You can also install Saber by cloning this repository and running `setup.py install`
+
+```bash
+(saber) $ git clone https://github.com/BaderLab/Saber.git
+(saber) $ cd saber
+(saber) $ python setup.py install
+```
+
+Finally, you must also `pip` install the required Spacy model and the keras-contrib repositories
+
+```bash
+# keras-contrib
+pip install git+https://www.github.com/keras-team/keras-contrib.git#egg=keras_contrib
+# spacy small english model
+pip https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
+```
+
 
 ### (OPTIONAL) Creating and activating virtual environments
 
@@ -156,7 +181,7 @@ Or:
 For example, running the web-service locally and using `cURL`:
 
 ```bash
-curl -X POST 'http://localhost:5000/annotate/text' \
+$ curl -X POST 'http://localhost:5000/annotate/text' \
 --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}'
 ```
 
@@ -224,13 +249,7 @@ sp.fit()
 
 First, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) by following the instructions [here](https://github.com/jupyterlab/jupyterlab#installation) (make sure to activate your virtual environment first if you created one!
 
-This is a _temporary_ work-around, but you must also run:
-
-```
-(saber) $ pip install --upgrade .
-```
-
-for the notebooks to work. Finally, run:
+Once installed, run:
 
 ```
 (saber) $ jupyter lab
@@ -238,7 +257,7 @@ for the notebooks to work. Finally, run:
 
 > Note: if you activated a virtual enviornment make sure you see **Python [conda env:saber]** in the top right of the Jupyter notebook.
 
-Check out the `lightning_tour.ipynb` notebook for an overview.
+Check out `notebooks/lightning_tour.ipynb` for an overview.
 
 ## Resources
 
@@ -270,11 +289,10 @@ Corpora in the **Standoff** format can be converted to **CoNLL** format using [t
 When training new models, you can (and should) provide your own pre-trained word embeddings with the `pretrained_embeddings` argument (either at the command line or in the configuration file). Saber expects all word embeddings to be in the `word2vec` file format. [Pyysalo _et al_. 2013](https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf) provide word embeddings that work quite well in the biomedical domain, which can be downloaded [here](http://bio.nlplab.org). Alternatively, from the command line call:
 
 ```bash
-
-mkdir saber/word_embeddings
-cd saber/word_embeddings
+$ mkdir saber/word_embeddings
+$ cd saber/word_embeddings
 # Note: this file is over 4GB
-wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin
+$ wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin
 ```
 
 > Note: you do not need to download pre-trained word embeddings if you only plan on using Saber's pre-trained models.
