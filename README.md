@@ -8,15 +8,15 @@
 </p>
 
 <p align="center">
-  <a href="https://travis-ci.org/BaderLab/Saber">
-    <img src="https://travis-ci.org/BaderLab/Saber.svg?branch=master"
+  <a href="https://travis-ci.org/BaderLab/saber">
+    <img src="https://travis-ci.org/BaderLab/saber.svg?branch=master"
          alt="Travis CI">
   </a>
-  <a href="https://www.codacy.com/app/JohnGiorgi/Saber?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=BaderLab/Saber&amp;utm_campaign=Badge_Grade">
+  <a href="https://www.codacy.com/app/JohnGiorgi/Saber?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=BaderLab/saber&amp;utm_campaign=Badge_Grade">
     <img src="https://api.codacy.com/project/badge/Grade/d122e87152d84f959ee6d97b71d616cb" alt='Codacy Status'/>
   </a>
-  <a href='https://coveralls.io/github/BaderLab/Saber?branch=master'>
-    <img src='https://coveralls.io/repos/github/BaderLab/Saber/badge.svg?branch=master' alt='Coverage Status'/>
+  <a href='https://coveralls.io/github/BaderLab/saber?branch=master'>
+    <img src='https://coveralls.io/repos/github/BaderLab/saber/badge.svg?branch=master' alt='Coverage Status'/>
   </a>
   <a href='https://baderlab-saber.readthedocs.io/en/latest/?badge=latest'>
     <img src='https://readthedocs.org/projects/baderlab-saber/badge/?version=latest' alt='Documentation Status'/>
@@ -43,29 +43,49 @@
 
 **Disclaimer: Currently a pre-alpha, work in progress!**
 
-To clone and run this application, you will need `python>=3.6`. If not already installed, `python>=3.6` can be installed via:
+To install Saber, you will need `python>=3.6`. If not already installed, `python>=3.6` can be installed via:
 
  - the [official installer](https://www.python.org/downloads/)
  - [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
  - [Miniconda3](https://conda.io/miniconda.html) / [Anaconda3](https://www.anaconda.com/download/)
 
-> Use `python --version` at the command line to make sure installation was succseful. Note: you may need to use `python3` (not just `python`) at the command line depending on your install method.
+> Use `python --version` at the command line to make sure installation was successful. Note: you may need to use `python3` (not just `python`) at the command line depending on your install method.
 
-From your command line:
+(OPTIONAL) Activate your virtual environment (see [below](#optional-creating-and-activating-virtual-environments) for help):
 
 ```bash
-# Clone this repository
-$ git clone https://github.com/BaderLab/Saber.git
-
-# Go into the repository
-$ cd Saber
-
-# (OPTIONAL) Activate your virtual environment (see below for help)
 $ source activate saber
-
-# Install dependencies
-(saber) $ pip install -r requirements.txt
+# Notice your command prompt has changed to indicate that the environment is active
+(saber) $
 ```
+
+Install Saber right from this repository with `pip`
+
+```bash
+(saber) $ pip install git+https://github.com/BaderLab/saber.git
+```
+
+or by cloning the repository and then using `pip` to install the package
+
+```bash
+(saber) $ git clone https://github.com/BaderLab/saber.git
+(saber) $ cd saber
+(saber) $ pip install .
+```
+
+> You can also install Saber by cloning this repository and running `python setup.py install`
+
+Finally, you must also `pip` install the required [Spacy](https://spacy.io) model and the [keras-contrib](https://github.com/keras-team/keras-contrib) repositories
+
+```bash
+# keras-contrib
+(saber) $ pip install git+https://www.github.com/keras-team/keras-contrib.git
+# spacy small english model
+(saber) $ pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
+```
+
+> See [Running tests](#running-tests) for a way to verify your installation.
+
 
 ### (OPTIONAL) Creating and activating virtual environments
 
@@ -117,8 +137,6 @@ $ source activate saber
 
 You can interact with Saber as a web-service, command line tool, python package, or via the Juypter notebooks. If you created a virtual environment, **remember to activate it first**.
 
-> Note: the following examples assume you are in the project directory, `Saber`.
-
 ### Web-service
 
 To use Saber as a **local** web-service, run:
@@ -156,7 +174,7 @@ Or:
 For example, running the web-service locally and using `cURL`:
 
 ```bash
-curl -X POST 'http://localhost:5000/annotate/text' \
+$ curl -X POST 'http://localhost:5000/annotate/text' \
 --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}'
 ```
 
@@ -222,15 +240,9 @@ sp.fit()
 ```
 ### Juypter notebooks
 
-First, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) by following the instructions [here](https://github.com/jupyterlab/jupyterlab#installation) (make sure to activate your virtual environment first if you created one!
+First, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) by following the instructions [here](https://github.com/jupyterlab/jupyterlab#installation) (make sure to activate your virtual environment first if you created one!)
 
-This is a _temporary_ work-around, but you must also run:
-
-```
-(saber) $ pip install --upgrade .
-```
-
-for the notebooks to work. Finally, run:
+Once installed, run:
 
 ```
 (saber) $ jupyter lab
@@ -238,7 +250,7 @@ for the notebooks to work. Finally, run:
 
 > Note: if you activated a virtual enviornment make sure you see **Python [conda env:saber]** in the top right of the Jupyter notebook.
 
-Check out the `lightning_tour.ipynb` notebook for an overview.
+Check out `notebooks/lightning_tour.ipynb` for an overview.
 
 ## Resources
 
@@ -270,11 +282,10 @@ Corpora in the **Standoff** format can be converted to **CoNLL** format using [t
 When training new models, you can (and should) provide your own pre-trained word embeddings with the `pretrained_embeddings` argument (either at the command line or in the configuration file). Saber expects all word embeddings to be in the `word2vec` file format. [Pyysalo _et al_. 2013](https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf) provide word embeddings that work quite well in the biomedical domain, which can be downloaded [here](http://bio.nlplab.org). Alternatively, from the command line call:
 
 ```bash
-
-mkdir saber/word_embeddings
-cd saber/word_embeddings
+$ mkdir saber/word_embeddings
+$ cd saber/word_embeddings
 # Note: this file is over 4GB
-wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin
+$ wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin
 ```
 
 > Note: you do not need to download pre-trained word embeddings if you only plan on using Saber's pre-trained models.
@@ -293,7 +304,7 @@ To use [GloVe](https://nlp.stanford.edu/projects/glove/) embeddings, just conver
 
 ## Running tests
 
-Sabers test suite can be found in `saber/tests`. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in the ``requirements.txt`` (see [Installation](#Installation) for more help). Additionally, you will need to install ``pytest``:
+Sabers test suite can be found in `saber/tests`. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in ``requirements.txt``. Additionally, you will need to install ``pytest``:
 
 ```bash
 (saber) $ pip install pytest
@@ -302,7 +313,7 @@ Sabers test suite can be found in `saber/tests`. In order to run the tests, you'
 To run the tests:
 
 ```bash
-(saber) $ cd path/to/Saber
+(saber) $ cd path/to/saber
 (saber) $ py.test saber
 ```
 

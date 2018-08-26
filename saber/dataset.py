@@ -107,11 +107,9 @@ class Dataset(object):
         # if not None, transfer learning or loading a compound dataset or both
         else:
             self.type_to_idx.update(type_to_idx)
-            print('in else')
             # if 'tag' exists, we are transfer learning, use mapping as starting point
             if 'tag' in type_to_idx:
                 tag_map = type_to_idx['tag']
-                print('in else, if')
 
         # tag to idx maps are not shared in compound datasets, and are extending during TL
         self.type_to_idx['tag'] = Preprocessor.type_to_idx(self.types['tag'], tag_map)

@@ -100,7 +100,7 @@ def load_models(ents):
 
     for ent, value in ents.items():
         if value:
-            path_to_model = os.path.abspath(os.path.join(constants.PRETRAINED_MODEL_DIR, ent))
+            path_to_model = os.path.join(constants.PRETRAINED_MODEL_DIR, ent)
             # decompress the pre-trained model if this is not already done
             decompress_model(path_to_model)
 
