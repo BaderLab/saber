@@ -145,22 +145,22 @@ class MultiTaskLSTMCRF(object):
         for ds in self.ds:
             # word-level embedding
             word_ids = Input(shape=(None, ), dtype='int32', name='word_id_inputs')
-            word_embeddings = word_embeddings(word_ids)
+            word_embed = word_embeddings(word_ids)
 
             # character-level embedding
             char_ids = Input(shape=(None, None), dtype='int32', name='char_id_inputs')
-            char_embeddings = char_embeddings(char_ids)
+            char_embed= char_embeddings(char_ids)
 
             # character-level BiLSTM + dropout. Spatial dropout applies the same dropout mask to all
             # timesteps which is necessary to implement variational dropout
             # (https://arxiv.org/pdf/1512.05287.pdf)
-            char_embeddings = char_BiLSTM(char_embeddings)
+            char_embed = char_BiLSTM(char_embed)
             if self.config.variational_dropout:
                 self.log.info('Used variational dropout')
-                char_embeddings = SpatialDropout1D(self.config.dropout_rate['output'])(char_embeddings)
+                char_embed = SpatialDropout1D(self.config.dropout_rate['output'])(char_embed)
 
             # concatenate word- and char-level embeddings + dropout
-            model = Concatenate()([word_embeddings, char_embeddings])
+            model = Concatenate()([word_embed, char_embed])
             model = Dropout(self.config.dropout_rate['output'])(model)
 
             # word-level BiLSTM + dropout

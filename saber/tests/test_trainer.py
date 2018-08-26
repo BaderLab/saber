@@ -7,10 +7,8 @@ import pytest
 from ..config import Config
 from ..dataset import Dataset
 from ..trainer import Trainer
-
-# constants
-PATH_TO_DUMMY_CONFIG = os.path.abspath('saber/tests/resources/dummy_config.ini')
-PATH_TO_DUMMY_DATASET = os.path.abspath('saber/tests/resources/dummy_dataset_1')
+from ..constants import PATH_TO_DUMMY_CONFIG
+from ..constants import PATH_TO_DUMMY_DATASET
 
 @pytest.fixture
 def dummy_config():

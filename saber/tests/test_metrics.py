@@ -6,9 +6,10 @@ from ..utils import model_utils
 from ..config import Config
 from ..metrics import Metrics
 from ..sequence_processor import SequenceProcessor
+from ..constants import PATH_TO_DUMMY_CONFIG
+from ..constants import PATH_TO_DUMMY_DATASET
+from ..constants import PATH_TO_DUMMY_EMBEDDINGS
 
-PATH_TO_DUMMY_CONFIG = os.path.abspath('saber/tests/resources/dummy_config.ini')
-PATH_TO_DUMMY_DATASET = os.path.abspath('saber/tests/resources/dummy_dataset_1')
 PATH_TO_METRICS_OUTPUT = 'totally/arbitrary'
 
 @pytest.fixture
@@ -28,8 +29,8 @@ def multi_task_lstm_crf_single_model(dummy_config):
     """Returns an instance of MultiTaskLSTMCRF initialized with the
     default configuration file and a single compiled model."""
     seq_processor_with_single_ds = SequenceProcessor(dummy_config)
-    seq_processor_with_single_ds.load_dataset()
-    seq_processor_with_single_ds.load_embeddings()
+    seq_processor_with_single_ds.load_dataset(PATH_TO_DUMMY_DATASET)
+    seq_processor_with_single_ds.load_embeddings(PATH_TO_DUMMY_EMBEDDINGS)
     seq_processor_with_single_ds.create_model()
     multi_task_lstm_crf_single_model = seq_processor_with_single_ds.model
 
