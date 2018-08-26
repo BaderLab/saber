@@ -1,13 +1,15 @@
 """Any and all unit tests for the Config class (saber/config.py).
 """
 import configparser
+import copy
 import os
 import pytest
 
 from ..config import Config
+from ..constants import PATH_TO_DUMMY_CONFIG
+from ..constants import PATH_TO_DUMMY_DATASET
+from ..constants import PATH_TO_DUMMY_EMBEDDINGS
 
-# constants for dummy config/CL arguments to perform testing on
-PATH_TO_DUMMY_CONFIG = os.path.abspath('saber/tests/resources/dummy_config.ini')
 # Sections of the .ini file
 CONFIG_SECTIONS = ['mode', 'data', 'model', 'training', 'advanced']
 
@@ -45,13 +47,10 @@ DUMMY_ARGS_NO_PROCESSING = {'model_name': 'MT-LSTM-CRF',
 DUMMY_ARGS_NO_CLI_ARGS = {'model_name': 'mt-lstm-crf',
                           'train_model': True,
                           'save_model': False,
-                          'dataset_folder': \
-                                [os.path.abspath('saber/tests/resources/dummy_dataset_1')],
+                          'dataset_folder': [PATH_TO_DUMMY_DATASET],
                           'output_folder': os.path.abspath('../output'),
                           'pretrained_model_weights': '',
-                          'pretrained_embeddings': os.path.abspath( \
-                                ('saber/tests/resources/dummy_word_embeddings/'
-                                 'dummy_word_embeddings.txt')),
+                          'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
                           'word_embed_dim': 200,
                           'char_embed_dim': 30,
                           'optimizer': 'nadam',
@@ -78,17 +77,19 @@ DUMMY_COMMAND_LINE_ARGS = {'optimizer': 'sgd',
                            'learning_rate': 0.05,
                            'decay': 0.5,
                            'dropout_rate': [0.6, 0.6, 0.2],
+                           # the dataset and embeddings are used for test purposes so they must
+                           # point to the correct resources, this can be ensured by passing their
+                           # paths here
+                           'dataset_folder': [PATH_TO_DUMMY_DATASET],
+                           'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
                           }
 DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'mt-lstm-crf',
                             'train_model': True,
                             'save_model': False,
-                            'dataset_folder': \
-                                [os.path.abspath('saber/tests/resources/dummy_dataset_1')],
+                            'dataset_folder': [PATH_TO_DUMMY_DATASET],
                             'output_folder': os.path.abspath('../output'),
                             'pretrained_model_weights': '',
-                            'pretrained_embeddings': os.path.abspath( \
-                                ('saber/tests/resources/dummy_word_embeddings/'
-                                 'dummy_word_embeddings.txt')),
+                            'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
                             'word_embed_dim': 200,
                             'char_embed_dim': 30,
                             'optimizer': 'sgd',
@@ -114,25 +115,33 @@ DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'mt-lstm-crf',
 def config_no_cli_args():
     """Returns an instance of a Config object after parsing the dummy config file with no command
     line interface (CLI) args."""
+    # the dataset and embeddings are used for test purposes so they must point to the
+    # correct resources, this can be ensured by passing their paths here
+    cli_arguments = {'dataset_folder': [PATH_TO_DUMMY_DATASET],
+                     'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS}
     # parse the dummy config
-    return Config(filepath=PATH_TO_DUMMY_CONFIG, cli=False)
+    dummy_config = Config(PATH_TO_DUMMY_CONFIG)
+    dummy_config._process_args(cli_arguments)
+
+    return dummy_config
 
 @pytest.fixture
 def config_with_cli_args():
     """Returns an instance of a Config object after parsing the dummy config file with command line
     interface (CLI) args."""
     # parse the dummy config, leave cli false and instead pass command line args manually
-    config = Config(filepath=PATH_TO_DUMMY_CONFIG, cli=False)
+    dummy_config = Config(PATH_TO_DUMMY_CONFIG)
     # this is a bit of a hack, but need to simulate providing commands at the command line
-    config.cli_args = DUMMY_COMMAND_LINE_ARGS
-    config._process_args(DUMMY_COMMAND_LINE_ARGS)
-    return config
+    dummy_config.cli_args = DUMMY_COMMAND_LINE_ARGS
+    dummy_config._process_args(DUMMY_COMMAND_LINE_ARGS)
+
+    return dummy_config
 
 def test_process_args_no_cli_args(config_no_cli_args):
     """Asserts the Config.config object contains the expected attributes after initializing a Config
     object without CLI args."""
     # check filepath attribute
-    assert config_no_cli_args.filepath == os.path.join(os.path.dirname(os.path.os.path.abspath(__file__)), PATH_TO_DUMMY_CONFIG)
+    assert config_no_cli_args.filepath == PATH_TO_DUMMY_CONFIG
     # check that the config file contains the same values as DUMMY_ARGS_NO_PROCESSING
     config = config_no_cli_args.config
     for section in CONFIG_SECTIONS:
