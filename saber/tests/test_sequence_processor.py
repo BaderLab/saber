@@ -2,19 +2,17 @@
 # some combination of train, valid and test partitions are provided. Currently,
 # only the case where a single partition (train.*) is provided is covered.
 
-from os.path import abspath
-import pytest
-
 import numpy
+import os
+import pytest
 
 from ..config import Config
 from ..sequence_processor import SequenceProcessor
+from ..constants import PATH_TO_DUMMY_CONFIG
+from ..constants import PATH_TO_DUMMY_DATASET
+from ..constants import PATH_TO_DUMMY_EMBEDDINGS
 
-# constants for dummy dataset/config/word embeddings to perform testing on
-PATH_TO_DUMMY_CONFIG = abspath('saber/tests/resources/dummy_config.ini')
-PATH_TO_DUMMY_DATASET = abspath('saber/tests/resources/dummy_dataset_1')
-PATH_TO_DUMMY_TOKEN_EMBEDDINGS = abspath(('saber/tests/resources/dummy_word_embeddings/'
-                                          'dummy_word_embeddings.txt'))
+# constants to test against
 DUMMY_TRAIN_SENT_NUM = 2
 DUMMY_TEST_SENT_NUM = 1
 DUMMY_TAG_TYPE_COUNT = 5
@@ -28,7 +26,11 @@ DUMMY_EMBEDDINGS_MATRIX_SHAPE = (25, 2)
 def dummy_config_single_ds():
     """Returns an instance of a configparser object after parsing the dummy config file. Ensures
     that `replace_rare_tokens` argument is False."""
-    cli_arguments = {'replace_rare_tokens': False}
+    # the dataset and embeddings are used for test purposes so they must point to the
+    # correct resources, this can be ensured by passing their paths here
+    cli_arguments = {'replace_rare_tokens': False,
+                     'dataset_folder': [PATH_TO_DUMMY_DATASET],
+                     'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS}
     dummy_config = Config(PATH_TO_DUMMY_CONFIG)
     dummy_config._process_args(cli_arguments)
 
@@ -36,11 +38,12 @@ def dummy_config_single_ds():
 
 @pytest.fixture
 def dummy_config_compound_ds():
-    """Returns an instance of a configparser object after parsing the dummy
-    config file. """
+    """Returns an instance of a configparser object after parsing the dummy config file."""
     # create the config object, taking into account the CLI args
     compound_dataset = [PATH_TO_DUMMY_DATASET, PATH_TO_DUMMY_DATASET]
-    cli_arguments = {'dataset_folder': compound_dataset, 'replace_rare_tokens': False}
+    cli_arguments = {'replace_rare_tokens': False,
+                     'dataset_folder': compound_dataset,
+                     'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS}
     dummy_config = Config(PATH_TO_DUMMY_CONFIG)
     dummy_config._process_args(cli_arguments)
 
@@ -106,11 +109,12 @@ def test_attributes_after_initilization_of_model(sp_no_ds_no_embed, dummy_config
     assert sp_no_ds_no_embed.config.epochs == 50
     assert sp_no_ds_no_embed.config.model_name == 'mt-lstm-crf'
     assert sp_no_ds_no_embed.config.optimizer == 'nadam'
-    assert sp_no_ds_no_embed.config.output_folder == abspath('../output')
+    assert sp_no_ds_no_embed.config.output_folder == os.path.abspath('../output')
     assert sp_no_ds_no_embed.config.pretrained_model_weights is ''
     assert not sp_no_ds_no_embed.config.replace_rare_tokens
     assert sp_no_ds_no_embed.config.word_embed_dim == 200
-    assert sp_no_ds_no_embed.config.pretrained_embeddings == PATH_TO_DUMMY_TOKEN_EMBEDDINGS
+    # TEMP: need a better solution than this
+    assert sp_no_ds_no_embed.config.pretrained_embeddings == PATH_TO_DUMMY_EMBEDDINGS
     assert sp_no_ds_no_embed.config.train_model
     assert not sp_no_ds_no_embed.config.verbose
 
@@ -182,7 +186,7 @@ def test_predict(sp_single_ds_no_embed_with_model):
     simple_text = "This is a simple test"
     simple_annotation = {'text': simple_text, 'ents': [], 'title': None}
     # a simple, multi-sentence test
-    multi_sentence_text = "This is a simple text. With multiple sentences"
+    multi_sentence_text = "This is a simple test. With multiple sentences"
     multi_sentence_annotation = {'text': multi_sentence_text, 'ents': [], 'title': None}
 
     simple_prediction = sp_single_ds_no_embed_with_model.annotate(simple_text)

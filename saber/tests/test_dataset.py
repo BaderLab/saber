@@ -8,9 +8,9 @@ import numpy as np
 
 from .. import constants
 from ..dataset import Dataset
+from ..constants import PATH_TO_DUMMY_DATASET
 
 # constants for dummy dataset to perform testing on
-PATH_TO_DUMMY_DATASET = os.path.abspath('saber/tests/resources/dummy_dataset_1')
 DUMMY_WORD_SEQ = np.array([
     ['Human', 'APC2', 'maps', 'to', 'chromosome', '19p13', '.'],
     ['The', 'absence', 'of', 'functional', 'C7', 'activity', 'could', 'not', 'be', 'accounted',
