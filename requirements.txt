@@ -1,9 +1,9 @@
 tensorflow>=1.9.0
 Flask>=1.0.2
 gensim>=3.4.0
-keras==2.2.0
 # Keras contrib repo
-git+https://www.github.com/keras-team/keras-contrib.git#egg=keras_contrib
+git+https://www.github.com/keras-team/keras-contrib.git
+keras==2.2.0
 PTable>=0.9.2
 scikit-learn>=0.19.1
 spacy>=2.0.11
