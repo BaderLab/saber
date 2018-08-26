@@ -8,15 +8,15 @@
 </p>
 
 <p align="center">
-  <a href="https://travis-ci.org/BaderLab/Saber">
-    <img src="https://travis-ci.org/BaderLab/Saber.svg?branch=master"
+  <a href="https://travis-ci.org/BaderLab/saber">
+    <img src="https://travis-ci.org/BaderLab/saber.svg?branch=master"
          alt="Travis CI">
   </a>
-  <a href="https://www.codacy.com/app/JohnGiorgi/Saber?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=BaderLab/Saber&amp;utm_campaign=Badge_Grade">
+  <a href="https://www.codacy.com/app/JohnGiorgi/Saber?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=BaderLab/saber&amp;utm_campaign=Badge_Grade">
     <img src="https://api.codacy.com/project/badge/Grade/d122e87152d84f959ee6d97b71d616cb" alt='Codacy Status'/>
   </a>
-  <a href='https://coveralls.io/github/BaderLab/Saber?branch=master'>
-    <img src='https://coveralls.io/repos/github/BaderLab/Saber/badge.svg?branch=master' alt='Coverage Status'/>
+  <a href='https://coveralls.io/github/BaderLab/saber?branch=master'>
+    <img src='https://coveralls.io/repos/github/BaderLab/saber/badge.svg?branch=master' alt='Coverage Status'/>
   </a>
   <a href='https://baderlab-saber.readthedocs.io/en/latest/?badge=latest'>
     <img src='https://readthedocs.org/projects/baderlab-saber/badge/?version=latest' alt='Documentation Status'/>
@@ -43,7 +43,7 @@
 
 **Disclaimer: Currently a pre-alpha, work in progress!**
 
-To clone and run this application, you will need `python>=3.6`. If not already installed, `python>=3.6` can be installed via:
+To install Saber, you will need `python>=3.6`. If not already installed, `python>=3.6` can be installed via:
 
  - the [official installer](https://www.python.org/downloads/)
  - [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
@@ -59,37 +59,32 @@ $ source activate saber
 (saber) $
 ```
 
-The preferred way to install Saber is by pointing `pip` the GitHub repository
+Install Saber right from this repository with `pip`
 
 ```bash
-(saber) $ pip install git+https://github.com/BaderLab/Saber.git
+(saber) $ pip install git+https://github.com/BaderLab/saber.git
 ```
 
 or by cloning the repository and then using `pip` to install the package
 
 ```bash
-(saber) $ git clone https://github.com/BaderLab/Saber.git
-(saber) $ cd Saber
-# don't forget the '.'!
+(saber) $ git clone https://github.com/BaderLab/saber.git
+(saber) $ cd saber
 (saber) $ pip install .
 ```
 
-You can also install Saber by cloning this repository and running `setup.py install`
+> You can also install Saber by cloning this repository and running `python setup.py install`
 
-```bash
-(saber) $ git clone https://github.com/BaderLab/Saber.git
-(saber) $ cd saber
-(saber) $ python setup.py install
-```
-
-Finally, you must also `pip` install the required Spacy model and the keras-contrib repositories
+Finally, you must also `pip` install the required [Spacy](https://spacy.io) model and the [keras-contrib](https://github.com/keras-team/keras-contrib) repositories
 
 ```bash
 # keras-contrib
-pip install git+https://www.github.com/keras-team/keras-contrib.git#egg=keras_contrib
+(saber) $ pip install git+https://www.github.com/keras-team/keras-contrib.git
 # spacy small english model
-pip https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
+(saber) $ pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
 ```
+
+> See [Running tests](#running-tests) for a way to verify your installation.
 
 
 ### (OPTIONAL) Creating and activating virtual environments
@@ -141,8 +136,6 @@ $ source activate saber
 ## Quickstart
 
 You can interact with Saber as a web-service, command line tool, python package, or via the Juypter notebooks. If you created a virtual environment, **remember to activate it first**.
-
-> Note: the following examples assume you are in the project directory, `Saber`.
 
 ### Web-service
 
@@ -247,7 +240,7 @@ sp.fit()
 ```
 ### Juypter notebooks
 
-First, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) by following the instructions [here](https://github.com/jupyterlab/jupyterlab#installation) (make sure to activate your virtual environment first if you created one!
+First, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) by following the instructions [here](https://github.com/jupyterlab/jupyterlab#installation) (make sure to activate your virtual environment first if you created one!)
 
 Once installed, run:
 
@@ -311,7 +304,7 @@ To use [GloVe](https://nlp.stanford.edu/projects/glove/) embeddings, just conver
 
 ## Running tests
 
-Sabers test suite can be found in `saber/tests`. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in the ``requirements.txt`` (see [Installation](#Installation) for more help). Additionally, you will need to install ``pytest``:
+Sabers test suite can be found in `saber/tests`. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in ``requirements.txt``. Additionally, you will need to install ``pytest``:
 
 ```bash
 (saber) $ pip install pytest
@@ -320,7 +313,7 @@ Sabers test suite can be found in `saber/tests`. In order to run the tests, you'
 To run the tests:
 
 ```bash
-(saber) $ cd path/to/Saber
+(saber) $ cd path/to/saber
 (saber) $ py.test saber
 ```
 
