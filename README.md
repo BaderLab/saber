@@ -180,6 +180,8 @@ $ curl -X POST 'http://localhost:5000/annotate/text' \
 
 > Full documentation for the Saber API can be found [here](https://baderlab.github.io/saber-api-docs/).
 
+See `notebooks/lightning_tour.ipynb` for more.
+
 ### Command line tool
 
 All hyper-parameters are specified in a configuration file. The configuration file can be specified when running Saber:
@@ -200,12 +202,7 @@ Would overwrite the arguments for `dataset_folder` and `k_folds` found in the co
 
 > Note: At this time, the command-line tool simply trains the model.
 
-#### Preparing a corpus for training
-
-Any corpus used for training must be in a CoNLL format with a BIO tag scheme (see [Datasets](#datasets)):
-
-- To use k-fold cross-validation, simply provide a `train.*` file at `dataset_folder`.
-- To use a train/valid/test strategy, provide `train.*` and `test.*` files at `dataset_folder`. Optionally, you can provide a `valid.*` file. If not provided, a random 10% of examples from `train.*` are used as the validation set.
+See `notebooks/lightning_tour.ipynb` for more.
 
 ### Python module
 
@@ -238,6 +235,9 @@ annotation = sp.annotate(raw_text)
 sp.load_dataset('path/to/datasets/CRAFT')
 sp.fit()
 ```
+
+See `notebooks/lightning_tour.ipynb` for more.
+
 ### Juypter notebooks
 
 First, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) by following the instructions [here](https://github.com/jupyterlab/jupyterlab#installation) (make sure to activate your virtual environment first if you created one!)
@@ -250,7 +250,7 @@ Once installed, run:
 
 > Note: if you activated a virtual enviornment make sure you see **Python [conda env:saber]** in the top right of the Jupyter notebook.
 
-Check out `notebooks/lightning_tour.ipynb` for an overview.
+Check out `notebooks/lightning_tour.ipynb` for an overview of Saber.
 
 ## Resources
 
@@ -274,8 +274,6 @@ hypotension	I-DISO
 Corpora in such a format are collected in [here](https://github.com/BaderLab/Biomedical-Corpora) for convenience.
 
 > Many of the corpora in the BIO and IOBES tag format were originally collected by [Crichton _et al_., 2017](https://doi.org/10.1186/s12859-017-1776-8), [here](https://github.com/cambridgeltl/MTL-Bioinformatics-2016).
-
-Corpora in the **Standoff** format can be converted to **CoNLL** format using [this](https://github.com/spyysalo/standoff2conll) tool. Corpora in **PubTator** format can be converted to **Standoff** first using [this](https://github.com/spyysalo/pubtator) tool.
 
 ### Word embeddings
 
