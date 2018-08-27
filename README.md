@@ -256,7 +256,7 @@ Check out `notebooks/lightning_tour.ipynb` for an overview.
 
 ### Documentation
 
-Currently, the jupyter notebook `notebooks/lightning_tour.ipynb` is serving as the primary documentation for Saber. Documentation for the Saber web-service API can be found [here](https://baderlab.github.io/saber-api-docs/).
+Currently, the Jupyter notebook `notebooks/lightning_tour.ipynb` is serving as the primary documentation for Saber. Documentation for the Saber web-service API can be found [here](https://baderlab.github.io/saber-api-docs/).
 
 ### Datasets
 
