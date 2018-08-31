@@ -248,7 +248,7 @@ Once installed, run:
 (saber) $ jupyter lab
 ```
 
-> Note: if you activated a virtual enviornment make sure you see **Python [conda env:saber]** in the top right of the Jupyter notebook.
+> Note: if you activated a virtual environment make sure you see **Python [venv:saber]** in the top right of the Jupyter notebook. If you are using conda, you need to run `conda install nb_conda` with your environment activated.
 
 Check out `notebooks/lightning_tour.ipynb` for an overview of Saber.
 
