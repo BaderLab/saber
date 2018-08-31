@@ -174,7 +174,8 @@ class SequenceProcessor(object):
         model_attributes = pickle.load(open(attributes_filepath, "rb"))
         # create a new dataset instance, load the required attributes for model prediction
         # TEMP: this is an ugly hack, need way around having to provide a filepath
-        dummy_ds = os.path.abspath('saber/tests/resources/dummy_dataset_1')
+        dummy_ds = 'tests/resources/dummy_dataset_1'
+        dummy_ds = os.path.join(os.path.dirname(os.path.abspath(__file__)), dummy_ds)
         self.ds = [Dataset(dummy_ds)]
         self.ds[0].type_to_idx = model_attributes['type_to_idx']
         self.ds[0].idx_to_tag = model_attributes['idx_to_tag']
