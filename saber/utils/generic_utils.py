@@ -33,7 +33,7 @@ def clean_path(path):
     Returns:
         `path`, normalized and absolutized
     """
-    return os.path.abspath(os.path.normpath(path))
+    return os.path.abspath(os.path.normpath(path.strip()))
 
 def decompress_model(filepath):
     """Decompresses a bz2 compressed Saber model.
