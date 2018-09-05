@@ -35,6 +35,8 @@ PARTITIONS = ['train', 'valid', 'test']
 TRAIN_FILE = 'train.*'
 VALID_FILE = 'valid.*'
 TEST_FILE = 'test.*'
+# Pre-trained models
+PRETRAINED_MODELS = ['PRGE']
 # relative path to pretrained model directory
 PRETRAINED_MODEL_DIR = resource_filename(__name__, 'pretrained_models')
 MODEL_FILEPATH = 'model_params.json'
@@ -71,3 +73,10 @@ CONFIG_ARGS = ['model_name', 'train_model', 'dataset_folder', 'output_folder',
                'dropout_rate', 'batch_size', 'k_folds', 'epochs', 'criteria', 'verbose',
                'debug', 'tensorboard', 'replace_rare_tokens', 'fine_tune_word_embeddings',
                'variational_dropout']
+               
+ENTITIES = {'ANAT': False,
+            'CHED': False,
+            'DISO': False,
+            'LIVB': False,
+            'PRGE': True,
+            'TRIG': False}
