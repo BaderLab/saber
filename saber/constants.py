@@ -73,7 +73,7 @@ CONFIG_ARGS = ['model_name', 'train_model', 'dataset_folder', 'output_folder',
                'dropout_rate', 'batch_size', 'k_folds', 'epochs', 'criteria', 'verbose',
                'debug', 'tensorboard', 'replace_rare_tokens', 'fine_tune_word_embeddings',
                'variational_dropout']
-               
+
 ENTITIES = {'ANAT': False,
             'CHED': False,
             'DISO': False,
