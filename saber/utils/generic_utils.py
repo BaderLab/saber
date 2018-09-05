@@ -24,16 +24,17 @@ def make_dir(directory_filepath):
         if err.errno != errno.EEXIST:
             raise
 
-def clean_path(path):
-    """Returns normalized and absolutized `path`.
+def clean_path(filepath):
+    """Returns normalized and absolutized `filepath`.
 
     Args:
-        path (str): path to be normalized and absolutized
+        filepath (str): filepath to be normalized and absolutized
 
     Returns:
-        `path`, normalized and absolutized
+        `filepath`, normalized and absolutized
     """
-    return os.path.abspath(os.path.normpath(path.strip()))
+    filepath = filepath.strip() if isinstance(filepath, str) else filepath
+    return os.path.abspath(os.path.normpath(filepath))
 
 def decompress_model(filepath):
     """Decompresses a bz2 compressed Saber model.
