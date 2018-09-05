@@ -6,6 +6,7 @@ from flask import jsonify
 from flask import redirect
 from flask import request
 
+from . import constants
 from .utils import app_utils
 
 app = Flask(__name__)
@@ -21,17 +22,17 @@ def annotate_text():
     """Annotates raw text recieved in a POST request.
 
     Returns:
-        a json formatted string
+        json formatted string
     """
-    # force=True means Content-Type does not necc. have to be application/json
-    # so long as json in POST request is valid.
+    # force=True means Content-Type does not necc. have to be application/json so long as json in
+    # POST request is valid.
     data = request.get_json(force=True)
     # get args from request json
     text = data.get('text', '')
     requested_ents = data.get('ents', None)
 
     # decide which entities to annotate
-    ents = ENTITIES
+    ents = constants.ENTITIES
     if requested_ents is not None:
         ents = app_utils.harmonize_entities(ents, requested_ents)
 
@@ -53,18 +54,18 @@ def annotate_pmid():
     requested_ents = data.get('ents', None)
 
     # decide which entities to annotate
-    ents = ENTITIES
+    ents = constants.ENTITIES
     if requested_ents is not None:
         ents = app_utils.harmonize_entities(ents, requested_ents)
 
     # use Entrez Utilities Web Service API to get the abtract text
-    _, abstract = app_utils.get_pubmed_text(pmid)
+    title, abstract = app_utils.get_pubmed_text(pmid)
 
-    annotation = predict(abstract, ents)
+    annotation = predict(abstract, ents, title)
 
     return jsonify(annotation)
 
-def predict(text, ents):
+def predict(text, ents, title=None):
     """Annotates raw text for entities according to their boolean value in ents
 
     Args:
@@ -76,28 +77,23 @@ def predict(text, ents):
         dict containing the annotated entities and processed text.
     """
     annotations = []
+    for ent, value in ents.items():
+        if value:
+            # TEMP: Weird solution to a weird bug
+            # https://github.com/tensorflow/tensorflow/issues/14356#issuecomment-385962623
+            with GRAPH.as_default():
+                annotations.append(MODELS[ent].annotate(text, title))
 
-    for k, v in ents.items():
-        if v:
-            annotations.append(MODELS[k].annotate(text))
-
-    if len(annotations) == 1:
-        final_annotation = annotations[0]
-    elif len(annotations) > 1:
-        # load json strings as dicts and create combined entity list
-        combined_ents = []
-        for ann in annotations:
-            combined_ents.extend(ann['ents'])
-        # create json containing combined annotation
-        final_annotation = annotations[0]
+    # if multiple models, combine annotations into one object
+    final_annotation = annotations[0]
+    if len(annotations) > 1:
+        combined_ents = app_utils.combine_annotations(annotations)
         final_annotation['ents'] = combined_ents
 
     return final_annotation
 
 if __name__ == '__main__':
     # Load the pre-trained models
-    ENTITIES = {'ANAT': False, 'CHED': False, 'DISO': False, 'LIVB': False,
-                'PRGE': True, 'TRIG': False}
-    # MODELS = app_utils.load_models(ENTITIES)
+    MODELS, GRAPH = app_utils.load_models(constants.ENTITIES)
 
     app.run(host='0.0.0.0')
