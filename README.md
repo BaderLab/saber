@@ -119,7 +119,7 @@ $ source /path/to/new/venv/saber/bin/activate
 If you use [Conda](https://conda.io/docs/) / [Miniconda](https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh), you can create an environment named `saber` by running:
 
 ```bash
-$ conda create -n saber python=3
+$ conda create -n saber python=3.6
 ```
 
 To activate the environment:
