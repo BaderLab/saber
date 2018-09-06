@@ -23,12 +23,12 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ),
     install_requires=[
+        'scikit-learn>=0.19.1',
         'tensorflow>=1.9.0',
         'Flask>=1.0.2',
-        'gensim>=3.4.0'
-        'keras==2.2.0',
+        'keras>=2.2.2',
         'PTable>=0.9.2',
-        'scikit-learn>=0.19.1',
+        'gensim>=3.4.0'
         'spacy>=2.0.11',
     ],
     include_package_data=True,
