@@ -2,13 +2,13 @@
 """
 import logging
 import os.path
+import tensorflow as tf
 import traceback
 import xml.etree.ElementTree as ET
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
 from .. import constants
-from ..config import Config
 from .generic_utils import decompress_model
 from ..sequence_processor import SequenceProcessor
 
@@ -71,6 +71,7 @@ def get_pubmed_text(pmid):
     """
     xml = get_pubmed_xml(pmid)
     root = get_root(xml)
+    # TODO: There has got to be a better way to do this.
     # recurse down the xml tree to abstractText
     abstract_title = root.find('PubmedArticle').find('MedlineCitation').find('Article').find('ArticleTitle').text
     abstract_text = root.find('PubmedArticle').find('MedlineCitation').find('Article').find('Abstract').find('AbstractText').text
@@ -78,64 +79,81 @@ def get_pubmed_text(pmid):
     return abstract_title, abstract_text
 
 def get_root(xml):
-    """Return root of given XML string."""
+    """Return root of given XML string.
+
+    Args:
+        xml (str): a string containing the contents of an XML file.
+
+    Returns:
+        root of the given XML file, `xml`.
+    """
     return ET.fromstring(xml)
 
 def load_models(ents):
-    """Loads a model for each corresponding entity in ents.
+    """Loads a model for each entity in `ents`.
 
-    Given a dictionary with str, bool key, value pairs, loads each model (key)
-    for which value is True.
+    Given a dict with key (str): value (bool) pairs, loads each model (key) for which value is True.
 
     Args:
-        ents (dict): a dictionary where the keys correspond to entities and the
-            values are booleans.
-    Returns:
-        a dictionary with keys representing the model and values a loaded
-        SequenceProcessor object.
+        ents (dict): a dictionary where the keys correspond to entities and the values are booleans.
 
+    Returns:
+        a dictionary with keys representing the model and values a loaded SequenceProcessor object.
     """
     models = {} # acc for models
-    config = Config() # parse config
-
     for ent, value in ents.items():
         if value:
             path_to_model = os.path.join(constants.PRETRAINED_MODEL_DIR, ent)
-            # decompress the pre-trained model if this is not already done
             decompress_model(path_to_model)
-
             # create and load the pre-trained models
-            sp = SequenceProcessor(config)
+            sp = SequenceProcessor()
             sp.load(path_to_model)
             models[ent] = sp
+    # TEMP: Weird solution to a weird bug.
+    # https://github.com/tensorflow/tensorflow/issues/14356#issuecomment-385962623
+    # Unclear if this will work for multiple models! If not, return a graph for each.
+    graph = tf.get_default_graph()
 
-    return models
+    return models, graph
 
 def harmonize_entities(default_ents, requested_ents):
-    """Harmonizes two dictionaries represented default and requested entitiesself.
+    """Harmonizes two dictionaries representing default_ents and requested requested_ents.
 
-    Given two dictionaries of entity, boolean key value pairs, returns a
-    dictionary where the values of entities specied in requested_ents override
-    those specified in default_ents. Entities present in default_ents but not
-    in requested_ents will be set to False by default.
+    Given two dictionaries of entity: boolean key: value pairs, returns a
+    dictionary where the values of entities specified in `requested_ents` override those specified
+    in `default_ents`. Entities present in `default_ents` but not in `requested_ents` will be set to
+    False by default.
 
     Args:
-        default_ents (dict): contains entity (str), boolean key value pairs
-            representing which entities should be predicted in a given text
-        requested_ents (dict): contains entity (str), boolean key value pairs
-            representing which entities should be predicted in a given text
+        default_ents (dict): contains entity (str): boolean key: value pairs representing which
+            entities should be annotated in a given text.
+        requested_ents (dict): contains entity (str): boolean key: value pairs representing which
+            entities should be predicted in a given text.
 
-    Returns: a dictionary containing all key, value pairs in default_ents,
-        where values in requested_ents overide those in default_ents. Any
-        key in default_ents but not in requested_ents will have its value set to
-        False by default.
-
+    Returns: a dictionary containing all key, value pairs in `default_ents`, where values in
+        `requested_ents` overide those in default_ents. Any key in `default_ents` but not in
+        `requested_ents` will have its value set to False by default.
     """
     entities = {}
-    for k in default_ents:
-        entities[k] = False
-    for k, v in requested_ents.items():
-        if k in entities:
-            entities[k] = v
+    for ent in default_ents:
+        entities[ent] = False
+    for ent, value in requested_ents.items():
+        if ent in entities:
+            entities[ent] = value
 
     return entities
+
+def combine_annotations(annotations):
+    """Given a list of annotations made by a Saber model, combines all annotations under one dict.
+
+    Args:
+        annotations (list): a list of annotations returned by a Saber model
+
+    Returns:
+        a dict containing all annotations in `annotations`.
+    """
+    combined_anns = []
+    for ann in annotations:
+        combined_anns.extend(ann['ents'])
+    # create json containing combined annotation
+    return combined_anns
