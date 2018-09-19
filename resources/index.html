@@ -423,13 +423,14 @@
 <p>Saber is ready to go out-of-the box when using the <strong>web-service</strong> or a <strong>pre-trained model</strong>. However, if you plan on training you own models, you will need to provide a dataset (or datasets!) and, ideally, pre-trained word embeddings.</p>
 <h2 id="datasets">Datasets</h2>
 <p>Currently, Saber requires corpora to be in a <strong>CoNLL</strong> format with a BIO or IOBES tag scheme, e.g.:</p>
-<pre><code>Selegiline  B-CHED
+<div class="codehilite"><pre><span></span>Selegiline  B-CHED
 -   O
 induced O
 postural    B-DISO
 hypotension I-DISO
 ...
-</code></pre>
+</pre></div>
+
 
 <p>Corpora in such a format are collected in <a href="https://github.com/BaderLab/Biomedical-Corpora">here</a> for convenience.</p>
 <blockquote>
@@ -446,37 +447,40 @@ hypotension I-DISO
 <li>To use k-fold cross-validation, simply provide a <code>train.*</code> file in your dataset folder.</li>
 </ul>
 <p>E.g.</p>
-<pre><code>.
+<div class="codehilite"><pre><span></span>.
 ├── NCBI-Disease
 │   └── train.tsv
-</code></pre>
+</pre></div>
+
 
 <ul>
 <li>To use a train/valid/test strategy, provide <code>train.*</code> and <code>test.*</code> files in your dataset folder. Optionally, you can provide a <code>valid.*</code> file. If not provided, a random 10% of examples from <code>train.*</code> are used as the validation set.</li>
 </ul>
 <p>E.g.</p>
-<pre><code>.
+<div class="codehilite"><pre><span></span>.
 ├── NCBI-Disease
 │   ├── test.tsv
 │   └── train.tsv
-</code></pre>
+</pre></div>
+
 
 <h2 id="word-embeddings">Word embeddings</h2>
 <p>When training new models, you can (and should) provide your own pre-trained word embeddings with the <code>pretrained_embeddings</code> argument (either at the command line or in the configuration file). Saber expects all word embeddings to be in the <code>word2vec</code> file format. <a href="https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf">Pyysalo <em>et al</em>. 2013</a> provide word embeddings that work quite well in the biomedical domain, which can be downloaded <a href="http://bio.nlplab.org">here</a>. Alternatively, from the command line call:</p>
-<pre><code class="bash"># Replace this with a location you want to save the embeddings to
+<div class="codehilite"><pre><span></span><span class="c1"># Replace this with a location you want to save the embeddings to</span>
 $ mkdir path/to/word_embeddings
-# Note: this file is over 4GB
+<span class="c1"># Note: this file is over 4GB</span>
 $ wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin -O path/to/word_embeddings
-</code></pre>
+</pre></div>
+
 
 <h3 id="glove">GloVe</h3>
 <p>To use <a href="https://nlp.stanford.edu/projects/glove/">GloVe</a> embeddings, just convert them to the <a href="https://code.google.com/archive/p/word2vec/">word2vec</a> format first:</p>
-<pre><code class="bash">(saber) $ python
+<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ python
 &gt;&gt;&gt; from gensim.scripts.glove2word2vec import glove2word2vec
-&gt;&gt;&gt; glove_input_file = 'glove.txt'
-&gt;&gt;&gt; word2vec_output_file = 'word2vec.txt'
-&gt;&gt;&gt; glove2word2vec(glove_input_file, word2vec_output_file)
-</code></pre>
+&gt;&gt;&gt; <span class="nv">glove_input_file</span> <span class="o">=</span> <span class="s1">&#39;glove.txt&#39;</span>
+&gt;&gt;&gt; <span class="nv">word2vec_output_file</span> <span class="o">=</span> <span class="s1">&#39;word2vec.txt&#39;</span>
+&gt;&gt;&gt; glove2word2vec<span class="o">(</span>glove_input_file, word2vec_output_file<span class="o">)</span>
+</pre></div>
                 
                   
                 

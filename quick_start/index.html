@@ -449,60 +449,71 @@
 <p>If your goal is simply to use Saber to annotate biomedical text, then you can either use the <a href="#web-service">web-service</a> or a <a href="#pre-trained-models">pre-trained model</a>.</p>
 <h2 id="web-service">Web-service</h2>
 <p>To use Saber as a <strong>local</strong> web-service, run:</p>
-<pre><code class="bash">(saber) $ python -m saber.app
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ python -m saber.app
+</pre></div>
+
 
 <p>or to build &amp; run Saber with <strong>Docker</strong>:</p>
-<pre><code class="bash"># Build docker
-(saber) $ docker build -t saber .
+<div class="codehilite"><pre><span></span><span class="c1"># Build docker</span>
+<span class="o">(</span>saber<span class="o">)</span> $ docker build -t saber .
 
-# Run docker (use `-it` instead of `-dt` to try it interactively)
-(saber) $ docker run --rm -p 5000:5000 --name saber1 -dt saber
-</code></pre>
+<span class="c1"># Run docker (use `-it` instead of `-dt` to try it interactively)</span>
+<span class="o">(</span>saber<span class="o">)</span> $ docker run --rm -p <span class="m">5000</span>:5000 --name saber1 -dt saber
+</pre></div>
+
 
 <p>There are currently two endpoints, <code>/annotate/text</code> and <code>/annotate/pmid</code>. Both expect a <code>POST</code> request with a JSON payload, e.g.</p>
-<pre><code class="json">{
-  &quot;text&quot;: &quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;
-}
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="p">{</span>
+  <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span>
+<span class="p">}</span>
+</pre></div>
+
 
 <p>or</p>
-<pre><code class="json">{
-  &quot;pmid&quot;: 11835401
-}
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="p">{</span>
+  <span class="nt">&quot;pmid&quot;</span><span class="p">:</span> <span class="mi">11835401</span>
+<span class="p">}</span>
+</pre></div>
+
 
 <p>For example, running the web-service locally and using <code>cURL</code>:</p>
-<pre><code class="bash">(saber) $ curl -X POST 'http://localhost:5000/annotate/text' \
---data '{&quot;text&quot;: &quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;}'
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ curl -X POST <span class="s1">&#39;http://localhost:5000/annotate/text&#39;</span> <span class="se">\</span>
+--data <span class="s1">&#39;{&quot;text&quot;: &quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;}&#39;</span>
+</pre></div>
+
 
 <p>Documentation for the Saber web-service API can be found <a href="https://baderlab.github.io/saber-api-docs/">here</a>. We hope to provide a live version of the web-service soon!</p>
 <h2 id="pre-trained-models">Pre-trained models</h2>
 <p>First, import <code>SequenceProcessor</code>. This class coordinates training, annotation, saving and loading of models and datasets. In short, this is the interface to Saber.</p>
-<pre><code class="python">from saber.sequence_processor import SequenceProcessor
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber.sequence_processor</span> <span class="kn">import</span> <span class="n">SequenceProcessor</span>
+</pre></div>
+
 
 <p>To load a pre-trained model, we first create a <code>SequenceProcessor</code> object</p>
-<pre><code class="python">sp = SequenceProcessor()
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
+</pre></div>
+
 
 <p>and then load the model of our choice</p>
-<pre><code class="python">sp.load('PRGE')
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">sp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;PRGE&#39;</span><span class="p">)</span>
+</pre></div>
+
 
 <p>You can see all the pre-trained models in the <a href="https://baderlab.github.io/saber-api-docs/">web-service API docs</a> or, alternatively, by running the following line of code</p>
-<pre><code class="python">from saber.constants import ENTITIES; print(list(ENTITIES.keys()))
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber.constants</span> <span class="kn">import</span> <span class="n">ENTITIES</span><span class="p">;</span> <span class="k">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">ENTITIES</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+</pre></div>
+
 
 <p>To annotate text with the model, just call the <code>annotate()</code> method</p>
-<pre><code class="python">sp.annotate('A Sos-1-E3b1 complex directs Rac activation by entering into a tricomplex with Eps8.')
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s1">&#39;A Sos-1-E3b1 complex directs Rac activation by entering into a tricomplex with Eps8.&#39;</span><span class="p">)</span>
+</pre></div>
+
 
 <h3 id="working-with-annotations">Working with annotations</h3>
 <p>The <code>annotate()</code> method returns a simple <code>dict</code> object</p>
-<pre><code class="python">ann = sp.annotate('A Sos-1-E3b1 complex directs Rac activation by entering into a tricomplex with Eps8.')
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">ann</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s1">&#39;A Sos-1-E3b1 complex directs Rac activation by entering into a tricomplex with Eps8.&#39;</span><span class="p">)</span>
+</pre></div>
+
 
 <p>which contains the keys <code>title</code>, <code>text</code> and <code>ents</code>:</p>
 <ul>
@@ -511,19 +522,20 @@
 <li><code>ents</code>: contains a list of entities present in the <code>text</code> that were annotated by the model</li>
 </ul>
 <p>For example, to see all entities annotated by the model, call</p>
-<pre><code class="python">ann['ents']
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="n">ann</span><span class="p">[</span><span class="s1">&#39;ents&#39;</span><span class="p">]</span>
+</pre></div>
+
 
 <h4 id="converting-annotations-to-json">Converting annotations to JSON</h4>
 <p>The <code>annotate()</code> method returns a <code>dict</code> object, but can be converted to a <code>JSON</code> formatted string for ease-of-use in downstream applications</p>
-<pre><code class="python">import json
+<div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
 
-# convert to json object
-json_annotation = json.dumps(annotation)
+<span class="c1"># convert to json object</span>
+<span class="n">json_annotation</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">annotation</span><span class="p">)</span>
 
-# convert back to python dictionary
-annotation = json.loads(json_annotation)
-</code></pre>
+<span class="c1"># convert back to python dictionary</span>
+<span class="n">annotation</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json_annotation</span><span class="p">)</span>
+</pre></div>
                 
                   
                 

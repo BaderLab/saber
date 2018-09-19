@@ -411,61 +411,67 @@
 <p>You can interact with Saber as a web-service (explained in <a href="https://baderlab.github.io/saber/quick_start/">Quick start</a>), command line tool, python package, or via the Juypter notebooks. If you created a virtual environment, <em>remember to activate it first</em>.</p>
 <h3 id="command-line-tool">Command line tool</h3>
 <p>Currently, the command line tool simply trains the model. To use it, call</p>
-<pre><code class="bash">(saber) $ python -m saber.train
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ python -m saber.train
+</pre></div>
+
 
 <p>along with any command line arguments. For example, to train the model on the <a href="https://www.ncbi.nlm.nih.gov/CBBresearch/Dogan/DISEASE/">NCBI Disease</a> corpus</p>
-<pre><code class="bash">(saber) $ python -m saber.train --dataset_folder NCBI_disease_BIO
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ python -m saber.train --dataset_folder NCBI_disease_BIO
+</pre></div>
+
 
 <blockquote>
 <p>See <a href="https://baderlab.github.io/saber/resources/">Resources</a> for help preparing datasets for training.</p>
 </blockquote>
 <p>Run <code>python -m saber.train -h</code> to see all possible arguments.</p>
 <p>Of course, supplying arguments at the command line can quickly become cumbersome. Saber also allows you to specify a configuration file, which can be specified like so</p>
-<pre><code class="bash">(saber) $ python -m saber.train --config_filepath path/to/config.ini
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ python -m saber.train --config_filepath path/to/config.ini
+</pre></div>
+
 
 <p>Copy the contents of the <a href="https://github.com/BaderLab/saber/blob/master/saber/config.ini">default config file</a> to a new <code>*.ini</code> file in order to get started.</p>
 <p>Note that arguments supplied at the command line overwrite those found in the configuration file. For example</p>
-<pre><code class="bash">(saber) $ python -m saber.train --dataset_folder path/to/dataset --k_folds 10
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ python -m saber.train --dataset_folder path/to/dataset --k_folds <span class="m">10</span>
+</pre></div>
+
 
 <p>would overwrite the arguments for <code>dataset_folder</code> and <code>k_folds</code> found in the configuration file.</p>
 <h3 id="python-package">Python package</h3>
 <p>You can also import Saber and interact with it as a python package. Saber exposes its functionality through the <code>SequenceProcessor</code> class. Here is just about everything Saber does in one script:</p>
-<pre><code class="python">from saber.sequence_processor import SequenceProcessor
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber.sequence_processor</span> <span class="kn">import</span> <span class="n">SequenceProcessor</span>
 
-# First, create a SequenceProcessor object, which exposes Sabers functionality
-sp = SequenceProcessor()
+<span class="c1"># First, create a SequenceProcessor object, which exposes Sabers functionality</span>
+<span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
 
-# Load a dataset and create a model (provide a list of datasets to use multi-task learning!)
-sp.load_dataset('path/to/datasets/GENIA')
-sp.create_model()
+<span class="c1"># Load a dataset and create a model (provide a list of datasets to use multi-task learning!)</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/GENIA&#39;</span><span class="p">)</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">create_model</span><span class="p">()</span>
 
-# Train and save a model
-sp.fit()
-sp.save('pretrained_models/GENIA')
+<span class="c1"># Train and save a model</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
 
-# Load a model
-del sp
-sp = SequenceProcessor()
-sp.load('pretrained_models/GENIA')
+<span class="c1"># Load a model</span>
+<span class="k">del</span> <span class="n">sp</span>
+<span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
 
-# Perform prediction on raw text, get resulting annotation
-raw_text = 'The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.'
-annotation = sp.annotate(raw_text)
+<span class="c1"># Perform prediction on raw text, get resulting annotation</span>
+<span class="n">raw_text</span> <span class="o">=</span> <span class="s1">&#39;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&#39;</span>
+<span class="n">annotation</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">raw_text</span><span class="p">)</span>
 
-# Use transfer learning to continue training on a new dataset
-sp.load_dataset('path/to/datasets/CRAFT')
-sp.fit()
-</code></pre>
+<span class="c1"># Use transfer learning to continue training on a new dataset</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/CRAFT&#39;</span><span class="p">)</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+</pre></div>
+
 
 <h3 id="juypter-notebooks">Juypter notebooks</h3>
 <p>First, grab the notebook. Go <a href="https://raw.githubusercontent.com/BaderLab/saber/master/notebooks/lightning_tour.ipynb">here</a>, then press <code>command</code> / <code>control</code> + <code>s</code>, and save the notebook as <code>lightning_tour.ipynb</code> somewhere on your computer.</p>
 <p>Next, install <a href="https://github.com/jupyterlab/jupyterlab">JupyterLab</a> by following the instructions <a href="https://github.com/jupyterlab/jupyterlab#installation">here</a>. Once installed, run:</p>
-<pre><code>(saber) $ jupyter lab
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ jupyter lab
+</pre></div>
+
 
 <p>A new window will open in your browser. Use it to search for <code>lightning_tour.ipynb</code> on your computer.</p>
 <p>A couple of notes:</p>

@@ -444,29 +444,33 @@
 <p>Use <code>python --version</code> at the command line to make sure installation was successful. Note: you may need to use <code>python3</code> (not just <code>python</code>) at the command line depending on your install method.</p>
 </blockquote>
 <p>(OPTIONAL) First, activate your virtual environment (see <a href="#optional-creating-and-activating-virtual-environments">below</a> for help):</p>
-<pre><code class="bash">$ source activate saber
-(saber) $
-</code></pre>
+<div class="codehilite"><pre><span></span>$ <span class="nb">source</span> activate saber
+<span class="o">(</span>saber<span class="o">)</span> $
+</pre></div>
+
 
 <p>Then, install Saber right from the repository with <code>pip</code></p>
-<pre><code class="bash">(saber) $ pip install git+https://github.com/BaderLab/saber.git
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ pip install git+https://github.com/BaderLab/saber.git
+</pre></div>
+
 
 <p>or by cloning the repository and then using <code>pip</code> to install the package</p>
-<pre><code class="bash">(saber) $ git clone https://github.com/BaderLab/saber.git
-(saber) $ cd saber
-(saber) $ pip install .
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ git clone https://github.com/BaderLab/saber.git
+<span class="o">(</span>saber<span class="o">)</span> $ <span class="nb">cd</span> saber
+<span class="o">(</span>saber<span class="o">)</span> $ pip install .
+</pre></div>
+
 
 <blockquote>
 <p>You can also install Saber by cloning this repository and running <code>python setup.py install</code> from within the repository.</p>
 </blockquote>
 <p>Finally, you must also <code>pip</code> install the required <a href="https://spacy.io">Spacy</a> model and the <a href="https://github.com/keras-team/keras-contrib">keras-contrib</a> repositories</p>
-<pre><code class="bash"># keras-contrib
-(saber) $ pip install git+https://www.github.com/keras-team/keras-contrib.git
-# spacy small english model
-(saber) $ pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="c1"># keras-contrib</span>
+<span class="o">(</span>saber<span class="o">)</span> $ pip install git+https://www.github.com/keras-team/keras-contrib.git
+<span class="c1"># spacy small english model</span>
+<span class="o">(</span>saber<span class="o">)</span> $ pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
+</pre></div>
+
 
 <blockquote>
 <p>See <a href="#running-tests">Running tests</a> for a way to verify your installation.</p>
@@ -475,49 +479,56 @@
 <p>When using <code>pip</code> it is generally recommended to install packages in a virtual environment to avoid modifying system state. To create a virtual environment named <code>saber</code>:</p>
 <h4 id="using-virtualenv-or-venv">Using virtualenv or venv</h4>
 <p>Using <a href="https://virtualenv.pypa.io/en/stable/">virtualenv</a>:</p>
-<pre><code class="bash">$ virtualenv /path/to/new/venv/saber
-</code></pre>
+<div class="codehilite"><pre><span></span>$ virtualenv /path/to/new/venv/saber
+</pre></div>
+
 
 <p>Using <a href="https://docs.python.org/3/library/venv.html">venv</a>:</p>
-<pre><code class="bash">$ python3 -m venv /path/to/new/venv/saber
-</code></pre>
+<div class="codehilite"><pre><span></span>$ python3 -m venv /path/to/new/venv/saber
+</pre></div>
+
 
 <p>Next, you need to activate the environment.</p>
-<pre><code class="bash">$ source /path/to/new/venv/saber/bin/activate
-# Notice your command prompt has changed to indicate that the environment is active
-(saber) $
-</code></pre>
+<div class="codehilite"><pre><span></span>$ <span class="nb">source</span> /path/to/new/venv/saber/bin/activate
+<span class="c1"># Notice your command prompt has changed to indicate that the environment is active</span>
+<span class="o">(</span>saber<span class="o">)</span> $
+</pre></div>
+
 
 <h4 id="using-conda">Using Conda</h4>
 <p>If you use <a href="https://conda.io/docs/">Conda</a> / <a href="https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh">Miniconda</a>, you can create an environment named <code>saber</code> by running:</p>
-<pre><code class="bash">$ conda create -n saber python=3.6
-</code></pre>
+<div class="codehilite"><pre><span></span>$ conda create -n saber <span class="nv">python</span><span class="o">=</span><span class="m">3</span>.6
+</pre></div>
+
 
 <p>To activate the environment:</p>
-<pre><code class="bash">$ source activate saber
-# Notice your command prompt has changed to indicate that the environment is active
-(saber) $
-</code></pre>
+<div class="codehilite"><pre><span></span>$ <span class="nb">source</span> activate saber
+<span class="c1"># Notice your command prompt has changed to indicate that the environment is active</span>
+<span class="o">(</span>saber<span class="o">)</span> $
+</pre></div>
+
 
 <blockquote>
 <p>Note: you do not need to name the environment <code>saber</code>.</p>
 </blockquote>
 <h2 id="running-tests">Running tests</h2>
 <p>Sabers test suite can be found in <code>saber/tests</code>. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in <code>requirements.txt</code>. Additionally, you will need to install <code>pytest</code>:</p>
-<pre><code class="bash">(saber) $ pip install pytest
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ pip install pytest
+</pre></div>
+
 
 <p>To run the tests:</p>
-<pre><code class="bash">(saber) $ cd path/to/saber
-(saber) $ py.test saber
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ <span class="nb">cd</span> path/to/saber
+<span class="o">(</span>saber<span class="o">)</span> $ py.test saber
+</pre></div>
+
 
 <p>Alternatively, you can find out where Saber is installed and run <code>pytest</code> on that directory:</p>
-<pre><code class="bash"># Find out where Saber is installed
-(saber) $ python -c &quot;import os; import saber; print(os.path.dirname(saber.__file__))&quot;
-# Run tests on that installation directory
-(saber) $ python -m pytest &lt;Saber-directory&gt;
-</code></pre>
+<div class="codehilite"><pre><span></span><span class="c1"># Find out where Saber is installed</span>
+<span class="o">(</span>saber<span class="o">)</span> $ python -c <span class="s2">&quot;import os; import saber; print(os.path.dirname(saber.__file__))&quot;</span>
+<span class="c1"># Run tests on that installation directory</span>
+<span class="o">(</span>saber<span class="o">)</span> $ python -m pytest &lt;Saber-directory&gt;
+</pre></div>
                 
                   
                 
