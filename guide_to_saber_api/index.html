@@ -73,6 +73,25 @@
       <defs>
         
         
+          <svg xmlns="http://www.w3.org/2000/svg" width="416" height="448"
+    viewBox="0 0 416 448" id="__github">
+  <path fill="currentColor" d="M160 304q0 10-3.125 20.5t-10.75 19-18.125
+        8.5-18.125-8.5-10.75-19-3.125-20.5 3.125-20.5 10.75-19 18.125-8.5
+        18.125 8.5 10.75 19 3.125 20.5zM320 304q0 10-3.125 20.5t-10.75
+        19-18.125 8.5-18.125-8.5-10.75-19-3.125-20.5 3.125-20.5 10.75-19
+        18.125-8.5 18.125 8.5 10.75 19 3.125 20.5zM360
+        304q0-30-17.25-51t-46.75-21q-10.25 0-48.75 5.25-17.75 2.75-39.25
+        2.75t-39.25-2.75q-38-5.25-48.75-5.25-29.5 0-46.75 21t-17.25 51q0 22 8
+        38.375t20.25 25.75 30.5 15 35 7.375 37.25 1.75h42q20.5 0
+        37.25-1.75t35-7.375 30.5-15 20.25-25.75 8-38.375zM416 260q0 51.75-15.25
+        82.75-9.5 19.25-26.375 33.25t-35.25 21.5-42.5 11.875-42.875 5.5-41.75
+        1.125q-19.5 0-35.5-0.75t-36.875-3.125-38.125-7.5-34.25-12.875-30.25-20.25-21.5-28.75q-15.5-30.75-15.5-82.75
+        0-59.25 34-99-6.75-20.5-6.75-42.5 0-29 12.75-54.5 27 0 47.5 9.875t47.25
+        30.875q36.75-8.75 77.25-8.75 37 0 70 8 26.25-20.5
+        46.75-30.25t47.25-9.75q12.75 25.5 12.75 54.5 0 21.75-6.75 42 34 40 34
+        99.5z" />
+</svg>
+        
       </defs>
     </svg>
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -142,6 +161,30 @@
         
       </div>
       
+        <div class="md-flex__cell md-flex__cell--shrink">
+          <div class="md-header-nav__source">
+            
+
+
+  
+
+
+  <a href="https://github.com/BaderLab/saber/" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#__github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      BaderLab/saber
+    </div>
+  </a>
+
+          </div>
+        </div>
+      
     </div>
   </nav>
 </header>
@@ -167,6 +210,28 @@
     </a>
     Saber
   </label>
+  
+    <div class="md-nav__source">
+      
+
+
+  
+
+
+  <a href="https://github.com/BaderLab/saber/" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#__github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      BaderLab/saber
+    </div>
+  </a>
+
+    </div>
   
   <ul class="md-nav__list" data-md-scrollfix>
     
@@ -246,8 +311,8 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pre-trained-models" title="Pre-trained models" class="md-nav__link">
-    Pre-trained models
+  <a href="#python-package" title="Python package" class="md-nav__link">
+    Python package
   </a>
   
 </li>
@@ -310,8 +375,8 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pre-trained-models" title="Pre-trained models" class="md-nav__link">
-    Pre-trained models
+  <a href="#python-package" title="Python package" class="md-nav__link">
+    Python package
   </a>
   
 </li>
@@ -339,26 +404,36 @@
             <article class="md-content__inner md-typeset">
               
                 
+                  <a href="https://github.com/BaderLab/saber/edit/master/docs/guide_to_saber_api.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
+                
                 
                 <h1 id="guide-to-the-saber-api">Guide to the Saber API</h1>
+<p>You can interact with Saber as a web-service (explained in <a href="https://baderlab.github.io/saber/quick_start/">Quick start</a>), command line tool, python package, or via the Juypter notebooks. If you created a virtual environment, <em>remember to activate it first</em>.</p>
 <h3 id="command-line-tool">Command line tool</h3>
-<p>All hyper-parameters are specified in a configuration file. The configuration file can be specified when running Saber:</p>
+<p>Currently, the command line tool simply trains the model. To use it, call</p>
+<pre><code class="bash">(saber) $ python -m saber.train
+</code></pre>
+
+<p>along with any command line arguments. For example, to train the model on the <a href="https://www.ncbi.nlm.nih.gov/CBBresearch/Dogan/DISEASE/">NCBI Disease</a> corpus</p>
+<pre><code class="bash">(saber) $ python -m saber.train --dataset_folder NCBI_disease_BIO
+</code></pre>
+
+<blockquote>
+<p>See <a href="https://baderlab.github.io/saber/resources/">Resources</a> for help preparing datasets for training.</p>
+</blockquote>
+<p>Run <code>python -m saber.train -h</code> to see all possible arguments.</p>
+<p>Of course, supplying arguments at the command line can quickly become cumbersome. Saber also allows you to specify a configuration file, which can be specified like so</p>
 <pre><code class="bash">(saber) $ python -m saber.train --config_filepath path/to/config.ini
 </code></pre>
 
-<blockquote>
-<p>If not specified, the default configuration file at <code>saber/config.ini</code> is used.</p>
-</blockquote>
-<p>Alternatively, you can supply arguments at the command line. Each command line argument has a name identical to those found in <code>saber/config.ini</code>. For example:</p>
+<p>Copy the contents of the <a href="https://github.com/BaderLab/saber/blob/master/saber/config.ini">default config file</a> to a new <code>*.ini</code> file in order to get started.</p>
+<p>Note that arguments supplied at the command line overwrite those found in the configuration file. For example</p>
 <pre><code class="bash">(saber) $ python -m saber.train --dataset_folder path/to/dataset --k_folds 10
 </code></pre>
 
-<p>Would overwrite the arguments for <code>dataset_folder</code> and <code>k_folds</code> found in the config file. Run <code>python -m saber.train -h</code> to see all possible arguments.</p>
-<blockquote>
-<p>Note: At this time, the command-line tool simply trains the model.</p>
-</blockquote>
-<h3 id="pre-trained-models">Pre-trained models</h3>
-<p>Saber exposes its functionality through the <code>SequenceProcessor</code> class. Here is just about everything Saber does in one script:</p>
+<p>would overwrite the arguments for <code>dataset_folder</code> and <code>k_folds</code> found in the configuration file.</p>
+<h3 id="python-package">Python package</h3>
+<p>You can also import Saber and interact with it as a python package. Saber exposes its functionality through the <code>SequenceProcessor</code> class. Here is just about everything Saber does in one script:</p>
 <pre><code class="python">from saber.sequence_processor import SequenceProcessor
 
 # First, create a SequenceProcessor object, which exposes Sabers functionality
@@ -387,11 +462,17 @@ sp.fit()
 </code></pre>
 
 <h3 id="juypter-notebooks">Juypter notebooks</h3>
-<p>First, install <a href="https://github.com/jupyterlab/jupyterlab">JupyterLab</a> by following the instructions <a href="https://github.com/jupyterlab/jupyterlab#installation">here</a>. Once installed, run:</p>
+<p>First, grab the notebook. Go <a href="https://raw.githubusercontent.com/BaderLab/saber/master/notebooks/lightning_tour.ipynb">here</a>, then press <code>command</code> / <code>control</code> + <code>s</code>, and save the notebook as <code>lightning_tour.ipynb</code> somewhere on your computer.</p>
+<p>Next, install <a href="https://github.com/jupyterlab/jupyterlab">JupyterLab</a> by following the instructions <a href="https://github.com/jupyterlab/jupyterlab#installation">here</a>. Once installed, run:</p>
 <pre><code>(saber) $ jupyter lab
 </code></pre>
 
-<p>If you activated a virtual environment make sure you see <strong>Python [venv:saber]</strong> in the top right of the Jupyter notebook. If you are using conda, you need to run <code>conda install nb_conda</code> with your environment activated.</p>
+<p>A new window will open in your browser. Use it to search for <code>lightning_tour.ipynb</code> on your computer.</p>
+<p>A couple of notes:</p>
+<ul>
+<li>If you activated a virtual environment, "<code>myenv</code>", make sure you see <strong>Python [venv:myenv]</strong> in the top right of the Jupyter notebook.</li>
+<li>If you are using conda, you need to run <code>conda install nb_conda</code> with your environment activated.</li>
+</ul>
                 
                   
                 

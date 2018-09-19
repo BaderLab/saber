@@ -73,6 +73,25 @@
       <defs>
         
         
+          <svg xmlns="http://www.w3.org/2000/svg" width="416" height="448"
+    viewBox="0 0 416 448" id="__github">
+  <path fill="currentColor" d="M160 304q0 10-3.125 20.5t-10.75 19-18.125
+        8.5-18.125-8.5-10.75-19-3.125-20.5 3.125-20.5 10.75-19 18.125-8.5
+        18.125 8.5 10.75 19 3.125 20.5zM320 304q0 10-3.125 20.5t-10.75
+        19-18.125 8.5-18.125-8.5-10.75-19-3.125-20.5 3.125-20.5 10.75-19
+        18.125-8.5 18.125 8.5 10.75 19 3.125 20.5zM360
+        304q0-30-17.25-51t-46.75-21q-10.25 0-48.75 5.25-17.75 2.75-39.25
+        2.75t-39.25-2.75q-38-5.25-48.75-5.25-29.5 0-46.75 21t-17.25 51q0 22 8
+        38.375t20.25 25.75 30.5 15 35 7.375 37.25 1.75h42q20.5 0
+        37.25-1.75t35-7.375 30.5-15 20.25-25.75 8-38.375zM416 260q0 51.75-15.25
+        82.75-9.5 19.25-26.375 33.25t-35.25 21.5-42.5 11.875-42.875 5.5-41.75
+        1.125q-19.5 0-35.5-0.75t-36.875-3.125-38.125-7.5-34.25-12.875-30.25-20.25-21.5-28.75q-15.5-30.75-15.5-82.75
+        0-59.25 34-99-6.75-20.5-6.75-42.5 0-29 12.75-54.5 27 0 47.5 9.875t47.25
+        30.875q36.75-8.75 77.25-8.75 37 0 70 8 26.25-20.5
+        46.75-30.25t47.25-9.75q12.75 25.5 12.75 54.5 0 21.75-6.75 42 34 40 34
+        99.5z" />
+</svg>
+        
       </defs>
     </svg>
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -142,6 +161,30 @@
         
       </div>
       
+        <div class="md-flex__cell md-flex__cell--shrink">
+          <div class="md-header-nav__source">
+            
+
+
+  
+
+
+  <a href="https://github.com/BaderLab/saber/" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#__github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      BaderLab/saber
+    </div>
+  </a>
+
+          </div>
+        </div>
+      
     </div>
   </nav>
 </header>
@@ -167,6 +210,28 @@
     </a>
     Saber
   </label>
+  
+    <div class="md-nav__source">
+      
+
+
+  
+
+
+  <a href="https://github.com/BaderLab/saber/" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#__github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      BaderLab/saber
+    </div>
+  </a>
+
+    </div>
   
   <ul class="md-nav__list" data-md-scrollfix>
     
@@ -351,11 +416,13 @@
             <article class="md-content__inner md-typeset">
               
                 
+                  <a href="https://github.com/BaderLab/saber/edit/master/docs/resources.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
+                
                 
                 <h1 id="resources">Resources</h1>
 <p>Saber is ready to go out-of-the box when using the <strong>web-service</strong> or a <strong>pre-trained model</strong>. However, if you plan on training you own models, you will need to provide a dataset (or datasets!) and, ideally, pre-trained word embeddings.</p>
 <h2 id="datasets">Datasets</h2>
-<p>Currently, Saber requires corpora to be in a <strong>CoNLL</strong> format with a BIO tag scheme, e.g.:</p>
+<p>Currently, Saber requires corpora to be in a <strong>CoNLL</strong> format with a BIO or IOBES tag scheme, e.g.:</p>
 <pre><code>Selegiline  B-CHED
 -   O
 induced O
@@ -368,6 +435,32 @@ hypotension I-DISO
 <blockquote>
 <p>Many of the corpora in the BIO and IOBES tag format were originally collected by <a href="https://doi.org/10.1186/s12859-017-1776-8">Crichton <em>et al</em>., 2017</a>, <a href="https://github.com/cambridgeltl/MTL-Bioinformatics-2016">here</a>.</p>
 </blockquote>
+<p>In this format, the first column contains each token of an input sentence, the last column contains the tokens tag, all columns are separated by tabs, and all sentences by a newline.</p>
+<p>Of course, not all corpora are distributed in the CoNLL format:</p>
+<ul>
+<li>Corpora in the <strong>Standoff</strong> format can be converted to <strong>CoNLL</strong> format using <a href="https://github.com/spyysalo/standoff2conll">this</a> tool.</li>
+<li>Corpora in <strong>PubTator</strong> format can be converted to <strong>Standoff</strong> first using <a href="https://github.com/spyysalo/pubtator">this</a> tool.</li>
+</ul>
+<p>Saber infers the "training strategy" based on the structure of the dataset folder:</p>
+<ul>
+<li>To use k-fold cross-validation, simply provide a <code>train.*</code> file in your dataset folder.</li>
+</ul>
+<p>E.g.</p>
+<pre><code>.
+├── NCBI-Disease
+│   └── train.tsv
+</code></pre>
+
+<ul>
+<li>To use a train/valid/test strategy, provide <code>train.*</code> and <code>test.*</code> files in your dataset folder. Optionally, you can provide a <code>valid.*</code> file. If not provided, a random 10% of examples from <code>train.*</code> are used as the validation set.</li>
+</ul>
+<p>E.g.</p>
+<pre><code>.
+├── NCBI-Disease
+│   ├── test.tsv
+│   └── train.tsv
+</code></pre>
+
 <h2 id="word-embeddings">Word embeddings</h2>
 <p>When training new models, you can (and should) provide your own pre-trained word embeddings with the <code>pretrained_embeddings</code> argument (either at the command line or in the configuration file). Saber expects all word embeddings to be in the <code>word2vec</code> file format. <a href="https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf">Pyysalo <em>et al</em>. 2013</a> provide word embeddings that work quite well in the biomedical domain, which can be downloaded <a href="http://bio.nlplab.org">here</a>. Alternatively, from the command line call:</p>
 <pre><code class="bash"># Replace this with a location you want to save the embeddings to
