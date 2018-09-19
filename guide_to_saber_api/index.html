@@ -220,9 +220,52 @@
       
     
     
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Guide to the Saber API
+      </label>
+    
     <a href="./" title="Guide to the Saber API" class="md-nav__link md-nav__link--active">
       Guide to the Saber API
     </a>
+    
+      
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#command-line-tool" title="Command line tool" class="md-nav__link">
+    Command line tool
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-trained-models" title="Pre-trained models" class="md-nav__link">
+    Pre-trained models
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#juypter-notebooks" title="Juypter notebooks" class="md-nav__link">
+    Juypter notebooks
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
+</nav>
     
   </li>
 
@@ -256,6 +299,36 @@
     
   
   
+    <label class="md-nav__title" for="__toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#command-line-tool" title="Command line tool" class="md-nav__link">
+    Command line tool
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-trained-models" title="Pre-trained models" class="md-nav__link">
+    Pre-trained models
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#juypter-notebooks" title="Juypter notebooks" class="md-nav__link">
+    Juypter notebooks
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -268,6 +341,57 @@
                 
                 
                 <h1 id="guide-to-the-saber-api">Guide to the Saber API</h1>
+<h3 id="command-line-tool">Command line tool</h3>
+<p>All hyper-parameters are specified in a configuration file. The configuration file can be specified when running Saber:</p>
+<pre><code class="bash">(saber) $ python -m saber.train --config_filepath path/to/config.ini
+</code></pre>
+
+<blockquote>
+<p>If not specified, the default configuration file at <code>saber/config.ini</code> is used.</p>
+</blockquote>
+<p>Alternatively, you can supply arguments at the command line. Each command line argument has a name identical to those found in <code>saber/config.ini</code>. For example:</p>
+<pre><code class="bash">(saber) $ python -m saber.train --dataset_folder path/to/dataset --k_folds 10
+</code></pre>
+
+<p>Would overwrite the arguments for <code>dataset_folder</code> and <code>k_folds</code> found in the config file. Run <code>python -m saber.train -h</code> to see all possible arguments.</p>
+<blockquote>
+<p>Note: At this time, the command-line tool simply trains the model.</p>
+</blockquote>
+<h3 id="pre-trained-models">Pre-trained models</h3>
+<p>Saber exposes its functionality through the <code>SequenceProcessor</code> class. Here is just about everything Saber does in one script:</p>
+<pre><code class="python">from saber.sequence_processor import SequenceProcessor
+
+# First, create a SequenceProcessor object, which exposes Sabers functionality
+sp = SequenceProcessor()
+
+# Load a dataset and create a model (provide a list of datasets to use multi-task learning!)
+sp.load_dataset('path/to/datasets/GENIA')
+sp.create_model()
+
+# Train and save a model
+sp.fit()
+sp.save('pretrained_models/GENIA')
+
+# Load a model
+del sp
+sp = SequenceProcessor()
+sp.load('pretrained_models/GENIA')
+
+# Perform prediction on raw text, get resulting annotation
+raw_text = 'The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.'
+annotation = sp.annotate(raw_text)
+
+# Use transfer learning to continue training on a new dataset
+sp.load_dataset('path/to/datasets/CRAFT')
+sp.fit()
+</code></pre>
+
+<h3 id="juypter-notebooks">Juypter notebooks</h3>
+<p>First, install <a href="https://github.com/jupyterlab/jupyterlab">JupyterLab</a> by following the instructions <a href="https://github.com/jupyterlab/jupyterlab#installation">here</a>. Once installed, run:</p>
+<pre><code>(saber) $ jupyter lab
+</code></pre>
+
+<p>If you activated a virtual environment make sure you see <strong>Python [venv:saber]</strong> in the top right of the Jupyter notebook. If you are using conda, you need to run <code>conda install nb_conda</code> with your environment activated.</p>
                 
                   
                 

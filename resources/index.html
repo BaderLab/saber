@@ -255,19 +255,6 @@
     Datasets
   </a>
   
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#preparing-your-own-datasets" title="Preparing your own datasets" class="md-nav__link">
-    Preparing your own datasets
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -326,19 +313,6 @@
     Datasets
   </a>
   
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#preparing-your-own-datasets" title="Preparing your own datasets" class="md-nav__link">
-    Preparing your own datasets
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -394,7 +368,6 @@ hypotension I-DISO
 <blockquote>
 <p>Many of the corpora in the BIO and IOBES tag format were originally collected by <a href="https://doi.org/10.1186/s12859-017-1776-8">Crichton <em>et al</em>., 2017</a>, <a href="https://github.com/cambridgeltl/MTL-Bioinformatics-2016">here</a>.</p>
 </blockquote>
-<h3 id="preparing-your-own-datasets">Preparing your own datasets</h3>
 <h2 id="word-embeddings">Word embeddings</h2>
 <p>When training new models, you can (and should) provide your own pre-trained word embeddings with the <code>pretrained_embeddings</code> argument (either at the command line or in the configuration file). Saber expects all word embeddings to be in the <code>word2vec</code> file format. <a href="https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf">Pyysalo <em>et al</em>. 2013</a> provide word embeddings that work quite well in the biomedical domain, which can be downloaded <a href="http://bio.nlplab.org">here</a>. Alternatively, from the command line call:</p>
 <pre><code class="bash"># Replace this with a location you want to save the embeddings to
@@ -403,9 +376,6 @@ $ mkdir path/to/word_embeddings
 $ wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin -O path/to/word_embeddings
 </code></pre>
 
-<blockquote>
-<p>Note: you do not need to download pre-trained word embeddings if you only plan on using Saber's pre-trained models.</p>
-</blockquote>
 <h3 id="glove">GloVe</h3>
 <p>To use <a href="https://nlp.stanford.edu/projects/glove/">GloVe</a> embeddings, just convert them to the <a href="https://code.google.com/archive/p/word2vec/">word2vec</a> format first:</p>
 <pre><code class="bash">(saber) $ python
