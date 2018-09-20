@@ -1,0 +1,21 @@
+site_name: Saber
+
+nav:
+    - Home: index.md
+    - Installation: installation.md
+    - Quick Start: quick_start.md
+    - Guide to the Saber API: guide_to_saber_api.md
+    - Resources: resources.md
+
+theme:
+  name: 'material'
+  logo:
+    icon: 'bubble_chart'
+  palette:
+    primary: 'deep orange'
+
+markdown_extensions:
+  - codehilite
+
+repo_name: 'BaderLab/saber'
+repo_url: 'https://github.com/BaderLab/saber'
