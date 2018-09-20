@@ -114,3 +114,6 @@ ENV/
 *.iml
 /pretrained_models/CRAFT/
 /pretrained_models/PRGE/
+
+# MKDocs
+site/
