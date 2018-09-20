@@ -59,11 +59,11 @@ def prepare_output_directory(dataset_folder, output_folder, config=None):
     ├── output_folder
     |   └── <first_dataset_name_second_dataset_name_nth_dataset_name>
     |       └── <first_dataset_name>
-    |           └── train_session_<month>_<day>_<hr>:<min>
+    |           └── train_session_<month>_<day>_<hr>_<min>_<sec>
     |       └── <second_dataset_name>
-    |           └── train_session_<month>_<day>_<hr>:<min>
+    |           └── train_session_<month>_<day>_<hr>_<min>_<sec>
     |       └── <nth_dataset_name>
-    |           └── train_session_<month>_<day>_<hr>:<min>
+    |           └── train_session_<month>_<day>_<hr>_<min>_<sec>
 
     In the case of only a single dataset,
     <first_dataset_name_second_dataset_name> and <first_dataset_name> are
@@ -71,16 +71,14 @@ def prepare_output_directory(dataset_folder, output_folder, config=None):
     used to train the model to the top level of this directory.
 
     Args:
-        dataset_folder (str): a list of directory paths to CoNLL formatted
-            datasets
+        dataset_folder (str): a list of directory paths to CoNLL formatted datasets
         output_folder (str): the top-level output folder
-        config_filepath (str): optional, if not None, the config file used
-            to train a model is copied to the top-level of the output directory.
+        config_filepath (str): optional, if not None, the config file used to train a model is
+            copied to the top-level of the output directory.
 
     Returns:
         a list of directory paths to the subdirectories
-        train_session_<month>_<day>_<hr>_<min>, one for each dataset in
-        dataset_folder
+        train_session_<month>_<day>_<hr>_<min>_<sec>, one for each dataset in dataset_folder
     """
     # acc
     train_sess_output_dirnames = []
@@ -101,7 +99,7 @@ def prepare_output_directory(dataset_folder, output_folder, config=None):
         ds_dirname = os.path.join(output_folder, dirname)
 
         # create a subdirectory for each train session
-        ts_dirname = strftime("train_session_%a_%b_%d_%I_%M").lower()
+        ts_dirname = strftime("train_session_%a_%b_%d_%I_%M_%S").lower()
 
         # create the full directory path
         ds_ts_dirname = os.path.join(ds_dirname, ts_dirname)
