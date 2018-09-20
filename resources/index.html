@@ -265,8 +265,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../quick_start/" title="Quick start" class="md-nav__link">
-      Quick start
+    <a href="../quick_start/" title="Quick Start" class="md-nav__link">
+      Quick Start
     </a>
   </li>
 
@@ -466,20 +466,20 @@ hypotension I-DISO
 
 <h2 id="word-embeddings">Word embeddings</h2>
 <p>When training new models, you can (and should) provide your own pre-trained word embeddings with the <code>pretrained_embeddings</code> argument (either at the command line or in the configuration file). Saber expects all word embeddings to be in the <code>word2vec</code> file format. <a href="https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf">Pyysalo <em>et al</em>. 2013</a> provide word embeddings that work quite well in the biomedical domain, which can be downloaded <a href="http://bio.nlplab.org">here</a>. Alternatively, from the command line call:</p>
-<div class="codehilite"><pre><span></span><span class="c1"># Replace this with a location you want to save the embeddings to</span>
+<div class="codehilite"><pre><span></span># Replace this with a location you want to save the embeddings to
 $ mkdir path/to/word_embeddings
-<span class="c1"># Note: this file is over 4GB</span>
+# Note: this file is over 4GB
 $ wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin -O path/to/word_embeddings
 </pre></div>
 
 
 <h3 id="glove">GloVe</h3>
 <p>To use <a href="https://nlp.stanford.edu/projects/glove/">GloVe</a> embeddings, just convert them to the <a href="https://code.google.com/archive/p/word2vec/">word2vec</a> format first:</p>
-<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ python
-&gt;&gt;&gt; from gensim.scripts.glove2word2vec import glove2word2vec
-&gt;&gt;&gt; <span class="nv">glove_input_file</span> <span class="o">=</span> <span class="s1">&#39;glove.txt&#39;</span>
-&gt;&gt;&gt; <span class="nv">word2vec_output_file</span> <span class="o">=</span> <span class="s1">&#39;word2vec.txt&#39;</span>
-&gt;&gt;&gt; glove2word2vec<span class="o">(</span>glove_input_file, word2vec_output_file<span class="o">)</span>
+<div class="codehilite"><pre><span></span><span class="p">(</span><span class="n">saber</span><span class="p">)</span> <span class="err">$</span> <span class="n">python</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">gensim.scripts.glove2word2vec</span> <span class="kn">import</span> <span class="n">glove2word2vec</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">glove_input_file</span> <span class="o">=</span> <span class="s1">&#39;glove.txt&#39;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">word2vec_output_file</span> <span class="o">=</span> <span class="s1">&#39;word2vec.txt&#39;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">glove2word2vec</span><span class="p">(</span><span class="n">glove_input_file</span><span class="p">,</span> <span class="n">word2vec_output_file</span><span class="p">)</span>
 </pre></div>
                 
                   

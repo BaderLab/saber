@@ -265,8 +265,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../quick_start/" title="Quick start" class="md-nav__link">
-      Quick start
+    <a href="../quick_start/" title="Quick Start" class="md-nav__link">
+      Quick Start
     </a>
   </li>
 
@@ -314,6 +314,53 @@
   <a href="#python-package" title="Python package" class="md-nav__link">
     Python package
   </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#transfer-learning" title="Transfer learning" class="md-nav__link">
+    Transfer learning
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-task-learning" title="Multi-task learning" class="md-nav__link">
+    Multi-task learning
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#saving-and-loading-models" title="Saving and loading models" class="md-nav__link">
+    Saving and loading models
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#saving-a-model" title="Saving a model" class="md-nav__link">
+    Saving a model
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loading-a-model" title="Loading a model" class="md-nav__link">
+    Loading a model
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -379,6 +426,53 @@
     Python package
   </a>
   
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#transfer-learning" title="Transfer learning" class="md-nav__link">
+    Transfer learning
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-task-learning" title="Multi-task learning" class="md-nav__link">
+    Multi-task learning
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#saving-and-loading-models" title="Saving and loading models" class="md-nav__link">
+    Saving and loading models
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#saving-a-model" title="Saving a model" class="md-nav__link">
+    Saving a model
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loading-a-model" title="Loading a model" class="md-nav__link">
+    Loading a model
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -411,12 +505,12 @@
 <p>You can interact with Saber as a web-service (explained in <a href="https://baderlab.github.io/saber/quick_start/">Quick start</a>), command line tool, python package, or via the Juypter notebooks. If you created a virtual environment, <em>remember to activate it first</em>.</p>
 <h3 id="command-line-tool">Command line tool</h3>
 <p>Currently, the command line tool simply trains the model. To use it, call</p>
-<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ python -m saber.train
+<div class="codehilite"><pre><span></span>(saber) $ python -m saber.train
 </pre></div>
 
 
 <p>along with any command line arguments. For example, to train the model on the <a href="https://www.ncbi.nlm.nih.gov/CBBresearch/Dogan/DISEASE/">NCBI Disease</a> corpus</p>
-<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ python -m saber.train --dataset_folder NCBI_disease_BIO
+<div class="codehilite"><pre><span></span>(saber) $ python -m saber.train --dataset_folder NCBI_disease_BIO
 </pre></div>
 
 
@@ -425,13 +519,13 @@
 </blockquote>
 <p>Run <code>python -m saber.train -h</code> to see all possible arguments.</p>
 <p>Of course, supplying arguments at the command line can quickly become cumbersome. Saber also allows you to specify a configuration file, which can be specified like so</p>
-<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ python -m saber.train --config_filepath path/to/config.ini
+<div class="codehilite"><pre><span></span>(saber) $ python -m saber.train --config_filepath path/to/config.ini
 </pre></div>
 
 
 <p>Copy the contents of the <a href="https://github.com/BaderLab/saber/blob/master/saber/config.ini">default config file</a> to a new <code>*.ini</code> file in order to get started.</p>
 <p>Note that arguments supplied at the command line overwrite those found in the configuration file. For example</p>
-<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ python -m saber.train --dataset_folder path/to/dataset --k_folds <span class="m">10</span>
+<div class="codehilite"><pre><span></span>(saber) $ python -m saber.train --dataset_folder path/to/dataset --k_folds 10
 </pre></div>
 
 
@@ -466,10 +560,69 @@
 </pre></div>
 
 
+<h4 id="transfer-learning">Transfer learning</h4>
+<p>Transfer learning is as easy as training, saving, loading, and then continuing training of a model. Here is an example</p>
+<div class="codehilite"><pre><span></span><span class="c1"># Create and train a model on GENIA corpus</span>
+<span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/GENIA&#39;</span><span class="p">)</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">create_model</span><span class="p">()</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
+
+<span class="c1"># Load that model</span>
+<span class="k">del</span> <span class="n">sp</span>
+<span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
+
+<span class="c1"># Use transfer learning to continue training on a new dataset</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/CRAFT&#39;</span><span class="p">)</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+</pre></div>
+
+
+<blockquote>
+<p>Note that there is currently no way to easily do this with the command line interface, but I am working on it!</p>
+</blockquote>
+<h4 id="multi-task-learning">Multi-task learning</h4>
+<p>Multi-task learning is as easy as specifying multiple dataset paths, either in the <code>config</code> file, at the command line via the flag <code>--dataset_folder</code>, or as an argument to <code>load_dataset()</code>. The number of datasets is arbitrary.</p>
+<p>Here is an example using the last method</p>
+<div class="codehilite"><pre><span></span><span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
+
+<span class="c1"># Simply pass multiple dataset paths as a list to load_dataset to use multi-task learning.</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">([</span><span class="s1">&#39;path/to/datasets/NCBI-Disease&#39;</span><span class="p">,</span> <span class="s1">&#39;path/to/datasets/Linnaeus&#39;</span><span class="p">])</span>
+
+<span class="n">sp</span><span class="o">.</span><span class="n">create_model</span><span class="p">()</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+</pre></div>
+
+
+<h4 id="saving-and-loading-models">Saving and loading models</h4>
+<p>In the following sections we introduce the saving and loading of models.</p>
+<h5 id="saving-a-model">Saving a model</h5>
+<p>Assuming the model has already been created (see above), we can easily save our model like so</p>
+<div class="codehilite"><pre><span></span><span class="n">path_to_saved_model</span> <span class="o">=</span> <span class="s1">&#39;path/to/pretrained_models/mymodel&#39;</span>
+
+<span class="n">sp</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">path_to_saved_model</span><span class="p">)</span>
+</pre></div>
+
+
+<h5 id="loading-a-model">Loading a model</h5>
+<p>Lets illustrate loading a model with a new <code>SequenceProccesor</code> object</p>
+<div class="codehilite"><pre><span></span><span class="c1"># Delete our previous SequenceProccesor object (if it exists)</span>
+<span class="k">if</span> <span class="s1">&#39;sp&#39;</span> <span class="ow">in</span> <span class="nb">locals</span><span class="p">():</span> <span class="k">del</span> <span class="n">sp</span>
+
+<span class="c1"># Create a new SequenceProccesor object</span>
+<span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
+
+<span class="c1"># Load a previous model</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path_to_saved_model</span><span class="p">)</span>
+</pre></div>
+
+
 <h3 id="juypter-notebooks">Juypter notebooks</h3>
 <p>First, grab the notebook. Go <a href="https://raw.githubusercontent.com/BaderLab/saber/master/notebooks/lightning_tour.ipynb">here</a>, then press <code>command</code> / <code>control</code> + <code>s</code>, and save the notebook as <code>lightning_tour.ipynb</code> somewhere on your computer.</p>
 <p>Next, install <a href="https://github.com/jupyterlab/jupyterlab">JupyterLab</a> by following the instructions <a href="https://github.com/jupyterlab/jupyterlab#installation">here</a>. Once installed, run:</p>
-<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ jupyter lab
+<div class="codehilite"><pre><span></span>(saber) $ jupyter lab
 </pre></div>
 
 
@@ -499,7 +652,7 @@
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../quick_start/" title="Quick start" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../quick_start/" title="Quick Start" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -508,7 +661,7 @@
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Quick start
+                Quick Start
               </span>
             </div>
           </a>

@@ -36,7 +36,7 @@
     
     
       
-        <title>Quick start - Saber</title>
+        <title>Quick Start - Saber</title>
       
     
     
@@ -124,7 +124,7 @@
                 Saber
               </span>
               <span class="md-header-nav__topic">
-                Quick start
+                Quick Start
               </span>
             
           
@@ -274,11 +274,11 @@
     
     
       <label class="md-nav__link md-nav__link--active" for="__toc">
-        Quick start
+        Quick Start
       </label>
     
-    <a href="./" title="Quick start" class="md-nav__link md-nav__link--active">
-      Quick start
+    <a href="./" title="Quick Start" class="md-nav__link md-nav__link--active">
+      Quick Start
     </a>
     
       
@@ -449,16 +449,16 @@
 <p>If your goal is simply to use Saber to annotate biomedical text, then you can either use the <a href="#web-service">web-service</a> or a <a href="#pre-trained-models">pre-trained model</a>.</p>
 <h2 id="web-service">Web-service</h2>
 <p>To use Saber as a <strong>local</strong> web-service, run:</p>
-<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ python -m saber.app
+<div class="codehilite"><pre><span></span>(saber) $ python -m saber.app
 </pre></div>
 
 
 <p>or to build &amp; run Saber with <strong>Docker</strong>:</p>
-<div class="codehilite"><pre><span></span><span class="c1"># Build docker</span>
-<span class="o">(</span>saber<span class="o">)</span> $ docker build -t saber .
+<div class="codehilite"><pre><span></span># Build docker
+(saber) $ docker build -t saber .
 
-<span class="c1"># Run docker (use `-it` instead of `-dt` to try it interactively)</span>
-<span class="o">(</span>saber<span class="o">)</span> $ docker run --rm -p <span class="m">5000</span>:5000 --name saber1 -dt saber
+# Run docker (use `-it` instead of `-dt` to try it interactively)
+(saber) $ docker run --rm -p 5000:5000 --name saber1 -dt saber
 </pre></div>
 
 
@@ -531,10 +531,10 @@
 <div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
 
 <span class="c1"># convert to json object</span>
-<span class="n">json_annotation</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">annotation</span><span class="p">)</span>
+<span class="n">json_ann</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">ann</span><span class="p">)</span>
 
 <span class="c1"># convert back to python dictionary</span>
-<span class="n">annotation</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json_annotation</span><span class="p">)</span>
+<span class="n">ann</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json_ann</span><span class="p">)</span>
 </pre></div>
                 
                   

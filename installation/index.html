@@ -330,8 +330,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../quick_start/" title="Quick start" class="md-nav__link">
-      Quick start
+    <a href="../quick_start/" title="Quick Start" class="md-nav__link">
+      Quick Start
     </a>
   </li>
 
@@ -450,14 +450,14 @@
 
 
 <p>Then, install Saber right from the repository with <code>pip</code></p>
-<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ pip install git+https://github.com/BaderLab/saber.git
+<div class="codehilite"><pre><span></span>(saber) $ pip install git+https://github.com/BaderLab/saber.git
 </pre></div>
 
 
 <p>or by cloning the repository and then using <code>pip</code> to install the package</p>
-<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ git clone https://github.com/BaderLab/saber.git
-<span class="o">(</span>saber<span class="o">)</span> $ <span class="nb">cd</span> saber
-<span class="o">(</span>saber<span class="o">)</span> $ pip install .
+<div class="codehilite"><pre><span></span>(saber) $ git clone https://github.com/BaderLab/saber.git
+(saber) $ cd saber
+(saber) $ pip install .
 </pre></div>
 
 
@@ -465,10 +465,10 @@
 <p>You can also install Saber by cloning this repository and running <code>python setup.py install</code> from within the repository.</p>
 </blockquote>
 <p>Finally, you must also <code>pip</code> install the required <a href="https://spacy.io">Spacy</a> model and the <a href="https://github.com/keras-team/keras-contrib">keras-contrib</a> repositories</p>
-<div class="codehilite"><pre><span></span><span class="c1"># keras-contrib</span>
-<span class="o">(</span>saber<span class="o">)</span> $ pip install git+https://www.github.com/keras-team/keras-contrib.git
-<span class="c1"># spacy small english model</span>
-<span class="o">(</span>saber<span class="o">)</span> $ pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
+<div class="codehilite"><pre><span></span># keras-contrib
+(saber) $ pip install git+https://www.github.com/keras-team/keras-contrib.git
+# spacy small english model
+(saber) $ pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
 </pre></div>
 
 
@@ -513,21 +513,21 @@
 </blockquote>
 <h2 id="running-tests">Running tests</h2>
 <p>Sabers test suite can be found in <code>saber/tests</code>. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in <code>requirements.txt</code>. Additionally, you will need to install <code>pytest</code>:</p>
-<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ pip install pytest
+<div class="codehilite"><pre><span></span>(saber) $ pip install pytest
 </pre></div>
 
 
 <p>To run the tests:</p>
-<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ <span class="nb">cd</span> path/to/saber
-<span class="o">(</span>saber<span class="o">)</span> $ py.test saber
+<div class="codehilite"><pre><span></span>(saber) $ cd path/to/saber
+(saber) $ py.test saber
 </pre></div>
 
 
 <p>Alternatively, you can find out where Saber is installed and run <code>pytest</code> on that directory:</p>
 <div class="codehilite"><pre><span></span><span class="c1"># Find out where Saber is installed</span>
-<span class="o">(</span>saber<span class="o">)</span> $ python -c <span class="s2">&quot;import os; import saber; print(os.path.dirname(saber.__file__))&quot;</span>
+<span class="p">(</span><span class="n">saber</span><span class="p">)</span> <span class="err">$</span> <span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s2">&quot;import os; import saber; print(os.path.dirname(saber.__file__))&quot;</span>
 <span class="c1"># Run tests on that installation directory</span>
-<span class="o">(</span>saber<span class="o">)</span> $ python -m pytest &lt;Saber-directory&gt;
+<span class="p">(</span><span class="n">saber</span><span class="p">)</span> <span class="err">$</span> <span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pytest</span> <span class="o">&lt;</span><span class="n">Saber</span><span class="o">-</span><span class="n">directory</span><span class="o">&gt;</span>
 </pre></div>
                 
                   
@@ -564,13 +564,13 @@
           </a>
         
         
-          <a href="../quick_start/" title="Quick start" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../quick_start/" title="Quick Start" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
               <span class="md-flex__ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                Quick start
+                Quick Start
               </span>
             </div>
             <div class="md-flex__cell md-flex__cell--shrink">
