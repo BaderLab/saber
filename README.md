@@ -18,9 +18,6 @@
   <a href='https://coveralls.io/github/BaderLab/saber?branch=master'>
     <img src='https://coveralls.io/repos/github/BaderLab/saber/badge.svg?branch=master' alt='Coverage Status'/>
   </a>
-  <a href='https://baderlab-saber.readthedocs.io/en/latest/?badge=latest'>
-    <img src='https://readthedocs.org/projects/baderlab-saber/badge/?version=latest' alt='Documentation Status'/>
-  </a>
   <a href='https://spacy.io'>
     <img src='https://img.shields.io/badge/spaCy-v2-09a3d5.svg' alt='Spacy Version'/>
   </a>
@@ -32,7 +29,7 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quickstart">Quickstart</a> •
-  <a href="#resources">Resources</a>
+  <a href="#documentation">Documentation</a>
 </p>
 
 <p align="center">
@@ -84,9 +81,6 @@ Finally, you must also `pip` install the required [Spacy](https://spacy.io) mode
 (saber) $ pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
 ```
 
-> See [Running tests](#running-tests) for a way to verify your installation.
-
-
 ### (OPTIONAL) Creating and activating virtual environments
 
 When using `pip` it is generally recommended to install packages in a virtual environment to avoid modifying system state. To create a virtual environment named `saber`:
@@ -135,19 +129,19 @@ $ source activate saber
 
 ## Quickstart
 
-You can interact with Saber as a web-service, command line tool, python package, or via the Juypter notebooks. If you created a virtual environment, **remember to activate it first**.
+If your goal is simply to use Saber to annotate biomedical text, then you can either use the [web-service](#web-service) or a [pre-trained model](#pre-trained-models).
 
 ### Web-service
 
 To use Saber as a **local** web-service, run:
 
-``` bash
+```bash
 (saber) $ python -m saber.app
 ```
 
-To build & run Saber with __Docker__:
+or to build & run Saber with __Docker__:
 
-``` bash
+```bash
 # Build docker
 (saber) $ docker build -t saber .
 
@@ -163,7 +157,7 @@ There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both e
 }
 ```
 
-Or:
+or
 
 ```json
 {
@@ -178,149 +172,42 @@ $ curl -X POST 'http://localhost:5000/annotate/text' \
 --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}'
 ```
 
-> Full documentation for the Saber API can be found [here](https://baderlab.github.io/saber-api-docs/).
+Documentation for the Saber web-service API can be found [here](https://baderlab.github.io/saber-api-docs/). We hope to provide a live version of the web-service soon!
 
-See `notebooks/lightning_tour.ipynb` for more.
+### Pre-trained models
 
-### Command line tool
-
-All hyper-parameters are specified in a configuration file. The configuration file can be specified when running Saber:
-
-```bash
-(saber) $ python -m saber.train --config_filepath path/to/config.ini
-```
-
-> If not specified, the default configuration file at `saber/config.ini` is used.
-
-Alternatively, you can supply arguments at the command line. Each command line argument has a name identical to those found in `saber/config.ini`. For example:
-
-```bash
-(saber) $ python -m saber.train --dataset_folder path/to/dataset --k_folds 10
-```
-
-Would overwrite the arguments for `dataset_folder` and `k_folds` found in the config file.
-
-> Note: At this time, the command-line tool simply trains the model.
-
-See `notebooks/lightning_tour.ipynb` for more.
-
-### Python module
-
-Saber exposes its functionality through the `SequenceProcessor` class. Here is just about everything Saber does in one script:
+First, import `SequenceProcessor`. This is the interface to Saber.
 
 ```python
 from saber.sequence_processor import SequenceProcessor
+```
 
-# First, create a SequenceProcessor object, which exposes Sabers functionality
+To load a pre-trained model, we first create a `SequenceProcessor` object
+
+```python
 sp = SequenceProcessor()
-
-# Load a dataset and create a model (provide a list of datasets to use multi-task learning!)
-sp.load_dataset('path/to/datasets/GENIA')
-sp.create_model()
-
-# Train and save a model
-sp.fit()
-sp.save('pretrained_models/GENIA')
-
-# Load a model
-del sp
-sp = SequenceProcessor()
-sp.load('pretrained_models/GENIA')
-
-# Perform prediction on raw text, get resulting annotation
-raw_text = 'The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.'
-annotation = sp.annotate(raw_text)
-
-# Use transfer learning to continue training on a new dataset
-sp.load_dataset('path/to/datasets/CRAFT')
-sp.fit()
 ```
 
-See `notebooks/lightning_tour.ipynb` for more.
+and then load the model of our choice
 
-### Juypter notebooks
-
-First, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) by following the instructions [here](https://github.com/jupyterlab/jupyterlab#installation) (make sure to activate your virtual environment first if you created one!)
-
-Once installed, run:
-
-```
-(saber) $ jupyter lab
+```python
+sp.load('PRGE')
 ```
 
-> Note: if you activated a virtual environment make sure you see **Python [venv:saber]** in the top right of the Jupyter notebook. If you are using conda, you need to run `conda install nb_conda` with your environment activated.
+You can see all the pre-trained models in the [web-service API docs](https://baderlab.github.io/saber-api-docs/) or, alternatively, by running the following line of code
 
-Check out `notebooks/lightning_tour.ipynb` for an overview of Saber.
-
-## Resources
-
-### Documentation
-
-Currently, the Jupyter notebook `notebooks/lightning_tour.ipynb` is serving as the primary documentation for Saber. Documentation for the Saber web-service API can be found [here](https://baderlab.github.io/saber-api-docs/).
-
-### Datasets
-
-Currently, Saber requires corpora to be in a **CoNLL** format with a BIO tag scheme, e.g.:
-
-```
-Selegiline	B-CHED
--	O
-induced	O
-postural	B-DISO
-hypotension	I-DISO
-...
+```python
+from saber.constants import ENTITIES; print(list(ENTITIES.keys()))
 ```
 
-Corpora in such a format are collected in [here](https://github.com/BaderLab/Biomedical-Corpora) for convenience.
+To annotate text with the model, just call the `annotate()` method
 
-> Many of the corpora in the BIO and IOBES tag format were originally collected by [Crichton _et al_., 2017](https://doi.org/10.1186/s12859-017-1776-8), [here](https://github.com/cambridgeltl/MTL-Bioinformatics-2016).
-
-### Word embeddings
-
-When training new models, you can (and should) provide your own pre-trained word embeddings with the `pretrained_embeddings` argument (either at the command line or in the configuration file). Saber expects all word embeddings to be in the `word2vec` file format. [Pyysalo _et al_. 2013](https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf) provide word embeddings that work quite well in the biomedical domain, which can be downloaded [here](http://bio.nlplab.org). Alternatively, from the command line call:
-
-```bash
-$ mkdir saber/word_embeddings
-$ cd saber/word_embeddings
-# Note: this file is over 4GB
-$ wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin
+```python
+sp.annotate('A Sos-1-E3b1 complex directs Rac activation by entering into a tricomplex with Eps8.')
 ```
 
-> Note: you do not need to download pre-trained word embeddings if you only plan on using Saber's pre-trained models.
+See the [documentation](https://baderlab.github.io/saber/quick_start/) for more details.
 
-#### GloVe
+## Documentation
 
-To use [GloVe](https://nlp.stanford.edu/projects/glove/) embeddings, just convert them to the [word2vec](https://code.google.com/archive/p/word2vec/) format first:
-
-```bash
-(saber) $ python
->>> from gensim.scripts.glove2word2vec import glove2word2vec
->>> glove_input_file = 'glove.txt'
->>> word2vec_output_file = 'word2vec.txt'
->>> glove2word2vec(glove_input_file, word2vec_output_file)
-```
-
-## Running tests
-
-Sabers test suite can be found in `saber/tests`. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in ``requirements.txt``. Additionally, you will need to install ``pytest``:
-
-```bash
-(saber) $ pip install pytest
-```
-
-To run the tests:
-
-```bash
-(saber) $ cd path/to/saber
-(saber) $ py.test saber
-```
-
-Alternatively, you can find out where Saber is installed and run ``pytest`` on
-that directory:
-
-```bash
-# Find out where Saber is installed
-$ python -c "import os; import saber; print(os.path.dirname(saber.__file__))"
-# Run tests on that installation directory
-(saber) $ python -m pytest <Saber-directory>
-```
+Documentation for the Saber API can be found [here](https://baderlab.github.io/saber/). The web-service API has its own documentation [here](https://baderlab.github.io/saber-api-docs/#introduction). Finally, we provide a [jupyter notebook](notebooks/lightning_tour.ipynb) which introduces the main ways of using Saber. See [here](https://baderlab.github.io/saber/guide_to_saber_api/#juypter-notebooks) for help setting up [JupyterLab](https://github.com/jupyterlab/jupyterlab).
