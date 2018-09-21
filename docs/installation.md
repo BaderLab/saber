@@ -36,8 +36,8 @@ Finally, you must also `pip` install the required [Spacy](https://spacy.io) mode
 ```
 # keras-contrib
 (saber) $ pip install git+https://www.github.com/keras-team/keras-contrib.git
-# spacy small english model
-(saber) $ pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz#en_core_web_sm
+# NeuralCoref Large model built on top of Spacy, this might take a while to download!
+(saber) $ pip install https://github.com/huggingface/neuralcoref-models/releases/download/en_coref_lg-3.0.0/en_coref_lg-3.0.0.tar.gz
 ```
 
 > See [Running tests](#running-tests) for a way to verify your installation.
