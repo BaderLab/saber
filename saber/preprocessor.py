@@ -97,9 +97,11 @@ class Preprocessor(object):
             for cluster in doc._.coref_clusters:
                 referent = cluster.main
                 for mention in cluster.mentions:
-                    first_token, last_token = doc[mention.start], doc[mention.end - 1]
-                    start, end = first_token.idx, last_token.idx + len(last_token.text)
-                    coreference.append((referent.text, start, end))
+                    # exclude the referent itself from being captured
+                    if mention.text != referent.text:
+                        first_token, last_token = doc[mention.start], doc[mention.end - 1]
+                        start, end = first_token.idx, last_token.idx + len(last_token.text)
+                        coreference.append((referent.text, start, end))
 
         # collect token sequence
         for sent in doc.sents:
