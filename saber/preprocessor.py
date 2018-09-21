@@ -5,7 +5,7 @@ import logging
 import re
 from collections import Counter
 
-import en_core_web_sm
+import en_coref_lg
 import numpy as np
 from keras.preprocessing.sequence import pad_sequences
 
@@ -17,18 +17,20 @@ class Preprocessor(object):
     log = logging.getLogger(__name__)
 
     def __init__(self):
-        # load Spacy english model (core, small), disable NER pipeline
-        self.nlp = en_core_web_sm.load(disable=['ner'])
+        # load the NeuralCoref model, which is built on top of the Spacy english model
+        self.nlp = en_coref_lg.load()
 
     def transform(self, text, word2idx, char2idx, sterilize=True):
-        """Returns a dictionary collected from processeing `text`, including sentences, offsets,
-        and integer sequences.
+        """Returns a dictionary collected from processing `text`, including sentences, offsets,
+        coreferent mentions, and integer sequences.
 
         For the given raw text (`text`), returns a dictionary containing the following:
             - 'text': raw text, with minimal processing
             - 'sentences': a list of lists, contains the tokens in each sentence
             - 'offsets': A list of list of tuples containing the start and end indices of every
                 token in 'text'
+            - 'coref': A list of tuples, which contain the referent, start index, and end index
+                of every coreferent mention detected in `text`.
             - 'word2idx': 2-D numpy array containing the token index of every token in 'text'.
                 Index is chosen based on the mapping `word2idx`
             - 'char2idx': 3-D numpy array containing the character index of
@@ -46,15 +48,16 @@ class Preprocessor(object):
         text = self.sterilize(text) if sterilize else text
 
         # get sentences and token offsets
-        sentences, offsets = self._process_text(text)
+        sentences, offsets, coreference = self._process_text(text)
 
         word_idx_sequence = self.get_type_idx_sequence(sentences, word2idx, type_='word')
         char_idx_sequence = self.get_type_idx_sequence(sentences, char2idx, type_='char')
 
         transformed_text = {
             'text': text,
-            'sent': sentences,
+            'sents': sentences,
             'offsets': offsets,
+            'coref': coreference,
             'word2idx': word_idx_sequence,
             'char2idx': char_idx_sequence
         }
@@ -71,9 +74,10 @@ class Preprocessor(object):
             text (str): raw text to process.
 
         Returns:
-            two-tuple, containing the sentences in `text` (as a list of lists) and the token
+            three-tuple, containing the sentences in `text` (as a list of lists), the token
             offsets for every token in text (relative to their position in `text`, as a list of
-            lists).
+            lists), and the coreferent mentions in `text` along with their referent and start/end
+            indices.
 
         Example:
             >>> preprocessor = Preprocessor()
@@ -86,6 +90,16 @@ class Preprocessor(object):
         # accumulators
         sentences = []
         offsets = []
+        coreference = []
+
+        # collect coreferences, if they exist
+        if doc._.has_coref:
+            for cluster in doc._.coref_clusters:
+                referent = cluster.main
+                for mention in cluster.mentions:
+                    first_token, last_token = doc[mention.start], doc[mention.end - 1]
+                    start, end = first_token.idx, last_token.idx + len(last_token.text)
+                    coreference.append((referent.text, start, end))
 
         # collect token sequence
         for sent in doc.sents:
@@ -97,7 +111,7 @@ class Preprocessor(object):
             sentences.append(token_seq)
             offsets.append(token_offset_seq)
 
-        return sentences, offsets
+        return sentences, offsets, coreference
 
     @staticmethod
     def type_to_idx(types, initial_mapping=None, offset=0):

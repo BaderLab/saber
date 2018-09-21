@@ -5,6 +5,7 @@ import logging
 import os
 import pickle
 from pprint import pprint
+
 import time
 
 from gensim.models import KeyedVectors
@@ -97,17 +98,24 @@ class SequenceProcessor(object):
         for chunk in pred_chunk_seq:
             # create the entity
             # chunks are tuples (label, start, end), offsets is a lists of lists of tuples
-            start, end = offsets[chunk[1]][0], offsets[chunk[-1] - 1][-1]
+            label, start, end = chunk[0], offsets[chunk[1]][0], offsets[chunk[-1] - 1][-1]
+            text = transformed_text['text'][start:end]
             ents.append({'start': start,
                          'end': end,
-                         'text': transformed_text['text'][start:end],
-                         'label': chunk[0]})
+                         'text': text,
+                         'label': label,
+                         'referent': None})
 
-        annotation = {
-            'text': transformed_text['text'],
-            'ents': ents,
-            'title': title
-        }
+        # add in coreference resolution
+        # move too _resolve_coreferences()
+        ents = self._resolve_coreferences(transformed_text, ents)
+
+        # create the final annotation
+        annotation = {'text': transformed_text['text'],
+                      'sents': transformed_text['sents'],
+                      'ents': ents,
+                      'title': title
+                     }
 
         if jupyter:
             displacy.render(annotation, jupyter=jupyter, style='ent', manual=True,
@@ -463,17 +471,17 @@ class SequenceProcessor(object):
     def _transform(self, text, model_idx=0):
         """Processes raw text, returns a dictionary of useful values.
 
-        For the given raw text, returns a dictionary containing the following:
+        For the given raw text (`text`), returns a dictionary containing the following:
             - 'text': raw text, with minimal processing
             - 'sentences': a list of lists, contains the tokens in each sentence
-            - 'offsets': A list of list of tuples containing the start and end
-                indices of every token in 'text'
-            - 'word2idx': 2-D numpy array containing the token index of every
-                token in 'text'. Index is chosen based on the mapping of
-                self.ds[model_idx]
+            - 'offsets': A list of list of tuples containing the start and end indices of every
+                token in 'text'
+            - 'coref': A list of tuples, which contain the referent, start index, and end index
+                of every coreferent mention detected in `text`.
+            - 'word2idx': 2-D numpy array containing the token index of every token in 'text'.
+                Index is chosen based on the mapping `word2idx`
             - 'char2idx': 3-D numpy array containing the character index of
-                every character in 'text'. Index is chosen based on the mapping
-                of self.ds[model_idx]
+                every character in 'text'. Index is chosen based on the mapping `char2idx`
 
         Args:
             text (str): raw text to process
@@ -482,6 +490,43 @@ class SequenceProcessor(object):
         """
         ds = self.ds[model_idx]
         return self.preprocessor.transform(text, ds.type_to_idx['word'], ds.type_to_idx['char'])
+
+    def _resolve_coreferences(self, transformed_text, ents):
+        """Resolves coreferences amongst entities in `ents`.
+
+        Resolves coreferences for the entities in `ents` by using the coreferences identified
+        eariler in the processing pipeline by the custom Spacy model ('en_coref_lg'). Because
+        the referent detected by the Spacy model may not be an entitiy identified by Saber,
+        this method looks for the most likely referent amongst annotated entities, if it exists.
+
+        Args:
+            transformed_text (dict): a dictionary created during an earlier processing step
+                (Preprocessor.transform).
+            ents (list): a list of entities (themselves represented as dictionaries) identifed
+                by Saber.
+
+        Returns:
+            `ents`, with additional coreferent mentions if they were found
+        """
+        for coref in transformed_text['coref']:
+            referent, start, end = coref
+            text = transformed_text['text'][start:end]
+
+            # TEMP: this is a hack,
+            possible_matches = [ent for ent in ents if ent['text'] in referent or
+                                referent in ent['text']]
+
+            if possible_matches:
+                scores = [generic_utils.str_similarity(ent['text'], match['text'])
+                          for ent, match in zip(ents, possible_matches)]
+                best_match = possible_matches[scores.index(max(scores))]
+                ents.append({'start': start,
+                             'end': end,
+                             'text': text,
+                             'label': 'coreference',
+                             'referent': best_match
+                            })
+        return ents
 
 # https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
 class MissingStepException(Exception):
