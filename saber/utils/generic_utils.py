@@ -4,6 +4,7 @@ import errno
 import logging
 import os
 import shutil
+from difflib import SequenceMatcher
 from setuptools.archive_util import unpack_archive
 
 from .. import constants
@@ -102,3 +103,8 @@ def get_pretrained_model_dir(config):
     """
     ds_names = '_'.join([os.path.basename(ds) for ds in config.dataset_folder])
     return os.path.join(config.output_folder, constants.PRETRAINED_MODEL_DIR, ds_names)
+
+def str_similarity(a, b):
+    """Returns a simple similarity score for two strings `a` and `b`.
+    """
+    return SequenceMatcher(None, a, b).ratio()
