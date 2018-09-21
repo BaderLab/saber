@@ -16,6 +16,8 @@ theme:
 
 markdown_extensions:
   - codehilite
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:pymdownx.emoji.to_svg
 
 repo_name: 'BaderLab/saber'
 repo_url: 'https://github.com/BaderLab/saber'
