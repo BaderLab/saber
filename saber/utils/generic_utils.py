@@ -4,7 +4,6 @@ import errno
 import logging
 import os
 import shutil
-from difflib import SequenceMatcher
 from setuptools.archive_util import unpack_archive
 
 from .. import constants
