@@ -1,3 +1,4 @@
+import en_coref_md
 import pytest
 
 from .. import constants
@@ -6,20 +7,23 @@ from ..preprocessor import Preprocessor
 @pytest.fixture
 def preprocessor():
     """Returns an instance of a Preprocessor object."""
-    preprocessor = Preprocessor()
+    return Preprocessor()
 
-    return preprocessor
+@pytest.fixture
+def nlp():
+    """Returns Sacy NLP model."""
+    return en_coref_md.load()
 
-def test_process_text(preprocessor):
+def test_process_text(preprocessor, nlp):
     """Asserts that call to Preprocessor._process_text() returns the expected
     results."""
     # simple test and its expected value
-    simple_text = "Simple example. With two sentences!"
+    simple_text = nlp("Simple example. With two sentences!")
     simple_expected = ([['Simple', 'example', '.'], ['With', 'two', \
         'sentences', '!']], [[(0, 6), (7, 14), (14, 15)], [(16, 20),\
          (21, 24), (25, 34), (34, 35)]])
     # blank value test and its expected value
-    blank_test = ""
+    blank_test = nlp("")
     blank_expected = ([], [])
 
     assert preprocessor._process_text(simple_text) == simple_expected
