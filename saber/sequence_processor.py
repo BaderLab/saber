@@ -4,7 +4,6 @@ import logging
 import os
 import pickle
 from itertools import chain
-from operator import itemgetter
 from pprint import pprint
 
 import time
@@ -51,19 +50,22 @@ class SequenceProcessor(object):
             pprint({arg: getattr(self.config, arg) for arg in constants.CONFIG_ARGS})
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
-    def annotate(self, text, title=None, model_idx=0, jupyter=False):
+    def annotate(self, text, model_idx=0, title=None, coref=False, jupyter=False):
         """Uses a trained model to annotate `text`, returns the results in a dictionary.
 
         For the model at self.model.model[model_idx], coordinates a prediction step on `text`.
         Returns a dictionary containing the cleaned text (`text`), and any annotations made by the
-        model (`ents`). This dictionary can easily be converted to a json. Optionally,
-        renders a HTMl visilization of the annotations made by the model, for use in a jupyter
-        notebook.
+        model (`ents`). This dictionary can easily be converted to a JSON-formatted string.
+        Optionally (if `jupyter` is True), renders a HTMl visilization of the annotations made by
+        the model, for use in a jupyter notebook.
 
-        text (str): raw text to annotate
+        text (str): raw text to annotate.
         model_idx (int): index of model to use for prediction, defaults to 0
-        jupyter (bool): if True, annotations made by the model are rendered in HTML, which can be
-            visualized in a jupter notebook.
+        title (str): title of the document, defaults to None.
+        coref (book): True if coreference resolution should be performed before annotation, defaults
+            to False.
+        jupyter (bool): True if annotations made by the model should be rendered in HTML, which can
+            be visualized in a jupter notebook, defaults to false.
 
         Returns:
             dictionary containing the processed input text (`text`) and any annotations made by the
@@ -84,12 +86,13 @@ class SequenceProcessor(object):
         # process raw input text, collect input to ML model
         transformed_text = self.preprocessor.transform(text=text,
                                                        word2idx=ds.type_to_idx['word'],
-                                                       char2idx=ds.type_to_idx['char'])
-        model_input = [transformed_text['word2idx'], transformed_text['char2idx']]
+                                                       char2idx=ds.type_to_idx['char'],
+                                                       coref=coref)
+        model_input = [transformed_text['word_idx_seq'], transformed_text['char_idx_seq']]
 
         # perform prediction, convert from one-hot to predicted indices, flatten results
-        y_pred = model.predict(model_input, batch_size=constants.PRED_BATCH_SIZE).argmax(-1).ravel()
-        # convert predictions to tags and chunk
+        y_pred = model.predict(model_input, constants.PRED_BATCH_SIZE).argmax(-1).ravel()
+        # convert predictions to tags (removing pads) and then chunks
         pred_tag_seq = [ds.idx_to_tag[idx] for idx in y_pred if ds.idx_to_tag[idx] != constants.PAD]
         pred_chunk_seq = self.preprocessor.chunk_entities(pred_tag_seq)
         # flatten the token offsets
@@ -101,23 +104,13 @@ class SequenceProcessor(object):
             # chunks are tuples (label, start, end), offsets is a lists of lists of tuples
             label, start, end = chunk[0], offsets[chunk[1]][0], offsets[chunk[-1] - 1][-1]
             text = transformed_text['text'][start:end]
-            ents.append({'start': start,
-                         'end': end,
-                         'text': text,
-                         'label': label,
-                         'referent': None})
-
-        # add in coreference resolution
-        ents = self._resolve_coreferences(transformed_text, ents)
+            ents.append({'start': start, 'end': end, 'text': text, 'label': label})
 
         # create the final annotation
-        annotation = {'text': transformed_text['text'],
-                      # 'sents': transformed_text['sents'],
-                      'ents': ents,
-                      'title': title}
+        annotation = {'text': transformed_text['text'], 'ents': ents, 'title': title}
 
         if jupyter:
-            displacy.render(annotation, jupyter=jupyter, style='ent', manual=True,
+            displacy.render(annotation, jupyter=True, style='ent', manual=True,
                             options=constants.OPTIONS)
 
         return annotation
@@ -466,40 +459,6 @@ class SequenceProcessor(object):
                 token_embedding_matrix[i] = token_embedding
 
         return token_embedding_matrix
-
-    def _resolve_coreferences(self, transformed_text, ents):
-        """Resolves coreferences amongst entities in `ents`.
-
-        Resolves coreferences for the entities in `ents` by using the coreferences identified
-        eariler in the processing pipeline by the custom Spacy model ('en_coref_lg'). Because
-        the referent detected by the Spacy model may not be an entitiy identified by Saber,
-        this method looks for the most likely referent amongst annotated entities, if it exists.
-
-        Args:
-            transformed_text (dict): a dictionary created during an earlier processing step
-                (Preprocessor.transform).
-            ents (list): a list of entities (themselves represented as dictionaries) identifed
-                by Saber.
-
-        Returns:
-            `ents`, with additional coreferent mentions if they were found
-        """
-        for coref in transformed_text['coref']:
-            referent, start, end = coref
-            text = transformed_text['text'][start:end]
-
-            # TEMP: This is a hack. Finds "best" referent based on string similarity.
-            possible_matches = [(ent, generic_utils.str_similarity(ent['text'], referent)) for ent
-                                in ents]
-            if possible_matches:
-                # update referent to be the best match of the annotated entities
-                referent = max(possible_matches, key=itemgetter(1))[0]
-                ents.append({'start': start,
-                             'end': end,
-                             'text': text,
-                             'label': 'COREF',
-                             'referent': referent})
-        return ents
 
 # https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
 class MissingStepException(Exception):
