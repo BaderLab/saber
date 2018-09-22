@@ -83,8 +83,6 @@ def compress_model(dir_path):
     shutil.make_archive(base_name=dir_path, format='bztar', root_dir=root_dir, base_dir=base_dir)
     shutil.rmtree(dir_path)
 
-    return True
-
 def get_pretrained_model_dir(config):
     """Returns path to top-level directory to save a pretrained model.
 

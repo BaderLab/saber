@@ -5,7 +5,7 @@ import logging
 import re
 from collections import Counter
 
-import en_core_web_sm
+import en_coref_md
 import numpy as np
 from keras.preprocessing.sequence import pad_sequences
 
@@ -17,63 +17,72 @@ class Preprocessor(object):
     log = logging.getLogger(__name__)
 
     def __init__(self):
-        # load Spacy english model (core, small), disable NER pipeline
-        self.nlp = en_core_web_sm.load(disable=['ner'])
+        # load the NeuralCoref model, which is built on top of the Spacy english model
+        self.nlp = en_coref_md.load()
 
-    def transform(self, text, word2idx, char2idx, sterilize=True):
-        """Returns a dictionary collected from processeing `text`, including sentences, offsets,
-        and integer sequences.
+    def transform(self, text, word2idx, char2idx, coref=False, sterilize=True):
+        """Returns a dictionary collected from processing `text`, including sentences, offsets,
+        coreferent mentions, and integer sequences.
 
         For the given raw text (`text`), returns a dictionary containing the following:
             - 'text': raw text, with minimal processing
             - 'sentences': a list of lists, contains the tokens in each sentence
             - 'offsets': A list of list of tuples containing the start and end indices of every
                 token in 'text'
-            - 'word2idx': 2-D numpy array containing the token index of every token in 'text'.
-                Index is chosen based on the mapping `word2idx`
-            - 'char2idx': 3-D numpy array containing the character index of
-                every character in 'text'. Index is chosen based on the mapping `char2idx`
+            - 'word_idx_seq': 2-D numpy array which maps every token in 'text' to a unique integer
+                ID, given by the mapping `word2idx`.
+            - 'char_idx_seq': 3-D numpy array which maps every character in 'text' to a unique
+                integer ID, given by the mapping `char2idx`.
 
         Args:
-            text (str): raw text
-            word2idx (dict): mapping from words (keys) to unique integers (values)
-            char2idx (dict): mapping from chars (keys) to unique integers (values)
-            sterilize (bool): True if text should be sterilized
+            text (str): raw text.
+            word2idx (dict): mapping from words (keys) to unique integers (values).
+            char2idx (dict): mapping from chars (keys) to unique integers (values).
+            coref (bool): True if coreference resolution should be applied to `text`, defaults to
+                False.
+            sterilize (bool): True if text should be sterilized, defaults to True.
 
         Returns:
             a dictionary containing the processed raw text, sentences, token offsets, etc.
         """
         text = self.sterilize(text) if sterilize else text
+        doc = self.nlp(text)
+
+        if coref:
+            text = doc._.coref_resolved
+            doc = self.nlp(text)
 
         # get sentences and token offsets
-        sentences, offsets = self._process_text(text)
+        sentences, offsets = self._process_text(doc)
 
+        # map sequences to integer IDs
         word_idx_sequence = self.get_type_idx_sequence(sentences, word2idx, type_='word')
         char_idx_sequence = self.get_type_idx_sequence(sentences, char2idx, type_='char')
 
         transformed_text = {
             'text': text,
-            'sent': sentences,
+            'sents': sentences,
             'offsets': offsets,
-            'word2idx': word_idx_sequence,
-            'char2idx': char_idx_sequence
+            'word_idx_seq': word_idx_sequence,
+            'char_idx_seq': char_idx_sequence
         }
 
         return transformed_text
 
-    def _process_text(self, text):
+    def _process_text(self, doc):
         """Returns sentences and character offsets of tokens in text.
 
         For the given `text`, uses Spacy to return a two-tuple of the sentences and token
         offsets (relative to their position in `text`) of each token in `text`.
 
         Args:
-            text (str): raw text to process.
+            doc (Doc): Spacy Doc object
+            coref(bool): True if coreference mentions should be resolved
 
         Returns:
-            two-tuple, containing the sentences in `text` (as a list of lists) and the token
+            two-tuple, containing the sentences in `text` (as a list of lists), and the token
             offsets for every token in text (relative to their position in `text`, as a list of
-            lists).
+            lists)
 
         Example:
             >>> preprocessor = Preprocessor()
@@ -81,8 +90,6 @@ class Preprocessor(object):
             >>> preprocessor._process_text(text)
             ([['Simple', 'example', '!']], [[(0, 6), (7, 14), (14, 15)]])
         """
-        doc = self.nlp(text) # process text with spacy
-
         # accumulators
         sentences = []
         offsets = []
@@ -97,6 +104,7 @@ class Preprocessor(object):
             sentences.append(token_seq)
             offsets.append(token_offset_seq)
 
+        # return sentences, offsets
         return sentences, offsets
 
     @staticmethod

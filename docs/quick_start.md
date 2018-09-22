@@ -77,6 +77,26 @@ To annotate text with the model, just call the `annotate()` method
 sp.annotate('A Sos-1-E3b1 complex directs Rac activation by entering into a tricomplex with Eps8.')
 ```
 
+### Coreference Resolution
+
+[**Coreference**](http://www.wikiwand.com/en/Coreference) occurs when two or more expressions in a text refer to the same person or thing, that is, they have the same **referent**. Take the following example:
+
+_"IL-6 supports tumour growth and metastasising in terminal patients, and it significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy."_
+
+Clearly, _"it"_ referes to _"IL-6"_. If we do not resolve this coreference, then _"it"_ will not be labeled as an entity and any relation or event it is mentioned in will not be extracted. Saber uses [NeuralCoref](https://github.com/huggingface/neuralcoref), a state-of-the-art coreference resolution tool based on neural nets and built on top of [Spacy](https://spacy.io). To use it, just supply the argument `coref=True` (which is `False` by default) to the `annotate()` method
+
+```python
+text = "IL-6 supports tumour growth and metastasising in terminal patients, and it significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy."
+# WITHOUT coreference resolution
+sp.annotate(text, coref=False)
+# WITH coreference resolution
+sp.annotate(text, coref=True)
+```
+
+> Note that if you are using the web-service, simply supply `"coref": true` in your `JSON` payload to resolve coreferences.
+
+Saber currently takes the simplest possible approach: replace all coreference mentions with their referent, and then feed the resolved text to the model that identifies named entities.
+
 ### Working with annotations
 
 The `annotate()` method returns a simple `dict` object
