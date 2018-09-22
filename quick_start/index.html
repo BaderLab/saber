@@ -307,6 +307,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#coreference-resolution" title="Coreference Resolution" class="md-nav__link">
+    Coreference Resolution
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#working-with-annotations" title="Working with annotations" class="md-nav__link">
     Working with annotations
   </a>
@@ -400,6 +407,13 @@
   
     <nav class="md-nav">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#coreference-resolution" title="Coreference Resolution" class="md-nav__link">
+    Coreference Resolution
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#working-with-annotations" title="Working with annotations" class="md-nav__link">
@@ -509,6 +523,22 @@
 </pre></div>
 
 
+<h3 id="coreference-resolution">Coreference Resolution</h3>
+<p><a href="http://www.wikiwand.com/en/Coreference"><strong>Coreference</strong></a> occurs when two or more expressions in a text refer to the same person or thing, that is, they have the same <strong>referent</strong>. Take the following example:</p>
+<p><em>"IL-6 supports tumour growth and metastasising in terminal patients, and it significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy."</em></p>
+<p>Clearly, <em>"it"</em> referes to <em>"IL-6"</em>. If we do not resolve this coreference, then <em>"it"</em> will not be labeled as an entity and any relation or event it is mentioned in will not be extracted. Saber uses <a href="https://github.com/huggingface/neuralcoref">NeuralCoref</a>, a state-of-the-art coreference resolution tool based on neural nets and built on top of <a href="https://spacy.io">Spacy</a>. To use it, just supply the argument <code>coref=True</code> (which is <code>False</code> by default) to the <code>annotate()</code> method</p>
+<div class="codehilite"><pre><span></span><span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;IL-6 supports tumour growth and metastasising in terminal patients, and it significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy.&quot;</span>
+<span class="c1"># WITHOUT coreference resolution</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">coref</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="c1"># WITH coreference resolution</span>
+<span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">coref</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+
+
+<blockquote>
+<p>Note that if you are using the web-service, simply supply <code>"coref": true</code> in your <code>JSON</code> payload to resolve coreferences.</p>
+</blockquote>
+<p>Saber currently takes the simplest possible approach: replace all coreference mentions with their referent, and then feed the resolved text to the model that identifies named entities.</p>
 <h3 id="working-with-annotations">Working with annotations</h3>
 <p>The <code>annotate()</code> method returns a simple <code>dict</code> object</p>
 <div class="codehilite"><pre><span></span><span class="n">ann</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s1">&#39;A Sos-1-E3b1 complex directs Rac activation by entering into a tricomplex with Eps8.&#39;</span><span class="p">)</span>
