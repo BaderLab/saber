@@ -77,8 +77,8 @@ Finally, you must also `pip` install the required [Spacy](https://spacy.io) mode
 ```bash
 # keras-contrib
 (saber) $ pip install git+https://www.github.com/keras-team/keras-contrib.git
-# NeuralCoref Large model built on top of Spacy, this might take a while to download!
-(saber) $ pip install https://github.com/huggingface/neuralcoref-models/releases/download/en_coref_lg-3.0.0/en_coref_lg-3.0.0.tar.gz
+# NeuralCoref medium model built on top of Spacy, this might take a few minutes to download!
+(saber) $ pip install https://github.com/huggingface/neuralcoref-models/releases/download/en_coref_md-3.0.0/en_coref_md-3.0.0.tar.gz
 ```
 
 ### (OPTIONAL) Creating and activating virtual environments
