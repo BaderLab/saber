@@ -1,6 +1,6 @@
+#!/usr/bin/env python3
 """Simple web service which exposes Saber's functionality via a RESTful API.
 """
-#!/usr/bin/env python3
 from flask import Flask
 from flask import jsonify
 from flask import redirect
@@ -30,13 +30,14 @@ def annotate_text():
     # get args from request json
     text = data.get('text', '')
     requested_ents = data.get('ents', None)
+    coref = data.get('coref', False)
 
     # decide which entities to annotate
     ents = constants.ENTITIES
     if requested_ents is not None:
         ents = app_utils.harmonize_entities(ents, requested_ents)
 
-    annotation = predict(text, ents)
+    annotation = predict(text, ents, coref=coref)
 
     return jsonify(annotation)
 
@@ -50,8 +51,9 @@ def annotate_pmid():
     """
     data = request.get_json(force=True)
     # get args from request json
-    pmid = data['pmid']
+    pmid = data.get('pmid', None)
     requested_ents = data.get('ents', None)
+    coref = data.get('coref', False)
 
     # decide which entities to annotate
     ents = constants.ENTITIES
@@ -61,11 +63,11 @@ def annotate_pmid():
     # use Entrez Utilities Web Service API to get the abtract text
     title, abstract = app_utils.get_pubmed_text(pmid)
 
-    annotation = predict(abstract, ents, title)
+    annotation = predict(abstract, ents, title=title, coref=coref)
 
     return jsonify(annotation)
 
-def predict(text, ents, title=None):
+def predict(text, ents, title=None, coref=False):
     """Annotates raw text for entities according to their boolean value in ents
 
     Args:
@@ -82,7 +84,7 @@ def predict(text, ents, title=None):
             # TEMP: Weird solution to a weird bug
             # https://github.com/tensorflow/tensorflow/issues/14356#issuecomment-385962623
             with GRAPH.as_default():
-                annotations.append(MODELS[ent].annotate(text, title))
+                annotations.append(MODELS[ent].annotate(text, title=title, coref=coref))
 
     # if multiple models, combine annotations into one object
     final_annotation = annotations[0]

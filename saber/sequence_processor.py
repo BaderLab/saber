@@ -1,10 +1,11 @@
 """Contains the SequenceProcessor class, which exposes most of Sabers functionality.
 """
-from itertools import chain
 import logging
 import os
 import pickle
+from itertools import chain
 from pprint import pprint
+
 import time
 
 from gensim.models import KeyedVectors
@@ -49,19 +50,22 @@ class SequenceProcessor(object):
             pprint({arg: getattr(self.config, arg) for arg in constants.CONFIG_ARGS})
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
-    def annotate(self, text, title=None, model_idx=0, jupyter=False):
+    def annotate(self, text, model_idx=0, title=None, coref=False, jupyter=False):
         """Uses a trained model to annotate `text`, returns the results in a dictionary.
 
         For the model at self.model.model[model_idx], coordinates a prediction step on `text`.
         Returns a dictionary containing the cleaned text (`text`), and any annotations made by the
-        model (`ents`). This dictionary can easily be converted to a json. Optionally,
-        renders a HTMl visilization of the annotations made by the model, for use in a jupyter
-        notebook.
+        model (`ents`). This dictionary can easily be converted to a JSON-formatted string.
+        Optionally (if `jupyter` is True), renders a HTMl visilization of the annotations made by
+        the model, for use in a jupyter notebook.
 
-        text (str): raw text to annotate
+        text (str): raw text to annotate.
         model_idx (int): index of model to use for prediction, defaults to 0
-        jupyter (bool): if True, annotations made by the model are rendered in HTML, which can be
-            visualized in a jupter notebook.
+        title (str): title of the document, defaults to None.
+        coref (book): True if coreference resolution should be performed before annotation, defaults
+            to False.
+        jupyter (bool): True if annotations made by the model should be rendered in HTML, which can
+            be visualized in a jupter notebook, defaults to false.
 
         Returns:
             dictionary containing the processed input text (`text`) and any annotations made by the
@@ -80,13 +84,15 @@ class SequenceProcessor(object):
         model = self.model.model[model_idx]
 
         # process raw input text, collect input to ML model
-        transformed_text = self._transform(text, model_idx)
-        model_input = [transformed_text['word2idx'], transformed_text['char2idx']]
+        transformed_text = self.preprocessor.transform(text=text,
+                                                       word2idx=ds.type_to_idx['word'],
+                                                       char2idx=ds.type_to_idx['char'],
+                                                       coref=coref)
+        model_input = [transformed_text['word_idx_seq'], transformed_text['char_idx_seq']]
 
         # perform prediction, convert from one-hot to predicted indices, flatten results
-        y_pred = model.predict(model_input, batch_size=constants.PRED_BATCH_SIZE)
-        y_pred = np.asarray(y_pred.argmax(-1)).ravel()
-        # convert predictions to tags and chunk
+        y_pred = model.predict(model_input, constants.PRED_BATCH_SIZE).argmax(-1).ravel()
+        # convert predictions to tags (removing pads) and then chunks
         pred_tag_seq = [ds.idx_to_tag[idx] for idx in y_pred if ds.idx_to_tag[idx] != constants.PAD]
         pred_chunk_seq = self.preprocessor.chunk_entities(pred_tag_seq)
         # flatten the token offsets
@@ -95,22 +101,16 @@ class SequenceProcessor(object):
         # accumulate predicted entities
         ents = []
         for chunk in pred_chunk_seq:
-            # create the entity
             # chunks are tuples (label, start, end), offsets is a lists of lists of tuples
-            start, end = offsets[chunk[1]][0], offsets[chunk[-1] - 1][-1]
-            ents.append({'start': start,
-                         'end': end,
-                         'text': transformed_text['text'][start:end],
-                         'label': chunk[0]})
+            label, start, end = chunk[0], offsets[chunk[1]][0], offsets[chunk[-1] - 1][-1]
+            text = transformed_text['text'][start:end]
+            ents.append({'start': start, 'end': end, 'text': text, 'label': label})
 
-        annotation = {
-            'text': transformed_text['text'],
-            'ents': ents,
-            'title': title
-        }
+        # create the final annotation
+        annotation = {'text': transformed_text['text'], 'ents': ents, 'title': title}
 
         if jupyter:
-            displacy.render(annotation, jupyter=jupyter, style='ent', manual=True,
+            displacy.render(annotation, jupyter=True, style='ent', manual=True,
                             options=constants.OPTIONS)
 
         return annotation
@@ -459,29 +459,6 @@ class SequenceProcessor(object):
                 token_embedding_matrix[i] = token_embedding
 
         return token_embedding_matrix
-
-    def _transform(self, text, model_idx=0):
-        """Processes raw text, returns a dictionary of useful values.
-
-        For the given raw text, returns a dictionary containing the following:
-            - 'text': raw text, with minimal processing
-            - 'sentences': a list of lists, contains the tokens in each sentence
-            - 'offsets': A list of list of tuples containing the start and end
-                indices of every token in 'text'
-            - 'word2idx': 2-D numpy array containing the token index of every
-                token in 'text'. Index is chosen based on the mapping of
-                self.ds[model_idx]
-            - 'char2idx': 3-D numpy array containing the character index of
-                every character in 'text'. Index is chosen based on the mapping
-                of self.ds[model_idx]
-
-        Args:
-            text (str): raw text to process
-            model_idx (int): index of dataset in `self.ds` to use for mapping of word/character
-                indices.
-        """
-        ds = self.ds[model_idx]
-        return self.preprocessor.transform(text, ds.type_to_idx['word'], ds.type_to_idx['char'])
 
 # https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
 class MissingStepException(Exception):
