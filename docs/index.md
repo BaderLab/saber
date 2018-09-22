@@ -6,8 +6,8 @@ The neural network model used is a BiLSTM-CRF [[1](https://arxiv.org/abs/1603.01
 
 The goal is that Saber will eventually perform all the important steps in text-mining of biomedical literature:
 
-- Biomedical named entity recognition (BioNER) (:white_check_mark:)
 - Coreference resolution (:white_check_mark:)
+- Biomedical named entity recognition (BioNER) (:white_check_mark:)
 - Entity linking / grounding / normalization (:soon:)
 - Simple relation extraction (:soon:)
 - Event extraction (:soon:)
