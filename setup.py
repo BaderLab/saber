@@ -28,8 +28,8 @@ setuptools.setup(
         'Flask>=1.0.2',
         'keras>=2.2.2',
         'PTable>=0.9.2',
-        'gensim>=3.4.0'
         'spacy>=2.0.11',
+        'gensim>=3.4.0'
     ],
     include_package_data=True,
 )
