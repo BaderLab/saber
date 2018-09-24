@@ -139,15 +139,25 @@ To use Saber as a **local** web-service, run:
 (saber) $ python -m saber.app
 ```
 
-or to build & run Saber with __Docker__:
+or to build & run local Saber image with __Docker__:
 
 ```bash
 # Build docker
-(saber) $ docker build -t saber .
+$ docker build -t saber .
 
 # Run docker (use `-it` instead of `-dt` to try it interactively)
-(saber) $ docker run --rm -p 5000:5000 --name saber1 -dt saber
+$ docker run --rm -p 5000:5000 --name saber1 -dt saber
 ```
+
+there is also a public Saber image auto-built on the Docker Hub:
+
+```
+$ docker pull pathwaycommons/saber
+
+$ docker run -dt --rm -p 5000:5000 --name saber1 pathwaycommons/saber
+
+```
+
 
 There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a `POST` request with a JSON payload, e.g.:
 
