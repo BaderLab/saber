@@ -90,7 +90,7 @@ When using `pip` it is generally recommended to install packages in a virtual en
 Using [virtualenv](https://virtualenv.pypa.io/en/stable/):
 
 ```bash
-$ virtualenv /path/to/new/venv/saber
+$ virtualenv --python=python3 /path/to/new/venv/saber
 ```
 
 Using [venv](https://docs.python.org/3/library/venv.html):
