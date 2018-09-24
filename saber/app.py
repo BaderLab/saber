@@ -6,6 +6,8 @@ from flask import jsonify
 from flask import redirect
 from flask import request
 
+from waitress import serve
+
 from . import constants
 from .utils import app_utils
 
@@ -97,5 +99,5 @@ def predict(text, ents, title=None, coref=False):
 if __name__ == '__main__':
     # Load the pre-trained models
     MODELS, GRAPH = app_utils.load_models(constants.ENTITIES)
-
-    app.run(host='0.0.0.0')
+    #app.run(host='0.0.0.0')
+    serve(app, host='0.0.0.0', port=5000)

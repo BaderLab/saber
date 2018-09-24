@@ -12,7 +12,7 @@ setuptools.setup(
     description="Saber: Sequence Annotator for Biomedical Entities and Relations",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/BaderLab/Saber",
+    url="https://github.com/BaderLab/saber",
     python_requires='>=3.6',
     packages=setuptools.find_packages(),
     classifiers=(
@@ -26,6 +26,7 @@ setuptools.setup(
         'scikit-learn>=0.19.1',
         'tensorflow>=1.9.0',
         'Flask>=1.0.2',
+        'waitress>=1.1.0',
         'keras>=2.2.2',
         'PTable>=0.9.2',
         'spacy>=2.0.11',
