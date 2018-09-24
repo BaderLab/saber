@@ -10,6 +10,7 @@ import numpy as np
 from keras.preprocessing.sequence import pad_sequences
 
 from . import constants
+from .utils import text_utils
 
 class Preprocessor(object):
     """A class for processing text data."""
@@ -19,6 +20,8 @@ class Preprocessor(object):
     def __init__(self):
         # load the NeuralCoref model, which is built on top of the Spacy english model
         self.nlp = en_coref_md.load()
+        # Load our modified tokenizer, better tokenization of biomedical text
+        self.nlp.tokenizer = text_utils.biomedical_tokenizer(self.nlp)
 
     def transform(self, text, word2idx, char2idx, coref=False, sterilize=True):
         """Returns a dictionary collected from processing `text`, including sentences, offsets,
