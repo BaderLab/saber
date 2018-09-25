@@ -467,15 +467,17 @@
 </pre></div>
 
 
-<p>or to build &amp; run Saber with <strong>Docker</strong>:</p>
-<div class="codehilite"><pre><span></span># Build docker
-(saber) $ docker build -t saber .
-
-# Run docker (use `-it` instead of `-dt` to try it interactively)
-(saber) $ docker run --rm -p 5000:5000 --name saber1 -dt saber
+<p>or, if you prefer, you can pull &amp; run the Saber image from <strong>Docker Hub</strong>:</p>
+<div class="codehilite"><pre><span></span><span class="c1"># Pull Saber image from Docker Hub</span>
+$ docker pull pathwaycommons/saber
+<span class="c1"># Run docker (use `-dt` instead of `-it` to run container in background)</span>
+$ docker run -dt --rm -p <span class="m">5000</span>:5000 --name saber pathwaycommons/saber
 </pre></div>
 
 
+<blockquote>
+<p>Alternatively, you can clone the GitHub repository and build the container from the <code>Dockerfile</code> with <code>docker build -t saber .</code></p>
+</blockquote>
 <p>There are currently two endpoints, <code>/annotate/text</code> and <code>/annotate/pmid</code>. Both expect a <code>POST</code> request with a JSON payload, e.g.</p>
 <div class="codehilite"><pre><span></span><span class="p">{</span>
   <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span>
@@ -492,13 +494,13 @@
 
 <p>For example, running the web-service locally and using <code>cURL</code>:</p>
 <div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ curl -X POST <span class="s1">&#39;http://localhost:5000/annotate/text&#39;</span> <span class="se">\</span>
---data <span class="s1">&#39;{&quot;text&quot;: &quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;}&#39;</span>
+--data <span class="s1">&#39;{&quot;text&quot;: &#39;</span>The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.<span class="s1">&#39;}&#39;</span>
 </pre></div>
 
 
 <p>Documentation for the Saber web-service API can be found <a href="https://baderlab.github.io/saber-api-docs/">here</a>. We hope to provide a live version of the web-service soon!</p>
 <h2 id="pre-trained-models">Pre-trained models</h2>
-<p>First, import <code>SequenceProcessor</code>. This class coordinates training, annotation, saving and loading of models and datasets. In short, this is the interface to Saber.</p>
+<p>First, import <code>SequenceProcessor</code>. This class coordinates training, annotation, saving and loading of models and datasets. In short, this is the interface to Saber</p>
 <div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber.sequence_processor</span> <span class="kn">import</span> <span class="n">SequenceProcessor</span>
 </pre></div>
 
@@ -519,7 +521,7 @@
 
 
 <p>To annotate text with the model, just call the <code>annotate()</code> method</p>
-<div class="codehilite"><pre><span></span><span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s1">&#39;A Sos-1-E3b1 complex directs Rac activation by entering into a tricomplex with Eps8.&#39;</span><span class="p">)</span>
+<div class="codehilite"><pre><span></span><span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">)</span>
 </pre></div>
 
 
@@ -541,7 +543,7 @@
 <p>Saber currently takes the simplest possible approach: replace all coreference mentions with their referent, and then feed the resolved text to the model that identifies named entities.</p>
 <h3 id="working-with-annotations">Working with annotations</h3>
 <p>The <code>annotate()</code> method returns a simple <code>dict</code> object</p>
-<div class="codehilite"><pre><span></span><span class="n">ann</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s1">&#39;A Sos-1-E3b1 complex directs Rac activation by entering into a tricomplex with Eps8.&#39;</span><span class="p">)</span>
+<div class="codehilite"><pre><span></span><span class="n">ann</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">)</span>
 </pre></div>
 
 
