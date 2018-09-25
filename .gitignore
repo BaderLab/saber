@@ -112,6 +112,3 @@ ENV/
 # IDE
 .idea
 *.iml
-
-# MKDocs
-site/
