@@ -512,22 +512,20 @@
 <p>Note: you do not need to name the environment <code>saber</code>.</p>
 </blockquote>
 <h2 id="running-tests">Running tests</h2>
-<p>Sabers test suite can be found in <code>saber/tests</code>. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in <code>requirements.txt</code>. Additionally, you will need to install <code>pytest</code>:</p>
-<div class="codehilite"><pre><span></span>(saber) $ pip install pytest
-</pre></div>
-
-
-<p>To run the tests:</p>
-<div class="codehilite"><pre><span></span>(saber) $ cd path/to/saber
-(saber) $ py.test saber
-</pre></div>
-
-
-<p>Alternatively, you can find out where Saber is installed and run <code>pytest</code> on that directory:</p>
-<div class="codehilite"><pre><span></span><span class="c1"># Find out where Saber is installed</span>
-<span class="p">(</span><span class="n">saber</span><span class="p">)</span> <span class="err">$</span> <span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s2">&quot;import os; import saber; print(os.path.dirname(saber.__file__))&quot;</span>
+<p>Sabers test suite can be found in <code>saber/tests</code>. If Saber is already installed, you can run <code>pytest</code> on the installation directory:</p>
+<div class="codehilite"><pre><span></span><span class="c1"># Install pytest</span>
+<span class="p">(</span><span class="n">saber</span><span class="p">)</span> <span class="err">$</span> <span class="n">pip</span> <span class="n">install</span> <span class="n">pytest</span>
+<span class="c1"># Find out where Saber is installed</span>
+<span class="p">(</span><span class="n">saber</span><span class="p">)</span> <span class="err">$</span> <span class="n">INSTALL_DIR</span><span class="o">=</span><span class="err">$</span><span class="p">(</span><span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s2">&quot;import os; import saber; print(os.path.dirname(saber.__file__))&quot;</span><span class="p">)</span>
 <span class="c1"># Run tests on that installation directory</span>
-<span class="p">(</span><span class="n">saber</span><span class="p">)</span> <span class="err">$</span> <span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pytest</span> <span class="o">&lt;</span><span class="n">Saber</span><span class="o">-</span><span class="n">directory</span><span class="o">&gt;</span>
+<span class="p">(</span><span class="n">saber</span><span class="p">)</span> <span class="err">$</span> <span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pytest</span> <span class="err">$</span><span class="n">INSTALL_DIR</span>
+</pre></div>
+
+
+<p>Alternatively, to clone Saber, install it, and run the test suite all in one go:</p>
+<div class="codehilite"><pre><span></span>(saber) $ git clone https://github.com/BaderLab/saber.git
+(saber) $ cd saber
+(saber) $ python setup.py test
 </pre></div>
                 
                   
