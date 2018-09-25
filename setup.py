@@ -27,7 +27,7 @@ setuptools.setup(
         'tensorflow>=1.9.0',
         'Flask>=1.0.2',
         'waitress>=1.1.0',
-        'keras>=2.2.2',
+        'keras==2.2.0',
         'PTable>=0.9.2',
         'spacy>=2.0.11',
         'gensim>=3.4.0'
