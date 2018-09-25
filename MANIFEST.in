@@ -4,11 +4,14 @@ include README.md
 # Include the license file
 include LICENSE.txt
 
-# Include the config file
-include saber/config.ini
+# Include config file(s)
+global-include *.ini
+
+# Include 'default' dataset(s)
+# graft saber/datasets/
 
 # Include pretrained model(s)
-recursive-include saber/pretrained_models *.tar.bz2
+graft saber/pretrained_models/
 
 # Include the test resources
-recursive-include saber/tests/resources *
+graft saber/tests/
