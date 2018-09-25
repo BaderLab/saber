@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="Saber",
+    name="saber",
     version="0.0.1",
     author="John Giorgi",
     author_email="johnmgiorgi@gmail.com",
@@ -33,4 +33,8 @@ setuptools.setup(
         'gensim>=3.4.0'
     ],
     include_package_data=True,
+    # allows us to install + run tests with `python setup.py test`
+    # https://docs.pytest.org/en/latest/goodpractices.html#integrating-with-setuptools-python-setup-py-test-pytest-runner
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
 )
