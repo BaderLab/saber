@@ -88,24 +88,21 @@ $ source activate saber
 
 ## Running tests
 
-Sabers test suite can be found in `saber/tests`. In order to run the tests, you'll usually want to clone the repository locally. Make sure to install all required development dependencies defined in ``requirements.txt``. Additionally, you will need to install ``pytest``:
+Sabers test suite can be found in `saber/tests`. If Saber is already installed, you can run `pytest` on the installation directory:
 
 ```
+# Install pytest
 (saber) $ pip install pytest
-```
-
-To run the tests:
-
-```
-(saber) $ cd path/to/saber
-(saber) $ py.test saber
-```
-
-Alternatively, you can find out where Saber is installed and run `pytest` on that directory:
-
-```
 # Find out where Saber is installed
-(saber) $ python -c "import os; import saber; print(os.path.dirname(saber.__file__))"
+(saber) $ INSTALL_DIR=$(python -c "import os; import saber; print(os.path.dirname(saber.__file__))")
 # Run tests on that installation directory
-(saber) $ python -m pytest <Saber-directory>
+(saber) $ python -m pytest $INSTALL_DIR
+```
+
+Alternatively, to clone Saber, install it, and run the test suite all in one go:
+
+```
+(saber) $ git clone https://github.com/BaderLab/saber.git
+(saber) $ cd saber
+(saber) $ python setup.py test
 ```
