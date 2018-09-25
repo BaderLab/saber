@@ -16,8 +16,10 @@ or, if you prefer, you can pull & run the Saber image from **Docker Hub**:
 # Pull Saber image from Docker Hub
 $ docker pull pathwaycommons/saber
 # Run docker (use `-dt` instead of `-it` to run container in background)
-$ docker run -dt --rm -p 5000:5000 --name saber pathwaycommons/saber
+$ docker run -it --rm -p 5000:5000 --name saber pathwaycommons/saber
 ```
+
+> Alternatively, you can clone the GitHub repository and build the container from the `Dockerfile` with `docker build -t saber .`
 
 There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a `POST` request with a JSON payload, e.g.
 
