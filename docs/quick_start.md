@@ -10,14 +10,13 @@ To use Saber as a **local** web-service, run:
 (saber) $ python -m saber.app
 ```
 
-or to build & run Saber with __Docker__:
+or, if you prefer, you can pull & run the Saber image from **Docker Hub**:
 
-```
-# Build docker
-(saber) $ docker build -t saber .
-
-# Run docker (use `-it` instead of `-dt` to try it interactively)
-(saber) $ docker run --rm -p 5000:5000 --name saber1 -dt saber
+```bash
+# Pull Saber image from Docker Hub
+$ docker pull pathwaycommons/saber
+# Run docker (use `-dt` instead of `-it` to run container in background)
+$ docker run -dt --rm -p 5000:5000 --name saber pathwaycommons/saber
 ```
 
 There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a `POST` request with a JSON payload, e.g.
@@ -40,14 +39,14 @@ For example, running the web-service locally and using `cURL`:
 
 ```bash
 (saber) $ curl -X POST 'http://localhost:5000/annotate/text' \
---data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}'
+--data '{"text": 'The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.'}'
 ```
 
 Documentation for the Saber web-service API can be found [here](https://baderlab.github.io/saber-api-docs/). We hope to provide a live version of the web-service soon!
 
 ## Pre-trained models
 
-First, import `SequenceProcessor`. This class coordinates training, annotation, saving and loading of models and datasets. In short, this is the interface to Saber.
+First, import `SequenceProcessor`. This class coordinates training, annotation, saving and loading of models and datasets. In short, this is the interface to Saber
 
 ```python
 from saber.sequence_processor import SequenceProcessor
@@ -74,7 +73,7 @@ from saber.constants import ENTITIES; print(list(ENTITIES.keys()))
 To annotate text with the model, just call the `annotate()` method
 
 ```python
-sp.annotate('A Sos-1-E3b1 complex directs Rac activation by entering into a tricomplex with Eps8.')
+sp.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.")
 ```
 
 ### Coreference Resolution
@@ -102,7 +101,7 @@ Saber currently takes the simplest possible approach: replace all coreference me
 The `annotate()` method returns a simple `dict` object
 
 ```python
-ann = sp.annotate('A Sos-1-E3b1 complex directs Rac activation by entering into a tricomplex with Eps8.')
+ann = sp.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.")
 ```
 
 which contains the keys `title`, `text` and `ents`:
