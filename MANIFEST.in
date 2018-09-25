@@ -5,7 +5,7 @@ include README.md
 include LICENSE.txt
 
 # Include the config file
-include saber config.ini
+include saber/config.ini
 
 # Include pretrained model(s)
 recursive-include saber/pretrained_models *.tar.bz2
