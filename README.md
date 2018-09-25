@@ -40,7 +40,7 @@
 
 **Disclaimer: Currently a pre-alpha, work in progress!**
 
-To install Saber, you will need `python>=3.6`. If not already installed, `python>=3.6` can be installed via:
+To install Saber, you will need `python==3.6`. If not already installed, `python==3.6` can be installed via:
 
  - the [official installer](https://www.python.org/downloads/)
  - [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
@@ -139,25 +139,14 @@ To use Saber as a **local** web-service, run:
 (saber) $ python -m saber.app
 ```
 
-or to build & run local Saber image with __Docker__:
+or, if you prefer, you can pull & run the Saber image from **Docker Hub**:
 
 ```bash
-# Build docker
-$ docker build -t saber .
-
-# Run docker (use `-it` instead of `-dt` to try it interactively)
-$ docker run --rm -p 5000:5000 --name saber1 -dt saber
-```
-
-there is also a public Saber image auto-built on the Docker Hub:
-
-```
+# Pull Saber image from Docker Hub
 $ docker pull pathwaycommons/saber
-
-$ docker run -dt --rm -p 5000:5000 --name saber1 pathwaycommons/saber
-
+# Run docker (use `-dt` instead of `-it` to run container in background)
+$ docker run -dt --rm -p 5000:5000 --name saber pathwaycommons/saber
 ```
-
 
 There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a `POST` request with a JSON payload, e.g.:
 
@@ -186,7 +175,7 @@ Documentation for the Saber web-service API can be found [here](https://baderlab
 
 ### Pre-trained models
 
-First, import `SequenceProcessor`. This is the interface to Saber.
+First, import `SequenceProcessor`. This is the interface to Saber
 
 ```python
 from saber.sequence_processor import SequenceProcessor
@@ -213,7 +202,7 @@ from saber.constants import ENTITIES; print(list(ENTITIES.keys()))
 To annotate text with the model, just call the `annotate()` method
 
 ```python
-sp.annotate('A Sos-1-E3b1 complex directs Rac activation by entering into a tricomplex with Eps8.')
+sp.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.")
 ```
 
 See the [documentation](https://baderlab.github.io/saber/quick_start/) for more details.
