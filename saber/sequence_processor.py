@@ -20,6 +20,8 @@ from .trainer import Trainer
 from .utils import generic_utils
 from .utils import model_utils
 
+print('Saber version: {0}'.format(constants.__version__))
+
 class SequenceProcessor(object):
     """A class for handeling the loading, saving and training of sequence models.
 
