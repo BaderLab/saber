@@ -2,10 +2,6 @@ from datetime import datetime
 import os
 import logging
 
-from . import constants
-
-print('Saber version: {0}'.format(constants.__version__))
-
 # Set Tensforflow logging level
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
