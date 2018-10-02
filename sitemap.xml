@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-     <loc>None</loc>
-     <lastmod>2018-09-25</lastmod>
+     <loc>https://baderlab.github.io/saber/</loc>
+     <lastmod>2018-10-02</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>None</loc>
-     <lastmod>2018-09-25</lastmod>
+     <loc>https://baderlab.github.io/saber/installation/</loc>
+     <lastmod>2018-10-02</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>None</loc>
-     <lastmod>2018-09-25</lastmod>
+     <loc>https://baderlab.github.io/saber/quick_start/</loc>
+     <lastmod>2018-10-02</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>None</loc>
-     <lastmod>2018-09-25</lastmod>
+     <loc>https://baderlab.github.io/saber/guide_to_saber_api/</loc>
+     <lastmod>2018-10-02</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>None</loc>
-     <lastmod>2018-09-25</lastmod>
+     <loc>https://baderlab.github.io/saber/resources/</loc>
+     <lastmod>2018-10-02</lastmod>
      <changefreq>daily</changefreq>
     </url>
 </urlset>

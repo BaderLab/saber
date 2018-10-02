@@ -10,7 +10,13 @@
       <meta name="viewport" content="width=device-width,initial-scale=1">
       <meta http-equiv="x-ua-compatible" content="ie=edge">
       
+        <meta name="description" content="Documentation for Saber">
       
+      
+        <link rel="canonical" href="https://baderlab.github.io/saber/quick_start/">
+      
+      
+        <meta name="author" content="John Giorgi">
       
       
         <meta name="lang:clipboard.copy" content="Copy to clipboard">
@@ -47,7 +53,7 @@
       
         
         
-        <meta name="theme-color" content="#ff7043">
+        <meta name="theme-color" content="#7e57c2">
       
     
     
@@ -67,7 +73,7 @@
   
     
     
-    <body dir="ltr" data-md-color-primary="deep-orange" data-md-color-accent="">
+    <body dir="ltr" data-md-color-primary="deep-purple" data-md-color-accent="deep-purple">
   
     <svg class="md-svg">
       <defs>
@@ -107,9 +113,9 @@
   <nav class="md-header-nav md-grid">
     <div class="md-flex">
       <div class="md-flex__cell md-flex__cell--shrink">
-        <a href=".." title="Saber" class="md-header-nav__button md-logo">
+        <a href="https://baderlab.github.io/saber/" title="Saber" class="md-header-nav__button md-logo">
           
-            <i class="md-icon">bubble_chart</i>
+            <i class="md-icon">memory</i>
           
         </a>
       </div>
@@ -203,9 +209,9 @@
                   <div class="md-sidebar__inner">
                     <nav class="md-nav md-nav--primary" data-md-level="0">
   <label class="md-nav__title md-nav__title--site" for="__drawer">
-    <a href=".." title="Saber" class="md-nav__button md-logo">
+    <a href="https://baderlab.github.io/saber/" title="Saber" class="md-nav__button md-logo">
       
-        <i class="md-icon">bubble_chart</i>
+        <i class="md-icon">memory</i>
       
     </a>
     Saber
@@ -459,13 +465,12 @@
                   <a href="https://github.com/BaderLab/saber/edit/master/docs/quick_start.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
                 
                 
-                <h1 id="quick-start">Quick Start</h1>
+                <h1 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h1>
 <p>If your goal is simply to use Saber to annotate biomedical text, then you can either use the <a href="#web-service">web-service</a> or a <a href="#pre-trained-models">pre-trained model</a>.</p>
-<h2 id="web-service">Web-service</h2>
+<h2 id="web-service">Web-service<a class="headerlink" href="#web-service" title="Permanent link">&para;</a></h2>
 <p>To use Saber as a <strong>local</strong> web-service, run:</p>
 <div class="codehilite"><pre><span></span>(saber) $ python -m saber.app
 </pre></div>
-
 
 <p>or, if you prefer, you can pull &amp; run the Saber image from <strong>Docker Hub</strong>:</p>
 <div class="codehilite"><pre><span></span><span class="c1"># Pull Saber image from Docker Hub</span>
@@ -474,16 +479,15 @@ $ docker pull pathwaycommons/saber
 $ docker run -it --rm -p <span class="m">5000</span>:5000 --name saber pathwaycommons/saber
 </pre></div>
 
-
-<blockquote>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
 <p>Alternatively, you can clone the GitHub repository and build the container from the <code>Dockerfile</code> with <code>docker build -t saber .</code></p>
-</blockquote>
+</div>
 <p>There are currently two endpoints, <code>/annotate/text</code> and <code>/annotate/pmid</code>. Both expect a <code>POST</code> request with a JSON payload, e.g.</p>
 <div class="codehilite"><pre><span></span><span class="p">{</span>
   <span class="nt">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span>
 <span class="p">}</span>
 </pre></div>
-
 
 <p>or</p>
 <div class="codehilite"><pre><span></span><span class="p">{</span>
@@ -491,44 +495,51 @@ $ docker run -it --rm -p <span class="m">5000</span>:5000 --name saber pathwayco
 <span class="p">}</span>
 </pre></div>
 
-
-<p>For example, running the web-service locally and using <code>cURL</code>:</p>
-<div class="codehilite"><pre><span></span><span class="o">(</span>saber<span class="o">)</span> $ curl -X POST <span class="s1">&#39;http://localhost:5000/annotate/text&#39;</span> <span class="se">\</span>
+<p>For example, with the web-service running locally:</p>
+<div class="superfences-tabs">
+<input name="__tabs_1" type="radio" id="__tab_1_0" checked="checked" />
+<label for="__tab_1_0">Bash</label>
+<div class="superfences-content"><div class="codehilite"><pre><span></span>curl -X POST <span class="s1">&#39;http://localhost:5000/annotate/text&#39;</span> <span class="se">\</span>
 --data <span class="s1">&#39;{&quot;text&quot;: &#39;</span>The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.<span class="s1">&#39;}&#39;</span>
-</pre></div>
+</pre></div></div>
+<input name="__tabs_1" type="radio" id="__tab_1_1" />
+<label for="__tab_1_1">python</label>
+<div class="superfences-content"><div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">requests</span> <span class="c1"># assuming you have requests package installed!</span>
 
+<span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;http://localhost:5000/annotate/pmid&quot;</span>
+<span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">}</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">)</span>
 
+<span class="k">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">reason</span><span class="p">)</span>
+</pre></div></div>
+</div>
 <p>Documentation for the Saber web-service API can be found <a href="https://baderlab.github.io/saber-api-docs/">here</a>. We hope to provide a live version of the web-service soon!</p>
-<h2 id="pre-trained-models">Pre-trained models</h2>
+<h2 id="pre-trained-models">Pre-trained models<a class="headerlink" href="#pre-trained-models" title="Permanent link">&para;</a></h2>
 <p>First, import <code>SequenceProcessor</code>. This class coordinates training, annotation, saving and loading of models and datasets. In short, this is the interface to Saber</p>
 <div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber.sequence_processor</span> <span class="kn">import</span> <span class="n">SequenceProcessor</span>
 </pre></div>
-
 
 <p>To load a pre-trained model, we first create a <code>SequenceProcessor</code> object</p>
 <div class="codehilite"><pre><span></span><span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
 </pre></div>
 
-
 <p>and then load the model of our choice</p>
 <div class="codehilite"><pre><span></span><span class="n">sp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;PRGE&#39;</span><span class="p">)</span>
 </pre></div>
-
 
 <p>You can see all the pre-trained models in the <a href="https://baderlab.github.io/saber-api-docs/">web-service API docs</a> or, alternatively, by running the following line of code</p>
 <div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber.constants</span> <span class="kn">import</span> <span class="n">ENTITIES</span><span class="p">;</span> <span class="k">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">ENTITIES</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
 </pre></div>
 
-
 <p>To annotate text with the model, just call the <code>annotate()</code> method</p>
 <div class="codehilite"><pre><span></span><span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">)</span>
 </pre></div>
 
-
-<h3 id="coreference-resolution">Coreference Resolution</h3>
+<h3 id="coreference-resolution">Coreference Resolution<a class="headerlink" href="#coreference-resolution" title="Permanent link">&para;</a></h3>
 <p><a href="http://www.wikiwand.com/en/Coreference"><strong>Coreference</strong></a> occurs when two or more expressions in a text refer to the same person or thing, that is, they have the same <strong>referent</strong>. Take the following example:</p>
-<p><em>"IL-6 supports tumour growth and metastasising in terminal patients, and it significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy."</em></p>
-<p>Clearly, <em>"it"</em> referes to <em>"IL-6"</em>. If we do not resolve this coreference, then <em>"it"</em> will not be labeled as an entity and any relation or event it is mentioned in will not be extracted. Saber uses <a href="https://github.com/huggingface/neuralcoref">NeuralCoref</a>, a state-of-the-art coreference resolution tool based on neural nets and built on top of <a href="https://spacy.io">Spacy</a>. To use it, just supply the argument <code>coref=True</code> (which is <code>False</code> by default) to the <code>annotate()</code> method</p>
+<p><em>"<strong>IL-6</strong> supports tumour growth and metastasising in terminal patients, and <strong>it</strong> significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy."</em></p>
+<p>Clearly, "<strong>it</strong>" referes to "<strong>IL-6</strong>". If we do not resolve this coreference, then "<strong>it</strong>" will not be labeled as an entity and any relation or event it is mentioned in will not be extracted. Saber uses <a href="https://github.com/huggingface/neuralcoref">NeuralCoref</a>, a state-of-the-art coreference resolution tool based on neural nets and built on top of <a href="https://spacy.io">Spacy</a>. To use it, just supply the argument <code>coref=True</code> (which is <code>False</code> by default) to the <code>annotate()</code> method</p>
 <div class="codehilite"><pre><span></span><span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;IL-6 supports tumour growth and metastasising in terminal patients, and it significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy.&quot;</span>
 <span class="c1"># WITHOUT coreference resolution</span>
 <span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">coref</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
@@ -536,16 +547,15 @@ $ docker run -it --rm -p <span class="m">5000</span>:5000 --name saber pathwayco
 <span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">coref</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 
-
-<blockquote>
-<p>Note that if you are using the web-service, simply supply <code>"coref": true</code> in your <code>JSON</code> payload to resolve coreferences.</p>
-</blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you are using the web-service, simply supply <code>"coref": true</code> in your <code>JSON</code> payload to resolve coreferences.</p>
+</div>
 <p>Saber currently takes the simplest possible approach: replace all coreference mentions with their referent, and then feed the resolved text to the model that identifies named entities.</p>
-<h3 id="working-with-annotations">Working with annotations</h3>
+<h3 id="working-with-annotations">Working with annotations<a class="headerlink" href="#working-with-annotations" title="Permanent link">&para;</a></h3>
 <p>The <code>annotate()</code> method returns a simple <code>dict</code> object</p>
 <div class="codehilite"><pre><span></span><span class="n">ann</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">)</span>
 </pre></div>
-
 
 <p>which contains the keys <code>title</code>, <code>text</code> and <code>ents</code>:</p>
 <ul>
@@ -557,8 +567,7 @@ $ docker run -it --rm -p <span class="m">5000</span>:5000 --name saber pathwayco
 <div class="codehilite"><pre><span></span><span class="n">ann</span><span class="p">[</span><span class="s1">&#39;ents&#39;</span><span class="p">]</span>
 </pre></div>
 
-
-<h4 id="converting-annotations-to-json">Converting annotations to JSON</h4>
+<h4 id="converting-annotations-to-json">Converting annotations to JSON<a class="headerlink" href="#converting-annotations-to-json" title="Permanent link">&para;</a></h4>
 <p>The <code>annotate()</code> method returns a <code>dict</code> object, but can be converted to a <code>JSON</code> formatted string for ease-of-use in downstream applications</p>
 <div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
 
@@ -632,6 +641,13 @@ $ docker run -it --rm -p <span class="m">5000</span>:5000 --name saber pathwayco
       </div>
       
         
+  <div class="md-footer-social">
+    <link rel="stylesheet" href="../assets/fonts/font-awesome.css">
+    
+      <a href="https://github.com/BaderLab" class="md-footer-social__link fa fa-github"></a>
+    
+  </div>
+
       
     </div>
   </div>
