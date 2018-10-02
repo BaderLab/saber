@@ -3,12 +3,12 @@
 import configparser
 import copy
 import os
+
 import pytest
 
 from ..config import Config
-from ..constants import PATH_TO_DUMMY_CONFIG
-from ..constants import PATH_TO_DUMMY_DATASET
-from ..constants import PATH_TO_DUMMY_EMBEDDINGS
+from ..constants import (PATH_TO_DUMMY_CONFIG, PATH_TO_DUMMY_DATASET,
+                         PATH_TO_DUMMY_EMBEDDINGS)
 
 # Sections of the .ini file
 CONFIG_SECTIONS = ['mode', 'data', 'model', 'training', 'advanced']

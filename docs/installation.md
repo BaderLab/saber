@@ -6,12 +6,13 @@ To install Saber, you will need `python==3.6`. If not already installed, `python
  - [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
  - [Miniconda3](https://conda.io/miniconda.html) / [Anaconda3](https://www.anaconda.com/download/)
 
-> Use `python --version` at the command line to make sure installation was successful. Note: you may need to use `python3` (not just `python`) at the command line depending on your install method.
+!!! note
+    Run `python --version` at the command line to make sure installation was successful. You may need to type `python3` (not just `python`) depending on your install method.
 
 (OPTIONAL) First, activate your virtual environment (see [below](#optional-creating-and-activating-virtual-environments) for help):
 
 ```
-$ source activate saber
+$ conda activate saber
 (saber) $
 ```
 
@@ -29,7 +30,8 @@ or by cloning the repository and then using `pip` to install the package
 (saber) $ pip install .
 ```
 
-> You can also install Saber by cloning this repository and running `python setup.py install` from within the repository.
+!!! tip
+    You can also install Saber by cloning this repository and running `python setup.py install`.
 
 Finally, you must also `pip` install the required [Spacy](https://spacy.io) model and the [keras-contrib](https://github.com/keras-team/keras-contrib) repositories
 
@@ -40,7 +42,8 @@ Finally, you must also `pip` install the required [Spacy](https://spacy.io) mode
 (saber) $ pip install https://github.com/huggingface/neuralcoref-models/releases/download/en_coref_md-3.0.0/en_coref_md-3.0.0.tar.gz
 ```
 
-> See [Running tests](#running-tests) for a way to verify your installation.
+!!! note
+    See [Running tests](#running-tests) for a way to verify your installation.
 
 ### (OPTIONAL) Creating and activating virtual environments
 
@@ -51,7 +54,7 @@ When using `pip` it is generally recommended to install packages in a virtual en
 Using [virtualenv](https://virtualenv.pypa.io/en/stable/):
 
 ```
-$ virtualenv /path/to/new/venv/saber
+$ virtualenv --python=python3 /path/to/new/venv/saber
 ```
 
 Using [venv](https://docs.python.org/3/library/venv.html):
@@ -79,12 +82,13 @@ $ conda create -n saber python=3.6
 To activate the environment:
 
 ```
-$ source activate saber
+$ conda activate saber
 # Notice your command prompt has changed to indicate that the environment is active
 (saber) $
 ```
 
-> Note: you do not need to name the environment `saber`.
+!!! note
+    You do not _need_ to name the environment `saber`.
 
 ## Running tests
 
