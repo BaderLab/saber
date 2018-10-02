@@ -14,7 +14,7 @@ from keras_contrib.layers.crf import CRF
 
 from .. import constants
 from ..utils import model_utils
-from .layers.attention_with_context import AttentionWithContext
+# from .layers.attention_with_context import AttentionWithContext
 
 # TODO (johngiorgi): I should to stratify the K-folds...
 
