@@ -13,14 +13,15 @@ Currently, the command line tool simply trains the model. To use it, call
 along with any command line arguments. For example, to train the model on the [NCBI Disease](https://www.ncbi.nlm.nih.gov/CBBresearch/Dogan/DISEASE/) corpus
 
 ```
-(saber) $ python -m saber.train --dataset_folder NCBI_disease_BIO
+(saber) $ python -m saber.train --dataset_folder NCBI_Disease_BIO
 ```
 
-> See [Resources](https://baderlab.github.io/saber/resources/) for help preparing datasets for training.
+!!! tip
+    See [Resources](https://baderlab.github.io/saber/resources/) for help preparing datasets for training.
 
-Run `python -m saber.train -h` to see all possible arguments.
+Run `python -m saber.train --help` to see all possible arguments.
 
-Of course, supplying arguments at the command line can quickly become cumbersome. Saber also allows you to specify a configuration file, which can be specified like so
+Of course, supplying arguments at the command line can quickly become cumbersome. Saber also allows you to provide a configuration file, which can be specified like so
 
 ```
 (saber) $ python -m saber.train --config_filepath path/to/config.ini
@@ -28,13 +29,14 @@ Of course, supplying arguments at the command line can quickly become cumbersome
 
 Copy the contents of the [default config file](https://github.com/BaderLab/saber/blob/master/saber/config.ini) to a new `*.ini` file in order to get started.
 
-Note that arguments supplied at the command line overwrite those found in the configuration file. For example
+!!! note
+    Arguments supplied at the command line overwrite those found in the configuration file, e.g.,
 
-```
-(saber) $ python -m saber.train --dataset_folder path/to/dataset --k_folds 10
-```
+    ```
+    (saber) $ python -m saber.train --dataset_folder path/to/dataset --k_folds 10
+    ```
 
-would overwrite the arguments for `dataset_folder` and `k_folds` found in the configuration file.
+    would overwrite the arguments for `dataset_folder` and `k_folds` found in the configuration file.
 
 ### Python package
 
@@ -90,7 +92,8 @@ sp.load_dataset('path/to/datasets/CRAFT')
 sp.fit()
 ```
 
-> Note that there is currently no way to easily do this with the command line interface, but I am working on it!
+!!! info
+    There is currently no easy way to do this with the command line interface, but I am working on it!
 
 #### Multi-task learning
 
@@ -102,11 +105,38 @@ Here is an example using the last method
 sp = SequenceProcessor()
 
 # Simply pass multiple dataset paths as a list to load_dataset to use multi-task learning.
-sp.load_dataset(['path/to/datasets/NCBI-Disease', 'path/to/datasets/Linnaeus'])
+sp.load_dataset(['path/to/datasets/NCBI_Disease', 'path/to/datasets/Linnaeus'])
 
 sp.create_model()
 sp.fit()
 ```
+
+#### Training on GPUs
+
+Saber will automatically train on as many GPUs as are available. In order for this to work, you must have [CUDA](https://developer.nvidia.com/cuda-downloads) and [CudDNN](https://developer.nvidia.com/cudnn) installed already. Additionally, you must install `tensorflow-gpu`:
+
+```
+(saber) $ pip install tensorflow-gpu
+```
+
+!!! warning
+     Use `pip install tensorflow-gpu==1.7.0` if you would like to train on multiple GPUs as `tensorflow-gpu` versions `>1.7.0` are currently throwing errors.
+
+To control which GPUs Saber trains on, you can use the `CUDA_VISIBLE_DEVICES` environment variable, e.g.,
+
+```
+# To train exclusively on CPU
+(saber) $ CUDA_VISIBLE_DEVICES="" python -m saber.train
+
+# To train on 1 GPU with ID=0
+(saber) $ CUDA_VISIBLE_DEVICES="0" python -m saber.train
+
+# To train on 2 GPUs with IDs=0,2
+(saber) $ CUDA_VISIBLE_DEVICES="0,2" python -m saber.train
+```
+
+!!! tip
+    You can get information about your NVIDIA GPUs by typing `nvidia-smi` at the command line (assuming the GPUs are setup properly and the nvidia driver is installed).
 
 #### Saving and loading models
 
@@ -117,9 +147,8 @@ In the following sections we introduce the saving and loading of models.
 Assuming the model has already been created (see above), we can easily save our model like so
 
 ```python
-path_to_saved_model = 'path/to/pretrained_models/mymodel'
-
-sp.save(path_to_saved_model)
+save_dir = 'path/to/pretrained_models/mymodel'
+sp.save(save_dir)
 ```
 
 ##### Loading a model
@@ -129,10 +158,8 @@ Lets illustrate loading a model with a new `SequenceProccesor` object
 ```python
 # Delete our previous SequenceProccesor object (if it exists)
 if 'sp' in locals(): del sp
-
 # Create a new SequenceProccesor object
 sp = SequenceProcessor()
-
 # Load a previous model
 sp.load(path_to_saved_model)
 ```
@@ -150,7 +177,6 @@ Next, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) by followin
 
 A new window will open in your browser. Use it to search for `lightning_tour.ipynb` on your computer.
 
-A couple of notes:
-
-- If you activated a virtual environment, "`myenv`", make sure you see **Python [venv:myenv]** in the top right of the Jupyter notebook.
-- If you are using conda, you need to run `conda install nb_conda` with your environment activated.
+!!! notes
+    - If you activated a virtual environment, "`myenv`", make sure you see **Python [venv:myenv]** in the top right of the Jupyter notebook.
+    - If you are using conda, you need to run `conda install nb_conda` with your environment activated (you only need to do this once!).

@@ -3,18 +3,18 @@ for a Keras model.
 """
 import json
 import logging
-from operator import itemgetter
 import os
+from operator import itemgetter
 from statistics import mean
 
 import numpy as np
-from prettytable import PrettyTable
 from keras.callbacks import Callback
+from prettytable import PrettyTable
 
 from . import constants
+from .preprocessor import Preprocessor
 from .utils import model_utils
 from .utils.generic_utils import make_dir
-from .preprocessor import Preprocessor
 
 class Metrics(Callback):
     """A class for handling performance metrics, inherits from Callback.

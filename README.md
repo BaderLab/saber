@@ -51,7 +51,7 @@ To install Saber, you will need `python==3.6`. If not already installed, `python
 (OPTIONAL) Activate your virtual environment (see [below](#optional-creating-and-activating-virtual-environments) for help):
 
 ```bash
-$ source activate saber
+$ conda activate saber
 # Notice your command prompt has changed to indicate that the environment is active
 (saber) $
 ```
@@ -119,7 +119,7 @@ $ conda create -n saber python=3.6
 To activate the environment:
 
 ```bash
-$ source activate saber
+$ conda activate saber
 
 # Again, your command prompt should change to indicate that the environment is active
 (saber) $

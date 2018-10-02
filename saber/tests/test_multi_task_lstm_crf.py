@@ -1,12 +1,13 @@
-import numpy
 import os
+
+import numpy
+
 import pytest
 
 from ..config import Config
+from ..constants import (PATH_TO_DUMMY_CONFIG, PATH_TO_DUMMY_DATASET,
+                         PATH_TO_DUMMY_EMBEDDINGS)
 from ..sequence_processor import SequenceProcessor
-from ..constants import PATH_TO_DUMMY_CONFIG
-from ..constants import PATH_TO_DUMMY_DATASET
-from ..constants import PATH_TO_DUMMY_EMBEDDINGS
 
 # TODO (johngiorgi): fix some of the test_model_attributes_after_creation_of_model tests
 
