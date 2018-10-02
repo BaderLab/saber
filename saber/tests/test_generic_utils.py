@@ -2,6 +2,7 @@ import pytest
 
 from ..utils.model_utils import precision_recall_f1_support
 
+
 def test_precision_recall_f1_support():
     """Asserts that precision_recall_f1_support returns the expected values."""
     TP_dummy = 100
