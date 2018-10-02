@@ -3,11 +3,10 @@
 import os
 from time import strftime
 
-from keras import optimizers
-from keras.callbacks import ModelCheckpoint
-from keras.callbacks import TensorBoard
-from keras.utils import to_categorical
 import numpy as np
+from keras import optimizers
+from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.utils import to_categorical
 from sklearn.model_selection import KFold
 
 from ..metrics import Metrics

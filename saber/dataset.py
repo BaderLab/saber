@@ -1,9 +1,9 @@
 """Contains the Dataset class, which handles the loading and storage of datasets.
 """
-from glob import glob
-from itertools import chain
 import logging
 import os
+from glob import glob
+from itertools import chain
 
 from . import constants
 from .preprocessor import Preprocessor
