@@ -2,13 +2,13 @@
 # TODO (johngiorgi): begin writing tests, start with _split_train_valid
 
 import os
+
 import pytest
 
 from ..config import Config
+from ..constants import PATH_TO_DUMMY_CONFIG, PATH_TO_DUMMY_DATASET
 from ..dataset import Dataset
 from ..trainer import Trainer
-from ..constants import PATH_TO_DUMMY_CONFIG
-from ..constants import PATH_TO_DUMMY_DATASET
 
 @pytest.fixture
 def dummy_config():
