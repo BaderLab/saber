@@ -4,6 +4,7 @@ import pytest
 from .. import constants
 from ..preprocessor import Preprocessor
 
+
 @pytest.fixture
 def preprocessor():
     """Returns an instance of a Preprocessor object."""

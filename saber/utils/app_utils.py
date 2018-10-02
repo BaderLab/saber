@@ -2,15 +2,16 @@
 """
 import logging
 import os.path
-import tensorflow as tf
 import traceback
 import xml.etree.ElementTree as ET
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
+import tensorflow as tf
+
 from .. import constants
-from .generic_utils import decompress_model
 from ..sequence_processor import SequenceProcessor
+from .generic_utils import decompress_model
 
 # TODO: Need better error handeling here
 log = logging.getLogger(__name__)

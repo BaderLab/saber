@@ -3,13 +3,13 @@
 import logging
 import os
 import pickle
+import time
 from itertools import chain
 from pprint import pprint
 
-import time
-
-from gensim.models import KeyedVectors
 import numpy as np
+from gensim.models import KeyedVectors
+from pkg_resources import resource_filename
 from spacy import displacy
 
 from . import constants
@@ -17,8 +17,7 @@ from .config import Config
 from .dataset import Dataset
 from .preprocessor import Preprocessor
 from .trainer import Trainer
-from .utils import generic_utils
-from .utils import model_utils
+from .utils import generic_utils, model_utils
 
 print('Saber version: {0}'.format(constants.__version__))
 
@@ -179,8 +178,7 @@ class SequenceProcessor(object):
         model_attributes = pickle.load(open(attributes_filepath, "rb"))
         # create a new dataset instance, load the required attributes for model prediction
         # TEMP: this is an ugly hack, need way around having to provide a filepath
-        dummy_ds = 'tests/resources/dummy_dataset_1'
-        dummy_ds = os.path.join(os.path.dirname(os.path.abspath(__file__)), dummy_ds)
+        dummy_ds = resource_filename(__name__, 'tests/resources/dummy_dataset_1')
         self.ds = [Dataset(dummy_ds)]
         self.ds[0].type_to_idx = model_attributes['type_to_idx']
         self.ds[0].idx_to_tag = model_attributes['idx_to_tag']

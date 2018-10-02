@@ -2,15 +2,16 @@
 # some combination of train, valid and test partitions are provided. Currently,
 # only the case where a single partition (train.*) is provided is covered.
 
-import numpy
 import os
+
+import numpy
+
 import pytest
 
 from ..config import Config
+from ..constants import (PATH_TO_DUMMY_CONFIG, PATH_TO_DUMMY_DATASET,
+                         PATH_TO_DUMMY_EMBEDDINGS)
 from ..sequence_processor import SequenceProcessor
-from ..constants import PATH_TO_DUMMY_CONFIG
-from ..constants import PATH_TO_DUMMY_DATASET
-from ..constants import PATH_TO_DUMMY_EMBEDDINGS
 
 # constants to test against
 DUMMY_TRAIN_SENT_NUM = 2
