@@ -2,7 +2,7 @@
 
 __Saber__ (__S__equence __A__nnotator for __B__iomedical __E__ntities and __R__elations) is a deep-learning based tool for __information extraction__ in the biomedical domain.
 
-The neural network model used is a BiLSTM-CRF [[1](https://arxiv.org/abs/1603.01360), [2](https://arxiv.org/abs/1603.01354)]; a state-of-the-art architecture for sequence labelling. The model is implemented using [Keras](https://keras.io/).
+The neural network model used is a BiLSTM-CRF [[1](https://arxiv.org/abs/1603.01360), [2](https://arxiv.org/abs/1603.01354)]; a state-of-the-art architecture for sequence labelling. The model is implemented using [Keras](https://keras.io/) / [Tensorflow](https://www.tensorflow.org).
 
 The goal is that Saber will eventually perform all the important steps in text-mining of biomedical literature:
 
