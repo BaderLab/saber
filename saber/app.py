@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 """Simple web service which exposes Saber's functionality via a RESTful API.
 """
-from flask import Flask
-from flask import jsonify
-from flask import redirect
-from flask import request
-
+from flask import Flask, jsonify, redirect, request
 from waitress import serve
 
 from . import constants

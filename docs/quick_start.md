@@ -19,7 +19,8 @@ $ docker pull pathwaycommons/saber
 $ docker run -it --rm -p 5000:5000 --name saber pathwaycommons/saber
 ```
 
-> Alternatively, you can clone the GitHub repository and build the container from the `Dockerfile` with `docker build -t saber .`
+!!! tip
+    Alternatively, you can clone the GitHub repository and build the container from the `Dockerfile` with `docker build -t saber .`
 
 There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a `POST` request with a JSON payload, e.g.
 
@@ -37,11 +38,22 @@ or
 }
 ```
 
-For example, running the web-service locally and using `cURL`:
+For example, with the web-service running locally:
 
-```bash
-(saber) $ curl -X POST 'http://localhost:5000/annotate/text' \
+``` bash tab="Bash"
+curl -X POST 'http://localhost:5000/annotate/text' \
 --data '{"text": 'The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.'}'
+```
+
+``` python tab="python"
+import requests # assuming you have requests package installed!
+
+url = "http://localhost:5000/annotate/pmid"
+payload = {"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}
+response = requests.post(url, json=payload)
+
+print(response.text)
+print(response.status_code, response.reason)
 ```
 
 Documentation for the Saber web-service API can be found [here](https://baderlab.github.io/saber-api-docs/). We hope to provide a live version of the web-service soon!
@@ -82,9 +94,9 @@ sp.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p
 
 [**Coreference**](http://www.wikiwand.com/en/Coreference) occurs when two or more expressions in a text refer to the same person or thing, that is, they have the same **referent**. Take the following example:
 
-_"IL-6 supports tumour growth and metastasising in terminal patients, and it significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy."_
+_"__IL-6__ supports tumour growth and metastasising in terminal patients, and __it__ significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy."_
 
-Clearly, _"it"_ referes to _"IL-6"_. If we do not resolve this coreference, then _"it"_ will not be labeled as an entity and any relation or event it is mentioned in will not be extracted. Saber uses [NeuralCoref](https://github.com/huggingface/neuralcoref), a state-of-the-art coreference resolution tool based on neural nets and built on top of [Spacy](https://spacy.io). To use it, just supply the argument `coref=True` (which is `False` by default) to the `annotate()` method
+Clearly, "__it__" referes to "__IL-6__". If we do not resolve this coreference, then "__it__" will not be labeled as an entity and any relation or event it is mentioned in will not be extracted. Saber uses [NeuralCoref](https://github.com/huggingface/neuralcoref), a state-of-the-art coreference resolution tool based on neural nets and built on top of [Spacy](https://spacy.io). To use it, just supply the argument `coref=True` (which is `False` by default) to the `annotate()` method
 
 ```python
 text = "IL-6 supports tumour growth and metastasising in terminal patients, and it significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy."
@@ -94,7 +106,8 @@ sp.annotate(text, coref=False)
 sp.annotate(text, coref=True)
 ```
 
-> Note that if you are using the web-service, simply supply `"coref": true` in your `JSON` payload to resolve coreferences.
+!!! note
+    If you are using the web-service, simply supply `"coref": true` in your `JSON` payload to resolve coreferences.
 
 Saber currently takes the simplest possible approach: replace all coreference mentions with their referent, and then feed the resolved text to the model that identifies named entities.
 

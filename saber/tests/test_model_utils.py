@@ -1,15 +1,15 @@
 """Any and all unit tests for the model_utils (saber/utils/model_utils.py).
 """
 import os
+
 import pytest
 
-from ..utils import model_utils
-from ..metrics import Metrics
 from ..config import Config
+from ..constants import (PATH_TO_DUMMY_CONFIG, PATH_TO_DUMMY_DATASET,
+                         PATH_TO_DUMMY_EMBEDDINGS)
+from ..metrics import Metrics
 from ..sequence_processor import SequenceProcessor
-from ..constants import PATH_TO_DUMMY_CONFIG
-from ..constants import PATH_TO_DUMMY_DATASET
-from ..constants import PATH_TO_DUMMY_EMBEDDINGS
+from ..utils import model_utils
 
 @pytest.fixture
 def dummy_config():

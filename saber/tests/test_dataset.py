@@ -3,12 +3,14 @@
 # only the case where a single partition (train.*) is provided is covered.
 
 import os
-import pytest
+
 import numpy as np
 
+import pytest
+
 from .. import constants
-from ..dataset import Dataset
 from ..constants import PATH_TO_DUMMY_DATASET
+from ..dataset import Dataset
 
 # constants for dummy dataset to perform testing on
 DUMMY_WORD_SEQ = np.array([

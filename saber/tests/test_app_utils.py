@@ -1,6 +1,7 @@
 """Any and all unit tests for the app_utils (saber/utils/app_utils.py).
 """
 import pytest
+
 from ..utils import app_utils
 
 ENTITIES = {'ANAT': False,
