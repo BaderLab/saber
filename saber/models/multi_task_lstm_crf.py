@@ -1,27 +1,20 @@
-"""Contains the class for the Multi-task BiLSTM-CRF (MT-BILSTM-CRF) Keras model for squence
-labelling.
+"""Contains the Multi-task BiLSTM-CRF (MT-BILSTM-CRF) Keras model for squence labelling.
 """
 import json
 import logging
 
-from keras import initializers
-from keras_contrib.layers.crf import CRF
-from keras.layers import Bidirectional
-from keras.layers import Concatenate
-from keras.layers import Dense
-from keras.layers import Dropout
-from keras.layers import Embedding
-from keras.models import Input
-from keras.layers import LSTM
-from keras.models import Model
-from keras.models import model_from_json
-from keras.layers import SpatialDropout1D
-from keras.layers import TimeDistributed
-from keras.utils import multi_gpu_model
 import tensorflow as tf
+from keras import initializers
+from keras.layers import (LSTM, Bidirectional, Concatenate, Dense, Dropout,
+                          Embedding, SpatialDropout1D, TimeDistributed)
+from keras.models import Input, Model, model_from_json
+from keras.utils import multi_gpu_model
+
+from keras_contrib.layers.crf import CRF
 
 from .. import constants
 from ..utils import model_utils
+from .layers.attention_with_context import AttentionWithContext
 
 # TODO (johngiorgi): I should to stratify the K-folds...
 
@@ -29,23 +22,22 @@ class MultiTaskLSTMCRF(object):
     """A Keras implementation of a BiLSTM-CRF for sequence labeling.
 
     A BiLSTM-CRF for NER implementation in Keras. Supports multi-task learning by default, just pass
-    multiple Dataset objects via `ds` to the constructor and the model will share all the parameters
+    multiple Dataset objects via `ds` to the constructor and the model will share the parameters
     of all layers, except for the final output layer, across all datasets, where each dataset
-    represents a NER task.
+    represents a sequence labelling task.
 
     Args:
         config (Config): A Config object which contains a set of harmonzied arguments provided in
-            a .ini file and, optionally, from the command line. If not provided, a new instance of
+            a *.ini file and, optionally, from the command line. If not provided, a new instance of
             Config is used.
         ds (list): a list of Dataset objects.
         token_embedding_matrix (numpy.ndarray): a numpy array where ith row contains the vector
             embedding for ith word type.
 
-    References
-    --
-    Guillaume Lample, Miguel Ballesteros, Sandeep Subramanian, Kazuya Kawakami, Chris Dyer.
-    "Neural Architectures for Named Entity Recognition". Proceedings of NAACL 2016.
-    https://arxiv.org/abs/1603.01360
+    References:
+        - Guillaume Lample, Miguel Ballesteros, Sandeep Subramanian, Kazuya Kawakami, Chris Dyer.
+          "Neural Architectures for Named Entity Recognition". Proceedings of NAACL 2016.
+          https://arxiv.org/abs/1603.01360
     """
     def __init__(self, config, ds, token_embedding_matrix=None):
         # hyperparameters and model details
@@ -61,15 +53,15 @@ class MultiTaskLSTMCRF(object):
         self.log = logging.getLogger(__name__)
 
     def save(self, weights_filepath, model_filepath, model=0):
-        """Save a models to disk.
+        """Save a model to disk.
 
         Saves a model to disk, by saving its architecture as a json file at `model_filepath`
         and its weights as a hdf5 file at `model_filepath`.
 
         Args:
-            weights_filepath (str): filepath to the models wieghts (.hdf5 file)
-            model_filepath (str): filepath to the models architecture (.json file)
-            model (int): which model from `self.model` to save
+            weights_filepath (str): filepath to the models wieghts (.hdf5 file).
+            model_filepath (str): filepath to the models architecture (.json file).
+            model (int): which model from `self.model` to save.
         """
         with open(model_filepath, 'w') as f:
             model_json = self.model[model].to_json()
@@ -83,8 +75,8 @@ class MultiTaskLSTMCRF(object):
         and its weights from a hdf5 file at `model_filepath`.
 
         Args:
-            weights_filepath (str): filepath to the models wieghts (.hdf5 file)
-            model_filepath (str): filepath to the models architecture (.json file)
+            weights_filepath (str): filepath to the models wieghts (.hdf5 file).
+            model_filepath (str): filepath to the models architecture (.json file).
         """
         with open(model_filepath) as f:
             model = model_from_json(f.read(), custom_objects={'CRF': CRF})
@@ -94,8 +86,8 @@ class MultiTaskLSTMCRF(object):
     def specify_(self):
         """Specifies a multi-task BiLSTM-CRF for sequence tagging using Keras.
 
-        Implements a hybrid long short-term memory network-condition random
-        field (LSTM-CRF) multi-task model for sequence tagging.
+        Implements a hybrid bidirectional ong short-term memory network-condition random
+        field (BiLSTM-CRF) multi-task model for sequence tagging.
         """
         # specify any shared layers outside the for loop
         # word-level embedding layer
@@ -135,12 +127,9 @@ class MultiTaskLSTMCRF(object):
         all_tag_types = set(x for l in all_tag_types for x in l)
 
         # feedforward before CRF, maps each time step to a vector
-        # if activation function relu, initialize bias to small constant to avoid dead neurons
-        bias_init = initializers.Constant(value=0.01) if self.config.activation == 'relu' else 'zeros'
         feedforward_map = TimeDistributed(Dense(len(all_tag_types),
                                                 activation=self.config.activation,
-                                                bias_initializer=bias_init),
-                                          name='feedforward_map')
+                                                name='feedforward_map'))
         # specify model, taking into account the shared layers
         for ds in self.ds:
             # word-level embedding
@@ -149,7 +138,7 @@ class MultiTaskLSTMCRF(object):
 
             # character-level embedding
             char_ids = Input(shape=(None, None), dtype='int32', name='char_id_inputs')
-            char_embed= char_embeddings(char_ids)
+            char_embed = char_embeddings(char_ids)
 
             # character-level BiLSTM + dropout. Spatial dropout applies the same dropout mask to all
             # timesteps which is necessary to implement variational dropout
@@ -171,6 +160,8 @@ class MultiTaskLSTMCRF(object):
             if self.config.variational_dropout:
                 model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
 
+            # add attention
+            # model = AttentionWithContext(model)
             # feedforward before CRF
             model = feedforward_map(model)
 
@@ -187,17 +178,18 @@ class MultiTaskLSTMCRF(object):
     def compile_(self):
         """Compiles a bi-directional multi-task LSTM-CRF for sequence tagging using Keras."""
         for i in range(len(self.model)):
+            # need to grab the loss function from models CRF instance
+            crf_loss_function = self.model[i].layers[-1].loss_function
             # parallize the model if multiple GPUs are available
             # https://github.com/keras-team/keras/pull/9226
+            # awfully bad practice to catch all exceptions but this was the example given by Keras
+            # documentation
             try:
                 self.model[i] = multi_gpu_model(self.model[i])
                 self.log.info('Compiling the model on multiple GPUs')
-            # awfully bad practice but this was the example given by Keras documentation
             except:
                 self.log.info('Compiling the model on a single CPU or GPU')
 
-            # need to grab the loss function from models CRF instance
-            crf_loss_function = self.model[i].layers[-1].loss_function
             model_utils.compile_model(model=self.model[i],
                                       loss_function=crf_loss_function,
                                       optimizer=self.config.optimizer,
