@@ -1,23 +1,22 @@
 """Contains the Preprocessor class, which handles low level NLP tasks such as tokenization and
 sentence segmentation.
 """
+import copy
 import logging
 import re
 from collections import Counter
 
+import en_coref_md
 import numpy as np
 from keras.preprocessing.sequence import pad_sequences
-
-import en_coref_md
 
 from . import constants
 from .utils import text_utils
 
+LOGGER = logging.getLogger(__name__)
+
 class Preprocessor(object):
     """A class for processing text data."""
-    # define this at the class level because most methods are static
-    log = logging.getLogger(__name__)
-
     def __init__(self):
         # load the NeuralCoref model, which is built on top of the Spacy english model
         self.nlp = en_coref_md.load()
@@ -39,21 +38,22 @@ class Preprocessor(object):
                 integer ID, given by the mapping `char2idx`.
 
         Args:
-            text (str): raw text.
-            word2idx (dict): mapping from words (keys) to unique integers (values).
-            char2idx (dict): mapping from chars (keys) to unique integers (values).
+            text (str): Raw text.
+            word2idx (dict): Mapping from words (keys) to unique integers (values).
+            char2idx (dict): Mapping from chars (keys) to unique integers (values).
             coref (bool): True if coreference resolution should be applied to `text`, defaults to
                 False.
             sterilize (bool): True if text should be sterilized, defaults to True.
 
         Returns:
-            a dictionary containing the processed raw text, sentences, token offsets, etc.
+            A dictionary containing the processed raw text, sentences, token offsets, etc.
         """
         text = self.sterilize(text) if sterilize else text
         doc = self.nlp(text)
 
         if coref:
-            text = doc._.coref_resolved
+            # doc._.coref_resolved returns empty string if no coreference found
+            text = doc._.coref_resolved if doc._.coref_resolved else text
             doc = self.nlp(text)
 
         # get sentences and token offsets
@@ -68,25 +68,13 @@ class Preprocessor(object):
             'sents': sentences,
             'offsets': offsets,
             'word_idx_seq': word_idx_sequence,
-            'char_idx_seq': char_idx_sequence
+            'char_idx_seq': char_idx_sequence,
         }
 
         return transformed_text
 
     def _process_text(self, doc):
-        """Returns sentences and character offsets of tokens in text.
-
-        For the given `text`, uses Spacy to return a two-tuple of the sentences and token
-        offsets (relative to their position in `text`) of each token in `text`.
-
-        Args:
-            doc (Doc): Spacy Doc object
-            coref(bool): True if coreference mentions should be resolved
-
-        Returns:
-            two-tuple, containing the sentences in `text` (as a list of lists), and the token
-            offsets for every token in text (relative to their position in `text`, as a list of
-            lists)
+        """Returns tuple of sentences and character offsets of tokens in SpaCy `doc` object.
 
         Example:
             >>> preprocessor = Preprocessor()
@@ -108,38 +96,38 @@ class Preprocessor(object):
             sentences.append(token_seq)
             offsets.append(token_offset_seq)
 
-        # return sentences, offsets
         return sentences, offsets
 
     @staticmethod
     def type_to_idx(types, initial_mapping=None, offset=0):
-        """Returns a dictionary of element:index pairs for each element in types.
+        """Returns a dictionary which maps each item in `types` to a unique integer ID.
 
-        Given a list `types`, returns a dictionary of length len(types) + offset, where the keys are
-        elements of `types` and the values are unique integer ids.
+        Given a list `types`, returns a dictionary of length `len(types)`` + offset, where the
+        keys are elements of `types` and the values are unique integer ids.
 
         Args:
             types (list): A list of unique types (words, characters, or tags)
             initial_mapping (dict): An initial mapping of types to integers. If not None, the
                 mapping of types to integers will update this dictionary, with the integer count
-                begginning at len(initial_mapping).
+                begginning at `len(initial_mapping)`.
             offset (int): Used when computing the mapping. An offset a 1 means we begin computing
                 the mapping at 1, useful if we want to use 0 as a padding value. Has no effect if
                 initial_mapping is not None.
         Returns:
-            a mapping from elements in the `types` to unique integer ids
-
-        Preconditions:
-            assumes that all elements in sequence are unique
+            A mapping from items in `types` to unique integer ids.
         """
+        types = copy.deepcopy(types) # make a deep copy
+        types = list(set(types)) # ensure we have only unique elements
+
+        # update types according to initial_mapping
         if initial_mapping is not None:
-            # if a type in initial_mapping already exists in types, remove it
-            for type_ in initial_mapping:
+            for type_, idx in initial_mapping.items():
+                # if a type in initial_mapping already exists in types, move it to correct index
                 if type_ in types:
-                    types.remove(type_)
-            mapping = {e: i + len(initial_mapping) for i, e in enumerate(types)}
-            mapping.update(initial_mapping)
-            return mapping
+                    types.insert(idx, types.pop(types.index(type_)))
+                # otherwise add it
+                else:
+                    types.insert(idx, type_)
         # offset accounts for sequence pad
         return {e: i + offset for i, e in enumerate(types)}
 
@@ -168,7 +156,7 @@ class Preprocessor(object):
         """
         if type_ not in ['word', 'char', 'tag']:
             err_msg = "Argument `type_` must be one 'word', 'char' or 'type'"
-            Preprocessor.log.error('ValueError: %s', err_msg)
+            LOGGER.error('ValueError: %s', err_msg)
             raise ValueError(err_msg)
 
         # Word type
@@ -238,23 +226,21 @@ class Preprocessor(object):
     @staticmethod
     def replace_rare_tokens(sentences, count=constants.NUM_RARE):
         """
-        Replaces rare tokens in sentences with a special unknown token.
+        Replaces rare tokens in `sentences` with a special unknown token.
 
         Returns `sentences`, a list of list where each inner list is a sentence represented as a
         list of strings (tokens), where all tokens appearing less than `count` number of times have
         been replaced with a special unknown token.
 
         Args:
-            sentences (list): list of lists where each inner list is a sentence
+            sentences (list): List of lists where each inner list is a sentence
                 represented as a list of strings (tokens).
-            count (int): threshold for token to be considered rare, tokens appearing `count` times
-                or less are replaced with a special unknown token.
+            count (int): Tokens appearing `count` times or less are replaced with unknown token.
 
         Returns:
             sentences, where all rare tokens have been replaced by a special unknown token
         """
         token_count = Counter()
-
         # create a token count across all sentences
         for sent in sentences:
             token_count.update(sent)
@@ -275,12 +261,12 @@ class Preprocessor(object):
         multiple spaces with a single space. Optionally, lowercases `text`.
 
         Args:
-            text (str): text to sterilize
+            text (str): Text to sterilize
             lower (bool): True if text should be lower cased
 
         Returns:
             `text`, where proceeding/preeceding spaces have been removed, spans of multiple spaces
-            have been replaced with a single space, and optionally, the text has been lowercased
+            have been replaced with a single space, and optionally, the text has been lowercased.
         """
         sterilized_text = re.sub(r'\s+', ' ', text.strip())
         sterilized_text = sterilized_text.lower() if lower else sterilized_text
