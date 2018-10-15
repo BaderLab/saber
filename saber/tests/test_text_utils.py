@@ -1,7 +1,10 @@
 import en_coref_md
+
 import pytest
 
 from ..utils import text_utils
+
+######################################### PYTEST FIXTURES #########################################
 
 @pytest.fixture
 def nlp():
@@ -10,6 +13,8 @@ def nlp():
     custom_nlp = en_coref_md.load()
     custom_nlp.tokenizer = text_utils.biomedical_tokenizer(custom_nlp)
     return custom_nlp
+
+############################################ UNIT TESTS ############################################
 
 def test_biomedical_tokenizer(nlp):
     """Asserts that call to customized spaCy tokenizer returns the expected results.
