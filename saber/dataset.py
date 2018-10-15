@@ -164,7 +164,8 @@ class Dataset(object):
 
                 # one-hot encode our targets
                 self.idx_seq[partition]['tag'] = \
-                    data_utils.one_hot_encode(self.idx_seq[partition]['tag'])
+                    data_utils.one_hot_encode(self.idx_seq[partition]['tag'],
+                                              num_classes=len(self.type_to_idx['tag']))
 
     def get_idx_to_tag(self):
         """Updates `seld.idx_to_tag` a reverse mapping of `self.type_to_idx['tag']`.
