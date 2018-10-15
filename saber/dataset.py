@@ -2,236 +2,171 @@
 """
 import logging
 import os
-from glob import glob
 from itertools import chain
+
+from nltk.corpus.reader.conll import ConllCorpusReader
 
 from . import constants
 from .preprocessor import Preprocessor
-from .utils import model_utils
+from .utils import data_utils
+
+LOGGER = logging.getLogger(__name__)
 
 class Dataset(object):
-    """A class for handling datasets.
+    """A class for handling datasets. Expects datasets to be in tab-seperated CoNLL format, where
+    each line contains a token and its tag (seperated by a tab) and each sentence is seperated
+    by a blank line.
+
+    Example corpus:
+    '''
+    The	O
+    transcription	O
+    of	O
+    most	O
+    RP	B-PRGE
+    genes	I-PRGE
+    ...	O
+    '''
 
     Args:
-        filepath (str): path to directory containing a CoNLL formatted dataset
-        sep (str): Seperator used for dataset at 'filepath'. Defaults to '\t'.
-        replace_rare_tokens (bool): True if rare tokens should be replaced with a special unknown
-            token. Threshold for considering tokens rare can be found at constants.NUM_RARE.
+        directory (str): Path to directory containing CoNLL formatted dataset(s).
+        replace_rare (bool): True if rare tokens should be replaced with a special unknown token.
+            Threshold for considering tokens rare can be found at `saber.constants.NUM_RARE`.
+
     """
-    def __init__(self, filepath, sep='\t', replace_rare_tokens=True):
-        self.log = logging.getLogger(__name__)
-        # collect filepaths for each partition in a dictionary
-        self.partition_filepaths = self.get_filepaths(filepath)
-        # column delimiter in CONLL dataset
-        self.sep = sep
-        self.replace_rare_tokens = replace_rare_tokens
+    def __init__(self, directory=None, replace_rare=True, **kwargs):
+        self.directory = directory
+        # Dont load a corpus unless a directory was passed on object construction
+        if self.directory is not None:
+            self.directory = data_utils.get_filepaths(directory)
+            self.conll_parser = ConllCorpusReader(directory, '.conll', ('words', 'pos'))
+        self.replace_rare = replace_rare
 
-        # word and tag seq from dataset, a dict of dict containing partition: type key value pairs.
-        self.type_seq = {'train': {'word': None, 'char': None, 'tag': None},
-                         'valid': {'word': None, 'char': None, 'tag': None},
-                         'test': {'word': None, 'char': None, 'tag': None},}
-
-        # word, character, and tag types from dataset
+        # lists of unique words, characters, and tags ('types', these are shared across partitions)
         self.types = {'word': None, 'char': None, 'tag': None}
-        # mappings of type: index for word, character and tag types
+        # word, character and tag sequences from dataset (per partition)
+        self.type_seq = {'train': None, 'valid': None, 'test': None}
+        # mappings of word, characters, and tag types to unique integer IDs
         self.type_to_idx = {'word': None, 'char': None, 'tag': None}
-        # inverse mapping from indices to tag types
+        # reverse mapping of unique integer IDs to tag types
         self.idx_to_tag = None
-        # same as type_seq, but all types mapped to int idx according to self.type_to_idx
-        self.idx_seq = {'train': {'word': None, 'char': None, 'tag': None},
-                        'valid': {'word': None, 'char': None, 'tag': None},
-                        'test': {'word': None, 'char': None, 'tag': None},}
+        # same as type_seq but all words, characters and tags have been mapped to unique integer IDs
+        self.idx_seq = {'train': None, 'valid': None, 'test': None}
 
-    def get_filepaths(self, filepath):
-        """Collects 'train' (and, if they exist) 'valid'/'test' parition filepaths from `filepath`.
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
-        Looks for 'train', 'valid' and 'test' partitions at 'filepath/train.*', 'filepath/valid.*'
-        and 'filepath/test.*' respectively. Train set must be provided, valid and test sets are
-        optional.
+    def load(self):
+        """Coordinates the loading of a given data set at `self.directory`.
 
-        Args:
-            filepath (str): path to dataset (corpus)
-
-        Returns:
-            a dictionary with keys 'train', and optionally, 'valid' and 'test' containing the
-            filepaths to the train, valid and test paritions of the dataset at 'filepath'.
+        For a given dataset in CoNLL format at `self.directory`, cordinates the loading of data and
+        updates the approriate instance attributes. Expects `self.directory` to be a directory
+        containing a single file, `train.*` and optionally two additional files, `valid.*` and
+        `test.*`.
 
         Raises:
-            ValueError when no file at filepath/train.* is found.
+            ValueError if `self.directory` is None.
         """
-        partition_filepaths = {}
-        # search for partition filepaths
-        train_partition = glob(os.path.join(filepath, constants.TRAIN_FILE))
-        valid_partition = glob(os.path.join(filepath, constants.VALID_FILE))
-        test_partition = glob(os.path.join(filepath, constants.TEST_FILE))
-
-        # must supply a train file
-        if not train_partition:
-            err_msg = "Must supply at least one file, train.* at {}".format(filepath)
-            self.log.error('ValueError %s', err_msg)
+        if self.directory is None:
+            err_msg = "`Dataset.directory` is None; must be provided before call to `Dataset.load`"
+            LOGGER.error('ValueError %s', err_msg)
             raise ValueError(err_msg)
-        partition_filepaths['train'] = train_partition[0]
 
-        # optionally, valid and test files can be supplied
-        if valid_partition:
-            partition_filepaths['valid'] = valid_partition[0]
-        if test_partition:
-            partition_filepaths['test'] = test_partition[0]
+        self._get_types() # get types (unique words, chars and tags) from CoNLL formatted dataset
+        self._get_type_seq() # get word, char, and tag sequences from CoNLL formatted dataset
+        self._get_idx_maps() # map each word, char, and type to a unique integer
+        self.get_idx_to_tag() # create reverse mapping of unique integers to tags
 
-        return partition_filepaths
-
-    def load_dataset(self, type_to_idx=None):
-        """Coordinates loading of given data set at self.filepath.
-
-        For a given dataset in CoNLL format at filepath, cordinates the loading of data and updates
-        instance attributes. Expects self.filepath to be a directory containing a single file,
-        train.* and optionally two additional files, valid.* and test.*. If this is a type_to_idx
-        must be provided.
-
-        Args:
-            type_to_idx (dict): optional, a mapping of word types to indices
-                (at type_to_idx['word']) and a mapping of char types to indices
-                (at type_to_idx['char']) shared between datasets.
-        """
-        tag_map = constants.INITIAL_MAPPING['tag']
-        # if None, not transfer learning and loading a single dataset
-        if type_to_idx is None:
-            self.load_data_and_labels()
-            self.get_types()
-
-            # generate type to index mappings
-            self.type_to_idx['word'] = Preprocessor.type_to_idx(self.types['word'],
-                                                                constants.INITIAL_MAPPING['word'])
-            self.type_to_idx['char'] = Preprocessor.type_to_idx(self.types['char'],
-                                                                constants.INITIAL_MAPPING['word'])
-        # if not None, transfer learning or loading a compound dataset or both
-        else:
-            self.type_to_idx.update(type_to_idx)
-            # if 'tag' exists, we are transfer learning, use mapping as starting point
-            if 'tag' in type_to_idx:
-                tag_map = type_to_idx['tag']
-
-        # tag to idx maps are not shared in compound datasets, and are extending during TL
-        self.type_to_idx['tag'] = Preprocessor.type_to_idx(self.types['tag'], tag_map)
-
-        # create reverse mapping of indices to tags, save computation downstream
-        self.idx_to_tag = {v: k for k, v in self.type_to_idx['tag'].items()}
-        # use type to idx mapping to get final representation for training
+        # map sequences in `self.type_seq` to integers using `self.type_to_idx`, this is the final
+        # representation used for training
         self.get_idx_seq()
 
-    def load_data_and_labels(self):
-        """Loads CoNLL format data set given at self.trainset_filepath.
+    def _get_types(self):
+        """Collects the sets of all words, characters and tags in a CoNLL formated dataset.
 
-        Updates self.word_seq and self.tag_seq each with a numpy array of lists containg the word
-        and tag sequence respectively. Expects filepath to be a directory containing one file,
-        train.*. The file format is tab-separated values. A blank line is required at the end of
-        each sentence.
-
-        Example dataset:
-        '''
-        The	O
-        transcription	O
-        of	O
-        most	O
-        RP	B-PRGE
-        genes	I-PRGE
-        ...	O
-        '''
+        For the CoNLL formated dataset given at `self.directory`, updates `self.types` with the
+        sets of all words (word types), characters (character types) and tags (tag types). All types
+        are shared across all partitions, that is, word, char and tag types are collected from the
+        train and, if provided, valid/test partitions found at `self.directory/train.*`,
+        `self.directory/valid.*` and `self.directory/test.*`.
         """
-        for partition, filepath in self.partition_filepaths.items():
-            # accumulate sequences across a single partition
-            word_seq, tag_seq = [], []
+        words = [constants.PAD, constants.UNK]
+        chars = [constants.PAD, constants.UNK]
+        tags = [constants.PAD]
 
-            with open(filepath, 'r') as ds:
-                # accumulators per sentence
-                words, tags = [], []
+        for _, filepath in self.directory.items():
+            if filepath is not None:
+                conll_file = os.path.basename(filepath) # get name of conll file
+                # get types for current partiton
+                words.extend(set(self.conll_parser.words(conll_file)))
+                chars.extend(set(chain(*[list(w) for w in self.conll_parser.words(conll_file)])))
+                tags.extend(set([tag[-1] for tag in self.conll_parser.tagged_words(conll_file)]))
+        # pool types across partitions
+        self.types['word'] = list(set(words))
+        self.types['char'] = list(set(chars))
+        self.types['tag'] = list(set(tags))
 
-                for line in ds:
-                    line = line.rstrip() # right strip
+    def _get_type_seq(self):
+        """Loads sequence data from a CoNLL format data set given at `self.directory`.
 
-                    # accumulate each sequence
-                    if not line or line.startswith('-DOCSTART-'):
-                        if words:
-                            word_seq.append(words)
-                            tag_seq.append(tags)
-
-                            words, tags = [], []
-                    # accumulate each word/tag in a sequence
-                    else:
-                        # ignore comment lines
-                        if not line.startswith('# '):
-                            word, tag = line.split(self.sep)
-                            words.append(word)
-                            tags.append(tag)
-
-                # in order to collect last sentence in the file
-                word_seq.append(words)
-                tag_seq.append(tags)
-
-            # replace all rare tokens with special unknown token
-            if self.replace_rare_tokens:
-                word_seq = Preprocessor.replace_rare_tokens(word_seq)
-
-            self.type_seq[partition] = {'word': word_seq, 'tag': tag_seq}
-
-    def get_types(self):
-        """Returns word types, char types and tag types.
-
-        Returns the word types, character types and tag types for the current
-        loaded dataset. All types are shared across all partitions, that is,
-        word, char and tag types are collected from train, valid, and test
-        partitions (if provided),
-
-        Returns:
-            a three-tuple containing the word types, chararcter types and
-            tag types.
+        For the CoNLL formated dataset given at `self.directory`, updates `self.type_seq` with
+        lists containg the word, character and tag sequences for the train and, if provided,
+        valid/test partitions found at `self.directory/train.*`, `self.directory/valid.*` and
+        `self.directory/test.*`.
         """
-        # Word types
-        # iterate over all partitions which have a not None value at type_seq[partition]['word'],
-        # that is, all partitions present in the dataset
-        word_types = [s for p in self.type_seq.values() if p['word'] is not None for s in p['word']]
-        # flatten list of word types, and convert to set to get unqiue elements
-        word_types = list(set(chain.from_iterable(word_types)))
+        for partition, filepath in self.directory.items():
+            if filepath is not None:
+                conll_file = os.path.basename(filepath) # get name of conll file
 
-        # Char types
-        char_types = []
-        for word in word_types:
-            char_types.extend(list(word))
-        char_types = list(set(char_types))
+                # collect sequence data
+                sents = list(self.conll_parser.sents(conll_file))
+                tagged_sents = list(self.conll_parser.tagged_sents(conll_file))
 
-        # Tag types
-        tag_types = [s for p in self.type_seq.values() if p['tag'] is not None for s in p['tag']]
-        tag_types = list(set(chain.from_iterable(tag_types)))
+                word_seq = Preprocessor.replace_rare_tokens(sents) if self.replace_rare else sents
+                char_seq = [[[c for c in w] for w in s] for s in sents]
+                tag_seq = [[t[-1] for t in s] for s in tagged_sents]
 
-        self.types['word'] = word_types
-        self.types['char'] = char_types
-        self.types['tag'] = tag_types
+                # update the class attributes
+                self.type_seq[partition] = {'word': word_seq, 'char': char_seq, 'tag': tag_seq}
+
+    def _get_idx_maps(self):
+        """Updates `self.type_to_idx` with mappings from word, char and tag types to unique int IDs.
+        """
+        # generate type to index mappings
+        self.type_to_idx['word'] = Preprocessor.type_to_idx(self.types['word'],
+                                                            constants.INITIAL_MAPPING['word'])
+        self.type_to_idx['char'] = Preprocessor.type_to_idx(self.types['char'],
+                                                            constants.INITIAL_MAPPING['word'])
+        self.type_to_idx['tag'] = Preprocessor.type_to_idx(self.types['tag'],
+                                                           constants.INITIAL_MAPPING['tag'])
 
     def get_idx_seq(self):
-        """Get the index sequence for 'word', 'char', and 'tag' types for all paritions.
+        """Udpates `self.idx_seq` with the final representation of the data used for training.
 
-        For paritions 'train' and (optionally) 'valid' and 'test', maps all 'word', 'char', and
-        'tag' types to a unique integer index. Returns a dictionary of dictionaries, where the
-        first dictionary contains keys for each parition ('train', 'valid', 'test') and the
-        nested dictionaries contains keys for each type ('word', 'char', 'tag').
-
-        Returns:
-            dictionary of dictionaries, containing the index sequences for 'word', 'char', and 'tag'
-            types for all paritions 'train', 'valid' and 'test'.
+        Updates `self.idx_seq` with numpy arrays, by using `self.type_to_idx` to map all elements
+        in `self.type_seq` to their corresponding integer IDs, for the train and, if provided,
+        valid/test partitions found at `self.directory/train.*`, `self.directory/valid.*` and
+        `self.directory/test.*`.
         """
-        for partition in self.partition_filepaths:
-            self.idx_seq[partition] = {
-                'word': Preprocessor.get_type_idx_sequence(self.type_seq[partition]['word'],
-                                                           self.type_to_idx['word'],
-                                                           type_='word'),
-                'char': Preprocessor.get_type_idx_sequence(self.type_seq[partition]['word'],
-                                                           self.type_to_idx['char'],
-                                                           type_='char'),
-                'tag': Preprocessor.get_type_idx_sequence(self.type_seq[partition]['tag'],
-                                                          self.type_to_idx['tag'],
-                                                          type_='tag'),
-            }
+        for partition, filepath in self.directory.items():
+            if filepath is not None:
+                self.idx_seq[partition] = {
+                    'word': Preprocessor.get_type_idx_sequence(self.type_seq[partition]['word'],
+                                                               self.type_to_idx['word'],
+                                                               type_='word'),
+                    'char': Preprocessor.get_type_idx_sequence(self.type_seq[partition]['word'],
+                                                               self.type_to_idx['char'],
+                                                               type_='char'),
+                    'tag': Preprocessor.get_type_idx_sequence(self.type_seq[partition]['tag'],
+                                                              self.type_to_idx['tag'],
+                                                              type_='tag'),
+                }
 
-            self.idx_seq[partition]['tag'] = model_utils.idx_seq_to_categorical(
-                self.idx_seq[partition]['tag'], num_classes=len(self.type_to_idx['tag'])
-            )
+                # one-hot encode our targets
+                self.idx_seq[partition]['tag'] = \
+                    data_utils.one_hot_encode(self.idx_seq[partition]['tag'])
+
+    def get_idx_to_tag(self):
+        """Updates `seld.idx_to_tag` a reverse mapping of `self.type_to_idx['tag']`.
+        """
+        self.idx_to_tag = {v: k for k, v in self.type_to_idx['tag'].items()}
