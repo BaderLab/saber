@@ -469,7 +469,7 @@
 <p>If your goal is simply to use Saber to annotate biomedical text, then you can either use the <a href="#web-service">web-service</a> or a <a href="#pre-trained-models">pre-trained model</a>.</p>
 <h2 id="web-service">Web-service<a class="headerlink" href="#web-service" title="Permanent link">&para;</a></h2>
 <p>To use Saber as a <strong>local</strong> web-service, run:</p>
-<div class="codehilite"><pre><span></span>(saber) $ python -m saber.app
+<div class="codehilite"><pre><span></span>(saber) $ python -m saber.cli.app
 </pre></div>
 
 <p>or, if you prefer, you can pull &amp; run the Saber image from <strong>Docker Hub</strong>:</p>
@@ -514,18 +514,19 @@ $ docker run -it --rm -p <span class="m">5000</span>:5000 --name saber pathwayco
 <span class="k">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">reason</span><span class="p">)</span>
 </pre></div></div>
 </div>
-<p>Documentation for the Saber web-service API can be found <a href="https://baderlab.github.io/saber-api-docs/">here</a>. We hope to provide a live version of the web-service soon!</p>
+<details class="warning"><summary>Warning</summary><p>The first request to the web-service will be slow (~30s). This is because a large language
+model needs to be loaded into memory.</p></details><p>Documentation for the Saber web-service API can be found <a href="https://baderlab.github.io/saber-api-docs/">here</a>. We hope to provide a live version of the web-service soon!</p>
 <h2 id="pre-trained-models">Pre-trained models<a class="headerlink" href="#pre-trained-models" title="Permanent link">&para;</a></h2>
-<p>First, import <code>SequenceProcessor</code>. This class coordinates training, annotation, saving and loading of models and datasets. In short, this is the interface to Saber</p>
-<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber.sequence_processor</span> <span class="kn">import</span> <span class="n">SequenceProcessor</span>
+<p>First, import <code>Saber</code>. This class coordinates training, annotation, saving and loading of models and datasets. In short, this is the interface to Saber.</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber</span> <span class="kn">import</span> <span class="n">Saber</span>
 </pre></div>
 
-<p>To load a pre-trained model, we first create a <code>SequenceProcessor</code> object</p>
-<div class="codehilite"><pre><span></span><span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
+<p>To load a pre-trained model, we first create a <code>Saber</code> object</p>
+<div class="codehilite"><pre><span></span><span class="n">saber</span> <span class="o">=</span> <span class="n">Saber</span><span class="p">()</span>
 </pre></div>
 
 <p>and then load the model of our choice</p>
-<div class="codehilite"><pre><span></span><span class="n">sp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;PRGE&#39;</span><span class="p">)</span>
+<div class="codehilite"><pre><span></span><span class="n">saber</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;PRGE&#39;</span><span class="p">)</span>
 </pre></div>
 
 <p>You can see all the pre-trained models in the <a href="https://baderlab.github.io/saber-api-docs/">web-service API docs</a> or, alternatively, by running the following line of code</p>
@@ -533,18 +534,18 @@ $ docker run -it --rm -p <span class="m">5000</span>:5000 --name saber pathwayco
 </pre></div>
 
 <p>To annotate text with the model, just call the <code>annotate()</code> method</p>
-<div class="codehilite"><pre><span></span><span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">)</span>
+<div class="codehilite"><pre><span></span><span class="n">saber</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">)</span>
 </pre></div>
 
-<h3 id="coreference-resolution">Coreference Resolution<a class="headerlink" href="#coreference-resolution" title="Permanent link">&para;</a></h3>
+<details class="warning"><summary>Warning</summary><p>The <code>annotate</code> method will be slow the first time you call it (~30s). This is because a large language model needs to be loaded into memory.</p></details><h3 id="coreference-resolution">Coreference Resolution<a class="headerlink" href="#coreference-resolution" title="Permanent link">&para;</a></h3>
 <p><a href="http://www.wikiwand.com/en/Coreference"><strong>Coreference</strong></a> occurs when two or more expressions in a text refer to the same person or thing, that is, they have the same <strong>referent</strong>. Take the following example:</p>
 <p><em>"<strong>IL-6</strong> supports tumour growth and metastasising in terminal patients, and <strong>it</strong> significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy."</em></p>
 <p>Clearly, "<strong>it</strong>" referes to "<strong>IL-6</strong>". If we do not resolve this coreference, then "<strong>it</strong>" will not be labeled as an entity and any relation or event it is mentioned in will not be extracted. Saber uses <a href="https://github.com/huggingface/neuralcoref">NeuralCoref</a>, a state-of-the-art coreference resolution tool based on neural nets and built on top of <a href="https://spacy.io">Spacy</a>. To use it, just supply the argument <code>coref=True</code> (which is <code>False</code> by default) to the <code>annotate()</code> method</p>
 <div class="codehilite"><pre><span></span><span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;IL-6 supports tumour growth and metastasising in terminal patients, and it significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy.&quot;</span>
 <span class="c1"># WITHOUT coreference resolution</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">coref</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">coref</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 <span class="c1"># WITH coreference resolution</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">coref</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">coref</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 
 <div class="admonition note">
@@ -554,7 +555,7 @@ $ docker run -it --rm -p <span class="m">5000</span>:5000 --name saber pathwayco
 <p>Saber currently takes the simplest possible approach: replace all coreference mentions with their referent, and then feed the resolved text to the model that identifies named entities.</p>
 <h3 id="working-with-annotations">Working with annotations<a class="headerlink" href="#working-with-annotations" title="Permanent link">&para;</a></h3>
 <p>The <code>annotate()</code> method returns a simple <code>dict</code> object</p>
-<div class="codehilite"><pre><span></span><span class="n">ann</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">)</span>
+<div class="codehilite"><pre><span></span><span class="n">ann</span> <span class="o">=</span> <span class="n">saber</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">)</span>
 </pre></div>
 
 <p>which contains the keys <code>title</code>, <code>text</code> and <code>ents</code>:</p>

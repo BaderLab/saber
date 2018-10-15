@@ -525,77 +525,77 @@
 <p>You can interact with Saber as a web-service (explained in <a href="https://baderlab.github.io/saber/quick_start/">Quick start</a>), command line tool, python package, or via the Juypter notebooks. If you created a virtual environment, <em>remember to activate it first</em>.</p>
 <h3 id="command-line-tool">Command line tool<a class="headerlink" href="#command-line-tool" title="Permanent link">&para;</a></h3>
 <p>Currently, the command line tool simply trains the model. To use it, call</p>
-<div class="codehilite"><pre><span></span>(saber) $ python -m saber.train
+<div class="codehilite"><pre><span></span>(saber) $ python -m saber.cli.train
 </pre></div>
 
 <p>along with any command line arguments. For example, to train the model on the <a href="https://www.ncbi.nlm.nih.gov/CBBresearch/Dogan/DISEASE/">NCBI Disease</a> corpus</p>
-<div class="codehilite"><pre><span></span>(saber) $ python -m saber.train --dataset_folder NCBI_Disease_BIO
+<div class="codehilite"><pre><span></span>(saber) $ python -m saber.cli.train --dataset_folder NCBI_Disease_BIO
 </pre></div>
 
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>See <a href="https://baderlab.github.io/saber/resources/">Resources</a> for help preparing datasets for training.</p>
 </div>
-<p>Run <code>python -m saber.train --help</code> to see all possible arguments.</p>
+<p>Run <code>python -m saber.cli.train --help</code> to see all possible arguments.</p>
 <p>Of course, supplying arguments at the command line can quickly become cumbersome. Saber also allows you to provide a configuration file, which can be specified like so</p>
-<div class="codehilite"><pre><span></span>(saber) $ python -m saber.train --config_filepath path/to/config.ini
+<div class="codehilite"><pre><span></span>(saber) $ python -m saber.cli.train --config_filepath path/to/config.ini
 </pre></div>
 
 <p>Copy the contents of the <a href="https://github.com/BaderLab/saber/blob/master/saber/config.ini">default config file</a> to a new <code>*.ini</code> file in order to get started.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Arguments supplied at the command line overwrite those found in the configuration file, e.g.,</p>
-<div class="codehilite"><pre><span></span>(saber) $ python -m saber.train --dataset_folder path/to/dataset --k_folds 10
+<div class="codehilite"><pre><span></span>(saber) $ python -m saber.cli.train --dataset_folder path/to/dataset --k_folds 10
 </pre></div>
 
 <p>would overwrite the arguments for <code>dataset_folder</code> and <code>k_folds</code> found in the configuration file.</p>
 </div>
 <h3 id="python-package">Python package<a class="headerlink" href="#python-package" title="Permanent link">&para;</a></h3>
-<p>You can also import Saber and interact with it as a python package. Saber exposes its functionality through the <code>SequenceProcessor</code> class. Here is just about everything Saber does in one script:</p>
-<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber.sequence_processor</span> <span class="kn">import</span> <span class="n">SequenceProcessor</span>
+<p>You can also import Saber and interact with it as a python package. Saber exposes its functionality through the <code>Saber</code> class. Here is just about everything Saber does in one script:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber</span> <span class="kn">import</span> <span class="n">Saber</span>
 
-<span class="c1"># First, create a SequenceProcessor object, which exposes Sabers functionality</span>
-<span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
+<span class="c1"># First, create a Saber object, which exposes Sabers functionality</span>
+<span class="n">saber</span> <span class="o">=</span> <span class="n">Saber</span><span class="p">()</span>
 
 <span class="c1"># Load a dataset and create a model (provide a list of datasets to use multi-task learning!)</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/GENIA&#39;</span><span class="p">)</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">create_model</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/GENIA&#39;</span><span class="p">)</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
 
 <span class="c1"># Train and save a model</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
 
 <span class="c1"># Load a model</span>
 <span class="k">del</span> <span class="n">sp</span>
-<span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
+<span class="n">saber</span> <span class="o">=</span> <span class="n">Saber</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
 
 <span class="c1"># Perform prediction on raw text, get resulting annotation</span>
 <span class="n">raw_text</span> <span class="o">=</span> <span class="s1">&#39;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&#39;</span>
-<span class="n">annotation</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">raw_text</span><span class="p">)</span>
+<span class="n">annotation</span> <span class="o">=</span> <span class="n">saber</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">raw_text</span><span class="p">)</span>
 
 <span class="c1"># Use transfer learning to continue training on a new dataset</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/CRAFT&#39;</span><span class="p">)</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/CRAFT&#39;</span><span class="p">)</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
 </pre></div>
 
 <h4 id="transfer-learning">Transfer learning<a class="headerlink" href="#transfer-learning" title="Permanent link">&para;</a></h4>
 <p>Transfer learning is as easy as training, saving, loading, and then continuing training of a model. Here is an example</p>
 <div class="codehilite"><pre><span></span><span class="c1"># Create and train a model on GENIA corpus</span>
-<span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/GENIA&#39;</span><span class="p">)</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">create_model</span><span class="p">()</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
+<span class="n">saber</span> <span class="o">=</span> <span class="n">Saber</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/GENIA&#39;</span><span class="p">)</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
 
 <span class="c1"># Load that model</span>
 <span class="k">del</span> <span class="n">sp</span>
-<span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
+<span class="n">saber</span> <span class="o">=</span> <span class="n">Saber</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
 
 <span class="c1"># Use transfer learning to continue training on a new dataset</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/CRAFT&#39;</span><span class="p">)</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/CRAFT&#39;</span><span class="p">)</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
 </pre></div>
 
 <div class="admonition info">
@@ -605,13 +605,13 @@
 <h4 id="multi-task-learning">Multi-task learning<a class="headerlink" href="#multi-task-learning" title="Permanent link">&para;</a></h4>
 <p>Multi-task learning is as easy as specifying multiple dataset paths, either in the <code>config</code> file, at the command line via the flag <code>--dataset_folder</code>, or as an argument to <code>load_dataset()</code>. The number of datasets is arbitrary.</p>
 <p>Here is an example using the last method</p>
-<div class="codehilite"><pre><span></span><span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
+<div class="codehilite"><pre><span></span><span class="n">saber</span> <span class="o">=</span> <span class="n">Saber</span><span class="p">()</span>
 
 <span class="c1"># Simply pass multiple dataset paths as a list to load_dataset to use multi-task learning.</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">([</span><span class="s1">&#39;path/to/datasets/NCBI_Disease&#39;</span><span class="p">,</span> <span class="s1">&#39;path/to/datasets/Linnaeus&#39;</span><span class="p">])</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">([</span><span class="s1">&#39;path/to/datasets/NCBI_Disease&#39;</span><span class="p">,</span> <span class="s1">&#39;path/to/datasets/Linnaeus&#39;</span><span class="p">])</span>
 
-<span class="n">sp</span><span class="o">.</span><span class="n">create_model</span><span class="p">()</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
 </pre></div>
 
 <h4 id="training-on-gpus">Training on GPUs<a class="headerlink" href="#training-on-gpus" title="Permanent link">&para;</a></h4>
@@ -619,19 +619,15 @@
 <div class="codehilite"><pre><span></span>(saber) $ pip install tensorflow-gpu
 </pre></div>
 
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Use <code>pip install tensorflow-gpu==1.7.0</code> if you would like to train on multiple GPUs as <code>tensorflow-gpu</code> versions <code>&gt;1.7.0</code> are currently throwing errors.</p>
-</div>
-<p>To control which GPUs Saber trains on, you can use the <code>CUDA_VISIBLE_DEVICES</code> environment variable, e.g.,</p>
+<details class="warning"><summary>Warning</summary><p>Use <code>pip install tensorflow-gpu==1.7.0</code> if you would like to train on multiple GPUs as <code>tensorflow-gpu</code> versions <code>&gt;1.7.0</code> are currently throwing errors.</p></details><p>To control which GPUs Saber trains on, you can use the <code>CUDA_VISIBLE_DEVICES</code> environment variable, e.g.,</p>
 <div class="codehilite"><pre><span></span># To train exclusively on CPU
-(saber) $ CUDA_VISIBLE_DEVICES=&quot;&quot; python -m saber.train
+(saber) $ CUDA_VISIBLE_DEVICES=&quot;&quot; python -m saber.cli.train
 
 # To train on 1 GPU with ID=0
-(saber) $ CUDA_VISIBLE_DEVICES=&quot;0&quot; python -m saber.train
+(saber) $ CUDA_VISIBLE_DEVICES=&quot;0&quot; python -m saber.cli.train
 
 # To train on 2 GPUs with IDs=0,2
-(saber) $ CUDA_VISIBLE_DEVICES=&quot;0,2&quot; python -m saber.train
+(saber) $ CUDA_VISIBLE_DEVICES=&quot;0,2&quot; python -m saber.cli.train
 </pre></div>
 
 <div class="admonition tip">
@@ -643,17 +639,17 @@
 <h5 id="saving-a-model">Saving a model<a class="headerlink" href="#saving-a-model" title="Permanent link">&para;</a></h5>
 <p>Assuming the model has already been created (see above), we can easily save our model like so</p>
 <div class="codehilite"><pre><span></span><span class="n">save_dir</span> <span class="o">=</span> <span class="s1">&#39;path/to/pretrained_models/mymodel&#39;</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">save_dir</span><span class="p">)</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">save_dir</span><span class="p">)</span>
 </pre></div>
 
 <h5 id="loading-a-model">Loading a model<a class="headerlink" href="#loading-a-model" title="Permanent link">&para;</a></h5>
-<p>Lets illustrate loading a model with a new <code>SequenceProccesor</code> object</p>
-<div class="codehilite"><pre><span></span><span class="c1"># Delete our previous SequenceProccesor object (if it exists)</span>
-<span class="k">if</span> <span class="s1">&#39;sp&#39;</span> <span class="ow">in</span> <span class="nb">locals</span><span class="p">():</span> <span class="k">del</span> <span class="n">sp</span>
-<span class="c1"># Create a new SequenceProccesor object</span>
-<span class="n">sp</span> <span class="o">=</span> <span class="n">SequenceProcessor</span><span class="p">()</span>
+<p>Lets illustrate loading a model with a new <code>Saber</code> object</p>
+<div class="codehilite"><pre><span></span><span class="c1"># Delete our previous Saber object (if it exists)</span>
+<span class="k">del</span> <span class="n">saber</span>
+<span class="c1"># Create a new Saber object</span>
+<span class="n">saber</span> <span class="o">=</span> <span class="n">Saber</span><span class="p">()</span>
 <span class="c1"># Load a previous model</span>
-<span class="n">sp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path_to_saved_model</span><span class="p">)</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path_to_saved_model</span><span class="p">)</span>
 </pre></div>
 
 <h3 id="juypter-notebooks">Juypter notebooks<a class="headerlink" href="#juypter-notebooks" title="Permanent link">&para;</a></h3>
