@@ -3,17 +3,18 @@
 
 Run the script with:
 ```
-python -m saber.train
+python -m saber.cli.train
 ```
 e.g.
 ```
-python -m saber.train --dataset_folder ./datasets/NCBI_disease_BIO --epochs 25
+python -m saber.cli.train --dataset_folder ./datasets/NCBI_disease_BIO --epochs 25
 ```
 """
 import logging
 
-from saber.config import Config
-from saber.sequence_processor import SequenceProcessor
+from ..config import Config
+from ..saber import Saber
+
 
 def main():
     """Coordinates a complete training cycle, including reading in a config, loading dataset(s),
@@ -22,23 +23,23 @@ def main():
     config = Config(cli=True)
 
     # currently performs training by default
-    sp = SequenceProcessor(config)
-    sp.load_dataset()
+    saber = Saber(config)
+    saber.load_dataset()
 
     # if pretrained token embeddings are provided, load them
     if config.pretrained_embeddings:
-        sp.load_embeddings()
-    sp.create_model()
+        saber.load_embeddings()
+    saber.build()
 
     try:
-        sp.fit()
+        saber.train()
     except KeyboardInterrupt:
         print("\nQutting Saber...")
         logging.warning('Saber was terminated early due to KeyboardInterrupt')
     finally:
         # save the model
         if config.save_model:
-            sp.save()
+            saber.save()
 
 if __name__ == '__main__':
     main()
