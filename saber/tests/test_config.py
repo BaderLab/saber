@@ -1,14 +1,14 @@
-"""Any and all unit tests for the Config class (saber/config.py).
+"""Contains any and all unit tests for the Config class (saber/config.py).
 """
 import configparser
-import copy
 import os
 
 import pytest
 
 from ..config import Config
-from ..constants import (PATH_TO_DUMMY_CONFIG, PATH_TO_DUMMY_DATASET,
-                         PATH_TO_DUMMY_EMBEDDINGS)
+from .resources.dummy_constants import (PATH_TO_DUMMY_CONFIG,
+                                        PATH_TO_DUMMY_DATASET,
+                                        PATH_TO_DUMMY_EMBEDDINGS)
 
 # Sections of the .ini file
 CONFIG_SECTIONS = ['mode', 'data', 'model', 'training', 'advanced']
@@ -111,6 +111,8 @@ DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'mt-lstm-crf',
                             'variational_dropout': True,
                            }
 
+######################################### PYTEST FIXTURES #########################################
+
 @pytest.fixture
 def config_no_cli_args():
     """Returns an instance of a Config object after parsing the dummy config file with no command
@@ -136,6 +138,8 @@ def config_with_cli_args():
     dummy_config._process_args(DUMMY_COMMAND_LINE_ARGS)
 
     return dummy_config
+
+############################################ UNIT TESTS ############################################
 
 def test_process_args_no_cli_args(config_no_cli_args):
     """Asserts the Config.config object contains the expected attributes after initializing a Config

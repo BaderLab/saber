@@ -1,91 +1,94 @@
-import os
-
+"""Any and all unit tests for the Metrics class (saber/metrics.py).
+"""
 import pytest
 
 from .. import constants
 from ..config import Config
-from ..constants import (PATH_TO_DUMMY_CONFIG, PATH_TO_DUMMY_DATASET,
-                         PATH_TO_DUMMY_EMBEDDINGS)
+from ..dataset import Dataset
 from ..metrics import Metrics
-from ..sequence_processor import SequenceProcessor
 from ..utils import model_utils
+from .resources.dummy_constants import (PATH_TO_DUMMY_CONFIG,
+                                        PATH_TO_DUMMY_DATASET)
 
 PATH_TO_METRICS_OUTPUT = 'totally/arbitrary'
 
+######################################### PYTEST FIXTURES #########################################
+
 @pytest.fixture
 def dummy_config():
-    """Returns an instance of a Config object after parsing the dummy
-    config file."""
-    # create a dictionary to serve as cli arguments
-    cli_arguments = {'dataset_folder': [PATH_TO_DUMMY_DATASET]}
-    # create the config object, taking into account the CLI args
+    """Returns an instance of a Config object."""
     dummy_config = Config(PATH_TO_DUMMY_CONFIG)
-    dummy_config._process_args(cli_arguments)
-
     return dummy_config
 
 @pytest.fixture
-def multi_task_lstm_crf_single_model(dummy_config):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the
-    default configuration file and a single compiled model."""
-    seq_processor_with_single_ds = SequenceProcessor(dummy_config)
-    seq_processor_with_single_ds.load_dataset(PATH_TO_DUMMY_DATASET)
-    seq_processor_with_single_ds.load_embeddings(PATH_TO_DUMMY_EMBEDDINGS)
-    seq_processor_with_single_ds.create_model()
-    multi_task_lstm_crf_single_model = seq_processor_with_single_ds.model
+def dummy_dataset():
+    """Returns a single dummy Dataset instance after calling Dataset.load().
+    """
+    # Don't replace rare tokens for the sake of testing
+    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET, replace_rare=False)
+    dataset.load()
 
-    return multi_task_lstm_crf_single_model
+    return dataset
 
 @pytest.fixture
-def dummy_output_directory(dummy_config):
-    """Returns a list of ouput directories, one for each dataset."""
-    return model_utils.prepare_output_directory(dummy_config.dataset_folder,
-                                                dummy_config.output_folder)
+def dummy_output_dir(tmpdir, dummy_config):
+    """Returns list of output directories."""
+    # make sure top-level directory is the pytest tmpdir
+    dummy_config.output_folder = tmpdir
+    output_dirs = model_utils.prepare_output_directory(dummy_config)
+
+    return output_dirs
 
 @pytest.fixture
-def dummy_metrics_single_model(multi_task_lstm_crf_single_model, dummy_output_directory):
-    """Returns a Metrics object for the given model, 'multi_task_lstm_crf_single_model'"""
-    model = multi_task_lstm_crf_single_model
-    ds = model.ds[0]
+def dummy_training_data(dummy_dataset):
+    """Returns training data from `dummy_dataset`.
+    """
+    training_data = {'x_train': [dummy_dataset.idx_seq['train']['word'],
+                                 dummy_dataset.idx_seq['train']['char']],
+                     'x_valid': None,
+                     'x_test': None,
+                     'y_train': dummy_dataset.idx_seq['train']['tag'],
+                     'y_valid': None,
+                     'y_test': None,
+                    }
 
-    training_data = {
-        'X_train': [ds.idx_seq['train']['word'], ds.idx_seq['train']['char']],
-        'X_valid': None,
-        'X_test': None,
-        'y_train': ds.idx_seq['train']['tag'],
-        'y_valid': None,
-        'y_test': None,
-    }
+    return training_data
 
-    return Metrics(training_data=training_data, idx_to_tag=ds.idx_to_tag, output_dir=dummy_output_directory[0])
+@pytest.fixture
+def dummy_metrics(dummy_config, dummy_dataset, dummy_training_data, dummy_output_dir):
+    """Returns an instance of Metrics.
+    """
+    metrics = Metrics(config=dummy_config,
+                      training_data=dummy_training_data,
+                      index_map=dummy_dataset.idx_to_tag,
+                      output_dir=dummy_output_dir,
+                      # to test passing of arbitrary keyword args to constructor
+                      totally_arbitrary='arbitrary')
+    return metrics
 
-def test_attributes_after_initilization_of_metrics(multi_task_lstm_crf_single_model,
-                                                   dummy_metrics_single_model,
-                                                   dummy_output_directory):
+############################################ UNIT TESTS ############################################
+
+def test_attributes_after_initilization(dummy_config,
+                                        dummy_dataset,
+                                        dummy_output_dir,
+                                        dummy_training_data,
+                                        dummy_metrics):
     """Asserts instance attributes are initialized correctly when Metrics object is initialized."""
-    model = multi_task_lstm_crf_single_model
-    ds = model.ds[0]
-    metrics = dummy_metrics_single_model
-    output_dir = dummy_output_directory[0]
+    assert dummy_metrics.config is dummy_config
+    assert dummy_metrics.training_data is dummy_training_data
+    assert dummy_metrics.index_map is dummy_dataset.idx_to_tag
 
-    X_train_word, X_train_char = metrics.training_data['X_train']
-    y_train = metrics.training_data['y_train']
+    assert dummy_metrics.output_dir == dummy_output_dir
+    assert dummy_metrics.current_epoch == 0
 
-    assert X_train_word.shape == ds.idx_seq['train']['word'].shape
-    assert X_train_char.shape == ds.idx_seq['train']['char'].shape
-    assert y_train.shape == ds.idx_seq['train']['tag'].shape
+    assert dummy_metrics.performance_metrics == {p: [] for p in constants.PARTITIONS}
 
-    assert metrics.idx_to_tag == ds.idx_to_tag
-    assert metrics.output_dir == output_dir
-    assert metrics.criteria == 'exact'
-    assert metrics.current_epoch == 0
-    assert metrics.current_fold == None
-    assert metrics.performance_metrics_per_epoch == {p: [] for p in constants.PARTITIONS}
+    # test that we can pass arbitrary keyword arguments
+    assert dummy_metrics.totally_arbitrary == 'arbitrary'
 
-
-def test_precision_recall_f1_support_errors():
-    """Asserts that call to Metrics.get_precision_recall_f1_support raises a ValueError error when
-    an invalid value for parameter 'criteria' is passed."""
+def test_precision_recall_f1_support_value_error():
+    """Asserts that call to `Metrics.get_precision_recall_f1_support` raises a `ValueError` error
+    when an invalid value for parameter `criteria` is passed."""
     # these are totally arbitrary
     y_true = [('test', 0, 3), ('test', 4, 7), ('test', 8, 11)]
     y_pred = [('test', 0, 3), ('test', 4, 7), ('test', 8, 11)]

@@ -3,14 +3,9 @@
 import pytest
 
 from ..utils import app_utils
+from .resources.dummy_constants import DUMMY_ENTITIES
 
-ENTITIES = {'ANAT': False,
-            'CHED': True,
-            'DISO': False,
-            'LIVB': True,
-            'PRGE': True,
-            'TRIG': False,
-           }
+############################################ UNIT TESTS ############################################
 
 def test_get_pubmed_xml_errors():
     """Asserts that call to app_utils.get_pubmed_xml raises a ValueError error when an invalid
@@ -37,8 +32,8 @@ def test_harmonize_entities():
                         'LIVB': False, 'PRGE': False, 'TRIG': False}
 
     assert one_on_expected == \
-        app_utils.harmonize_entities(ENTITIES, one_on_test)
+        app_utils.harmonize_entities(DUMMY_ENTITIES, one_on_test)
     assert multi_on_expected == \
-        app_utils.harmonize_entities(ENTITIES, multi_on_test)
+        app_utils.harmonize_entities(DUMMY_ENTITIES, multi_on_test)
     assert none_on_expected == \
-        app_utils.harmonize_entities(ENTITIES, none_on_test)
+        app_utils.harmonize_entities(DUMMY_ENTITIES, none_on_test)
