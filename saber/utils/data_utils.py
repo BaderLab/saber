@@ -137,7 +137,7 @@ def setup_dataset_for_transfer(dataset, type_to_idx):
     dataset.get_idx_to_tag() # re-generate index to tag mapping
     dataset.get_idx_seq() # re-generate index sequence
 
-def one_hot_encode(idx_seq):
+def one_hot_encode(idx_seq, num_classes=None):
     """One-hot encodes a given class vector.
 
     Converts a class matrix of integers, `idx_seq`, of shape (num examples, sequence length) to a
@@ -152,7 +152,7 @@ def one_hot_encode(idx_seq):
             (num examples, sequence length, num_classes)
     """
     # convert to one-hot encoding
-    one_hots = [to_categorical(s) for s in idx_seq]
+    one_hots = [to_categorical(s, num_classes) for s in idx_seq]
     one_hots = np.array(one_hots)
 
     return one_hots
