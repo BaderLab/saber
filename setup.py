@@ -28,11 +28,14 @@ setuptools.setup(
         'Flask>=1.0.2',
         'waitress>=1.1.0',
         'keras>=2.2.0',
+        'keras_contrib',
         'PTable>=0.9.2',
         'spacy>=2.0.11',
-        'gensim>=3.4.0'
+        'gensim>=3.4.0',
+        'nltk',
     ],
     include_package_data=True,
+    dependency_links=["https://github.com/keras-team/keras-contrib/tarball/master#egg=keras_contrib"],
     # allows us to install + run tests with `python setup.py test`
     # https://docs.pytest.org/en/latest/goodpractices.html#integrating-with-setuptools-python-setup-py-test-pytest-runner
     setup_requires=['pytest-runner'],
