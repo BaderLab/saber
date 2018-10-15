@@ -136,7 +136,7 @@ If your goal is simply to use Saber to annotate biomedical text, then you can ei
 To use Saber as a **local** web-service, run:
 
 ```bash
-(saber) $ python -m saber.app
+(saber) $ python -m saber.cli.app
 ```
 
 or, if you prefer, you can pull & run the Saber image from **Docker Hub**:
@@ -175,22 +175,22 @@ Documentation for the Saber web-service API can be found [here](https://baderlab
 
 ### Pre-trained models
 
-First, import `SequenceProcessor`. This is the interface to Saber
+First, import `Saber`. This is the interface to Saber
 
 ```python
-from saber.sequence_processor import SequenceProcessor
+from saber import Saber
 ```
 
-To load a pre-trained model, we first create a `SequenceProcessor` object
+To load a pre-trained model, we first create a `Saber` object
 
 ```python
-sp = SequenceProcessor()
+saber = Saber()
 ```
 
 and then load the model of our choice
 
 ```python
-sp.load('PRGE')
+saber.load('PRGE')
 ```
 
 You can see all the pre-trained models in the [web-service API docs](https://baderlab.github.io/saber-api-docs/) or, alternatively, by running the following line of code
@@ -202,7 +202,7 @@ from saber.constants import ENTITIES; print(list(ENTITIES.keys()))
 To annotate text with the model, just call the `annotate()` method
 
 ```python
-sp.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.")
+saber.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.")
 ```
 
 See the [documentation](https://baderlab.github.io/saber/quick_start/) for more details.
