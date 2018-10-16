@@ -11,6 +11,8 @@ from .utils import generic_utils
 
 # TODO: Some arguments still need help strings written
 
+LOGGER = logging.getLogger(__name__)
+
 class Config(object):
     """A class for managing all hyperparameters and configurations of a model.
 
@@ -23,7 +25,6 @@ class Config(object):
         cli (bool): True if command line arguments will be supplied, defaults to False.
     """
     def __init__(self, filepath='config.ini', cli=False):
-        self.log = logging.getLogger(__name__)
         # filepath to config file
         self.filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filepath)
         # parse args provided in configuration file
@@ -106,7 +107,7 @@ class Config(object):
         except KeyError as key:
             err_msg = ('KeyError raised for key {}. This may have happened because there is no '
                        '.ini file at: {}').format(key, self.filepath)
-            self.log.error('KeyError %s', err_msg)
+            LOGGER.error('KeyError %s', err_msg)
             print(err_msg)
         else:
             # overwrite any parameters in the config if specfied at command line
@@ -123,7 +124,7 @@ class Config(object):
             for arg, value in args.items():
                 setattr(self, arg, value)
 
-        self.log.debug('Hyperparameters and model details %s', args)
+        LOGGER.debug('Hyperparameters and model details %s', args)
 
         return args
 
@@ -149,8 +150,7 @@ class Config(object):
         args['dataset_folder'] = [generic_utils.clean_path(ds) for ds in args['dataset_folder']]
         args['output_folder'] = generic_utils.clean_path(args['output_folder'])
         if args['pretrained_model_weights']:
-            args['pretrained_model_weights'] = generic_utils.clean_path(
-                args['pretrained_model_weights'])
+            args['pretrained_model_weights'] = generic_utils.clean_path(args['pretrained_model_weights'])
         if args['pretrained_embeddings']:
             args['pretrained_embeddings'] = generic_utils.clean_path(args['pretrained_embeddings'])
 
@@ -216,7 +216,7 @@ class Config(object):
                             help=('Integer. Number of epochs to train the model. An epoch is an '
                                   'iteration over all data provided.'))
         parser.add_argument('--model_name', required=False, type=str,
-                            help="Which model architecture to use. Must be one of ['MT-LSTM-CRF, ']")
+                            help="Which model architecture to use. Must be one of ['MT-LSTM-CRF,']")
         parser.add_argument('--optimizer', required=False, type=str,
                             help=("Name of the optimization function to use during training. All "
                                   "optimizers implemented in Keras are supported. Defaults to "
