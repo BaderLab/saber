@@ -4,7 +4,6 @@ import json
 
 from keras import optimizers
 from keras.models import model_from_json
-from keras_contrib.layers.crf import CRF
 
 
 class BaseKerasModel(object):
