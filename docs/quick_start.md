@@ -7,7 +7,7 @@ If your goal is simply to use Saber to annotate biomedical text, then you can ei
 To use Saber as a **local** web-service, run:
 
 ```
-(saber) $ python -m saber.app
+(saber) $ python -m saber.cli.app
 ```
 
 or, if you prefer, you can pull & run the Saber image from **Docker Hub**:
@@ -56,26 +56,30 @@ print(response.text)
 print(response.status_code, response.reason)
 ```
 
+??? warning
+    The first request to the web-service will be slow (~30s). This is because a large language
+    model needs to be loaded into memory.
+
 Documentation for the Saber web-service API can be found [here](https://baderlab.github.io/saber-api-docs/). We hope to provide a live version of the web-service soon!
 
 ## Pre-trained models
 
-First, import `SequenceProcessor`. This class coordinates training, annotation, saving and loading of models and datasets. In short, this is the interface to Saber
+First, import `Saber`. This class coordinates training, annotation, saving and loading of models and datasets. In short, this is the interface to Saber.
 
 ```python
-from saber.sequence_processor import SequenceProcessor
+from saber.saber import Saber
 ```
 
-To load a pre-trained model, we first create a `SequenceProcessor` object
+To load a pre-trained model, we first create a `Saber` object
 
 ```python
-sp = SequenceProcessor()
+saber = Saber()
 ```
 
 and then load the model of our choice
 
 ```python
-sp.load('PRGE')
+saber.load('PRGE')
 ```
 
 You can see all the pre-trained models in the [web-service API docs](https://baderlab.github.io/saber-api-docs/) or, alternatively, by running the following line of code
@@ -87,8 +91,11 @@ from saber.constants import ENTITIES; print(list(ENTITIES.keys()))
 To annotate text with the model, just call the `annotate()` method
 
 ```python
-sp.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.")
+saber.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.")
 ```
+
+??? warning
+    The `annotate` method will be slow the first time you call it (~30s). This is because a large language model needs to be loaded into memory.
 
 ### Coreference Resolution
 
@@ -101,9 +108,9 @@ Clearly, "__it__" referes to "__IL-6__". If we do not resolve this coreference, 
 ```python
 text = "IL-6 supports tumour growth and metastasising in terminal patients, and it significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy."
 # WITHOUT coreference resolution
-sp.annotate(text, coref=False)
+saber.annotate(text, coref=False)
 # WITH coreference resolution
-sp.annotate(text, coref=True)
+saber.annotate(text, coref=True)
 ```
 
 !!! note
@@ -116,7 +123,7 @@ Saber currently takes the simplest possible approach: replace all coreference me
 The `annotate()` method returns a simple `dict` object
 
 ```python
-ann = sp.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.")
+ann = saber.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.")
 ```
 
 which contains the keys `title`, `text` and `ents`:

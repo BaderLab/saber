@@ -10,7 +10,7 @@ matrix:
 
 python:
   - "3.6"
-  
+
 branches:
   only:
     - master
@@ -21,6 +21,6 @@ install:
   - pip install coveralls
 
 script:
-  - py.test saber --cov=saber
+  - pytest --cov=saber -v
 
 after_success: coveralls

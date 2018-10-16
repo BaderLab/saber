@@ -1,71 +1,89 @@
-import os
-
-import numpy
-
 import pytest
 
 from ..config import Config
-from ..constants import (PATH_TO_DUMMY_CONFIG, PATH_TO_DUMMY_DATASET,
-                         PATH_TO_DUMMY_EMBEDDINGS)
-from ..sequence_processor import SequenceProcessor
+from ..dataset import Dataset
+from ..embeddings import Embeddings
+from ..models.multi_task_lstm_crf import MultiTaskLSTMCRF
+from .resources.dummy_constants import *
 
-# TODO (johngiorgi): fix some of the test_model_attributes_after_creation_of_model tests
+######################################### PYTEST FIXTURES #########################################
 
 @pytest.fixture
 def dummy_config():
-    """Returns an instance of a configparser object after parsing the dummy config file."""
-    # the dataset and embeddings are used for test purposes so they must point to the
-    # correct resources, this can be ensured by passing their paths here
-    cli_arguments = {'dataset_folder': [PATH_TO_DUMMY_DATASET],
-                     'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS}
-    # create the config object, taking into account the CLI args
-    dummy_config = Config(PATH_TO_DUMMY_CONFIG)
-    dummy_config._process_args(cli_arguments)
-
-    return dummy_config
+    """Returns an instance of a Config object."""
+    return Config(PATH_TO_DUMMY_CONFIG)
 
 @pytest.fixture
-def multi_task_lstm_crf_single_model(dummy_config):
+def dummy_dataset():
+    """Returns a single dummy Dataset instance after calling Dataset.load().
+    """
+    # Don't replace rare tokens for the sake of testing
+    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET, replace_rare=False)
+    dataset.load()
+
+    return dataset
+
+@pytest.fixture
+def dummy_embeddings(dummy_dataset):
+    """Returns an instance of an Embeddings() object AFTER the `.load()` method is called.
+    """
+    embeddings = Embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS,
+                            token_map=dummy_dataset.idx_to_tag)
+    embeddings.load(binary=False) # txt file format is easier to test
+    return embeddings
+
+@pytest.fixture
+def single_model_without_embeddings(dummy_config, dummy_dataset, dummy_embeddings):
     """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration file and
     a single compiled model."""
-    seq_processor_with_single_ds = SequenceProcessor(config=dummy_config)
+    model = MultiTaskLSTMCRF(config=dummy_config,
+                             datasets=dummy_dataset,
+                             # to test passing of arbitrary keyword args to constructor
+                             totally_arbitrary='arbitrary')
 
-    seq_processor_with_single_ds.load_dataset()
-    seq_processor_with_single_ds.load_embeddings()
-    seq_processor_with_single_ds.create_model()
-    multi_task_lstm_crf_single_model = seq_processor_with_single_ds.model
+    return model
 
-    return multi_task_lstm_crf_single_model
+@pytest.fixture
+def single_model_with_embeddings(dummy_config, dummy_dataset, dummy_embeddings):
+    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration file and
+    a single compiled model."""
+    model = MultiTaskLSTMCRF(config=dummy_config,
+                             datasets=dummy_dataset,
+                             embeddings=dummy_embeddings,
+                             # to test passing of arbitrary keyword args to constructor
+                             totally_arbitrary='arbitrary')
 
-def test_model_attributes_after_creation_of_model(multi_task_lstm_crf_single_model, dummy_config):
-    """Asserts instance attributes are initialized correctly after the loading of a dataset
-    and the creation of a model."""
-    # MultiTaskLSTMCRF object attributes
-    assert multi_task_lstm_crf_single_model.config is dummy_config
-    assert isinstance(multi_task_lstm_crf_single_model.token_embedding_matrix, numpy.ndarray)
+    return model
 
-    # Attributes of Config object tied to MultiTaskLSTMCRF instance
-    assert multi_task_lstm_crf_single_model.config.activation == 'relu'
-    assert multi_task_lstm_crf_single_model.config.batch_size == 32
-    assert multi_task_lstm_crf_single_model.config.char_embed_dim == 30
-    assert multi_task_lstm_crf_single_model.config.criteria == 'exact'
-    # TEMP: need a better solution than this
-    assert multi_task_lstm_crf_single_model.config.dataset_folder == [PATH_TO_DUMMY_DATASET]
-    assert not multi_task_lstm_crf_single_model.config.debug
-    assert multi_task_lstm_crf_single_model.config.decay == 0.0
-    assert multi_task_lstm_crf_single_model.config.dropout_rate == {'input': 0.3, 'output':0.3, 'recurrent': 0.1}
-    assert not multi_task_lstm_crf_single_model.config.fine_tune_word_embeddings
-    assert multi_task_lstm_crf_single_model.config.grad_norm == 1.0
-    assert multi_task_lstm_crf_single_model.config.k_folds == 2
-    assert multi_task_lstm_crf_single_model.config.learning_rate == 0.0
-    assert multi_task_lstm_crf_single_model.config.epochs == 50
-    assert multi_task_lstm_crf_single_model.config.model_name == 'mt-lstm-crf'
-    assert multi_task_lstm_crf_single_model.config.optimizer == 'nadam'
-    assert multi_task_lstm_crf_single_model.config.output_folder == os.path.abspath('../output')
-    assert multi_task_lstm_crf_single_model.config.pretrained_model_weights == ''
-    assert not multi_task_lstm_crf_single_model.config.replace_rare_tokens
-    assert multi_task_lstm_crf_single_model.config.word_embed_dim == 200
-    # TEMP: need a better solution than this
-    assert multi_task_lstm_crf_single_model.config.pretrained_embeddings == PATH_TO_DUMMY_EMBEDDINGS
-    assert multi_task_lstm_crf_single_model.config.train_model
-    assert not multi_task_lstm_crf_single_model.config.verbose
+############################################ UNIT TESTS ############################################
+
+def test_attributes_after_init_of_single_model_without_embeddings(dummy_config,
+                                                                  dummy_dataset,
+                                                                  single_model_without_embeddings):
+    """Asserts instance attributes are initialized correctly when single MultiTaskLSTMCRF
+    model is initialized without embeddings (`embeddings` attribute is not None.)
+    """
+    # attributes that are passed to __init__
+    assert single_model_without_embeddings.config is dummy_config
+    assert single_model_without_embeddings.datasets is dummy_dataset
+    assert single_model_without_embeddings.embeddings is None
+    # other instance attributes
+    assert single_model_without_embeddings.models == []
+    # test that we can pass arbitrary keyword arguments
+    assert single_model_without_embeddings.totally_arbitrary == 'arbitrary'
+
+def test_attributes_after_init_of_single_model_with_embeddings(dummy_config,
+                                                               dummy_dataset,
+                                                               dummy_embeddings,
+                                                               single_model_with_embeddings):
+    """Asserts instance attributes are initialized correctly when single MultiTaskLSTMCRF
+    model is initialized with embeddings (`embeddings` attribute is not None.)
+    """
+    # attributes that are passed to __init__
+    assert single_model_with_embeddings.config is dummy_config
+    assert single_model_with_embeddings.datasets is dummy_dataset
+    assert single_model_with_embeddings.embeddings is dummy_embeddings
+    # other instance attributes
+    assert single_model_with_embeddings.models == []
+    # test that we can pass arbitrary keyword arguments
+    assert single_model_with_embeddings.totally_arbitrary == 'arbitrary'
