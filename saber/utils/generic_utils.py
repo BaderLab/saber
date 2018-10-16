@@ -9,7 +9,7 @@ from setuptools.archive_util import unpack_archive
 
 from .. import constants
 
-log = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 # https://stackoverflow.com/questions/273192/how-can-i-create-a-directory-if-it-does-not-exist#273227
 def make_dir(directory):
@@ -33,7 +33,7 @@ def extract_directory(directory):
     if not os.path.isdir(directory):
         head, _ = os.path.split(os.path.abspath(directory))
 
-        print('\nunzipping... ', end='', flush=True)
+        print('Unzipping...', end=' ', flush=True)
         unpack_archive(directory + '.tar.bz2', extract_dir=head)
 
 def compress_directory(directory):
@@ -49,11 +49,11 @@ def compress_directory(directory):
     output_filepath = '{}.tar.bz2'.format(directory)
     if os.path.exists(output_filepath):
         err_msg = "{} already exists.".format(output_filepath)
-        log.error('ValueError %s', err_msg)
+        LOGGER.error('ValueError %s', err_msg)
         raise ValueError(err_msg)
     if not os.path.exists(directory):
         err_msg = "File or directory at 'directory' does not exist."
-        log.error('ValueError %s', err_msg)
+        LOGGER.error('ValueError %s', err_msg)
         raise ValueError(err_msg)
 
     # create bz2 compressed directory, remove uncompressed directory
