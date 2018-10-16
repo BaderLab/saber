@@ -105,7 +105,7 @@ class Trainer(object):
             # get list of Keras Callback objects for computing/storing metrics
             metrics = model_utils.setup_metrics_callback(config=self.config,
                                                          datasets=self.datasets,
-                                                         training_data=self.training_data,
+                                                         training_data=self.training_data[fold],
                                                          output_dir=self.output_dir,
                                                          fold=fold + 1)
             for epoch in range(self.config.epochs):
