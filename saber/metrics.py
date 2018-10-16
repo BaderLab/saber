@@ -43,7 +43,7 @@ class Metrics(Callback):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def on_epoch_end(self, epoch):
+    def on_epoch_end(self, epoch, logs={}):
         """Computes, accumulates and prints train/valid/test scores at the end of each epoch."""
         # train
         train_scores = self._evaluate(self.training_data['x_train'], self.training_data['y_train'])
