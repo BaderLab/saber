@@ -166,7 +166,7 @@ def collect_valid_data(training_data, test_size=0.10):
     respectively.
 
     Args:
-        training_data (dict): A dictionary containing training data (inputs and targets).
+        training_data (list): A list containing training data (inputs and targets) for each dataset.
         test_size (float): Percentage of the training examples in `training_data` to use for the new
             validation set.
 
@@ -195,6 +195,9 @@ def collect_valid_data(training_data, test_size=0.10):
                             'x_valid': [x_valid_word, x_valid_char],
                             'y_train': y_train,
                             'y_valid': y_valid,
+                            # add back in test data
+                            'x_test': data['x_test'],
+                            'y_test': data['y_test'],
                            }
 
     return training_data
@@ -276,7 +279,7 @@ def collect_cv_data(training_data, k_folds):
     `partitioned_data[i][j]` contains the data for the ith dataset and jth fold.
 
     Args:
-        training_data (dict): A dictionary containing training data (inputs and targets).
+        training_data (list): A list containing training data (inputs and targets) for each dataset.
         k_folds (int): Number of folds to split the data into.
 
     Returns:
