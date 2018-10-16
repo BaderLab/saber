@@ -34,7 +34,7 @@ Saber infers the "training strategy" based on the structure of the dataset folde
 E.g.
 ```
 .
-├── NCBI-Disease
+├── NCBI_Disease
 │   └── train.tsv
 ```
 
@@ -43,7 +43,7 @@ E.g.
 E.g.
 ```
 .
-├── NCBI-Disease
+├── NCBI_Disease
 │   ├── test.tsv
 │   └── train.tsv
 ```

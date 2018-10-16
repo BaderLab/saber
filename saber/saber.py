@@ -162,7 +162,7 @@ class Saber(object):
         architecture and weights.
         """
         start = time.time()
-        print('Loading model... ', end='', flush=True)
+        print('Loading model...', end=' ', flush=True)
 
         # If directory is one of the pre-trained models packaged with Saber, load it
         if directory.upper() in constants.PRETRAINED_MODELS:

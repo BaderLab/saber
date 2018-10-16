@@ -269,8 +269,8 @@ class Metrics(Callback):
                 best_macro_avg = max(macro_avg_per_epoch, key=itemgetter(2))
                 best_micro_avg = max(micro_avg_per_epoch, key=itemgetter(2))
 
-                best_micro_epoch = micro_avg_per_epoch.index(best_micro_avg)
-                best_macro_epoch = macro_avg_per_epoch.index(best_macro_avg)
+                best_micro_epoch = micro_avg_per_epoch.index(best_micro_avg) + 1
+                best_macro_epoch = macro_avg_per_epoch.index(best_macro_avg) + 1
 
                 performance_metrics[partition]['scores'] = \
                     self.performance_metrics[partition][self.current_epoch]

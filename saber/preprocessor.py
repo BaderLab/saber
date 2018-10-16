@@ -6,9 +6,10 @@ import logging
 import re
 from collections import Counter
 
-import en_coref_md
 import numpy as np
 from keras.preprocessing.sequence import pad_sequences
+
+import en_coref_md
 
 from . import constants
 from .utils import text_utils
