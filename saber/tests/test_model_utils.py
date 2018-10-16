@@ -8,7 +8,7 @@ import pytest
 
 from ..config import Config
 from ..utils import model_utils
-from .resources.dummy_constants import PATH_TO_DUMMY_CONFIG
+from .resources.dummy_constants import *
 
 ######################################### PYTEST FIXTURES #########################################
 

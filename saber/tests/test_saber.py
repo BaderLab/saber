@@ -7,8 +7,7 @@ from ..dataset import Dataset
 from ..embeddings import Embeddings
 from ..models.base_model import BaseKerasModel
 from ..saber import MissingStepException, Saber
-from .resources.dummy_constants import (PATH_TO_DUMMY_CONFIG,
-                                        PATH_TO_DUMMY_DATASET)
+from .resources.dummy_constants import *
 
 # TODO (johngiorgi): Write tests for compound dataset
 
@@ -40,7 +39,7 @@ def saber_single_dataset(dummy_config_single_dataset):
     """Returns instance of `Saber` initialized with the dummy config file and a single dataset.
     """
     saber = Saber(config=dummy_config_single_dataset)
-    saber.load_dataset()
+    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET)
 
     return saber
 
@@ -50,8 +49,8 @@ def saber_single_dataset_embeddings(dummy_config_single_dataset):
     embeddings.
     """
     saber = Saber(config=dummy_config_single_dataset)
-    saber.load_dataset()
-    saber.load_embeddings(binary=False)
+    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET)
+    saber.load_embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, binary=False)
 
     return saber
 
@@ -60,7 +59,7 @@ def saber_single_dataset_model(dummy_config_single_dataset):
     """Returns an instance of `Saber` initialized with the dummy config file, a single dataset
     a Keras model."""
     saber = Saber(config=dummy_config_single_dataset)
-    saber.load_dataset()
+    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET)
     saber.build()
 
     return saber
@@ -87,8 +86,9 @@ def saber_compound_dataset(dummy_config_compound_dataset):
     The compound dataset is just two copies of the dataset, this makes writing tests much
     simpler.
     """
+    compound_dataset = [PATH_TO_DUMMY_DATASET, PATH_TO_DUMMY_DATASET]
     saber = Saber(config=dummy_config_compound_dataset)
-    saber.load_dataset()
+    saber.load_dataset(directory=compound_dataset)
 
     return saber
 

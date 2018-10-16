@@ -9,10 +9,7 @@ import pytest
 
 from .. import constants
 from ..dataset import Dataset
-from .resources.dummy_constants import (DUMMY_CHAR_SEQ, DUMMY_CHAR_TYPES,
-                                        DUMMY_TAG_SEQ, DUMMY_TAG_TYPES,
-                                        DUMMY_WORD_SEQ, DUMMY_WORD_TYPES,
-                                        PATH_TO_DUMMY_DATASET)
+from .resources.dummy_constants import *
 
 # TODO (johngiorgi): Need to include tests for valid/test partitions
 # TODO (johngiorgi): Need to include tests for compound datasets
