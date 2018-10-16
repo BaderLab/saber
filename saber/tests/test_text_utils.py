@@ -1,5 +1,4 @@
 import en_coref_md
-
 import pytest
 
 from ..utils import text_utils
@@ -53,9 +52,9 @@ def test_biomedical_tokenizer(nlp):
     from_PRGE_ds = ("Here we report the cloning, expression, and biochemical characterization of "
                     "the 32-kDa subunit of human (h) TFIID, termed hTAFII32.")
     from_PRGE_ds_expected = ['Here', 'we', 'report', 'the', 'cloning', ',', 'expression', ',',
-                            'and', 'biochemical', 'characterization', 'of', 'the', '32', '-', 'kDa',
-                            'subunit', 'of', 'human', '(', 'h', ')', 'TFIID', ',', 'termed',
-                            'hTAFII32', '.']
+                             'and', 'biochemical', 'characterization', 'of', 'the', '32', '-',
+                             'kDa', 'subunit', 'of', 'human', '(', 'h', ')', 'TFIID', ',', 'termed',
+                             'hTAFII32', '.']
 
     # generic tests
     assert [t.text for t in nlp(blank_text)] == blank_expected

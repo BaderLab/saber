@@ -7,8 +7,7 @@ from ..config import Config
 from ..dataset import Dataset
 from ..metrics import Metrics
 from ..utils import model_utils
-from .resources.dummy_constants import (PATH_TO_DUMMY_CONFIG,
-                                        PATH_TO_DUMMY_DATASET)
+from .resources.dummy_constants import *
 
 PATH_TO_METRICS_OUTPUT = 'totally/arbitrary'
 
