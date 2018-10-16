@@ -518,7 +518,7 @@ $ docker run -it --rm -p <span class="m">5000</span>:5000 --name saber pathwayco
 model needs to be loaded into memory.</p></details><p>Documentation for the Saber web-service API can be found <a href="https://baderlab.github.io/saber-api-docs/">here</a>. We hope to provide a live version of the web-service soon!</p>
 <h2 id="pre-trained-models">Pre-trained models<a class="headerlink" href="#pre-trained-models" title="Permanent link">&para;</a></h2>
 <p>First, import <code>Saber</code>. This class coordinates training, annotation, saving and loading of models and datasets. In short, this is the interface to Saber.</p>
-<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber</span> <span class="kn">import</span> <span class="n">Saber</span>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber.saber</span> <span class="kn">import</span> <span class="n">Saber</span>
 </pre></div>
 
 <p>To load a pre-trained model, we first create a <code>Saber</code> object</p>
