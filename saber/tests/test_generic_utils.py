@@ -1,29 +1,67 @@
+"""Any and all unit tests for the generic_utils (saber/utils/generic_utils.py).
+"""
+import os
+
 import pytest
 
-from ..utils.model_utils import precision_recall_f1_support
+from .. import constants
+from ..config import Config
+from ..utils import generic_utils
+from .resources.dummy_constants import *
 
+######################################### PYTEST FIXTURES #########################################
 
-def test_precision_recall_f1_support():
-    """Asserts that precision_recall_f1_support returns the expected values."""
-    TP_dummy = 100
-    FP_dummy = 10
-    FN_dummy = 20
+@pytest.fixture(scope='session')
+def dummy_dir(tmpdir_factory):
+    """Returns the path to a temporary directory.
+    """
+    dummy_dir = tmpdir_factory.mktemp('dummy_dir')
+    return dummy_dir
 
-    prec_dummy = TP_dummy / (TP_dummy + FP_dummy)
-    rec_dummy = TP_dummy / (TP_dummy + FN_dummy)
-    f1_dummy = 2 * prec_dummy * rec_dummy / (prec_dummy + rec_dummy)
-    support_dummy = TP_dummy + FN_dummy
+@pytest.fixture
+def dummy_config():
+    """Returns an instance of a Config object."""
+    dummy_config = Config(PATH_TO_DUMMY_CONFIG)
+    return dummy_config
 
-    test_scores_no_null = precision_recall_f1_support(TP_dummy, FP_dummy, FN_dummy)
-    test_scores_TP_null = precision_recall_f1_support(0, FP_dummy, FN_dummy)
-    test_scores_FP_null = precision_recall_f1_support(TP_dummy, 0, FN_dummy)
-    f1_FP_null = 2 * 1. * rec_dummy / (1. + rec_dummy)
-    test_scores_FN_null = precision_recall_f1_support(TP_dummy, FP_dummy, 0)
-    f1_FN_null = 2 * prec_dummy * 1. / (prec_dummy + 1.)
-    test_scores_all_null = precision_recall_f1_support(0, 0, 0)
+############################################ UNIT TESTS ############################################
 
-    assert test_scores_no_null == (prec_dummy, rec_dummy, f1_dummy, support_dummy)
-    assert test_scores_TP_null == (0., 0., 0., FN_dummy)
-    assert test_scores_FP_null == (1., rec_dummy, f1_FP_null, support_dummy)
-    assert test_scores_FN_null == (prec_dummy, 1., f1_FN_null, TP_dummy)
-    assert test_scores_all_null == (0., 0., 0., 0)
+def test_make_dir_new(tmpdir):
+    """Assert that `generic_utils.make_dir()` creates a directory as expected when it does not
+    already exist.
+    """
+    dummy_dirpath = os.path.join(tmpdir, 'dummy_dir')
+    generic_utils.make_dir(dummy_dirpath)
+    assert os.path.isdir(dummy_dirpath)
+
+def test_make_dir_exists(dummy_dir):
+    """Assert that `generic_utils.make_dir()` fails silently when trying to create a directory that
+    already exists.
+    """
+    generic_utils.make_dir(dummy_dir)
+    assert os.path.isdir(dummy_dir)
+
+def test_clean_path():
+    """Asserts that filepath returned by `generic_utils.clean_path()` is as expected.
+    """
+    test = ' this/is//a/test/     '
+    expected = os.path.abspath('this/is/a/test')
+
+    assert generic_utils.clean_path(test) == expected
+
+def test_decompress_model():
+    """Asserts that `generic_utils.decompress_model()` decompresses a given directory.
+    """
+    pass
+
+def test_compress_model():
+    """Asserts that `generic_utils.compress_model()` compresses a given directory.
+    """
+    pass
+
+def test_get_pretrained_model_dir(dummy_config):
+    """Asserts that filepath returned by `generic_utils.get_pretrained_model_dir()` is as expected.
+    """
+    dataset = os.path.basename(dummy_config.dataset_folder[0])
+    expected = os.path.join(dummy_config.output_folder, constants.PRETRAINED_MODEL_DIR, dataset)
+    assert generic_utils.get_pretrained_model_dir(dummy_config) == expected

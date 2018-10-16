@@ -1,9 +1,12 @@
+"""Contains any and all unit tests for the `Preprocessor` class (saber/preprocessor.py).
+"""
 import en_coref_md
 import pytest
 
 from .. import constants
 from ..preprocessor import Preprocessor
 
+######################################### PYTEST FIXTURES #########################################
 
 @pytest.fixture
 def preprocessor():
@@ -14,6 +17,8 @@ def preprocessor():
 def nlp():
     """Returns Sacy NLP model."""
     return en_coref_md.load()
+
+############################################ UNIT TESTS ############################################
 
 def test_process_text(preprocessor, nlp):
     """Asserts that call to Preprocessor._process_text() returns the expected
@@ -34,25 +39,35 @@ def test_type_to_idx():
     """Asserts that call to Preprocessor.test_type_to_idx() returns the
     expected results."""
     # simple test and its expected value
-    simple_seq = ["This", "is", "a", "test", "."]
+    simple_test = ["This", "is", "a", "test", "."]
     simple_expected = {'This': 0, 'is': 1, 'a': 2, 'test': 3, '.': 4}
     # result of simple test with an offset arg value of 1
     offset_expected = {'This': 1, 'is': 2, 'a': 3, 'test': 4, '.': 5}
     # blank value test and its expected value
-    blank_seq = []
+    blank_test = []
     blank_expected = {}
 
-    assert Preprocessor.type_to_idx(simple_seq) == simple_expected
-    assert Preprocessor.type_to_idx(simple_seq, offset=1) == offset_expected
-    assert Preprocessor.type_to_idx(blank_seq) == blank_expected
+    simple_actual = Preprocessor.type_to_idx(simple_test)
+    offset_actual = Preprocessor.type_to_idx(simple_test, offset=1)
+    blank_actual = Preprocessor.type_to_idx(blank_test)
+
+    assert all([k in simple_expected for k in simple_actual]) # check keys
+    assert all([v in simple_expected.values() for v in simple_actual.values()]) # check values
+
+    assert all([k in offset_expected for k in offset_actual]) # check keys
+    assert all([v in offset_expected.values() for v in offset_actual.values()]) # check values
+
+    assert all([k in blank_expected for k in blank_actual]) # check keys
+    assert all([v in simple_expected.values() for v in blank_actual.values()]) # check values
 
 def test_get_type_to_idx_sequence():
     """"""
     simple_seq = ["This", "is", "a", "test", ".", constants.UNK]
     simple_type_to_idx = Preprocessor.type_to_idx(simple_seq)
     simple_expected = [0, 1, 2, 3, 4]
-    simple_actual = Preprocessor.get_type_idx_sequence(seq=simple_seq, type_to_idx=simple_type_to_idx)
-    # TODO
+    simple_actual = Preprocessor.get_type_idx_sequence(simple_seq, type_to_idx=simple_type_to_idx)
+
+    pass
 
 def test_chunk_entities():
     """Asserts that call to Preprocessor.chunk_entities() returns the

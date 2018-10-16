@@ -7,24 +7,24 @@ You can interact with Saber as a web-service (explained in [Quick start](https:/
 Currently, the command line tool simply trains the model. To use it, call
 
 ```
-(saber) $ python -m saber.train
+(saber) $ python -m saber.cli.train
 ```
 
 along with any command line arguments. For example, to train the model on the [NCBI Disease](https://www.ncbi.nlm.nih.gov/CBBresearch/Dogan/DISEASE/) corpus
 
 ```
-(saber) $ python -m saber.train --dataset_folder NCBI_Disease_BIO
+(saber) $ python -m saber.cli.train --dataset_folder NCBI_Disease_BIO
 ```
 
 !!! tip
     See [Resources](https://baderlab.github.io/saber/resources/) for help preparing datasets for training.
 
-Run `python -m saber.train --help` to see all possible arguments.
+Run `python -m saber.cli.train --help` to see all possible arguments.
 
 Of course, supplying arguments at the command line can quickly become cumbersome. Saber also allows you to provide a configuration file, which can be specified like so
 
 ```
-(saber) $ python -m saber.train --config_filepath path/to/config.ini
+(saber) $ python -m saber.cli.train --config_filepath path/to/config.ini
 ```
 
 Copy the contents of the [default config file](https://github.com/BaderLab/saber/blob/master/saber/config.ini) to a new `*.ini` file in order to get started.
@@ -33,41 +33,41 @@ Copy the contents of the [default config file](https://github.com/BaderLab/saber
     Arguments supplied at the command line overwrite those found in the configuration file, e.g.,
 
     ```
-    (saber) $ python -m saber.train --dataset_folder path/to/dataset --k_folds 10
+    (saber) $ python -m saber.cli.train --dataset_folder path/to/dataset --k_folds 10
     ```
 
     would overwrite the arguments for `dataset_folder` and `k_folds` found in the configuration file.
 
 ### Python package
 
-You can also import Saber and interact with it as a python package. Saber exposes its functionality through the `SequenceProcessor` class. Here is just about everything Saber does in one script:
+You can also import Saber and interact with it as a python package. Saber exposes its functionality through the `Saber` class. Here is just about everything Saber does in one script:
 
 ```python
-from saber.sequence_processor import SequenceProcessor
+from saber.saber import Saber
 
-# First, create a SequenceProcessor object, which exposes Sabers functionality
-sp = SequenceProcessor()
+# First, create a Saber object, which exposes Sabers functionality
+saber = Saber()
 
 # Load a dataset and create a model (provide a list of datasets to use multi-task learning!)
-sp.load_dataset('path/to/datasets/GENIA')
-sp.create_model()
+saber.load_dataset('path/to/datasets/GENIA')
+saber.build()
 
 # Train and save a model
-sp.fit()
-sp.save('pretrained_models/GENIA')
+saber.train()
+saber.save('pretrained_models/GENIA')
 
 # Load a model
 del sp
-sp = SequenceProcessor()
-sp.load('pretrained_models/GENIA')
+saber = Saber()
+saber.load('pretrained_models/GENIA')
 
 # Perform prediction on raw text, get resulting annotation
 raw_text = 'The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.'
-annotation = sp.annotate(raw_text)
+annotation = saber.annotate(raw_text)
 
 # Use transfer learning to continue training on a new dataset
-sp.load_dataset('path/to/datasets/CRAFT')
-sp.fit()
+saber.load_dataset('path/to/datasets/CRAFT')
+saber.train()
 ```
 
 #### Transfer learning
@@ -76,20 +76,20 @@ Transfer learning is as easy as training, saving, loading, and then continuing t
 
 ```python
 # Create and train a model on GENIA corpus
-sp = SequenceProcessor()
-sp.load_dataset('path/to/datasets/GENIA')
-sp.create_model()
-sp.fit()
-sp.save('pretrained_models/GENIA')
+saber = Saber()
+saber.load_dataset('path/to/datasets/GENIA')
+saber.build()
+saber.train()
+saber.save('pretrained_models/GENIA')
 
 # Load that model
 del sp
-sp = SequenceProcessor()
-sp.load('pretrained_models/GENIA')
+saber = Saber()
+saber.load('pretrained_models/GENIA')
 
 # Use transfer learning to continue training on a new dataset
-sp.load_dataset('path/to/datasets/CRAFT')
-sp.fit()
+saber.load_dataset('path/to/datasets/CRAFT')
+saber.train()
 ```
 
 !!! info
@@ -102,13 +102,13 @@ Multi-task learning is as easy as specifying multiple dataset paths, either in t
 Here is an example using the last method
 
 ```python
-sp = SequenceProcessor()
+saber = Saber()
 
 # Simply pass multiple dataset paths as a list to load_dataset to use multi-task learning.
-sp.load_dataset(['path/to/datasets/NCBI_Disease', 'path/to/datasets/Linnaeus'])
+saber.load_dataset(['path/to/datasets/NCBI_Disease', 'path/to/datasets/Linnaeus'])
 
-sp.create_model()
-sp.fit()
+saber.build()
+saber.train()
 ```
 
 #### Training on GPUs
@@ -119,20 +119,20 @@ Saber will automatically train on as many GPUs as are available. In order for th
 (saber) $ pip install tensorflow-gpu
 ```
 
-!!! warning
+??? warning
      Use `pip install tensorflow-gpu==1.7.0` if you would like to train on multiple GPUs as `tensorflow-gpu` versions `>1.7.0` are currently throwing errors.
 
 To control which GPUs Saber trains on, you can use the `CUDA_VISIBLE_DEVICES` environment variable, e.g.,
 
 ```
 # To train exclusively on CPU
-(saber) $ CUDA_VISIBLE_DEVICES="" python -m saber.train
+(saber) $ CUDA_VISIBLE_DEVICES="" python -m saber.cli.train
 
 # To train on 1 GPU with ID=0
-(saber) $ CUDA_VISIBLE_DEVICES="0" python -m saber.train
+(saber) $ CUDA_VISIBLE_DEVICES="0" python -m saber.cli.train
 
 # To train on 2 GPUs with IDs=0,2
-(saber) $ CUDA_VISIBLE_DEVICES="0,2" python -m saber.train
+(saber) $ CUDA_VISIBLE_DEVICES="0,2" python -m saber.cli.train
 ```
 
 !!! tip
@@ -148,20 +148,20 @@ Assuming the model has already been created (see above), we can easily save our 
 
 ```python
 save_dir = 'path/to/pretrained_models/mymodel'
-sp.save(save_dir)
+saber.save(save_dir)
 ```
 
 ##### Loading a model
 
-Lets illustrate loading a model with a new `SequenceProccesor` object
+Lets illustrate loading a model with a new `Saber` object
 
 ```python
-# Delete our previous SequenceProccesor object (if it exists)
-if 'sp' in locals(): del sp
-# Create a new SequenceProccesor object
-sp = SequenceProcessor()
+# Delete our previous Saber object (if it exists)
+del saber
+# Create a new Saber object
+saber = Saber()
 # Load a previous model
-sp.load(path_to_saved_model)
+saber.load(path_to_saved_model)
 ```
 
 ### Juypter notebooks

@@ -12,7 +12,6 @@ COLOURS = {'PRGE': 'linear-gradient(90deg, #aa9cfc, #fc9ce7)',
            'CL': 'linear-gradient(90deg, #00E5FF, #84FFFF)',
           }
 # entity options
-# OPTIONS = {'ents': ['PRGE', 'CHED', 'LIVB', 'CL', 'SO', 'GO'], 'colors': COLOURS}
 OPTIONS = {'colors': COLOURS}
 
 # SPECIAL TOKENS
@@ -35,18 +34,13 @@ PARTITIONS = ['train', 'valid', 'test']
 TRAIN_FILE = 'train.*'
 VALID_FILE = 'valid.*'
 TEST_FILE = 'test.*'
-# Pre-trained models
+# pre-trained models
 PRETRAINED_MODELS = ['PRGE']
 # relative path to pretrained model directory
 PRETRAINED_MODEL_DIR = resource_filename(__name__, 'pretrained_models')
-MODEL_FILEPATH = 'model_params.json'
-WEIGHTS_FILEPATH = 'model_weights.hdf5'
-ATTRIBUTES_FILEPATH = 'attributes.pickle'
-# relative paths for test resources
-PATH_TO_DUMMY_DATASET = resource_filename(__name__, 'tests/resources/dummy_dataset_1')
-PATH_TO_DUMMY_CONFIG = resource_filename(__name__, 'tests/resources/dummy_config.ini')
-PATH_TO_DUMMY_EMBEDDINGS = resource_filename(__name__, ('tests/resources/dummy_word_embeddings/'
-                                                        'dummy_word_embeddings.txt'))
+MODEL_FILENAME = 'model_params.json'
+WEIGHTS_FILENAME = 'model_weights.hdf5'
+ATTRIBUTES_FILENAME = 'attributes.pickle'
 
 # MODEL SETTINGS
 # batch size to use when performing model prediction
@@ -60,12 +54,18 @@ UNITS_WORD_LSTM = 200
 UNITS_CHAR_LSTM = 200
 UNITS_DENSE = UNITS_WORD_LSTM // 2
 # possible models
-MODELS = ['mt-lstm-crf',]
+MODEL_NAMES = ['mt-lstm-crf',]
 
 # RESTful API
 # endpoint for Entrez Utilities Web Service API
 EUTILS_API_ENDPOINT = ('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?retmode=xml&db='
                        'pubmed&id=')
+ENTITIES = {'ANAT': False,
+            'CHED': False,
+            'DISO': False,
+            'LIVB': False,
+            'PRGE': True,
+            'TRIG': False}
 # CONFIG
 CONFIG_ARGS = ['model_name', 'train_model', 'dataset_folder', 'output_folder',
                'pretrained_model_weights', 'pretrained_embeddings', 'word_embed_dim',
@@ -73,10 +73,3 @@ CONFIG_ARGS = ['model_name', 'train_model', 'dataset_folder', 'output_folder',
                'dropout_rate', 'batch_size', 'k_folds', 'epochs', 'criteria', 'verbose',
                'debug', 'tensorboard', 'replace_rare_tokens', 'fine_tune_word_embeddings',
                'variational_dropout']
-
-ENTITIES = {'ANAT': False,
-            'CHED': False,
-            'DISO': False,
-            'LIVB': False,
-            'PRGE': True,
-            'TRIG': False}
