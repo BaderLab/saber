@@ -1,115 +1,14 @@
-"""Any and all unit tests for the Config class (saber/config.py).
+"""Contains any and all unit tests for the Config class (saber/config.py).
 """
 import configparser
-import copy
 import os
 
 import pytest
 
 from ..config import Config
-from ..constants import (PATH_TO_DUMMY_CONFIG, PATH_TO_DUMMY_DATASET,
-                         PATH_TO_DUMMY_EMBEDDINGS)
+from .resources.dummy_constants import *
 
-# Sections of the .ini file
-CONFIG_SECTIONS = ['mode', 'data', 'model', 'training', 'advanced']
-
-# Arg values before any processing
-DUMMY_ARGS_NO_PROCESSING = {'model_name': 'MT-LSTM-CRF',
-                            'train_model': 'True',
-                            'save_model': 'False',
-                            'dataset_folder': 'saber/tests/resources/dummy_dataset_1',
-                            'output_folder': '../output',
-                            'pretrained_model_weights': '',
-                            'pretrained_embeddings': ('saber/tests/resources/'
-                                                      'dummy_word_embeddings/'
-                                                      'dummy_word_embeddings.txt'),
-                            'word_embed_dim': '200',
-                            'char_embed_dim': '30',
-                            'optimizer': 'nadam',
-                            'activation': 'relu',
-                            'learning_rate': '0.0',
-                            'grad_norm': '1.0',
-                            'decay': '0.0',
-                            'dropout_rate': '0.3, 0.3, 0.1',
-                            'batch_size': '32',
-                            'k_folds': '2',
-                            'epochs': '50',
-                            'criteria': 'exact',
-                            'verbose': 'False',
-                            'debug': 'False',
-                            'tensorboard': 'False',
-                            'replace_rare_tokens': 'False',
-                            'fine_tune_word_embeddings': 'False',
-                            # TEMP
-                            'variational_dropout': 'True',
-                           }
-# Final arg values when args provided in only config file
-DUMMY_ARGS_NO_CLI_ARGS = {'model_name': 'mt-lstm-crf',
-                          'train_model': True,
-                          'save_model': False,
-                          'dataset_folder': [PATH_TO_DUMMY_DATASET],
-                          'output_folder': os.path.abspath('../output'),
-                          'pretrained_model_weights': '',
-                          'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
-                          'word_embed_dim': 200,
-                          'char_embed_dim': 30,
-                          'optimizer': 'nadam',
-                          'activation': 'relu',
-                          'learning_rate': 0.0,
-                          'decay': 0.0,
-                          'grad_norm': 1.0,
-                          'dropout_rate': {'input': 0.3, 'output':0.3, 'recurrent': 0.1},
-                          'batch_size': 32,
-                          'k_folds': 2,
-                          'epochs': 50,
-                          'criteria': 'exact',
-                          'verbose': False,
-                          'debug': False,
-                          'tensorboard': False,
-                          'replace_rare_tokens': False,
-                          'fine_tune_word_embeddings': False,
-                          # TEMP
-                          'variational_dropout': True,
-                         }
-# Final arg values when args provided in config file and from CLI
-DUMMY_COMMAND_LINE_ARGS = {'optimizer': 'sgd',
-                           'grad_norm': 1.0,
-                           'learning_rate': 0.05,
-                           'decay': 0.5,
-                           'dropout_rate': [0.6, 0.6, 0.2],
-                           # the dataset and embeddings are used for test purposes so they must
-                           # point to the correct resources, this can be ensured by passing their
-                           # paths here
-                           'dataset_folder': [PATH_TO_DUMMY_DATASET],
-                           'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
-                          }
-DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'mt-lstm-crf',
-                            'train_model': True,
-                            'save_model': False,
-                            'dataset_folder': [PATH_TO_DUMMY_DATASET],
-                            'output_folder': os.path.abspath('../output'),
-                            'pretrained_model_weights': '',
-                            'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
-                            'word_embed_dim': 200,
-                            'char_embed_dim': 30,
-                            'optimizer': 'sgd',
-                            'activation': 'relu',
-                            'learning_rate': 0.05,
-                            'decay': 0.5,
-                            'grad_norm': 1.0,
-                            'dropout_rate': {'input': 0.6, 'output': 0.6, 'recurrent': 0.2},
-                            'batch_size': 32,
-                            'k_folds': 2,
-                            'epochs': 50,
-                            'criteria': 'exact',
-                            'verbose': False,
-                            'debug': False,
-                            'tensorboard': False,
-                            'fine_tune_word_embeddings': False,
-                            'replace_rare_tokens': False,
-                            # TEMP
-                            'variational_dropout': True,
-                           }
+######################################### PYTEST FIXTURES #########################################
 
 @pytest.fixture
 def config_no_cli_args():
@@ -136,6 +35,8 @@ def config_with_cli_args():
     dummy_config._process_args(DUMMY_COMMAND_LINE_ARGS)
 
     return dummy_config
+
+############################################ UNIT TESTS ############################################
 
 def test_process_args_no_cli_args(config_no_cli_args):
     """Asserts the Config.config object contains the expected attributes after initializing a Config
@@ -210,7 +111,8 @@ def test_save_with_cli_args(config_with_cli_args, tmpdir):
         for arg, value in saved_config[section].items():
             assert value == unprocessed_args[arg]
 
-# helper functions
+######################################### HELPER FUNCTIONS #########################################
+
 def load_saved_config(filepath):
     """Load a saved ConfigParser object at 'filepath/config.ini'.
 

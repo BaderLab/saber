@@ -3,6 +3,8 @@ import pytest
 
 from ..utils import text_utils
 
+######################################### PYTEST FIXTURES #########################################
+
 @pytest.fixture
 def nlp():
     """Returns an instance of a spaCy's nlp object after replacing the default tokenizer with
@@ -10,6 +12,8 @@ def nlp():
     custom_nlp = en_coref_md.load()
     custom_nlp.tokenizer = text_utils.biomedical_tokenizer(custom_nlp)
     return custom_nlp
+
+############################################ UNIT TESTS ############################################
 
 def test_biomedical_tokenizer(nlp):
     """Asserts that call to customized spaCy tokenizer returns the expected results.
@@ -48,9 +52,9 @@ def test_biomedical_tokenizer(nlp):
     from_PRGE_ds = ("Here we report the cloning, expression, and biochemical characterization of "
                     "the 32-kDa subunit of human (h) TFIID, termed hTAFII32.")
     from_PRGE_ds_expected = ['Here', 'we', 'report', 'the', 'cloning', ',', 'expression', ',',
-                            'and', 'biochemical', 'characterization', 'of', 'the', '32', '-', 'kDa',
-                            'subunit', 'of', 'human', '(', 'h', ')', 'TFIID', ',', 'termed',
-                            'hTAFII32', '.']
+                             'and', 'biochemical', 'characterization', 'of', 'the', '32', '-',
+                             'kDa', 'subunit', 'of', 'human', '(', 'h', ')', 'TFIID', ',', 'termed',
+                             'hTAFII32', '.']
 
     # generic tests
     assert [t.text for t in nlp(blank_text)] == blank_expected
