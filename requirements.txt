@@ -6,7 +6,7 @@ waitress>=1.1.0
 git+https://www.github.com/keras-team/keras-contrib.git
 keras>=2.2.2
 PTable>=0.9.2
-spacy>=2.0.11
+spacy==2.0.11
 gensim>=3.4.0
 nltk
 # NeuralCoref medium model
