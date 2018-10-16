@@ -232,21 +232,20 @@ def get_data_partitions(training_data, train_valid_indices):
     """Get train and valid partitions for all k-folds for all datasets.
 
     For all Dataset objects in `datasets`, gets the train and valid partitions for the current
-    k-fold (`fold`) using the indices given at `train_valid_indices`. Returns a list of four-tuples:
-
-    (x_train, x_valid, y_train, y_valid)
-
-    Where x represents the inputs, and y the labels or targets.
+    k-fold (`fold`) using the indices given at `train_valid_indices`. Returns a list of lists
+    of four-tuples: (x_train, x_valid, y_train, y_valid), where index i, j contains the data
+    for the ith dataset and jth k-fold.
 
     Args:
-        datasets (list): a list of Dataset objects.
+        datasets (list): A list of Dataset objects.
         train_valid_indices (list): A list of list of two-tuples, where train_valid_indices[i][j].
             is a tuple containing the train and valid indices (in that order) for the ith dataset.
-            and jth fold
+            and jth fold.
         fold (int): The current fold in k-fold cross-validation.
 
     Returns:
-        A list of four-tuples containing train and valid data for all datasets.
+        A list of lists, `partitioned_data`, where `partitioned_data[i][j]` contains the data for
+        the ith dataset and jth fold.
     """
     partitioned_data = []
     for i, _ in enumerate(train_valid_indices): # loop over datasets
@@ -267,7 +266,10 @@ def get_data_partitions(training_data, train_valid_indices):
             partitioned_data[i].append({'x_train': [x_word_train, x_char_train],
                                         'x_valid': [x_word_valid, x_char_valid],
                                         'y_train': y_train,
-                                        'y_valid': y_valid,})
+                                        'y_valid': y_valid,
+                                        # add back in test data
+                                        'x_test': training_data[i]['x_test'],
+                                        'y_test': training_data[i]['y_test'],})
 
     return partitioned_data
 
