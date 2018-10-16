@@ -1,4 +1,4 @@
-"""A collection of web-service helper/utility functions.
+"""A collection of web-service-related helper/utility functions.
 """
 import logging
 import os.path
@@ -10,11 +10,11 @@ from urllib.request import urlopen
 import tensorflow as tf
 
 from .. import constants
-from ..sequence_processor import SequenceProcessor
-from .generic_utils import decompress_model
+from ..saber import Saber
+from ..utils import generic_utils
 
 # TODO: Need better error handeling here
-log = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 def get_pubmed_xml(pmid):
     """Uses the Entrez Utilities Web Service API to fetch XML representation of pubmed document.
@@ -32,11 +32,11 @@ def get_pubmed_xml(pmid):
     """
     if not isinstance(pmid, int):
         err_msg = "Argument 'pmid' must be of type {}, not {}.".format(int, type(pmid))
-        log.error('ValueError %s', err_msg)
+        LOGGER.error('ValueError %s', err_msg)
         raise ValueError(err_msg)
     if pmid < 1:
         err_msg = "Argument 'pmid' must have a value of 1 or greater. Got {}".format(pmid)
-        log.error('ValueError %s', err_msg)
+        LOGGER.error('ValueError %s', err_msg)
         raise ValueError(err_msg)
 
     try:
@@ -46,7 +46,7 @@ def get_pubmed_xml(pmid):
         err_msg = ("HTTP Error 400: Bad Request was returned. Check that the supplied value for "
                    "'pmid' ({}) is a valid PubMed ID.".format(pmid))
         traceback.print_exc()
-        log.error('HTTPError %s', err_msg)
+        LOGGER.error('HTTPError %s', err_msg)
         print(err_msg)
     else:
         root = get_root(response)
@@ -55,7 +55,7 @@ def get_pubmed_xml(pmid):
         if not int(response_pmid) == pmid:
             err_msg = ('Requested PubMed ID and PubMed ID returned by Entrez Utilities Web Service '
                        'API do not match.')
-            log.error('AssertionError %s', err_msg)
+            LOGGER.error('AssertionError %s', err_msg)
             raise AssertionError(err_msg)
 
     return response
@@ -99,17 +99,17 @@ def load_models(ents):
         ents (dict): a dictionary where the keys correspond to entities and the values are booleans.
 
     Returns:
-        a dictionary with keys representing the model and values a loaded SequenceProcessor object.
+        a dictionary with keys representing the model and values a loaded Saber object.
     """
     models = {} # acc for models
     for ent, value in ents.items():
         if value:
             path_to_model = os.path.join(constants.PRETRAINED_MODEL_DIR, ent)
-            decompress_model(path_to_model)
+            generic_utils.extract_directory(path_to_model)
             # create and load the pre-trained models
-            sp = SequenceProcessor()
-            sp.load(path_to_model)
-            models[ent] = sp
+            saber = Saber()
+            saber.load(path_to_model)
+            models[ent] = saber
     # TEMP: Weird solution to a weird bug.
     # https://github.com/tensorflow/tensorflow/issues/14356#issuecomment-385962623
     # Unclear if this will work for multiple models! If not, return a graph for each.
