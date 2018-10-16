@@ -1,7 +1,6 @@
 """Contains any and all unit tests for the `Preprocessor` class (saber/preprocessor.py).
 """
 import en_coref_md
-
 import pytest
 
 from .. import constants
@@ -66,7 +65,7 @@ def test_get_type_to_idx_sequence():
     simple_seq = ["This", "is", "a", "test", ".", constants.UNK]
     simple_type_to_idx = Preprocessor.type_to_idx(simple_seq)
     simple_expected = [0, 1, 2, 3, 4]
-    simple_actual = Preprocessor.get_type_idx_sequence(seq=simple_seq, type_to_idx=simple_type_to_idx)
+    simple_actual = Preprocessor.get_type_idx_sequence(simple_seq, type_to_idx=simple_type_to_idx)
 
     pass
 

@@ -1,11 +1,14 @@
 """Constants used by the unit tests.
 """
+import logging
 import os
 
 import numpy as np
 from pkg_resources import resource_filename
 
 from ... import constants
+
+LOGGER = logging.getLogger(__name__)
 
 # relative paths for test resources
 PATH_TO_DUMMY_DATASET = resource_filename(__name__, 'dummy_dataset_1')

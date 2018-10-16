@@ -3,13 +3,13 @@
 import pytest
 
 from ..utils import app_utils
-from .resources.dummy_constants import DUMMY_ENTITIES
+from .resources.dummy_constants import *
 
 ############################################ UNIT TESTS ############################################
 
 def test_get_pubmed_xml_errors():
-    """Asserts that call to app_utils.get_pubmed_xml raises a ValueError error when an invalid
-    value for argument 'pmid' is passed."""
+    """Asserts that call to `app_utils.get_pubmed_xml()` raises a ValueError error when an invalid
+    value for argument `pmid` is passed."""
     invalid_pmids = [["test"], "test", 0.0, 0, -1, (42,)]
 
     for pmid in invalid_pmids:
