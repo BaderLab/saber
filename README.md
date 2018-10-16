@@ -178,7 +178,7 @@ Documentation for the Saber web-service API can be found [here](https://baderlab
 First, import `Saber`. This is the interface to Saber
 
 ```python
-from saber import Saber
+from saber.saber import Saber
 ```
 
 To load a pre-trained model, we first create a `Saber` object
