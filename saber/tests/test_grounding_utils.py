@@ -1,55 +1,46 @@
+"""Any and all unit tests for the grounding_utils (saber/utils/grounding_utils.py).
+"""
 import pytest
-# import json
 
 from ..utils import grounding_utils
 
+
 @pytest.fixture
 def annotation():
-    return {
-        "ents": [
-            {
-                "end": 27,
-                "label": "PRGE",
-                "start": 23,
-                "text": "Hdm2"
-            },
-            {
-                "end": 34,
-                "label": "PRGE",
-                "start": 31,
-                "text": "MK2"
-            },
-            {
-                "end": 69,
-                "label": "PRGE",
-                "start": 66,
-                "text": "p53"
-            }
-        ],
-        "text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.",
-        "title": ""
-    }
+    """Returns a dictionary object similar to one that might be returned by `Saber.annotate()`
+    """
+    annotation = {"ents": [{"text": "Hdm2", "label": "PRGE", "start": 23, "end": 27},
+                           {"text": "MK2", "label": "PRGE", "start": 31, "end": 34},
+                           {"text": "p53", "label": "PRGE", "start": 66, "end": 69}
+                          ],
+                  "text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.",
+                  "title": ""}
 
+    return annotation
 
 def test_query_uniprot(annotation):
+    """
+    """
     text = annotation['ents'][1]['text']
-    r = grounding_utils._query_uniprot(text,9606,limit=1)
-    assert len(r) == 1
-    assert r[0]['Entry'] == 'P49137'
-    assert len(r[0].keys()) == 3
+    actual = grounding_utils._query_uniprot(text, 9606, limit=1)
+    assert len(actual) == 1
+    assert actual[0]['Entry'] == 'P49137'
+    assert len(actual[0].keys()) == 3
     #short text
-    r = grounding_utils._query_uniprot("p")
-    assert r == []
-
+    actual = grounding_utils._query_uniprot("p")
+    assert actual == []
 
 def test_ground(annotation):
-    a = grounding_utils.ground(annotation, ('human','mouse'), limit=2)
-    assert a != None
-    for ent in a['ents']:
+    """
+    """
+    actual = grounding_utils.ground(annotation, ('human', 'mouse'), limit=2)
+    assert actual is not None
+    for ent in actual['ents']:
         assert 'xrefs' in ent.keys()
 
-
 def test_query_hgnc(annotation):
-    a = grounding_utils._query_hgnc(annotation)
-    assert a == None
+    """
+    """
+    actual = grounding_utils._query_hgnc(annotation)
+    assert actual is None
     #TODO: implement _query_hgnc, make test fail, then fix
