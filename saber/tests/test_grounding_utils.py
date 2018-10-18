@@ -1,7 +1,7 @@
 import pytest
 # import json
 
-from ..utils import grounding
+from ..utils import grounding_utils
 
 @pytest.fixture
 def annotation():
@@ -33,22 +33,23 @@ def annotation():
 
 def test_query_uniprot(annotation):
     text = annotation['ents'][1]['text']
-    r = grounding._query_uniprot(text, limit=1)
+    r = grounding_utils._query_uniprot(text,9606,limit=1)
     assert len(r) == 1
     assert r[0]['Entry'] == 'P49137'
     assert len(r[0].keys()) == 3
     #short text
-    r = grounding._query_uniprot("p",limit=1)
+    r = grounding_utils._query_uniprot("p")
     assert r == []
 
 
 def test_ground(annotation):
-    a = grounding.ground(annotation)
-    assert a == annotation
-    #TODO: implement grounding.ground, make test fail, then fix
+    a = grounding_utils.ground(annotation, ('human','mouse'), limit=2)
+    assert a != None
+    for ent in a['ents']:
+        assert 'xrefs' in ent.keys()
 
 
 def test_query_hgnc(annotation):
-    a = grounding._query_hgnc(annotation)
+    a = grounding_utils._query_hgnc(annotation)
     assert a == None
     #TODO: implement _query_hgnc, make test fail, then fix
