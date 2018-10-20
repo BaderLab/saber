@@ -143,7 +143,7 @@ class Metrics(Callback):
             ValueError, if `criteria` is not one of 'exact', 'left', or 'right'
         """
         performance_scores = {}
-        FN_total, FP_total, TP_total  = 0, 0, 0 # micro performance accumulators
+        FN_total, FP_total, TP_total = 0, 0, 0 # micro performance accumulators
         labels = list(set([chunk[0] for chunk in y_true])) # unique labels
 
         # accumulate performance scores per label
