@@ -16,7 +16,8 @@ class Embeddings(object):
         self.token_map = token_map
 
         self.matrix = None # token embeddings tied to this instance
-        self.word_count = None # number of loaded embeddings
+        self.num_loaded = None # number of loaded embeddings
+        self.num_embed = None # final count of embedded words
         self.dimension = None # dimension of these embeddings
 
         for key, value in kwargs.items():
@@ -27,7 +28,8 @@ class Embeddings(object):
 
         Creates an embedding matrix from the pre-trained word embeddings given at `self.filepath`,
         whose ith row corresponds to the word embedding for the word with value i in
-        `self.token_map`.
+        `self.token_map`. Updates the instance attributes `self.matrix, `self.num_loaded`,
+        `self.dimension`, and `self.num_embed`.
 
         Args:
             binary (bool): True if pre-trained embeddings are in C binary format, False if they are
@@ -35,8 +37,11 @@ class Embeddings(object):
         """
         # prepare the embedding indices
         embedding_idx = self._prepare_embedding_index(binary)
-        self.word_count, self.dimension = len(embedding_idx), len(list(embedding_idx.values())[0])
+        self.num_loaded, self.dimension = len(embedding_idx), len(list(embedding_idx.values())[0])
         self.matrix = self._prepare_embedding_matrix(embedding_idx)
+        self.num_embed = self.matrix.shape[0] # num of embedded words
+
+        return True
 
     def _prepare_embedding_index(self, binary=True):
         """Returns an embedding index for pre-trained token embeddings.
@@ -55,6 +60,7 @@ class Embeddings(object):
         limit = 10000 if self.__dict__.get("debug", False) else None
         vectors = KeyedVectors.load_word2vec_format(self.filepath, binary=binary, limit=limit)
         embedding_idx = {word: vectors[word] for word in vectors.vocab}
+
         return embedding_idx
 
     def _prepare_embedding_matrix(self, embedding_idx):
