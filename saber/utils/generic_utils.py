@@ -7,8 +7,6 @@ import shutil
 
 from setuptools.archive_util import unpack_archive
 
-from .. import constants
-
 LOGGER = logging.getLogger(__name__)
 
 # https://stackoverflow.com/questions/273192/how-can-i-create-a-directory-if-it-does-not-exist#273227
@@ -61,21 +59,3 @@ def compress_directory(directory):
     base_dir = os.path.basename(directory)
     shutil.make_archive(base_name=directory, format='bztar', root_dir=root_dir, base_dir=base_dir)
     shutil.rmtree(directory)
-
-def get_pretrained_model_dir(config):
-    """Returns path to top-level directory to save a pretrained model.
-
-    Returns a directory path to save a pretrained model based on `config.dataset_folder` and
-    `config.output_folder`. The folder which contains the saved model is named from each dataset
-    name in `config.dataset_folder` joined by an underscore. The full path is:
-    `<config.output_folder>/<constants.PRETRAINED_MODEL_DIR>/<dataset_names>`
-
-    Args:
-        config (Config): Config object
-
-    Returns:
-        full path to save a pre-trained model based on 'config.dataset_folder' and
-        'config.dataset_folder'
-    """
-    ds_names = '_'.join([os.path.basename(ds) for ds in config.dataset_folder])
-    return os.path.join(config.output_folder, constants.PRETRAINED_MODEL_DIR, ds_names)

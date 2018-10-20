@@ -5,16 +5,18 @@ from time import strftime
 
 from keras.callbacks import ModelCheckpoint, TensorBoard
 
+from .. import constants
 from ..metrics import Metrics
 from .generic_utils import make_dir
 
+# I/O
 
 def prepare_output_directory(config):
-    """Creates an output directory under `output_folder` for each dataset in `dataset_folder`.
+    """Create output directories `config.output_folder/config.dataset_folder` for each dataset.
 
     Creates the following directory structure:
     .
-    ├── output_folder
+    ├── config.output_folder
     |   └── <first_dataset_name_second_dataset_name_nth_dataset_name>
     |       └── <first_dataset_name>
     |           └── train_session_<month>_<day>_<hr>_<min>_<sec>
@@ -42,12 +44,11 @@ def prepare_output_directory(config):
     if len(config.dataset_folder) > 1:
         dataset_names = '_'.join([os.path.basename(ds) for ds in config.dataset_folder])
         output_folder = os.path.join(output_folder, dataset_names)
-
     make_dir(output_folder)
 
-    for ds in config.dataset_folder:
+    for dataset in config.dataset_folder:
         # create a subdirectory for each datasets name
-        dataset_dir = os.path.join(output_folder, ds)
+        dataset_dir = os.path.join(output_folder, os.path.basename(dataset))
         # create a subdirectory for each train session
         train_session_dir = strftime("train_session_%a_%b_%d_%I_%M_%S").lower()
         dataset_train_session_dir = os.path.join(dataset_dir, train_session_dir)
@@ -58,6 +59,29 @@ def prepare_output_directory(config):
         config.save(dataset_train_session_dir)
 
     return output_dirs
+
+def prepare_pretrained_model_dir(config):
+    """Returns path to top-level directory to save a pre-trained model.
+
+    Returns a directory path to save a pre-trained model based on `config.dataset_folder` and
+    `config.output_folder`. The folder which contains the saved model is named from each dataset
+    name in `config.dataset_folder` joined by an underscore:
+    .
+    ├── config.output_folder
+    |   └── <constants.PRETRAINED_MODEL_DIR>
+    |       └── <first_dataset_name_second_dataset_name_nth_dataset_name>
+
+    config (Config): A Config object which contains a set of harmonzied arguments provided in
+        a *.ini file and, optionally, from the command line.
+
+    Returns:
+        Full path to save a pre-trained model based on `config.dataset_folder` and
+        `config.dataset_folder`.
+    """
+    ds_names = '_'.join([os.path.basename(ds) for ds in config.dataset_folder])
+    return os.path.join(config.output_folder, constants.PRETRAINED_MODEL_DIR, ds_names)
+
+# Callbacks
 
 def setup_checkpoint_callback(output_dir):
     """Sets up per epoch model checkpointing.
@@ -73,10 +97,10 @@ def setup_checkpoint_callback(output_dir):
     """
     checkpointers = []
     for dir_ in output_dir:
-        metric_filepath = os.path.join(dir_, 'model_weights_best.hdf5')
+        metric_filepath = os.path.join(dir_, 'model_weights_epoch_{epoch:02d}.hdf5')
         checkpointer = ModelCheckpoint(filepath=metric_filepath,
                                        monitor='val_loss',
-                                       save_best_only=True,
+                                       # save_best_only=True,
                                        save_weights_only=True)
         checkpointers.append(checkpointer)
 
@@ -121,10 +145,10 @@ def setup_metrics_callback(config, datasets, training_data, output_dir, fold=Non
         A list of Metric objects, one for each dataset in `datasets`.
     """
     metrics = []
-    for i, ds in enumerate(datasets):
+    for i, dataset in enumerate(datasets):
         metric = Metrics(config=config,
                          training_data=training_data[i],
-                         index_map=ds.idx_to_tag,
+                         index_map=dataset.idx_to_tag,
                          output_dir=output_dir[i],
                          fold=fold)
         metrics.append(metric)
@@ -151,6 +175,8 @@ def setup_callbacks(config, output_dir):
 
     return callbacks
 
+# Evaluation metrics
+
 def precision_recall_f1_support(true_positives, false_positives, false_negatives):
     """Returns the precision, recall, F1 and support from TP, FP and FN counts.
 
@@ -168,7 +194,34 @@ def precision_recall_f1_support(true_positives, false_positives, false_negatives
     """
     precision = true_positives / (true_positives + false_positives) if true_positives > 0 else 0.
     recall = true_positives / (true_positives + false_negatives) if true_positives > 0 else 0.
-    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.
+    f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.
     support = true_positives + false_negatives
 
-    return precision, recall, f1, support
+    return precision, recall, f1_score, support
+
+# Saving/loading
+
+def load_pretrained_model(config, datasets, weights_filepath, model_filepath):
+    """Loads a pre-trained Keras model from its pre-trained weights and architecture files.
+
+    Loads a pre-trained Keras model given by its pre-trained weights (`weights_filepath`) and
+    architecture files (`model_filepath`). The type of model to load is specificed in
+    `config.model_name`.
+
+    Args:
+        config (Config): config (Config): A Config object which contains a set of harmonzied
+            arguments provided in a *.ini file and, optionally, from the command line.
+        datasets (Dataset): A list of Dataset objects.
+        weights_filepath (str): A filepath to the weights of a pre-trained Keras model.
+        model_filepath (str): A filepath to the architecture of a pre-trained Keras model.
+
+    Returns:
+        A pre-trained Keras model.
+    """
+    if config.model_name == 'mt-lstm-crf':
+        from ..models.multi_task_lstm_crf import MultiTaskLSTMCRF
+        model = MultiTaskLSTMCRF(config, datasets)
+    model.load(weights_filepath, model_filepath)
+    model.compile()
+
+    return model
