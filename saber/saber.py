@@ -15,7 +15,7 @@ from .dataset import Dataset
 from .embeddings import Embeddings
 from .preprocessor import Preprocessor
 from .trainer import Trainer
-from .utils import data_utils, generic_utils
+from .utils import data_utils, generic_utils, grounding_utils, model_utils
 
 print('Saber version: {0}'.format(constants.__version__))
 LOGGER = logging.getLogger(__name__)
@@ -105,8 +105,9 @@ class Saber(object):
             text = transformed_text['text'][start:end]
             ents.append({'start': start, 'end': end, 'text': text, 'label': label})
 
-        # create the final annotation
+        # create the final annotation and ground it
         annotation = {'text': transformed_text['text'], 'ents': ents, 'title': title}
+        annotation = grounding_utils.ground(annotation)
 
         if jupyter:
             displacy.render(annotation, jupyter=True, style='ent', manual=True,
@@ -121,30 +122,30 @@ class Saber(object):
         defaults to '<self.config.output_folder>/<constants.PRETRAINED_MODEL_DIR>/<dataset_names>'
 
         Args:
-            directory (str): Directory path to save model folder. Defaults to
-                '<self.config.output_folder>/<constants.PRETRAINED_MODEL_DIR>/<dataset_names>'.
+            directory (str): Directory path to save model to. If None, a default directory under
+                `self.config.output_folder` is created.
             compress (bool): True if model should be saved as tarball. Defaults to True.
             model_idx (int): Which model in `self.model.models` to save, defaults to 0.
         """
         start = time.time()
-        print('Saving model... ', end='', flush=True)
+        print('Saving model...', end=' ', flush=True)
 
-        # if no directory is provided, get a 'default' one from dataset names
+        # allows user to call save without providing a directory, default one is chosen
         if directory is None:
-            directory = generic_utils.get_pretrained_model_dir(self.config)
+            directory = model_utils.prepare_pretrained_model_dir(self.config)
+
         directory = generic_utils.clean_path(directory)
         generic_utils.make_dir(directory)
 
-        # create filepaths to objects to be saved
         weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
         model_filepath = os.path.join(directory, constants.MODEL_FILENAME)
+        self.model.save(weights_filepath, model_filepath, model_idx)
+        # beside the architecture and weights, save only the objects we need for model prediction
         attributes_filepath = os.path.join(directory, constants.ATTRIBUTES_FILENAME)
-        # create a dictionary containing anything else we need to save the model
         model_attributes = {'type_to_idx': self.datasets[model_idx].type_to_idx,
                             'idx_to_tag': self.datasets[model_idx].idx_to_tag}
-        # save weights, model architecture, attributes, and configuration file
-        self.model.save(weights_filepath, model_filepath, model_idx)
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
+        # save config for reproducibility
         self.config.save(directory)
 
         if compress:
@@ -152,8 +153,8 @@ class Saber(object):
 
         end = time.time() - start
         print('Done ({0:.2f} seconds).'.format(end))
-        print('Model was saved to {}.'.format(directory))
-        LOGGER.info('Model was saved to %s.', directory)
+        print('Model was saved to {}'.format(directory))
+        LOGGER.info('Model was saved to %s', directory)
 
     def load(self, directory):
         """Coordinates the loading of Saber models.
@@ -164,16 +165,17 @@ class Saber(object):
         start = time.time()
         print('Loading model...', end=' ', flush=True)
 
-        # If directory is one of the pre-trained models packaged with Saber, load it
+        # Allows user to provide names of pretrained models (e.g. 'PRGE') rather than filepaths
         if directory.upper() in constants.PRETRAINED_MODELS:
             directory = os.path.join(constants.PRETRAINED_MODEL_DIR, directory.upper())
+
         directory = generic_utils.clean_path(directory)
         generic_utils.extract_directory(directory)
 
-        # load attributes to be carried over from saved model
+        # load only the objects we need for model prediction
         attributes_filepath = os.path.join(directory, constants.ATTRIBUTES_FILENAME)
         model_attributes = pickle.load(open(attributes_filepath, "rb"))
-        # create a new dataset instance, with the required attributes for model prediction
+        # its easiest to use a Dataset object to hold these data objects
         self.datasets = [Dataset()]
         self.datasets[0].type_to_idx = model_attributes['type_to_idx']
         self.datasets[0].idx_to_tag = model_attributes['idx_to_tag']
@@ -181,11 +183,10 @@ class Saber(object):
         # create new instance of model, load pre-trained weights
         weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
         model_filepath = os.path.join(directory, constants.MODEL_FILENAME)
-        if self.config.model_name == 'mt-lstm-crf':
-            from .models.multi_task_lstm_crf import MultiTaskLSTMCRF
-            self.model = MultiTaskLSTMCRF(self.config, self.datasets)
-        self.model.load(weights_filepath, model_filepath)
-        self.model.compile()
+        self.model = model_utils.load_pretrained_model(config=self.config,
+                                                       datasets=self.datasets,
+                                                       weights_filepath=weights_filepath,
+                                                       model_filepath=model_filepath)
 
         end = time.time() - start
         print('Done ({0:.2f} seconds).'.format(end))
@@ -201,7 +202,8 @@ class Saber(object):
             ValueError: If `self.config.dataset_folder` is None and `directory` is None.
         """
         start = time.time()
-        if directory is not None: # then dataset dir was passed with function call
+        # allows a user to provide the dataset directory when function is called
+        if directory is not None:
             directory = directory if isinstance(directory, list) else [directory]
             directory = [generic_utils.clean_path(dir_) for dir_ in directory]
             self.config.dataset_folder = directory
@@ -211,23 +213,28 @@ class Saber(object):
             LOGGER.error('ValueError %s', err_msg)
             raise ValueError(err_msg)
 
-        # if a dataset has already been loaded, assume we are transfer learning
+        # need to save the type to index mapping here for setting up transfer learning
         type_to_idx = None if self.datasets is None else self.datasets[0].type_to_idx
 
         # datasets may be 'single' or 'compound' (more than one)
         if len(self.config.dataset_folder) == 1:
-            print('Loading (single) dataset... ', end='', flush=True)
+            print('Loading (single) dataset...', end=' ', flush=True)
             self.datasets = data_utils.load_single_dataset(self.config)
             LOGGER.info('Loaded single dataset at: %s', self.config.dataset_folder)
         else:
-            print('Loading (compound) dataset... ', end='', flush=True)
+            print('Loading (compound) dataset...', end=' ', flush=True)
             self.datasets = data_utils.load_compound_dataset(self.config)
             LOGGER.info('Loaded multiple datasets at: %s', self.config.dataset_folder)
 
-        # if transfer learning, make required changes to target datasets
-        if type_to_idx is not None:
+        # if a model has already been loaded, assume we are transfer learning
+        if self.model is not None:
+            print('\nTransferring from pre-trained model...', end=' ', flush=True)
+            LOGGER.info('Transferred from a pre-trained model')
+            # make required changes to target datasets
             for dataset in self.datasets:
                 data_utils.setup_dataset_for_transfer(dataset, type_to_idx)
+            # prepare model for transfer learning
+            self.model.prepare_for_transfer(self.datasets)
 
         end = time.time() - start
         print('Done ({0:.2f} seconds).'.format(end))
@@ -246,7 +253,7 @@ class Saber(object):
             ValueError: If 'self.config.pretrained_embeddings' is None and `filepath` is None.
         """
         start = time.time()
-        print('Loading embeddings... ', end='', flush=True)
+        print('Loading embeddings...', end=' ', flush=True)
 
         if filepath is not None:
             filepath = generic_utils.clean_path(filepath)
@@ -268,9 +275,9 @@ class Saber(object):
         self.embeddings.load(binary=binary)
 
         end = time.time() - start
-        words, dims = self.embeddings.word_count, self.embeddings.dimension
-        info_msg = 'Found {} word vectors of dimension {}'.format(words, dims)
-        print('Done ({0:.2f} seconds)'.format(end))
+        words, dims = self.embeddings.num_loaded, self.embeddings.dimension
+        info_msg = 'Found {} word vectors of dimension {}.'.format(words, dims)
+        print('Done ({0:.2f} seconds).'.format(end))
         print(info_msg)
         LOGGER.info(info_msg)
 
@@ -301,7 +308,7 @@ class Saber(object):
 
         # setup the chosen model
         if self.config.model_name == 'mt-lstm-crf':
-            print('Building the multi-task BiLSTM-CRF model... ', end='', flush=True)
+            print('Building the multi-task BiLSTM-CRF model...', end=' ', flush=True)
             from .models.multi_task_lstm_crf import MultiTaskLSTMCRF
             model = MultiTaskLSTMCRF(config=self.config,
                                      datasets=self.datasets,
