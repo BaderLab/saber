@@ -468,11 +468,11 @@
                 <h1 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h1>
 <p>If your goal is simply to use Saber to annotate biomedical text, then you can either use the <a href="#web-service">web-service</a> or a <a href="#pre-trained-models">pre-trained model</a>.</p>
 <h2 id="web-service">Web-service<a class="headerlink" href="#web-service" title="Permanent link">&para;</a></h2>
-<p>To use Saber as a <strong>local</strong> web-service, run:</p>
+<p>To use Saber as a <strong>local</strong> web-service, run</p>
 <div class="codehilite"><pre><span></span>(saber) $ python -m saber.cli.app
 </pre></div>
 
-<p>or, if you prefer, you can pull &amp; run the Saber image from <strong>Docker Hub</strong>:</p>
+<p>or, if you prefer, you can pull &amp; run the Saber image from <strong>Docker Hub</strong></p>
 <div class="codehilite"><pre><span></span><span class="c1"># Pull Saber image from Docker Hub</span>
 $ docker pull pathwaycommons/saber
 <span class="c1"># Run docker (use `-dt` instead of `-it` to run container in background)</span>
@@ -495,7 +495,7 @@ $ docker run -it --rm -p <span class="m">5000</span>:5000 --name saber pathwayco
 <span class="p">}</span>
 </pre></div>
 
-<p>For example, with the web-service running locally:</p>
+<p>For example, with the web-service running locally</p>
 <div class="superfences-tabs">
 <input name="__tabs_1" type="radio" id="__tab_1_0" checked="checked" />
 <label for="__tab_1_0">Bash</label>
@@ -558,7 +558,7 @@ model needs to be loaded into memory.</p></details><p>Documentation for the Sabe
 <div class="codehilite"><pre><span></span><span class="n">ann</span> <span class="o">=</span> <span class="n">saber</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">)</span>
 </pre></div>
 
-<p>which contains the keys <code>title</code>, <code>text</code> and <code>ents</code>:</p>
+<p>which contains the keys <code>title</code>, <code>text</code> and <code>ents</code></p>
 <ul>
 <li><code>title</code>: contains the title of the article, if provided</li>
 <li><code>text</code>: contains the text (which is minimally processed) the model was deployed on</li>

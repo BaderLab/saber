@@ -440,7 +440,7 @@
                 
                 
                 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
-<p>To install Saber, you will need <code>python==3.6</code>. If not already installed, <code>python==3.6</code> can be installed via:</p>
+<p>To install Saber, you will need <code>python==3.6</code>. If not already installed, <code>python==3.6</code> can be installed via</p>
 <ul>
 <li>the <a href="https://www.python.org/downloads/">official installer</a></li>
 <li><a href="https://brew.sh">Homebrew</a>, on MacOS (<code>brew install python3</code>)</li>
@@ -450,12 +450,13 @@
 <p class="admonition-title">Note</p>
 <p>Run <code>python --version</code> at the command line to make sure installation was successful. You may need to type <code>python3</code> (not just <code>python</code>) depending on your install method.</p>
 </div>
-<p>(OPTIONAL) First, activate your virtual environment (see <a href="#optional-creating-and-activating-virtual-environments">below</a> for help):</p>
+<p>(OPTIONAL) First, activate your virtual environment (see <a href="#optional-creating-and-activating-virtual-environments">below</a> for help)</p>
 <div class="codehilite"><pre><span></span>$ conda activate saber
+<span class="c1"># Notice your command prompt has changed to indicate that the environment is active</span>
 <span class="o">(</span>saber<span class="o">)</span> $
 </pre></div>
 
-<p>Then, install Saber right from the repository with <code>pip</code></p>
+<p>then install Saber right from the repository with <code>pip</code></p>
 <div class="codehilite"><pre><span></span>(saber) $ pip install git+https://github.com/BaderLab/saber.git
 </pre></div>
 
@@ -481,13 +482,13 @@
 <p>See <a href="#running-tests">Running tests</a> for a way to verify your installation.</p>
 </div>
 <h3 id="optional-creating-and-activating-virtual-environments">(OPTIONAL) Creating and activating virtual environments<a class="headerlink" href="#optional-creating-and-activating-virtual-environments" title="Permanent link">&para;</a></h3>
-<p>When using <code>pip</code> it is generally recommended to install packages in a virtual environment to avoid modifying system state. To create a virtual environment named <code>saber</code>:</p>
+<p>When using <code>pip</code> it is generally recommended to install packages in a virtual environment to avoid modifying system state. To create a virtual environment named <code>saber</code></p>
 <h4 id="using-virtualenv-or-venv">Using virtualenv or venv<a class="headerlink" href="#using-virtualenv-or-venv" title="Permanent link">&para;</a></h4>
-<p>Using <a href="https://virtualenv.pypa.io/en/stable/">virtualenv</a>:</p>
+<p>Using <a href="https://virtualenv.pypa.io/en/stable/">virtualenv</a></p>
 <div class="codehilite"><pre><span></span>$ virtualenv --python<span class="o">=</span>python3 /path/to/new/venv/saber
 </pre></div>
 
-<p>Using <a href="https://docs.python.org/3/library/venv.html">venv</a>:</p>
+<p>Using <a href="https://docs.python.org/3/library/venv.html">venv</a></p>
 <div class="codehilite"><pre><span></span>$ python3 -m venv /path/to/new/venv/saber
 </pre></div>
 
@@ -498,11 +499,11 @@
 </pre></div>
 
 <h4 id="using-conda">Using Conda<a class="headerlink" href="#using-conda" title="Permanent link">&para;</a></h4>
-<p>If you use <a href="https://conda.io/docs/">Conda</a> / <a href="https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh">Miniconda</a>, you can create an environment named <code>saber</code> by running:</p>
+<p>If you use <a href="https://conda.io/docs/">Conda</a> / <a href="https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh">Miniconda</a>, you can create an environment named <code>saber</code> by running</p>
 <div class="codehilite"><pre><span></span>$ conda create -n saber <span class="nv">python</span><span class="o">=</span><span class="m">3</span>.6
 </pre></div>
 
-<p>To activate the environment:</p>
+<p>To activate the environment</p>
 <div class="codehilite"><pre><span></span>$ conda activate saber
 <span class="c1"># Notice your command prompt has changed to indicate that the environment is active</span>
 <span class="o">(</span>saber<span class="o">)</span> $
@@ -513,7 +514,7 @@
 <p>You do not <em>need</em> to name the environment <code>saber</code>.</p>
 </div>
 <h2 id="running-tests">Running tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h2>
-<p>Sabers test suite can be found in <code>saber/tests</code>. If Saber is already installed, you can run <code>pytest</code> on the installation directory:</p>
+<p>Sabers test suite can be found in <code>saber/tests</code>. If Saber is already installed, you can run <code>pytest</code> on the installation directory</p>
 <div class="codehilite"><pre><span></span><span class="c1"># Install pytest</span>
 <span class="p">(</span><span class="n">saber</span><span class="p">)</span> <span class="err">$</span> <span class="n">pip</span> <span class="n">install</span> <span class="n">pytest</span>
 <span class="c1"># Find out where Saber is installed</span>
@@ -522,7 +523,7 @@
 <span class="p">(</span><span class="n">saber</span><span class="p">)</span> <span class="err">$</span> <span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pytest</span> <span class="err">$</span><span class="n">INSTALL_DIR</span>
 </pre></div>
 
-<p>Alternatively, to clone Saber, install it, and run the test suite all in one go:</p>
+<p>Alternatively, to clone Saber, install it, and run the test suite all in one go</p>
 <div class="codehilite"><pre><span></span>(saber) $ git clone https://github.com/BaderLab/saber.git
 (saber) $ cd saber
 (saber) $ python setup.py test

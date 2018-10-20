@@ -566,7 +566,7 @@
 <span class="n">saber</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
 
 <span class="c1"># Load a model</span>
-<span class="k">del</span> <span class="n">sp</span>
+<span class="k">del</span> <span class="n">saber</span>
 <span class="n">saber</span> <span class="o">=</span> <span class="n">Saber</span><span class="p">()</span>
 <span class="n">saber</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
 
@@ -589,7 +589,7 @@
 <span class="n">saber</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
 
 <span class="c1"># Load that model</span>
-<span class="k">del</span> <span class="n">sp</span>
+<span class="k">del</span> <span class="n">saber</span>
 <span class="n">saber</span> <span class="o">=</span> <span class="n">Saber</span><span class="p">()</span>
 <span class="n">saber</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
 
@@ -615,7 +615,11 @@
 </pre></div>
 
 <h4 id="training-on-gpus">Training on GPUs<a class="headerlink" href="#training-on-gpus" title="Permanent link">&para;</a></h4>
-<p>Saber will automatically train on as many GPUs as are available. In order for this to work, you must have <a href="https://developer.nvidia.com/cuda-downloads">CUDA</a> and <a href="https://developer.nvidia.com/cudnn">CudDNN</a> installed already. Additionally, you must install <code>tensorflow-gpu</code>:</p>
+<p>Saber will automatically train on as many GPUs as are available. In order for this to work, you must have <a href="https://developer.nvidia.com/cuda-downloads">CUDA</a> and, optionally, <a href="https://developer.nvidia.com/cudnn">CudDNN</a> installed. If you are using conda to manage your environment, then these are installed for you when you call</p>
+<div class="codehilite"><pre><span></span>(saber) $ conda install tensorflow-gpu
+</pre></div>
+
+<p>Otherwise, install them yourself and use <code>pip</code> to install <code>tensorflow-gpu</code></p>
 <div class="codehilite"><pre><span></span>(saber) $ pip install tensorflow-gpu
 </pre></div>
 
