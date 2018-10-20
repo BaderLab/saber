@@ -83,7 +83,7 @@ def prepare_pretrained_model_dir(config):
 
 # Callbacks
 
-def setup_checkpoint_callback(output_dir):
+def setup_checkpoint_callback(config, output_dir):
     """Sets up per epoch model checkpointing.
 
     Sets up model checkpointing by creating a Keras CallBack for each output directory in
@@ -96,11 +96,13 @@ def setup_checkpoint_callback(output_dir):
         checkpointer: A Keras CallBack object for per epoch model checkpointing.
     """
     checkpointers = []
+    print(config.save_all_weights)
     for dir_ in output_dir:
-        metric_filepath = os.path.join(dir_, 'model_weights_epoch_{epoch:02d}.hdf5')
+        metric_filepath = \
+            os.path.join(dir_, 'model_weights_epoch_{epoch:02d}_val_loss_{val_loss:.2f}.hdf5')
         checkpointer = ModelCheckpoint(filepath=metric_filepath,
                                        monitor='val_loss',
-                                       # save_best_only=True,
+                                       save_best_only=(not config.save_all_weights),
                                        save_weights_only=True)
         checkpointers.append(checkpointer)
 
@@ -168,7 +170,7 @@ def setup_callbacks(config, output_dir):
     """
     callbacks = []
     # model checkpointing
-    callbacks.append(setup_checkpoint_callback(output_dir))
+    callbacks.append(setup_checkpoint_callback(config, output_dir))
     # tensorboard
     if config.tensorboard:
         callbacks.append(setup_tensorboard_callback(output_dir))
