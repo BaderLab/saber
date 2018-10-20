@@ -94,6 +94,7 @@ class Config(object):
             # advanced
             args['verbose'] = self.config['advanced'].getboolean('verbose')
             args['debug'] = self.config['advanced'].getboolean('debug')
+            args['save_all_weights'] = self.config['advanced'].getboolean('save_all_weights')
             args['tensorboard'] = self.config['advanced'].getboolean('tensorboard')
             args['replace_rare_tokens'] = self.config['advanced'].getboolean('replace_rare_tokens')
             args['fine_tune_word_embeddings'] = \
@@ -229,6 +230,10 @@ class Config(object):
         parser.add_argument('--save_model', required=False, action='store_true',
                             help=('True if the model should be saved when training is complete. '
                                   'Defaults to False.'))
+        parser.add_argument('--save_all_weights', required=False, action='store_true',
+                            help=('True if the weights from every epoch during training should be '
+                                  'saved. If false, weights are only saved for epochs that achieve '
+                                  'a new best on validation loss. Defaults to False.'))
         parser.add_argument('--tensorboard', required=False, action='store_true',
                             help=('True if tensorboard logs should be saved during training (note '
                                   'these can be very large). Defaults to False.'))
