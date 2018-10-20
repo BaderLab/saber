@@ -4,13 +4,13 @@ If your goal is simply to use Saber to annotate biomedical text, then you can ei
 
 ## Web-service
 
-To use Saber as a **local** web-service, run:
+To use Saber as a **local** web-service, run
 
 ```
 (saber) $ python -m saber.cli.app
 ```
 
-or, if you prefer, you can pull & run the Saber image from **Docker Hub**:
+or, if you prefer, you can pull & run the Saber image from **Docker Hub**
 
 ```bash
 # Pull Saber image from Docker Hub
@@ -38,7 +38,7 @@ or
 }
 ```
 
-For example, with the web-service running locally:
+For example, with the web-service running locally
 
 ``` bash tab="Bash"
 curl -X POST 'http://localhost:5000/annotate/text' \
@@ -126,7 +126,7 @@ The `annotate()` method returns a simple `dict` object
 ann = saber.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.")
 ```
 
-which contains the keys `title`, `text` and `ents`:
+which contains the keys `title`, `text` and `ents`
 
 - `title`: contains the title of the article, if provided
 - `text`: contains the text (which is minimally processed) the model was deployed on
