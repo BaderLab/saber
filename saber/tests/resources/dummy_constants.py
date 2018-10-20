@@ -11,7 +11,8 @@ from ... import constants
 LOGGER = logging.getLogger(__name__)
 
 # relative paths for test resources
-PATH_TO_DUMMY_DATASET = resource_filename(__name__, 'dummy_dataset_1')
+PATH_TO_DUMMY_DATASET_1 = resource_filename(__name__, 'dummy_dataset_1')
+PATH_TO_DUMMY_DATASET_2 = resource_filename(__name__, 'dummy_dataset_2')
 PATH_TO_DUMMY_CONFIG = resource_filename(__name__, 'dummy_config.ini')
 PATH_TO_DUMMY_EMBEDDINGS = resource_filename(__name__, 'dummy_word_embeddings/dummy_word_embeddings.txt')
 
@@ -68,7 +69,6 @@ CONFIG_SECTIONS = ['mode', 'data', 'model', 'training', 'advanced']
 
 # Arg values before any processing
 DUMMY_ARGS_NO_PROCESSING = {'model_name': 'MT-LSTM-CRF',
-                            'train_model': 'True',
                             'save_model': 'False',
                             'dataset_folder': 'saber/tests/resources/dummy_dataset_1',
                             'output_folder': '../output',
@@ -98,9 +98,8 @@ DUMMY_ARGS_NO_PROCESSING = {'model_name': 'MT-LSTM-CRF',
                            }
 # Final arg values when args provided in only config file
 DUMMY_ARGS_NO_CLI_ARGS = {'model_name': 'mt-lstm-crf',
-                          'train_model': True,
                           'save_model': False,
-                          'dataset_folder': [PATH_TO_DUMMY_DATASET],
+                          'dataset_folder': [PATH_TO_DUMMY_DATASET_1],
                           'output_folder': os.path.abspath('../output'),
                           'pretrained_model_weights': '',
                           'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
@@ -133,13 +132,12 @@ DUMMY_COMMAND_LINE_ARGS = {'optimizer': 'sgd',
                            # the dataset and embeddings are used for test purposes so they must
                            # point to the correct resources, this can be ensured by passing their
                            # paths here
-                           'dataset_folder': [PATH_TO_DUMMY_DATASET],
+                           'dataset_folder': [PATH_TO_DUMMY_DATASET_1],
                            'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
                           }
 DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'mt-lstm-crf',
-                            'train_model': True,
                             'save_model': False,
-                            'dataset_folder': [PATH_TO_DUMMY_DATASET],
+                            'dataset_folder': [PATH_TO_DUMMY_DATASET_1],
                             'output_folder': os.path.abspath('../output'),
                             'pretrained_model_weights': '',
                             'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
