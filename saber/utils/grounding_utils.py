@@ -22,7 +22,7 @@ def _query_uniprot(text, organisms=('9606'), limit=1):
         limit: Max number of hits (result rows ordered by relevance).
 
     Returns:
-        xrefs, a list of dictionaries list of dictionaries [{'col1':'val1', 'col2':'val2',..},..]
+        xrefs, a list of dictionaries [{'col1':'val1', 'col2':'val2',..},..]
     """
     if len(text) < 2:
         logging.error('query text must be at least two characters long')
@@ -74,12 +74,11 @@ def _query_uniprot(text, organisms=('9606'), limit=1):
 def ground(annotation, organisms=(9606), limit=10):
     """
     """
-    copy = {k:v for k, v in annotation.items()}
-    for ent in copy['ents']:
+    for ent in annotation['ents']:
         if ent['label'] == 'PRGE':
             xrefs = _query_uniprot(ent['text'], organisms, limit)
             ent.update(xrefs=xrefs)
-    return copy
+    return annotation
 
 # TODO try with HGNC rest api
 def _query_hgnc(text):
