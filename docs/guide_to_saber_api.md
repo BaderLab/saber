@@ -57,7 +57,7 @@ saber.train()
 saber.save('pretrained_models/GENIA')
 
 # Load a model
-del sp
+del saber
 saber = Saber()
 saber.load('pretrained_models/GENIA')
 
@@ -83,7 +83,7 @@ saber.train()
 saber.save('pretrained_models/GENIA')
 
 # Load that model
-del sp
+del saber
 saber = Saber()
 saber.load('pretrained_models/GENIA')
 
@@ -113,7 +113,13 @@ saber.train()
 
 #### Training on GPUs
 
-Saber will automatically train on as many GPUs as are available. In order for this to work, you must have [CUDA](https://developer.nvidia.com/cuda-downloads) and [CudDNN](https://developer.nvidia.com/cudnn) installed already. Additionally, you must install `tensorflow-gpu`:
+Saber will automatically train on as many GPUs as are available. In order for this to work, you must have [CUDA](https://developer.nvidia.com/cuda-downloads) and, optionally, [CudDNN](https://developer.nvidia.com/cudnn) installed. If you are using conda to manage your environment, then these are installed for you when you call
+
+```
+(saber) $ conda install tensorflow-gpu
+```
+
+Otherwise, install them yourself and use `pip` to install `tensorflow-gpu`
 
 ```
 (saber) $ pip install tensorflow-gpu

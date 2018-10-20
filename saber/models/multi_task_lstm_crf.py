@@ -15,26 +15,22 @@ from .. import constants
 from ..utils import model_utils
 from .base_model import BaseKerasModel
 
-# from .layers.attention_with_context import AttentionWithContext
-
-# TODO (johngiorgi): I should to stratify the K-folds...
-
 LOGGER = logging.getLogger(__name__)
 
 class MultiTaskLSTMCRF(BaseKerasModel):
     """A Keras implementation of a BiLSTM-CRF for sequence labeling.
 
     A BiLSTM-CRF for NER implementation in Keras. Supports multi-task learning by default, just pass
-    multiple Dataset objects via `ds` to the constructor and the model will share the parameters
-    of all layers, except for the final output layer, across all datasets, where each dataset
-    represents a sequence labelling task.
+    multiple Dataset objects via `ddatasets` to the constructor and the model will share the
+    parameters of all layers, except for the final output layer, across all datasets, where each
+    dataset represents a sequence labelling task.
 
     Args:
         config (Config): Contains a set of harmonzied arguments provided in a *.ini file and,
             optionally, from the command line.
-        ds (list): a list of Dataset objects.
-        embeddings (numpy.ndarray): a numpy array where ith row contains the vector
-            embedding for ith word type.
+        datasets (list): A list of Dataset objects.
+        embeddings (numpy.ndarray): A numpy array where ith row contains the vector embedding for
+            the ith word type.
 
     References:
         - Guillaume Lample, Miguel Ballesteros, Sandeep Subramanian, Kazuya Kawakami, Chris Dyer.
@@ -51,8 +47,8 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         and its weights from a hdf5 file at `model_filepath`.
 
         Args:
-            weights_filepath (str): filepath to the models wieghts (.hdf5 file).
-            model_filepath (str): filepath to the models architecture (.json file).
+            weights_filepath (str): Filepath to the models wieghts (.hdf5 file).
+            model_filepath (str): Filepath to the models architecture (.json file).
         """
         with open(model_filepath) as f:
             model = model_from_json(f.read(), custom_objects={'CRF': CRF})
@@ -73,7 +69,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                                         mask_zero=True,
                                         name="word_embedding_layer")
         else:
-            word_embeddings = Embedding(input_dim=len(self.datasets[0].types['word']),
+            word_embeddings = Embedding(input_dim=self.embeddings.num_embed,
                                         output_dim=self.embeddings.dimension,
                                         mask_zero=True,
                                         weights=[self.embeddings.matrix],
@@ -85,7 +81,8 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                                     mask_zero=True,
                                     name="char_embedding_layer")
         # char-level BiLSTM
-        char_BiLSTM = TimeDistributed(Bidirectional(LSTM(constants.UNITS_CHAR_LSTM // 2)))
+        char_BiLSTM = TimeDistributed(Bidirectional(LSTM(constants.UNITS_CHAR_LSTM // 2)),
+                                      name='character_BiLSTM')
         # word-level BiLSTM
         word_BiLSTM_1 = Bidirectional(LSTM(units=constants.UNITS_WORD_LSTM // 2,
                                            return_sequences=True,
@@ -99,15 +96,15 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                                       name="word_BiLSTM_2")
 
         # get all unique tag types across all datasets
-        all_tag_types = [ds.type_to_idx['tag'] for ds in self.datasets]
-        all_tag_types = set(x for l in all_tag_types for x in l)
+        all_tags = [ds.type_to_idx['tag'] for ds in self.datasets]
+        all_tags = set(x for l in all_tags for x in l)
 
         # feedforward before CRF, maps each time step to a vector
-        feedforward_map = TimeDistributed(Dense(len(all_tag_types),
-                                                activation=self.config.activation,
-                                                name='feedforward_map'))
+        dense_layer = TimeDistributed(Dense(len(all_tags), activation=self.config.activation),
+                                      name='dense_layer')
+
         # specify model, taking into account the shared layers
-        for ds in self.datasets:
+        for dataset in self.datasets:
             # word-level embedding
             word_ids = Input(shape=(None, ), dtype='int32', name='word_id_inputs')
             word_embed = word_embeddings(word_ids)
@@ -136,13 +133,11 @@ class MultiTaskLSTMCRF(BaseKerasModel):
             if self.config.variational_dropout:
                 model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
 
-            # add attention
-            # model = AttentionWithContext(model)
             # feedforward before CRF
-            model = feedforward_map(model)
+            model = dense_layer(model)
 
             # CRF output layer
-            crf = CRF(len(ds.type_to_idx['tag']), name='crf_classifier')
+            crf = CRF(len(dataset.types['tag']), name='crf_classifier')
             output_layer = crf(model)
 
             # fully specified model
@@ -152,7 +147,11 @@ class MultiTaskLSTMCRF(BaseKerasModel):
             self.models.append(model)
 
     def compile(self):
-        """Compiles a bi-directional multi-task LSTM-CRF for sequence tagging using Keras."""
+        """Compiles the BiLSTM-CRF.
+
+        Compiles the Keras model(s) at `self.models`. If multiple GPUs are detected, a model
+        capable of training on all of them is compiled.
+        """
         for i in range(len(self.models)):
             # need to grab the loss function from models CRF instance
             crf_loss_function = self.models[i].layers[-1].loss_function
@@ -171,3 +170,29 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                           lr=self.config.learning_rate,
                           decay=self.config.decay,
                           clipnorm=self.config.grad_norm)
+
+    def prepare_for_transfer(self, datasets):
+        """Prepares the BiLSTM-CRF for transfer learning by recreating its last layer.
+
+        Prepares the BiLSTM-CRF model(s) at `self.models` for transfer learning by removing their
+        CRF classifiers and replacing them with un-trained CRF classifiers of the approriate size
+        (i.e. number of units equal to number of output tags) for the target datasets.
+
+        References:
+        - https://stackoverflow.com/questions/41378461/how-to-use-models-from-keras-applications-for-transfer-learnig/41386444#41386444
+        """
+        self.datasets = datasets # replace with target datasets
+        models, self.models = self.models, [] # wipe models
+
+        for dataset, model in zip(self.datasets, models):
+            # remove the old CRF classifier and define a new one
+            model.layers.pop()
+            new_crf = CRF(len(dataset.types['tag']), name='target_crf_classifier')
+            # create the new model
+            new_input = model.input
+            new_output = new_crf(model.layers[-1].output)
+            self.models.append(Model(new_input, new_output))
+
+            print('HELLO')
+
+        self.compile()

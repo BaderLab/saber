@@ -1,6 +1,6 @@
 # Installation
 
-To install Saber, you will need `python==3.6`. If not already installed, `python==3.6` can be installed via:
+To install Saber, you will need `python==3.6`. If not already installed, `python==3.6` can be installed via
 
  - the [official installer](https://www.python.org/downloads/)
  - [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
@@ -9,14 +9,15 @@ To install Saber, you will need `python==3.6`. If not already installed, `python
 !!! note
     Run `python --version` at the command line to make sure installation was successful. You may need to type `python3` (not just `python`) depending on your install method.
 
-(OPTIONAL) First, activate your virtual environment (see [below](#optional-creating-and-activating-virtual-environments) for help):
+(OPTIONAL) First, activate your virtual environment (see [below](#optional-creating-and-activating-virtual-environments) for help)
 
 ```
 $ conda activate saber
+# Notice your command prompt has changed to indicate that the environment is active
 (saber) $
 ```
 
-Then, install Saber right from the repository with `pip`
+then install Saber right from the repository with `pip`
 
 ```
 (saber) $ pip install git+https://github.com/BaderLab/saber.git
@@ -47,17 +48,17 @@ Finally, you must also `pip` install the required [Spacy](https://spacy.io) mode
 
 ### (OPTIONAL) Creating and activating virtual environments
 
-When using `pip` it is generally recommended to install packages in a virtual environment to avoid modifying system state. To create a virtual environment named `saber`:
+When using `pip` it is generally recommended to install packages in a virtual environment to avoid modifying system state. To create a virtual environment named `saber`
 
 #### Using virtualenv or venv
 
-Using [virtualenv](https://virtualenv.pypa.io/en/stable/):
+Using [virtualenv](https://virtualenv.pypa.io/en/stable/)
 
 ```
 $ virtualenv --python=python3 /path/to/new/venv/saber
 ```
 
-Using [venv](https://docs.python.org/3/library/venv.html):
+Using [venv](https://docs.python.org/3/library/venv.html)
 
 ```
 $ python3 -m venv /path/to/new/venv/saber
@@ -73,13 +74,13 @@ $ source /path/to/new/venv/saber/bin/activate
 
 #### Using Conda
 
-If you use [Conda](https://conda.io/docs/) / [Miniconda](https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh), you can create an environment named `saber` by running:
+If you use [Conda](https://conda.io/docs/) / [Miniconda](https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh), you can create an environment named `saber` by running
 
 ```
 $ conda create -n saber python=3.6
 ```
 
-To activate the environment:
+To activate the environment
 
 ```
 $ conda activate saber
@@ -92,7 +93,7 @@ $ conda activate saber
 
 ## Running tests
 
-Sabers test suite can be found in `saber/tests`. If Saber is already installed, you can run `pytest` on the installation directory:
+Sabers test suite can be found in `saber/tests`. If Saber is already installed, you can run `pytest` on the installation directory
 
 ```
 # Install pytest
@@ -103,7 +104,7 @@ Sabers test suite can be found in `saber/tests`. If Saber is already installed, 
 (saber) $ python -m pytest $INSTALL_DIR
 ```
 
-Alternatively, to clone Saber, install it, and run the test suite all in one go:
+Alternatively, to clone Saber, install it, and run the test suite all in one go
 
 ```
 (saber) $ git clone https://github.com/BaderLab/saber.git

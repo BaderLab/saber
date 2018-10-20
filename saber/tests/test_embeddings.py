@@ -47,7 +47,7 @@ def test_initialization(dummy_embeddings_before_load):
     assert dummy_embeddings_before_load.token_map == DUMMY_TOKEN_MAP
     # test attributes initialized with default values
     assert dummy_embeddings_before_load.matrix is None
-    assert dummy_embeddings_before_load.word_count is None
+    assert dummy_embeddings_before_load.num_loaded is None
     assert dummy_embeddings_before_load.dimension is None
     # test that we can pass arbitrary keyword arguments
     assert dummy_embeddings_before_load.totally_arbitrary == 'arbitrary'
@@ -76,6 +76,6 @@ def test_attributes_after_load(dummy_embeddings_after_load):
     """Asserts that attributes of Embeddings object are updated as expected after `.load()` is
     called.
     """
-    word_count, dimension = dummy_embeddings_after_load.matrix.shape
-    assert dummy_embeddings_after_load.word_count == word_count
+    num_loaded, dimension = dummy_embeddings_after_load.matrix.shape
+    assert dummy_embeddings_after_load.num_loaded == num_loaded
     assert dummy_embeddings_after_load.dimension == dimension
