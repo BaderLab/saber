@@ -45,12 +45,12 @@ def test_prepare_pretrained_model_dir(dummy_config):
     expected = os.path.join(dummy_config.output_folder, constants.PRETRAINED_MODEL_DIR, dataset)
     assert model_utils.prepare_pretrained_model_dir(dummy_config) == expected
 
-def test_setup_checkpoint_callback(dummy_output_dir):
+def test_setup_checkpoint_callback(dummy_config, dummy_output_dir):
     """Check that we get the expected results from call to
     `model_utils.setup_checkpoint_callback()`.
     """
-    simple_actual = model_utils.setup_checkpoint_callback(dummy_output_dir)
-    blank_actual = model_utils.setup_checkpoint_callback([])
+    simple_actual = model_utils.setup_checkpoint_callback(dummy_config, dummy_output_dir)
+    blank_actual = model_utils.setup_checkpoint_callback(dummy_config, [])
 
     # should get as many Callback objects as datasets
     assert len(dummy_output_dir) == len(simple_actual)
