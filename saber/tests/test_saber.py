@@ -20,11 +20,7 @@ def dummy_config_single_dataset():
     """Returns instance of `Config` after parsing the dummy config file. Ensures that
     `replace_rare_tokens` argument is False.
     """
-    cli_arguments = {'replace_rare_tokens': False}
-    dummy_config = Config(PATH_TO_DUMMY_CONFIG)
-    dummy_config._process_args(cli_arguments)
-
-    return dummy_config
+    return Config(PATH_TO_DUMMY_CONFIG)
 
 @pytest.fixture
 def saber_blank(dummy_config_single_dataset):
@@ -39,7 +35,7 @@ def saber_single_dataset(dummy_config_single_dataset):
     """Returns instance of `Saber` initialized with the dummy config file and a single dataset.
     """
     saber = Saber(config=dummy_config_single_dataset)
-    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET)
+    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
 
     return saber
 
@@ -49,7 +45,7 @@ def saber_single_dataset_embeddings(dummy_config_single_dataset):
     embeddings.
     """
     saber = Saber(config=dummy_config_single_dataset)
-    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET)
+    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
     saber.load_embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, binary=False)
 
     return saber
@@ -59,7 +55,7 @@ def saber_single_dataset_model(dummy_config_single_dataset):
     """Returns an instance of `Saber` initialized with the dummy config file, a single dataset
     a Keras model."""
     saber = Saber(config=dummy_config_single_dataset)
-    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET)
+    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
     saber.build()
 
     return saber
@@ -69,12 +65,10 @@ def saber_single_dataset_model(dummy_config_single_dataset):
 @pytest.fixture
 def dummy_config_compound_dataset():
     """Returns an instance of a `Config` after parsing the dummy config file. Ensures that
-    `replace_rare_tokens` argument is False. The compound dataset is just two copies of the dataset,
-    this makes writing tests much simpler.
+    `replace_rare_tokens` argument is False.
     """
-    compound_dataset = [PATH_TO_DUMMY_DATASET, PATH_TO_DUMMY_DATASET]
-    cli_arguments = {'replace_rare_tokens': False,
-                     'dataset_folder': compound_dataset}
+    compound_dataset = [PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2]
+    cli_arguments = {'dataset_folder': compound_dataset}
     dummy_config = Config(PATH_TO_DUMMY_CONFIG)
     dummy_config._process_args(cli_arguments)
 
@@ -86,9 +80,19 @@ def saber_compound_dataset(dummy_config_compound_dataset):
     The compound dataset is just two copies of the dataset, this makes writing tests much
     simpler.
     """
-    compound_dataset = [PATH_TO_DUMMY_DATASET, PATH_TO_DUMMY_DATASET]
+    compound_dataset = [PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_1]
     saber = Saber(config=dummy_config_compound_dataset)
     saber.load_dataset(directory=compound_dataset)
+
+    return saber
+
+@pytest.fixture
+def saber_compound_dataset_model(dummy_config_compound_dataset):
+    """Returns an instance of `Saber` initialized with the dummy config file, a single dataset
+    a Keras model."""
+    saber = Saber(config=dummy_config_compound_dataset)
+    saber.load_dataset(directory=[PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2])
+    saber.build()
 
     return saber
 
@@ -109,9 +113,11 @@ def test_attributes_after_initilization_of_model(saber_blank,
     # test that we can pass arbitrary keyword arguments
     assert saber_blank.totally_arbitrary == 'arbitrary'
 
-def test_load_dataset(saber_single_dataset):
+# SINGLE DATASETS
+
+def test_load_single_dataset(saber_single_dataset):
     """Assert that the `datasets` attribute of a `Saber` instance was updated as expected after
-    call to `Saber.load_dataset()`
+    call to `Saber.load_dataset()` when a single dataset was provided.
     """
     assert all([isinstance(ds, Dataset) for ds in saber_single_dataset.datasets])
 
@@ -123,6 +129,16 @@ def test_load_dataset_value_error(saber_single_dataset):
     saber_single_dataset.config.dataset_folder = ''
     with pytest.raises(ValueError):
         saber_single_dataset.load_dataset()
+
+def test_tag_to_idx_after_load_single_dataset_with_transfer(saber_single_dataset_model):
+    """Asserts that `saber.datasets[0].type_to_idx['tag']` is as expected after we load a single
+    target dataset for transfer learning.
+    """
+    expected = saber_single_dataset_model.datasets[0].type_to_idx['tag']
+    saber_single_dataset_model.load_dataset(PATH_TO_DUMMY_DATASET_2)
+    actual = saber_single_dataset_model.datasets[0].type_to_idx['tag']
+
+    assert all([actual[k] == expected[k] for k in actual if k in expected])
 
 def test_load_embeddings(saber_single_dataset_embeddings):
     """Assert that the `datasets` attribute of a `Saber` instance was updated as expected after
@@ -146,9 +162,9 @@ def test_load_embeddings_value_error(saber_single_dataset):
     with pytest.raises(ValueError):
         saber_single_dataset.load_embeddings()
 
-def test_build(saber_single_dataset_model):
+def test_build_single_dataset(saber_single_dataset_model):
     """Assert that the `model` attribute of a `Saber` instance was updated as expected after
-    call to `Saber.build()`.
+    call to `Saber.build()` when single dataset was loaded.
     """
     assert isinstance(saber_single_dataset_model.model, BaseKerasModel)
 
@@ -181,8 +197,9 @@ def test_train_no_model_missing_step_exception(saber_single_dataset):
     with pytest.raises(MissingStepException):
         saber_single_dataset.train()
 
-def test_annotate(saber_single_dataset_model):
-    """Asserts that call to `Saber.annotate()` returns the expected results."""
+def test_annotate_single(saber_single_dataset_model):
+    """Asserts that call to `Saber.annotate()` returns the expected results with a single dataset
+    loaded."""
     test = "This is a simple test. With multiple sentences"
     expected = {'text': test, 'ents': [], 'title': None}
 
@@ -208,3 +225,42 @@ def test_predict_blank_or_invalid(saber_single_dataset_model):
         saber_single_dataset_model.annotate(empty_list_test)
     with pytest.raises(ValueError):
         saber_single_dataset_model.annotate(false_bool_test)
+
+# COMPOUND DATASETS
+
+def test_load_compound_dataset(saber_compound_dataset):
+    """Assert that the `datasets` attribute of a `Saber` instance was updated as expected after
+    call to `Saber.load_dataset()` when a compound dataset was provided.
+    """
+    assert all([isinstance(ds, Dataset) for ds in saber_compound_dataset.datasets])
+
+def test_tag_to_idx_after_load_compound_dataset_with_transfer(saber_single_dataset_model):
+    """Asserts that `saber.datasets[0].type_to_idx['tag']` is as expected after we load a compound
+    target dataset for transfer learning.
+    """
+    expected = saber_single_dataset_model.datasets[0].type_to_idx['tag']
+    saber_compound_dataset_model = saber_single_dataset_model
+    saber_compound_dataset_model.load_dataset([PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2])
+    actual = [ds.type_to_idx['tag'] for ds in saber_compound_dataset_model.datasets]
+
+    for dataset in actual:
+        assert all([dataset[k] == expected[k] for k in dataset if k in expected])
+
+def test_build_compound_dataset(saber_compound_dataset_model):
+    """Assert that the `model` attribute of a `Saber` instance was updated as expected after
+    call to `Saber.build()` when compound dataset was loaded.
+    """
+    assert isinstance(saber_compound_dataset_model.model, BaseKerasModel)
+
+'''
+def test_annotate_compound(saber_compound_dataset_model):
+    """Asserts that call to `Saber.annotate()` returns the expected results with a compound dataset
+    loaded."""
+    test = "This is a simple test. With multiple sentences"
+    expected = {'text': test, 'ents': [], 'title': None}
+
+    actual = saber_compound_dataset_model.annotate(test)
+    actual['ents'] = [] # wipe the predicted ents as they are stochastic
+
+    assert expected == actual
+'''

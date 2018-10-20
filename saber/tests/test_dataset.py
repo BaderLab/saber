@@ -20,7 +20,7 @@ def empty_dummy_dataset():
     """Returns an empty single dummy Dataset instance.
     """
     # Don't replace rare tokens for the sake of testing
-    return Dataset(directory=PATH_TO_DUMMY_DATASET, replace_rare=False,
+    return Dataset(directory=PATH_TO_DUMMY_DATASET_1, replace_rare=False,
                    # to test passing of arbitrary keyword args to constructor
                    totally_arbitrary='arbitrary')
 
@@ -29,7 +29,7 @@ def loaded_dummy_dataset():
     """Returns a single dummy Dataset instance after calling Dataset.load().
     """
     # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET, replace_rare=False)
+    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_1, replace_rare=False)
     dataset.load()
 
     return dataset
@@ -45,11 +45,11 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     """
     # attributes that are passed to __init__
     for partition in empty_dummy_dataset.directory:
-        expected = os.path.join(PATH_TO_DUMMY_DATASET, '{}.tsv'.format(partition))
+        expected = os.path.join(PATH_TO_DUMMY_DATASET_1, '{}.tsv'.format(partition))
         assert empty_dummy_dataset.directory[partition] == expected
     assert not empty_dummy_dataset.replace_rare
     # other instance attributes
-    assert empty_dummy_dataset.conll_parser.root == PATH_TO_DUMMY_DATASET
+    assert empty_dummy_dataset.conll_parser.root == PATH_TO_DUMMY_DATASET_1
     assert empty_dummy_dataset.types == {'word': None, 'char': None, 'tag': None}
     assert empty_dummy_dataset.type_seq == {'train': None, 'valid': None, 'test': None}
     assert empty_dummy_dataset.type_to_idx == {'word': None, 'char': None, 'tag': None}
