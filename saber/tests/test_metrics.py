@@ -24,7 +24,7 @@ def dummy_dataset():
     """Returns a single dummy Dataset instance after calling Dataset.load().
     """
     # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET, replace_rare=False)
+    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_1, replace_rare=False)
     dataset.load()
 
     return dataset
@@ -73,15 +73,14 @@ def test_attributes_after_initilization(dummy_config,
                                         dummy_training_data,
                                         dummy_metrics):
     """Asserts instance attributes are initialized correctly when Metrics object is initialized."""
+    # attributes that are passed to __init__
     assert dummy_metrics.config is dummy_config
     assert dummy_metrics.training_data is dummy_training_data
     assert dummy_metrics.index_map is dummy_dataset.idx_to_tag
-
     assert dummy_metrics.output_dir == dummy_output_dir
+    # other instance attributes
     assert dummy_metrics.current_epoch == 0
-
     assert dummy_metrics.performance_metrics == {p: [] for p in constants.PARTITIONS}
-
     # test that we can pass arbitrary keyword arguments
     assert dummy_metrics.totally_arbitrary == 'arbitrary'
 
