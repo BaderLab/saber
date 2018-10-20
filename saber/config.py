@@ -67,7 +67,6 @@ class Config(object):
             # parse config
             # mode
             args['model_name'] = self.config['mode']['model_name']
-            args['train_model'] = self.config['mode'].getboolean('train_model')
             args['save_model'] = self.config['mode'].getboolean('save_model')
 
             # data
@@ -237,7 +236,6 @@ class Config(object):
                             help='Dimension of dense embeddings to be learned for each word.')
         parser.add_argument('--pretrained_embeddings', required=False, type=str,
                             help='Filepath to pre-trained word embeddings.')
-        parser.add_argument('--train_model', required=False, action='store_true', help='TODO')
         parser.add_argument('--variational_dropout', required=False, action='store_true',
                             help=('Pass this flag if variational dropout should be used. NOTE THAT '
                                   'THIS IS TEMPORARY.'))
