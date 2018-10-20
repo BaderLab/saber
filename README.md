@@ -40,7 +40,7 @@
 
 **Disclaimer: Currently a pre-alpha, work in progress!**
 
-To install Saber, you will need `python==3.6`. If not already installed, `python==3.6` can be installed via:
+To install Saber, you will need `python==3.6`. If not already installed, `python==3.6` can be installed via
 
  - the [official installer](https://www.python.org/downloads/)
  - [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
@@ -48,7 +48,7 @@ To install Saber, you will need `python==3.6`. If not already installed, `python
 
 > Use `python --version` at the command line to make sure installation was successful. Note: you may need to use `python3` (not just `python`) at the command line depending on your install method.
 
-(OPTIONAL) Activate your virtual environment (see [below](#optional-creating-and-activating-virtual-environments) for help):
+(OPTIONAL) Activate your virtual environment (see [below](#optional-creating-and-activating-virtual-environments) for help)
 
 ```bash
 $ conda activate saber
@@ -56,7 +56,7 @@ $ conda activate saber
 (saber) $
 ```
 
-Install Saber right from this repository with `pip`
+then install Saber right from this repository with `pip`
 
 ```bash
 (saber) $ pip install git+https://github.com/BaderLab/saber.git
@@ -83,23 +83,23 @@ Finally, you must also `pip` install the required [Spacy](https://spacy.io) mode
 
 ### (OPTIONAL) Creating and activating virtual environments
 
-When using `pip` it is generally recommended to install packages in a virtual environment to avoid modifying system state. To create a virtual environment named `saber`:
+When using `pip` it is generally recommended to install packages in a virtual environment to avoid modifying system state. To create a virtual environment named `saber`
 
 #### Using virtualenv or venv
 
-Using [virtualenv](https://virtualenv.pypa.io/en/stable/):
+Using [virtualenv](https://virtualenv.pypa.io/en/stable/)
 
 ```bash
 $ virtualenv --python=python3 /path/to/new/venv/saber
 ```
 
-Using [venv](https://docs.python.org/3/library/venv.html):
+Using [venv](https://docs.python.org/3/library/venv.html)
 
 ```bash
 $ python3 -m venv /path/to/new/venv/saber
 ```
 
-Next, you need to activate the environment.
+Next, you need to activate the environment
 
 ```bash
 $ source /path/to/new/venv/saber/bin/activate
@@ -110,7 +110,7 @@ $ source /path/to/new/venv/saber/bin/activate
 
 #### Using Conda
 
-If you use [Conda](https://conda.io/docs/) / [Miniconda](https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh), you can create an environment named `saber` by running:
+If you use [Conda](https://conda.io/docs/) / [Miniconda](https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh), you can create an environment named `saber` by running
 
 ```bash
 $ conda create -n saber python=3.6
@@ -133,13 +133,13 @@ If your goal is simply to use Saber to annotate biomedical text, then you can ei
 
 ### Web-service
 
-To use Saber as a **local** web-service, run:
+To use Saber as a **local** web-service, run
 
 ```bash
 (saber) $ python -m saber.cli.app
 ```
 
-or, if you prefer, you can pull & run the Saber image from **Docker Hub**:
+or, if you prefer, you can pull & run the Saber image from **Docker Hub**
 
 ```bash
 # Pull Saber image from Docker Hub
@@ -148,7 +148,7 @@ $ docker pull pathwaycommons/saber
 $ docker run -it --rm -p 5000:5000 --name saber pathwaycommons/saber
 ```
 
-There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a `POST` request with a JSON payload, e.g.:
+There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both expect a `POST` request with a JSON payload, e.g.
 
 ```json
 {
@@ -164,7 +164,7 @@ or
 }
 ```
 
-For example, running the web-service locally and using `cURL`:
+For example, running the web-service locally and using `cURL`
 
 ```bash
 $ curl -X POST 'http://localhost:5000/annotate/text' \
@@ -175,7 +175,7 @@ Documentation for the Saber web-service API can be found [here](https://baderlab
 
 ### Pre-trained models
 
-First, import `Saber`. This is the interface to Saber
+First, import the `Saber` class. This is the interface to Saber
 
 ```python
 from saber.saber import Saber
