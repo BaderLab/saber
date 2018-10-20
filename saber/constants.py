@@ -67,7 +67,7 @@ ENTITIES = {'ANAT': False,
             'PRGE': True,
             'TRIG': False}
 # CONFIG
-CONFIG_ARGS = ['model_name', 'train_model', 'dataset_folder', 'output_folder',
+CONFIG_ARGS = ['model_name', 'dataset_folder', 'output_folder',
                'pretrained_model_weights', 'pretrained_embeddings', 'word_embed_dim',
                'char_embed_dim', 'optimizer', 'activation', 'learning_rate', 'decay', 'grad_norm',
                'dropout_rate', 'batch_size', 'k_folds', 'epochs', 'criteria', 'verbose',
