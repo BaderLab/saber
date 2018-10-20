@@ -142,7 +142,8 @@ class Saber(object):
         self.model.save(weights_filepath, model_filepath, model_idx)
         # beside the architecture and weights, save only the objects we need for model prediction
         attributes_filepath = os.path.join(directory, constants.ATTRIBUTES_FILENAME)
-        model_attributes = {'type_to_idx': self.datasets[model_idx].type_to_idx,
+        model_attributes = {'model_name': self.config.model_name,
+                            'type_to_idx': self.datasets[model_idx].type_to_idx,
                             'idx_to_tag': self.datasets[model_idx].idx_to_tag}
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
         # save config for reproducibility
@@ -179,6 +180,10 @@ class Saber(object):
         self.datasets = [Dataset()]
         self.datasets[0].type_to_idx = model_attributes['type_to_idx']
         self.datasets[0].idx_to_tag = model_attributes['idx_to_tag']
+        # prevents user from having to specify pre-trained models name
+        # TEMP: the get statement is for older models that didn't save this attribute, will
+        # remove when those models are gone
+        self.config.model_name = model_attributes.get('model_name', self.config.model_name)
 
         # create new instance of model, load pre-trained weights
         weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
