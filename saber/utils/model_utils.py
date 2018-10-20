@@ -96,7 +96,6 @@ def setup_checkpoint_callback(config, output_dir):
         checkpointer: A Keras CallBack object for per epoch model checkpointing.
     """
     checkpointers = []
-    print(config.save_all_weights)
     for dir_ in output_dir:
         metric_filepath = \
             os.path.join(dir_, 'model_weights_epoch_{epoch:02d}_val_loss_{val_loss:.2f}.hdf5')
