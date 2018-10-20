@@ -75,12 +75,13 @@ class Trainer(object):
                 self.model.models[i].fit(x=self.training_data[i]['x_train'],
                                          y=self.training_data[i]['y_train'],
                                          batch_size=self.config.batch_size,
-                                         epochs=1,
                                          callbacks=[cb[i] for cb in self.callbacks] + [metrics[i]],
                                          validation_data=(self.training_data[i]['x_valid'],
                                                           self.training_data[i]['y_valid']),
-                                         verbose=1
-                                        )
+                                         verbose=1,
+                                         # required for Keras to properly display current epoch
+                                         initial_epoch=epoch,
+                                         epochs=epoch + 1)
 
     def _cross_validation(self):
         """Trains a Keras model with a cross-validation strategy.
@@ -118,11 +119,13 @@ class Trainer(object):
                         self.training_data[i][fold]['x_train'],
                         self.training_data[i][fold]['y_train'],
                         batch_size=self.config.batch_size,
-                        epochs=1,
                         callbacks=[cb[i] for cb in self.callbacks] + [metrics[i]],
                         validation_data=(self.training_data[i][fold]['x_valid'],
                                          self.training_data[i][fold]['y_valid']),
-                        verbose=1)
+                        verbose=1,
+                        # required for Keras to properly display current epoch
+                        initial_epoch=epoch,
+                        epochs=epoch + 1)
 
             # clear and rebuild the model at end of each fold (except for the last fold)
             if fold < self.config.k_folds - 1:
