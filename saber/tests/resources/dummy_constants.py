@@ -90,11 +90,12 @@ DUMMY_ARGS_NO_PROCESSING = {'model_name': 'MT-LSTM-CRF',
                             'criteria': 'exact',
                             'verbose': 'False',
                             'debug': 'False',
+                            'save_all_weights': 'False',
                             'tensorboard': 'False',
                             'replace_rare_tokens': 'False',
                             'fine_tune_word_embeddings': 'False',
                             # TEMP
-                            'variational_dropout': 'True',
+                            'variational_dropout': 'False',
                            }
 # Final arg values when args provided in only config file
 DUMMY_ARGS_NO_CLI_ARGS = {'model_name': 'mt-lstm-crf',
@@ -117,11 +118,12 @@ DUMMY_ARGS_NO_CLI_ARGS = {'model_name': 'mt-lstm-crf',
                           'criteria': 'exact',
                           'verbose': False,
                           'debug': False,
+                          'save_all_weights': False,
                           'tensorboard': False,
                           'replace_rare_tokens': False,
                           'fine_tune_word_embeddings': False,
                           # TEMP
-                          'variational_dropout': True,
+                          'variational_dropout': False,
                          }
 # Final arg values when args provided in config file and from CLI
 DUMMY_COMMAND_LINE_ARGS = {'optimizer': 'sgd',
@@ -155,11 +157,12 @@ DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'mt-lstm-crf',
                             'criteria': 'exact',
                             'verbose': False,
                             'debug': False,
+                            'save_all_weights': False,
                             'tensorboard': False,
                             'fine_tune_word_embeddings': False,
                             'replace_rare_tokens': False,
                             # TEMP
-                            'variational_dropout': True,
+                            'variational_dropout': False,
                            }
 ########################################### WEB SERVICE ###########################################
 
