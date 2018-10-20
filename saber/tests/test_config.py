@@ -16,7 +16,7 @@ def config_no_cli_args():
     line interface (CLI) args."""
     # the dataset and embeddings are used for test purposes so they must point to the
     # correct resources, this can be ensured by passing their paths here
-    cli_arguments = {'dataset_folder': [PATH_TO_DUMMY_DATASET],
+    cli_arguments = {'dataset_folder': [PATH_TO_DUMMY_DATASET_1],
                      'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS}
     # parse the dummy config
     dummy_config = Config(PATH_TO_DUMMY_CONFIG)
