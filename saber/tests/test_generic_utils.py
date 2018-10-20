@@ -58,10 +58,3 @@ def test_compress_model():
     """Asserts that `generic_utils.compress_model()` compresses a given directory.
     """
     pass
-
-def test_get_pretrained_model_dir(dummy_config):
-    """Asserts that filepath returned by `generic_utils.get_pretrained_model_dir()` is as expected.
-    """
-    dataset = os.path.basename(dummy_config.dataset_folder[0])
-    expected = os.path.join(dummy_config.output_folder, constants.PRETRAINED_MODEL_DIR, dataset)
-    assert generic_utils.get_pretrained_model_dir(dummy_config) == expected

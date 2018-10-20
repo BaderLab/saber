@@ -99,7 +99,7 @@ class BaseKerasModel(object):
         # It is recommended to leave the parameters of this optimizer at their
         # default values (except the learning rate, which can be freely tuned).
         # This optimizer is usually a good choice for recurrent neural networks
-        elif optimizer == 'rmrprop':
+        elif optimizer == 'rmsprop':
             optimizer_ = optimizers.RMSprop(lr=lr, clipnorm=clipnorm)
         # It is recommended to leave the parameters of these optimizers at their
         # default values.

@@ -124,7 +124,7 @@ class Trainer(object):
                                          self.training_data[i][fold]['y_valid']),
                         verbose=1)
 
-            # clear and rebuild the model at end of each fold (expect fo the last fold)
+            # clear and rebuild the model at end of each fold (except for the last fold)
             if fold < self.config.k_folds - 1:
                 self._reset_model()
 

@@ -15,9 +15,7 @@ from .resources.dummy_constants import *
 @pytest.fixture
 def dummy_config():
     """Returns an instance of a Config object."""
-    dummy_config = Config(PATH_TO_DUMMY_CONFIG)
-
-    return dummy_config
+    return Config(PATH_TO_DUMMY_CONFIG)
 
 @pytest.fixture
 def dummy_output_dir(tmpdir, dummy_config):
@@ -30,14 +28,22 @@ def dummy_output_dir(tmpdir, dummy_config):
 
 ############################################ UNIT TESTS ############################################
 
-def test_prepare_output_directory(dummy_output_dir, tmpdir):
+def test_prepare_output_directory(dummy_config, dummy_output_dir):
     """Assert that `model_utils.prepare_output_directory()` creates the expected directories
     with the expected content.
     """
+    # TODO (johngiorgi): need to test the actual output of the function!
     # check that the expected directories are created
     assert all([os.path.isdir(dir_) for dir_ in dummy_output_dir])
     # check that they contain config files
     assert all([os.path.isfile(os.path.join(dir_, 'config.ini')) for dir_ in dummy_output_dir])
+
+def test_prepare_pretrained_model_dir(dummy_config):
+    """Asserts that filepath returned by `generic_utils.get_pretrained_model_dir()` is as expected.
+    """
+    dataset = os.path.basename(dummy_config.dataset_folder[0])
+    expected = os.path.join(dummy_config.output_folder, constants.PRETRAINED_MODEL_DIR, dataset)
+    assert model_utils.prepare_pretrained_model_dir(dummy_config) == expected
 
 def test_setup_checkpoint_callback(dummy_output_dir):
     """Check that we get the expected results from call to
