@@ -245,10 +245,10 @@ class Metrics(Callback):
         best-achieved macro and micro averages thus far for the current epoch.
         """
         # create evaluation output directory
-        current_fold = self.__dict__.get("fold", False)
+        current_fold = self.__dict__.get("fold")
         eval_dirname = self.output_dir
-        if current_fold:
-            fold = 'fold_{}'.format(current_fold)
+        if current_fold is not None:
+            fold = 'fold_{}'.format(current_fold + 1)
             eval_dirname = os.path.join(self.output_dir, fold)
         make_dir(eval_dirname)
 
