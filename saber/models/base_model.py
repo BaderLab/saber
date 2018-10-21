@@ -65,8 +65,8 @@ class BaseKerasModel(object):
             # collect valid and test data, may not be provided
             x_valid, y_valid, x_test, y_test = None, None, None, None
             if ds.idx_seq['valid'] is not None:
-                x_test = [ds.idx_seq['valid']['word'], ds.idx_seq['valid']['char']]
-                y_test = ds.idx_seq['valid']['tag']
+                x_valid = [ds.idx_seq['valid']['word'], ds.idx_seq['valid']['char']]
+                y_valid = ds.idx_seq['valid']['tag']
             if ds.idx_seq['test'] is not None:
                 x_test = [ds.idx_seq['test']['word'], ds.idx_seq['test']['char']]
                 y_test = ds.idx_seq['test']['tag']
