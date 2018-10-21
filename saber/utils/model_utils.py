@@ -148,7 +148,7 @@ def setup_metrics_callback(config, datasets, training_data, output_dir, fold=Non
     metrics = []
     for i, dataset in enumerate(datasets):
         metric = Metrics(config=config,
-                         training_data=training_data[i],
+                         training_data=training_data[i][fold],
                          index_map=dataset.idx_to_tag,
                          output_dir=output_dir[i],
                          fold=fold)
