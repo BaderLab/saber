@@ -251,7 +251,6 @@ def get_data_partitions(training_data, train_valid_indices):
     for i, _ in enumerate(train_valid_indices): # loop over datasets
         partitioned_data.append([])
         for j, _ in enumerate(train_valid_indices[i]): # loop over folds
-
             # train_valid_indices[i][j] is a two-tuple which contains the train and valid indices
             train_indices, valid_indices = train_valid_indices[i][j]
             # get inputs and targets for dataset i
