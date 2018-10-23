@@ -97,9 +97,13 @@ def setup_checkpoint_callback(config, output_dir):
     """
     checkpointers = []
     for dir_ in output_dir:
-        metric_filepath = \
-            os.path.join(dir_, 'model_weights_epoch_{epoch:02d}_val_loss_{val_loss:.2f}.hdf5')
-        checkpointer = ModelCheckpoint(filepath=metric_filepath,
+        # if only saving best weights, filepath needs to be the same so it gets overwritten
+        if config.save_all_weights:
+            filepath = os.path.join(dir_, 'weights_epoch_{epoch:03d}_val_loss_{val_loss:.4f}.hdf5')
+        else:
+            filepath = os.path.join(dir_, 'weights_best_epoch.hdf5')
+
+        checkpointer = ModelCheckpoint(filepath=filepath,
                                        monitor='val_loss',
                                        save_best_only=(not config.save_all_weights),
                                        save_weights_only=True)
@@ -140,15 +144,16 @@ def setup_metrics_callback(config, datasets, training_data, output_dir, fold=Non
         datasets (list): A list of Dataset objects.
         training_data (dict): A dictionary containing training data (inputs and targets).
         output_dir (list): List of directories to save model output to, one for each model.
-        fold (int): The current fold in k-fold cross-validation.
+        fold (int): The current fold in k-fold cross-validation. Defaults to None.
 
     Returns:
         A list of Metric objects, one for each dataset in `datasets`.
     """
     metrics = []
     for i, dataset in enumerate(datasets):
+        eval_data = training_data[i] if fold is None else training_data[i][fold]
         metric = Metrics(config=config,
-                         training_data=training_data[i][fold],
+                         training_data=eval_data,
                          index_map=dataset.idx_to_tag,
                          output_dir=output_dir[i],
                          fold=fold)
