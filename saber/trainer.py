@@ -68,7 +68,7 @@ class Trainer(object):
                                                      output_dir=self.output_dir)
         # training loop
         for epoch in range(self.config.epochs):
-            print('Global epoch: {}/{}'.format(epoch + 1, self.config.epochs))
+            print('Global epoch: {}/{}\n{}'.format(epoch + 1, self.config.epochs, '-' * 20))
             # get a random ordering of the dataset/model indices
             ds_idx = random.sample(range(0, len(self.datasets)), len(self.datasets))
             for i in ds_idx:
@@ -111,7 +111,7 @@ class Trainer(object):
                                                          fold=fold)
             for epoch in range(self.config.epochs):
                 train_info = (fold + 1, self.config.k_folds, epoch + 1, self.config.epochs)
-                print('Fold: {}/{}; Global epoch: {}/{}'.format(*train_info))
+                print('Fold: {}/{}; Global epoch: {}/{}\n{}'.format(*train_info, '-' * 30))
                 # get a random ordering of the dataset/model indices
                 ds_idx = random.sample(range(0, len(self.datasets)), len(self.datasets))
                 for i in ds_idx:
