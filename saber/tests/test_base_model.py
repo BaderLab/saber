@@ -1,14 +1,13 @@
 """Any and all unit tests for the BaseKerasModel (saber/models/base_model.py).
 """
-from keras.engine.training import Model
-
 import pytest
 
+from .resources.dummy_constants import *
 from ..config import Config
 from ..dataset import Dataset
 from ..embeddings import Embeddings
 from ..models.base_model import BaseKerasModel
-from .resources.dummy_constants import *
+
 
 ######################################### PYTEST FIXTURES #########################################
 

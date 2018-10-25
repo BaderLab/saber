@@ -6,12 +6,16 @@ import configparser
 import logging
 import os
 
+from pkg_resources import resource_filename
+
+from . import constants
 from .preprocessor import Preprocessor
 from .utils import generic_utils
 
 # TODO: Some arguments still need help strings written
 
 LOGGER = logging.getLogger(__name__)
+
 
 class Config(object):
     """A class for managing all hyperparameters and configurations of a model.
@@ -21,27 +25,59 @@ class Config(object):
     assigned to an instance attribute.
 
     Args:
-        filepath (str): path to a .ini file, defaults to ./config.ini
+        filepath (str): Path to a *.ini file. If None, default config file is loaded.
         cli (bool): True if command line arguments will be supplied, defaults to False.
     """
-    def __init__(self, filepath='config.ini', cli=False):
-        # filepath to config file
-        self.filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filepath)
-        # parse args provided in configuration file
-        self.config = self._parse_config(self.filepath)
-        # parse cli arguments (if they exist)
+
+    def __init__(self, filepath=None, cli=False):
         self.cli_args = self._parse_cli_args() if cli else {}
-        # harmonize cli and config arguments and apply post processing
+        self.filepath = self._get_filepath(filepath, self.cli_args)
+        self.config = self._parse_config(self.filepath)
+
+        # harmonzing cli and config file arguments
         self._process_args(self.cli_args)
+
+    def save(self, directory):
+        """Saves the harmonzied args sourced from the *.ini file and the command line to filepath.
+
+        Saves a config.ini file at filepath, containing the harmonized arguments sourced from the
+        original config file at `self.config` and any arguments supplied at the command line.
+
+        Args:
+            directory (str): directory path to save the config.ini file.
+        """
+        # get filepath to save config
+        directory = generic_utils.clean_path(directory)
+        generic_utils.make_dir(directory)
+        filepath = os.path.join(directory, 'config.ini')
+
+        with open(filepath, 'w') as config_file:
+            for section in self.config.sections():
+                # write config file section header
+                config_file.write('[{}]\n'.format(section))
+                # for each argument in the section, write the argument and its value to the file
+                for arg in self.config[section]:
+                    value = getattr(self, arg)
+                    # need to un-process processed arguments
+                    if isinstance(value, list):
+                        unprocessed_value = ', '.join(value)
+                    elif isinstance(value, dict):
+                        unprocessed_value = [str(v) for v in value.values()]
+                        unprocessed_value = ', '.join(unprocessed_value)
+                    else:
+                        unprocessed_value = value
+
+                    config_file.write('{} = {}\n'.format(arg, unprocessed_value))
+                config_file.write('\n')
 
     def _parse_config(self, filepath):
         """Returns a parsed configparser object for config file at 'filepath'.
 
         Args:
-            filepath (str): path to .ini config file
+            filepath (str): path to *.ini config file
 
         Returns:
-            ConfigParser object, parsed from the .ini file at `filepath`
+            ConfigParser object, parsed from the *.ini file at `filepath`
         """
         config = configparser.ConfigParser()
         config.read(filepath)
@@ -49,7 +85,7 @@ class Config(object):
         return config
 
     def _process_args(self, cli_args):
-        """Collect arguments from .ini file if specificed.
+        """Collect arguments from *.ini file if specificed.
 
         Loads parameters from ConfigParser object at 'self.config'. Any identically named arguments
         provided at the command line (provided to this method as a dictionary in `cli_args`) will
@@ -106,7 +142,7 @@ class Config(object):
         # catch it here, provide hint to the user
         except KeyError as key:
             err_msg = ('KeyError raised for key {}. This may have happened because there is no '
-                       '.ini file at: {}').format(key, self.filepath)
+                       '*.ini file at: {}').format(key, self.filepath)
             LOGGER.error('KeyError %s', err_msg)
             print(err_msg)
         else:
@@ -163,6 +199,23 @@ class Config(object):
 
         return args
 
+    def _get_filepath(self, filepath, cli_args):
+        """Return appropriate filepath based on how Config class was invoked.
+
+        Args:
+            filepath (str): Filepath to a *.ini file, which serves as a config file for Saber.
+            cli_args (dict): Dictionary of command line arguments and their values.
+
+        Returns:
+            The appropriate filepath to a *.ini file based on how Config class was invoked.
+        """
+        if cli_args:
+            return cli_args['config_filepath']
+        elif filepath is None:
+            return resource_filename(__name__, constants.CONFIG_FILENAME)
+        else:
+            return filepath
+
     def _parse_cli_args(self):
         """Parse command line arguments passed with call to Saber.
 
@@ -171,9 +224,8 @@ class Config(object):
         """
         parser = argparse.ArgumentParser(description='Saber CLI.')
 
-        parser.add_argument('--filepath', required=False, default='./config.ini', type=str,
-                            help=('Path to the .ini file containing any arguments. Defaults to '
-                                  './config.ini.'))
+        parser.add_argument('--config_filepath', required=False, default='config.ini', type=str,
+                            help='Path to the *.ini file containing any arguments')
         parser.add_argument('--activation', required=False, type=str,
                             help=("Activation function to use in the dense layers. Defaults to "
                                   "'relu'."))
@@ -252,36 +304,3 @@ class Config(object):
         cli_args = parser.parse_args()
 
         return vars(cli_args)
-
-    def save(self, dir_path):
-        """Saves the harmonzied args sourced from the .ini file and the command line to filepath.
-
-        Saves a config.ini file at filepath, containing the harmonized arguments sourced from the
-        original config file at `self.config` and any arguments supplied at the command line.
-
-        Args:
-            dir_path (str): directory path to save the config.ini file.
-        """
-        # get filepath to save config
-        dir_path = generic_utils.clean_path(dir_path)
-        generic_utils.make_dir(dir_path)
-        filepath = os.path.join(dir_path, 'config.ini')
-
-        with open(filepath, 'w') as config_file:
-            for section in self.config.sections():
-                # write config file section header
-                config_file.write('[{}]\n'.format(section))
-                # for each argument in the section, write the argument and its value to the file
-                for arg in self.config[section]:
-                    value = getattr(self, arg)
-                    # need to un-process processed arguments
-                    if isinstance(value, list):
-                        unprocessed_value = ', '.join(value)
-                    elif isinstance(value, dict):
-                        unprocessed_value = [str(v) for v in value.values()]
-                        unprocessed_value = ', '.join(unprocessed_value)
-                    else:
-                        unprocessed_value = value
-
-                    config_file.write('{} = {}\n'.format(arg, unprocessed_value))
-                config_file.write('\n')
