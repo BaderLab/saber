@@ -34,11 +34,11 @@ class Config(object):
         self.filepath = self._get_filepath(filepath, self.cli_args)
         self.config = self._parse_config(self.filepath)
 
-        # harmonzing cli and config file arguments
+        # harmonizing cli and config file arguments
         self._process_args(self.cli_args)
 
     def save(self, directory):
-        """Saves the harmonzied args sourced from the *.ini file and the command line to filepath.
+        """Saves the harmonized args sourced from the *.ini file and the command line to filepath.
 
         Saves a config.ini file at filepath, containing the harmonized arguments sourced from the
         original config file at `self.config` and any arguments supplied at the command line.
@@ -85,7 +85,7 @@ class Config(object):
         return config
 
     def _process_args(self, cli_args):
-        """Collect arguments from *.ini file if specificed.
+        """Collect arguments from *.ini file if specified.
 
         Loads parameters from ConfigParser object at 'self.config'. Any identically named arguments
         provided at the command line (provided to this method as a dictionary in `cli_args`) will
@@ -224,7 +224,8 @@ class Config(object):
         """
         parser = argparse.ArgumentParser(description='Saber CLI.')
 
-        parser.add_argument('--config_filepath', required=False, default='config.ini', type=str,
+        parser.add_argument('--config_filepath', required=False, type=str,
+                            default=resource_filename(__name__, constants.CONFIG_FILENAME),
                             help='Path to the *.ini file containing any arguments')
         parser.add_argument('--activation', required=False, type=str,
                             help=("Activation function to use in the dense layers. Defaults to "
@@ -250,7 +251,7 @@ class Config(object):
                                   'certain optimizers this value is ignored. Defaults to 0.'))
         parser.add_argument('--dropout_rate', required=False, nargs=3, type=float,
                             metavar=('input', 'output', 'recurrent'),
-                            help=('Expects three values, seperated by a space, which specify the '
+                            help=('Expects three values, separated by a space, which specify the '
                                   'fraction of units to drop for input, output and recurrent '
                                   'connections respectively. Values must be between 0 and 1.'))
         parser.add_argument('--fine_tune_word_embeddings', required=False, action='store_true',
