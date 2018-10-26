@@ -20,6 +20,7 @@ from .utils import data_utils, generic_utils, grounding_utils, model_utils
 print('Saber version: {0}'.format(constants.__version__))
 LOGGER = logging.getLogger(__name__)
 
+
 class Saber(object):
     """The interface for Saber.
 
@@ -27,12 +28,12 @@ class Saber(object):
     training, saving, and loading of sequence labelling models.
 
     Args:
-        config (Config): A Config object which contains a set of harmonzied arguments provided in
+        config (Config): A Config object which contains a set of harmonized arguments provided in
             a *.ini file and, optionally, from the command line. If not provided, a new instance of
             Config is used.
     """
     def __init__(self, config=None, **kwargs):
-        self.config = config if config is not None else Config()
+        self.config = Config() if config is None else config
 
         self.preprocessor = None # object for text processing
         self.datasets = None # dataset(s) tied to this instance
@@ -52,7 +53,7 @@ class Saber(object):
 
         For the model at `self.model.models[model_idx]`, coordinates a prediction step on `text`.
         Returns a dictionary containing the cleaned text (`text`), and any annotations made by the
-        model (`ents`). If `jupyter` is True, renders a HTMl visulization of the annotations made
+        model (`ents`). If `jupyter` is True, renders a HTMl visualization of the annotations made
         by the model, for use in a jupyter notebook.
 
         text (str): Raw text to annotate.
@@ -118,7 +119,7 @@ class Saber(object):
     def save(self, directory=None, compress=True, model_idx=0):
         """Coordinates the saving of Saber models.
 
-        Saves the necessary files for model persistance to `directory`. If not provided, `directory`
+        Saves the necessary files for model persistence to `directory`. If not provided, `directory`
         defaults to '<self.config.output_folder>/<constants.PRETRAINED_MODEL_DIR>/<dataset_names>'
 
         Args:
