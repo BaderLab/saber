@@ -12,15 +12,13 @@ from . import constants
 from .preprocessor import Preprocessor
 from .utils import generic_utils
 
-# TODO: Some arguments still need help strings written
-
 LOGGER = logging.getLogger(__name__)
 
 
 class Config(object):
     """A class for managing all hyperparameters and configurations of a model.
 
-    Conatains methods for parsing arguments supplied at the command line or in a python ConfigParser
+    Contains methods for parsing arguments supplied at the command line or in a python ConfigParser
     object. Deals with harmonizing arguments from both of these sources. Each arguments value is
     assigned to an instance attribute.
 
@@ -28,28 +26,27 @@ class Config(object):
         filepath (str): Path to a *.ini file. If None, default config file is loaded.
         cli (bool): True if command line arguments will be supplied, defaults to False.
     """
-
     def __init__(self, filepath=None, cli=False):
+        # need to parse arguments first in case config filepath provided
         self.cli_args = self._parse_cli_args() if cli else {}
-        self.filepath = self._get_filepath(filepath, self.cli_args)
-        self.config = self._parse_config(self.filepath)
-
+        self.filepath = self._resolve_filepath(filepath, self.cli_args)
+        self.config = self._load_config(self.filepath)
         # harmonizing cli and config file arguments
-        self._process_args(self.cli_args)
+        self.harmonize_args(self.cli_args)
 
     def save(self, directory):
-        """Saves the harmonized args sourced from the *.ini file and the command line to filepath.
+        """Saves harmonized args sourced from the *.ini file and the command line to `directory`.
 
-        Saves a config.ini file at filepath, containing the harmonized arguments sourced from the
+        Saves a config.ini file at `directory`, containing the harmonized arguments sourced from the
         original config file at `self.config` and any arguments supplied at the command line.
 
         Args:
-            directory (str): directory path to save the config.ini file.
+            directory (str): Directory to save the config.ini file.
         """
-        # get filepath to save config
+        # creat filepath to save the config.ini file
         directory = generic_utils.clean_path(directory)
         generic_utils.make_dir(directory)
-        filepath = os.path.join(directory, 'config.ini')
+        filepath = os.path.join(directory, constants.CONFIG_FILENAME)
 
         with open(filepath, 'w') as config_file:
             for section in self.config.sections():
@@ -60,21 +57,42 @@ class Config(object):
                     value = getattr(self, arg)
                     # need to un-process processed arguments
                     if isinstance(value, list):
-                        unprocessed_value = ', '.join(value)
+                        value = ', '.join(value)
                     elif isinstance(value, dict):
-                        unprocessed_value = [str(v) for v in value.values()]
-                        unprocessed_value = ', '.join(unprocessed_value)
-                    else:
-                        unprocessed_value = value
-
-                    config_file.write('{} = {}\n'.format(arg, unprocessed_value))
+                        value = [str(v) for v in value.values()]
+                        value = ', '.join(value)
+                    config_file.write('{} = {}\n'.format(arg, value))
                 config_file.write('\n')
 
-    def _parse_config(self, filepath):
-        """Returns a parsed configparser object for config file at 'filepath'.
+    def harmonize_args(self, cli_args):
+        """Harmonizes args provided via a config file (`self.config`) and command line (`cli_args`).
+
+        Harmonizes the arguments passed to Saber via a config file (`self.config`) with those that
+        are optionally provided via the command line (`cli_args`).
 
         Args:
-            filepath (str): path to *.ini config file
+            cli_args (dict): Dictionary of command line arguments and their values.
+
+        Returns:
+            A set of arguments that have been resolved from `self.config` and optionally `cli_args`.
+        """
+        args = self._parse_config_args(self.config)
+        for key, value in cli_args.items():
+            # is not False needed to prevent store_true args from overriding corresponding
+            # config file args when they are not passed at the command line.
+            if value is not None and value is not False:
+                args[key] = value
+        # post-processing
+        args = self._post_process_config_args(args)
+        # use parameters dictionary to update instance attributes
+        for arg, value in args.items():
+            setattr(self, arg, value)
+
+    def _load_config(self, filepath):
+        """Returns a parsed ConfigParser object for config file at 'filepath'.
+
+        Args:
+            filepath (str): Path to a *.ini file, which serves as a config file for Saber.
 
         Returns:
             ConfigParser object, parsed from the *.ini file at `filepath`
@@ -84,104 +102,99 @@ class Config(object):
 
         return config
 
-    def _process_args(self, cli_args):
-        """Collect arguments from *.ini file if specified.
+    def _resolve_filepath(self, filepath, cli_args):
+        """Return appropriate filepath based on how Config class was invoked.
 
-        Loads parameters from ConfigParser object at 'self.config'. Any identically named arguments
-        provided at the command line (provided to this method as a dictionary in `cli_args`) will
-        overwrite those found in the ConfigParser object. Uses this final set of arguments to
-        initialize and assign identically named instance attributes.
+        Resolves the filepath to a *.ini file based on how the Config class was invoked. If
+        `cli` was True when the constructor was called, we use the `filepath` provided in
+        `cli_args`. If a `filepath` was passed to the constructor and `cli` was False, then we use
+        this filepath. Otherwise, we use the default filepath.
 
         Args:
-            cli_args (dict): dictionary containing any arguments supplied at the command line.
+            filepath (str): Path to a *.ini file, which serves as a config file for Saber.
+            cli_args (dict): Dictionary of command line arguments and their values.
 
         Returns:
-            a dictionary containing the final harmonized and post processed arguments.
+            The appropriate filepath to a *.ini file based on how Config class was invoked.
+        """
+        if cli_args:
+            filepath = cli_args['config_filepath']
+        elif filepath is None:
+            filepath = resource_filename(__name__, constants.CONFIG_FILENAME)
+
+        return filepath
+
+    def _parse_config_args(self, config):
+        """Collect arguments from a ConfigParser object parsed from *.ini file at `self.filepath`.
+
+        Args:
+            config (ConfigParser): config object parsed from the *.ini file at `self.filepath`.
+
+        Returns:
+            A dictionary containing the arguments parsed from a ConfigParser object, `config`.
         """
         args = {}
         try:
-            # parse config
             # mode
-            args['model_name'] = self.config['mode']['model_name']
-            args['save_model'] = self.config['mode'].getboolean('save_model')
-
+            args['model_name'] = config['mode']['model_name']
+            args['save_model'] = config['mode'].getboolean('save_model')
             # data
-            args['dataset_folder'] = self.config['data']['dataset_folder'].split(',')
-            args['output_folder'] = self.config['data']['output_folder']
-            args['pretrained_model_weights'] = self.config['data']['pretrained_model_weights']
-            args['pretrained_embeddings'] = self.config['data']['pretrained_embeddings']
-
+            args['dataset_folder'] = config['data']['dataset_folder'].split(',')
+            args['output_folder'] = config['data']['output_folder']
+            args['pretrained_model_weights'] = config['data']['pretrained_model_weights']
+            args['pretrained_embeddings'] = config['data']['pretrained_embeddings']
             # model
-            args['word_embed_dim'] = self.config['model'].getint('word_embed_dim')
-            args['char_embed_dim'] = self.config['model'].getint('char_embed_dim')
-
+            args['word_embed_dim'] = config['model'].getint('word_embed_dim')
+            args['char_embed_dim'] = config['model'].getint('char_embed_dim')
             # training
-            args['optimizer'] = self.config['training']['optimizer']
-            args['activation'] = self.config['training']['activation']
-            args['learning_rate'] = self.config['training'].getfloat('learning_rate')
-            args['decay'] = self.config['training'].getfloat('decay')
-            args['grad_norm'] = self.config['training'].getfloat('grad_norm')
-            args['dropout_rate'] = self.config['training']['dropout_rate'].split(',')
-            args['batch_size'] = self.config['training'].getint('batch_size')
-            args['k_folds'] = self.config['training'].getint('k_folds')
-            args['epochs'] = self.config['training'].getint('epochs')
-            args['criteria'] = self.config['training']['criteria']
-
+            args['optimizer'] = config['training']['optimizer']
+            args['activation'] = config['training']['activation']
+            args['learning_rate'] = config['training'].getfloat('learning_rate')
+            args['decay'] = config['training'].getfloat('decay')
+            args['grad_norm'] = config['training'].getfloat('grad_norm')
+            args['dropout_rate'] = config['training']['dropout_rate'].split(',')
+            args['batch_size'] = config['training'].getint('batch_size')
+            args['k_folds'] = config['training'].getint('k_folds')
+            args['epochs'] = config['training'].getint('epochs')
+            args['criteria'] = config['training']['criteria']
             # advanced
-            args['verbose'] = self.config['advanced'].getboolean('verbose')
-            args['debug'] = self.config['advanced'].getboolean('debug')
-            args['save_all_weights'] = self.config['advanced'].getboolean('save_all_weights')
-            args['tensorboard'] = self.config['advanced'].getboolean('tensorboard')
-            args['replace_rare_tokens'] = self.config['advanced'].getboolean('replace_rare_tokens')
-            args['fine_tune_word_embeddings'] = \
-                self.config['advanced'].getboolean('fine_tune_word_embeddings')
+            args['verbose'] = config['advanced'].getboolean('verbose')
+            args['debug'] = config['advanced'].getboolean('debug')
+            args['save_all_weights'] = config['advanced'].getboolean('save_all_weights')
+            args['tensorboard'] = config['advanced'].getboolean('tensorboard')
+            args['replace_rare_tokens'] = config['advanced'].getboolean('replace_rare_tokens')
+            args['fine_tune_word_embeddings'] = config['advanced'].getboolean('fine_tune_word_embeddings')
             # TEMP
-            args['variational_dropout'] = self.config['advanced'].getboolean('variational_dropout')
-
-        # ConfigParser throws a KeyError when you try to key into object that does not exist
-        # catch it here, provide hint to the user
+            args['variational_dropout'] = config['advanced'].getboolean('variational_dropout')
+        # ConfigParser throws KeyError when key into object that does not exist
+        # catch it and provide hint to the user
         except KeyError as key:
             err_msg = ('KeyError raised for key {}. This may have happened because there is no '
                        '*.ini file at: {}').format(key, self.filepath)
             LOGGER.error('KeyError %s', err_msg)
             print(err_msg)
-        else:
-            # overwrite any parameters in the config if specfied at command line
-            for key, value in cli_args.items():
-                # is not False needed to prevent store_true args from overriding  corresponding
-                # config file args when they are not passed at the command line.
-                if value is not None and value is not False:
-                    args[key] = value
-
-            # post-processing
-            args = self._post_process_args(args)
-
-            # use parameters dictionary to update instance attributes
-            for arg, value in args.items():
-                setattr(self, arg, value)
 
         LOGGER.debug('Hyperparameters and model details %s', args)
 
         return args
 
-    def _post_process_args(self, args):
-        """Post process parameters retrived from python config file.
+    def _post_process_config_args(self, args):
+        """Post process parameters retried from python config file.
 
-        Performs series of post processing steps on 'parameters'. E.g., file and directory path
-        arguments are normalized, string arguments are cleaned.
+        Performs series of post processing steps on `args`. E.g., file and directory path arguments
+        are normalized, string arguments are cleaned.
 
         Args:
-            args (dict): contains arguments (keys) and their values (values).
+            args (dict): Contains arguments (keys) and their values (values).
 
         Returns:
-            args, where post-processing has been applied to some values.
+            `args`, where post-processing has been applied to some values.
         """
         # normalize strings
         args['model_name'] = Preprocessor.sterilize(args['model_name'], lower=True)
         args['optimizer'] = Preprocessor.sterilize(args['optimizer'], lower=True)
         args['activation'] = Preprocessor.sterilize(args['activation'], lower=True)
         args['criteria'] = Preprocessor.sterilize(args['criteria'], lower=True)
-
         # create normalized absolutized versions of paths
         args['dataset_folder'] = [generic_utils.clean_path(ds) for ds in args['dataset_folder']]
         args['output_folder'] = generic_utils.clean_path(args['output_folder'])
@@ -189,7 +202,6 @@ class Config(object):
             args['pretrained_model_weights'] = generic_utils.clean_path(args['pretrained_model_weights'])
         if args['pretrained_embeddings']:
             args['pretrained_embeddings'] = generic_utils.clean_path(args['pretrained_embeddings'])
-
         # build dictionary for dropout rates
         args['dropout_rate'] = {
             'input': float(args['dropout_rate'][0]),
@@ -199,28 +211,11 @@ class Config(object):
 
         return args
 
-    def _get_filepath(self, filepath, cli_args):
-        """Return appropriate filepath based on how Config class was invoked.
-
-        Args:
-            filepath (str): Filepath to a *.ini file, which serves as a config file for Saber.
-            cli_args (dict): Dictionary of command line arguments and their values.
-
-        Returns:
-            The appropriate filepath to a *.ini file based on how Config class was invoked.
-        """
-        if cli_args:
-            return cli_args['config_filepath']
-        elif filepath is None:
-            return resource_filename(__name__, constants.CONFIG_FILENAME)
-        else:
-            return filepath
-
     def _parse_cli_args(self):
-        """Parse command line arguments passed with call to Saber.
+        """Parse command line arguments passed with call to Saber CLI.
 
         Returns:
-            a dictionary containing all arguments and their values supplied at the command line.
+            A dictionary containing all arguments and their values supplied at the command line.
         """
         parser = argparse.ArgumentParser(description='Saber CLI.')
 
@@ -278,7 +273,7 @@ class Config(object):
                             help='Path to top-level directory to save all output files.')
         parser.add_argument('--pretrained_model_weights', required=False, type=str, help='TODO')
         parser.add_argument('--replace_rare_tokens', required=False, action='store_true',
-                            help=('If True, word types that occur less than 1 time in the training '
+                            help=('If True, word types that occur only once in the training '
                                   'dataset will be replaced with a special unknown token.'))
         parser.add_argument('--save_model', required=False, action='store_true',
                             help=('True if the model should be saved when training is complete. '
@@ -301,7 +296,6 @@ class Config(object):
                             help=('True to display more information, such has model details, '
                                   'hyperparameters, and architecture. Defaults to False.'))
 
-        # parse cli args, return dictionary representation of these args
         cli_args = parser.parse_args()
 
         return vars(cli_args)
