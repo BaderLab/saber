@@ -4,9 +4,8 @@ import configparser
 
 import pytest
 
-from .resources.dummy_constants import *
 from .. import config
-
+from .resources.dummy_constants import *
 
 ######################################### PYTEST FIXTURES #########################################
 
@@ -14,13 +13,8 @@ from .. import config
 def config_no_cli_args():
     """Returns an instance of a config.Config object after parsing the dummy config file with no command
     line interface (CLI) args."""
-    # the dataset and embeddings are used for test purposes so they must point to the
-    # correct resources, this can be ensured by passing their paths here
-    cli_arguments = {'dataset_folder': [PATH_TO_DUMMY_DATASET_1],
-                     'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS}
     # parse the dummy config
     dummy_config = config.Config(PATH_TO_DUMMY_CONFIG)
-    dummy_config._process_args(cli_arguments)
 
     return dummy_config
 
@@ -32,7 +26,7 @@ def config_with_cli_args():
     dummy_config = config.Config(PATH_TO_DUMMY_CONFIG)
     # this is a bit of a hack, but need to simulate providing commands at the command line
     dummy_config.cli_args = DUMMY_COMMAND_LINE_ARGS
-    dummy_config._process_args(DUMMY_COMMAND_LINE_ARGS)
+    dummy_config.harmonize_args(DUMMY_COMMAND_LINE_ARGS)
 
     return dummy_config
 
@@ -83,31 +77,37 @@ def test_config_attributes_with_cli_args(config_with_cli_args):
     for arg, value in DUMMY_ARGS_WITH_CLI_ARGS.items():
         assert value == getattr(config_with_cli_args, arg)
 
-
-def test_get_filepath(config_no_cli_args):
-    """Asserts that `Config._get_filepath()` returns the expected values.
+def test_resolve_filepath(config_no_cli_args):
+    """Asserts that `Config._resolve_filepath()` returns the expected values.
     """
     # tests for when neither filepath nor cli_args arguments are provided
     filepath_none_cli_args_none_expected = resource_filename(config.__name__, constants.CONFIG_FILENAME)
-    filepath_none_cli_args_none_actual = config_no_cli_args._get_filepath(filepath=None, cli_args={})
+    filepath_none_cli_args_none_actual = config_no_cli_args._resolve_filepath(filepath=None, cli_args={})
     # tests for when cli_args argument is provided
     filepath_none_cli_args_expected = 'arbitrary/filepath/to/config.ini'
     dummy_cli_args = {'config_filepath': filepath_none_cli_args_expected}
-    filepath_none_cli_args_actual = config_no_cli_args._get_filepath(filepath=None,
-                                                                     cli_args=dummy_cli_args)
+    filepath_none_cli_args_actual = config_no_cli_args._resolve_filepath(filepath=None,
+                                                                         cli_args=dummy_cli_args)
     # tests for when filepath argument is provided
     filepath_cli_args_none_expected = filepath_none_cli_args_expected
-    filepath_cli_args_none_actual = config_no_cli_args._get_filepath(filepath=filepath_cli_args_none_expected,
-                                                                     cli_args={})
+    filepath_cli_args_none_actual = config_no_cli_args._resolve_filepath(filepath=filepath_cli_args_none_expected,
+                                                                         cli_args={})
     # tests for when both filepath and cli_args arguments are provided
     filepath_cli_args_expected = filepath_none_cli_args_expected
-    filepath_cli_args_actual = config_no_cli_args._get_filepath(filepath=filepath_cli_args_expected,
-                                                                cli_args=dummy_cli_args)
+    filepath_cli_args_actual = config_no_cli_args._resolve_filepath(filepath=filepath_cli_args_expected,
+                                                                    cli_args=dummy_cli_args)
 
     assert filepath_none_cli_args_none_expected == filepath_none_cli_args_none_actual
     assert filepath_none_cli_args_expected == filepath_none_cli_args_actual
     assert filepath_cli_args_none_expected == filepath_cli_args_none_actual
     assert filepath_cli_args_expected == filepath_cli_args_actual
+
+def test_key_error(tmpdir):
+    """Assert that a KeyError is raised when Config object is initialized with a value for
+    `filepath` that does does contain a valid *.ini file.
+    """
+    with pytest.raises(KeyError):
+        dummy_config = config.Config(tmpdir)
 
 def test_save_no_cli_args(config_no_cli_args, tmpdir):
     """Asserts that a saved config file contains the correct arguments and values."""
