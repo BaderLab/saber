@@ -1,45 +1,39 @@
-"""Contains any and all unit tests for the Config class (saber/config.py).
+"""Contains any and all unit tests for the config.Config class (saber/config.py).
 """
 import configparser
-import os
 
 import pytest
 
-from ..config import Config
+from .. import config
 from .resources.dummy_constants import *
 
 ######################################### PYTEST FIXTURES #########################################
 
 @pytest.fixture
 def config_no_cli_args():
-    """Returns an instance of a Config object after parsing the dummy config file with no command
+    """Returns an instance of a config.Config object after parsing the dummy config file with no command
     line interface (CLI) args."""
-    # the dataset and embeddings are used for test purposes so they must point to the
-    # correct resources, this can be ensured by passing their paths here
-    cli_arguments = {'dataset_folder': [PATH_TO_DUMMY_DATASET_1],
-                     'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS}
     # parse the dummy config
-    dummy_config = Config(PATH_TO_DUMMY_CONFIG)
-    dummy_config._process_args(cli_arguments)
+    dummy_config = config.Config(PATH_TO_DUMMY_CONFIG)
 
     return dummy_config
 
 @pytest.fixture
 def config_with_cli_args():
-    """Returns an instance of a Config object after parsing the dummy config file with command line
+    """Returns an instance of a config.config.Config object after parsing the dummy config file with command line
     interface (CLI) args."""
     # parse the dummy config, leave cli false and instead pass command line args manually
-    dummy_config = Config(PATH_TO_DUMMY_CONFIG)
+    dummy_config = config.Config(PATH_TO_DUMMY_CONFIG)
     # this is a bit of a hack, but need to simulate providing commands at the command line
     dummy_config.cli_args = DUMMY_COMMAND_LINE_ARGS
-    dummy_config._process_args(DUMMY_COMMAND_LINE_ARGS)
+    dummy_config.harmonize_args(DUMMY_COMMAND_LINE_ARGS)
 
     return dummy_config
 
 ############################################ UNIT TESTS ############################################
 
 def test_process_args_no_cli_args(config_no_cli_args):
-    """Asserts the Config.config object contains the expected attributes after initializing a Config
+    """Asserts the config.Config.config object contains the expected attributes after initializing a config.Config
     object without CLI args."""
     # check filepath attribute
     assert config_no_cli_args.filepath == PATH_TO_DUMMY_CONFIG
@@ -52,7 +46,7 @@ def test_process_args_no_cli_args(config_no_cli_args):
     assert config_no_cli_args.cli_args == {}
 
 def test_process_args_with_cli_args(config_with_cli_args):
-    """Asserts the Config.config object contains the expected attributes after initializing a Config
+    """Asserts the config.Config.config object contains the expected attributes after initializing a config.Config
     object with CLI args."""
     # check filepath attribute
     assert config_with_cli_args.filepath == os.path.join(os.path.dirname( \
@@ -66,7 +60,7 @@ def test_process_args_with_cli_args(config_with_cli_args):
     assert config_with_cli_args.cli_args == DUMMY_COMMAND_LINE_ARGS
 
 def test_config_attributes_no_cli_args(config_no_cli_args):
-    """Asserts that the class attributes of a Config object are of the expected value/type after
+    """Asserts that the class attributes of a config.Config object are of the expected value/type after
     objects initialization, with NO command line arguments.
     """
     # check that we get the values we expected
@@ -74,7 +68,7 @@ def test_config_attributes_no_cli_args(config_no_cli_args):
         assert value == getattr(config_no_cli_args, arg)
 
 def test_config_attributes_with_cli_args(config_with_cli_args):
-    """Asserts that the class attributes of a Config object are of the expected value/type after
+    """Asserts that the class attributes of a config.Config object are of the expected value/type after
     object initialization, taking into account command line arguments, which take precedence over
     config arguments.
     """
@@ -82,6 +76,38 @@ def test_config_attributes_with_cli_args(config_with_cli_args):
     # have overwritten our config arguments
     for arg, value in DUMMY_ARGS_WITH_CLI_ARGS.items():
         assert value == getattr(config_with_cli_args, arg)
+
+def test_resolve_filepath(config_no_cli_args):
+    """Asserts that `Config._resolve_filepath()` returns the expected values.
+    """
+    # tests for when neither filepath nor cli_args arguments are provided
+    filepath_none_cli_args_none_expected = resource_filename(config.__name__, constants.CONFIG_FILENAME)
+    filepath_none_cli_args_none_actual = config_no_cli_args._resolve_filepath(filepath=None, cli_args={})
+    # tests for when cli_args argument is provided
+    filepath_none_cli_args_expected = 'arbitrary/filepath/to/config.ini'
+    dummy_cli_args = {'config_filepath': filepath_none_cli_args_expected}
+    filepath_none_cli_args_actual = config_no_cli_args._resolve_filepath(filepath=None,
+                                                                         cli_args=dummy_cli_args)
+    # tests for when filepath argument is provided
+    filepath_cli_args_none_expected = filepath_none_cli_args_expected
+    filepath_cli_args_none_actual = config_no_cli_args._resolve_filepath(filepath=filepath_cli_args_none_expected,
+                                                                         cli_args={})
+    # tests for when both filepath and cli_args arguments are provided
+    filepath_cli_args_expected = filepath_none_cli_args_expected
+    filepath_cli_args_actual = config_no_cli_args._resolve_filepath(filepath=filepath_cli_args_expected,
+                                                                    cli_args=dummy_cli_args)
+
+    assert filepath_none_cli_args_none_expected == filepath_none_cli_args_none_actual
+    assert filepath_none_cli_args_expected == filepath_none_cli_args_actual
+    assert filepath_cli_args_none_expected == filepath_cli_args_none_actual
+    assert filepath_cli_args_expected == filepath_cli_args_actual
+
+def test_key_error(tmpdir):
+    """Assert that a KeyError is raised when Config object is initialized with a value for
+    `filepath` that does does contain a valid *.ini file.
+    """
+    with pytest.raises(KeyError):
+        dummy_config = config.Config(tmpdir)
 
 def test_save_no_cli_args(config_no_cli_args, tmpdir):
     """Asserts that a saved config file contains the correct arguments and values."""
@@ -114,13 +140,13 @@ def test_save_with_cli_args(config_with_cli_args, tmpdir):
 ######################################### HELPER FUNCTIONS #########################################
 
 def load_saved_config(filepath):
-    """Load a saved ConfigParser object at 'filepath/config.ini'.
+    """Load a saved config.ConfigParser object at 'filepath/config.ini'.
 
     Args:
         filepath (str): filepath to the saved config file 'config.ini'
 
     Returns:
-        parsed ConfigParser object at 'filepath/config.ini'.
+        parsed config.ConfigParser object at 'filepath/config.ini'.
     """
     saved_config_filepath = os.path.join(filepath, 'config.ini')
     saved_config = configparser.ConfigParser()
