@@ -1,10 +1,8 @@
 """Contains the Multi-task BiLSTM-CRF (MT-BILSTM-CRF) Keras model for squence labelling.
 """
-import json
 import logging
 
 import tensorflow as tf
-from keras import initializers
 from keras.layers import (LSTM, Bidirectional, Concatenate, Dense, Dropout,
                           Embedding, SpatialDropout1D, TimeDistributed)
 from keras.models import Input, Model, model_from_json
@@ -12,7 +10,6 @@ from keras.utils import multi_gpu_model
 from keras_contrib.layers.crf import CRF
 
 from .. import constants
-from ..utils import model_utils
 from .base_model import BaseKerasModel
 
 LOGGER = logging.getLogger(__name__)
