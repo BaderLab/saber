@@ -70,7 +70,7 @@ def dummy_config_compound_dataset():
     compound_dataset = [PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2]
     cli_arguments = {'dataset_folder': compound_dataset}
     dummy_config = Config(PATH_TO_DUMMY_CONFIG)
-    dummy_config._process_args(cli_arguments)
+    dummy_config.harmonize_args(cli_arguments)
 
     return dummy_config
 

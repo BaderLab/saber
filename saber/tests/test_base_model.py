@@ -1,7 +1,5 @@
 """Any and all unit tests for the BaseKerasModel (saber/models/base_model.py).
 """
-from keras.engine.training import Model
-
 import pytest
 
 from ..config import Config
