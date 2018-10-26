@@ -1,6 +1,6 @@
 FROM python:3.6
 WORKDIR /app
-ADD . /app
+COPY . /app
 RUN pip install .
 #RUN pip install git+https://github.com/BaderLab/saber.git
 RUN pip install git+https://www.github.com/keras-team/keras-contrib.git
