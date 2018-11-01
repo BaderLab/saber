@@ -61,7 +61,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         # specify any shared layers outside the for loop
         # word-level embedding layer
         if self.embeddings is None:
-            word_embeddings = Embedding(input_dim=len(self.datasets[0].types['word']),
+            word_embeddings = Embedding(input_dim=len(self.datasets[0].type_to_idx['word']) + 1,
                                         output_dim=self.config.word_embed_dim,
                                         mask_zero=True,
                                         name="word_embedding_layer")
@@ -73,7 +73,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                                         trainable=self.config.fine_tune_word_embeddings,
                                         name="word_embedding_layer")
         # character-level embedding layer
-        char_embeddings = Embedding(input_dim=len(self.datasets[0].types['char']),
+        char_embeddings = Embedding(input_dim=len(self.datasets[0].type_to_idx['char']) + 1,
                                     output_dim=self.config.char_embed_dim,
                                     mask_zero=True,
                                     name="char_embedding_layer")
@@ -134,7 +134,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
             model = dense_layer(model)
 
             # CRF output layer
-            crf = CRF(len(dataset.types['tag']), name='crf_classifier')
+            crf = CRF(len(dataset.type_to_idx['tag']), name='crf_classifier')
             output_layer = crf(model)
 
             # fully specified model
@@ -184,12 +184,10 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         for dataset, model in zip(self.datasets, models):
             # remove the old CRF classifier and define a new one
             model.layers.pop()
-            new_crf = CRF(len(dataset.types['tag']), name='target_crf_classifier')
+            new_crf = CRF(len(dataset.type_to_idx['tag']), name='target_crf_classifier')
             # create the new model
             new_input = model.input
             new_output = new_crf(model.layers[-1].output)
             self.models.append(Model(new_input, new_output))
-
-            print('HELLO')
 
         self.compile()
