@@ -4,11 +4,12 @@ import logging
 import os
 from itertools import chain
 
+from keras.utils import to_categorical
 from nltk.corpus.reader.conll import ConllCorpusReader
 
 from . import constants
 from .preprocessor import Preprocessor
-from .utils import data_utils
+from .utils import data_utils, generic_utils
 
 LOGGER = logging.getLogger(__name__)
 
@@ -25,25 +26,23 @@ class Dataset(object):
     most	O
     RP	B-PRGE
     genes	I-PRGE
-    ...	O
+    ...
     '''
 
     Args:
         directory (str): Path to directory containing CoNLL formatted dataset(s).
-        replace_rare (bool): True if rare tokens should be replaced with a special unknown token.
-            Threshold for considering tokens rare can be found at `saber.constants.NUM_RARE`.
-
+        replace_rare_tokens (bool): True if rare tokens should be replaced with a special unknown
+            token. Threshold for considering tokens rare can be found at `saber.constants.NUM_RARE`.
     """
-    def __init__(self, directory=None, replace_rare=True, **kwargs):
+    def __init__(self, directory=None, replace_rare_tokens=True, **kwargs):
         self.directory = directory
-        # Dont load a corpus unless a directory was passed on object construction
+        # don't load corpus unless directory was passed on object construction
         if self.directory is not None:
             self.directory = data_utils.get_filepaths(directory)
             self.conll_parser = ConllCorpusReader(directory, '.conll', ('words', 'pos'))
-        self.replace_rare = replace_rare
 
-        # lists of unique words, characters, and tags ('types', these are shared across partitions)
-        self.types = {'word': None, 'char': None, 'tag': None}
+        self.replace_rare_tokens = replace_rare_tokens
+
         # word, character and tag sequences from dataset (per partition)
         self.type_seq = {'train': None, 'valid': None, 'test': None}
         # mappings of word, characters, and tag types to unique integer IDs
@@ -72,14 +71,18 @@ class Dataset(object):
             LOGGER.error('ValueError %s', err_msg)
             raise ValueError(err_msg)
 
-        self._get_types() # get types (unique words, chars and tags) from CoNLL formatted dataset
-        self._get_type_seq() # get word, char, and tag sequences from CoNLL formatted dataset
-        self._get_idx_maps() # map each word, char, and type to a unique integer
-        self.get_idx_to_tag() # create reverse mapping of unique integers to tags
+        # unique words, chars and tags from CoNLL formatted dataset
+        types = self._get_types()
+        # map each word, char, and tag type to a unique integer
+        self.get_idx_maps(types)
 
-        # map sequences in `self.type_seq` to integers using `self.type_to_idx`, this is the final
-        # representation used for training
+        # get word, char, and tag sequences from CoNLL formatted dataset
+        self._get_type_seq()
+        # get final representation used for training
         self.get_idx_seq()
+
+        # useful during prediction / annotation
+        self.idx_to_tag = generic_utils.reverse_dict(self.type_to_idx['tag'])
 
     def _get_types(self):
         """Collects the sets of all words, characters and tags in a CoNLL formated dataset.
@@ -90,21 +93,24 @@ class Dataset(object):
         train and, if provided, valid/test partitions found at `self.directory/train.*`,
         `self.directory/valid.*` and `self.directory/test.*`.
         """
-        words = [constants.PAD, constants.UNK]
-        chars = [constants.PAD, constants.UNK]
-        tags = [constants.PAD]
+        types = {'word': [constants.PAD, constants.UNK],
+                 'char': [constants.PAD, constants.UNK],
+                 'tag': [constants.PAD],
+                }
 
         for _, filepath in self.directory.items():
             if filepath is not None:
-                conll_file = os.path.basename(filepath) # get name of conll file
-                # get types for current partiton
-                words.extend(set(self.conll_parser.words(conll_file)))
-                chars.extend(set(chain(*[list(w) for w in self.conll_parser.words(conll_file)])))
-                tags.extend(set([tag[-1] for tag in self.conll_parser.tagged_words(conll_file)]))
-        # pool types across partitions
-        self.types['word'] = list(set(words))
-        self.types['char'] = list(set(chars))
-        self.types['tag'] = list(set(tags))
+                conll_file = os.path.basename(filepath)  # get name of conll file
+                types['word'].extend(set(self.conll_parser.words(conll_file)))
+                types['char'].extend(set(chain(*[list(w) for w in self.conll_parser.words(conll_file)])))
+                types['tag'].extend(set([tag[-1] for tag in self.conll_parser.tagged_words(conll_file)]))
+
+        # ensure that we have only unique types
+        types['word'] = list(set(types['word']))
+        types['char'] = list(set(types['char']))
+        types['tag'] = list(set(types['tag']))
+
+        return types
 
     def _get_type_seq(self):
         """Loads sequence data from a CoNLL format data set given at `self.directory`.
@@ -122,26 +128,24 @@ class Dataset(object):
                 sents = list(self.conll_parser.sents(conll_file))
                 tagged_sents = list(self.conll_parser.tagged_sents(conll_file))
 
-                word_seq = Preprocessor.replace_rare_tokens(sents) if self.replace_rare else sents
+                word_seq = Preprocessor.replace_rare_tokens(sents) if self.replace_rare_tokens else sents
                 char_seq = [[[c for c in w] for w in s] for s in sents]
                 tag_seq = [[t[-1] for t in s] for s in tagged_sents]
 
                 # update the class attributes
                 self.type_seq[partition] = {'word': word_seq, 'char': char_seq, 'tag': tag_seq}
 
-    def _get_idx_maps(self):
+    def get_idx_maps(self, types, initial_mapping=None):
         """Updates `self.type_to_idx` with mappings from word, char and tag types to unique int IDs.
         """
+        initial_mapping = constants.INITIAL_MAPPING if initial_mapping is None else initial_mapping
         # generate type to index mappings
-        self.type_to_idx['word'] = Preprocessor.type_to_idx(self.types['word'],
-                                                            constants.INITIAL_MAPPING['word'])
-        self.type_to_idx['char'] = Preprocessor.type_to_idx(self.types['char'],
-                                                            constants.INITIAL_MAPPING['word'])
-        self.type_to_idx['tag'] = Preprocessor.type_to_idx(self.types['tag'],
-                                                           constants.INITIAL_MAPPING['tag'])
+        self.type_to_idx['word'] = Preprocessor.type_to_idx(types['word'], initial_mapping['word'])
+        self.type_to_idx['char'] = Preprocessor.type_to_idx(types['char'], initial_mapping['word'])
+        self.type_to_idx['tag'] = Preprocessor.type_to_idx(types['tag'], initial_mapping['tag'])
 
     def get_idx_seq(self):
-        """Udpates `self.idx_seq` with the final representation of the data used for training.
+        """Updates `self.idx_seq` with the final representation of the data used for training.
 
         Updates `self.idx_seq` with numpy arrays, by using `self.type_to_idx` to map all elements
         in `self.type_seq` to their corresponding integer IDs, for the train and, if provided,
@@ -161,13 +165,5 @@ class Dataset(object):
                                                               self.type_to_idx['tag'],
                                                               type_='tag'),
                 }
-
                 # one-hot encode our targets
-                self.idx_seq[partition]['tag'] = \
-                    data_utils.one_hot_encode(self.idx_seq[partition]['tag'],
-                                              num_classes=len(self.type_to_idx['tag']))
-
-    def get_idx_to_tag(self):
-        """Updates `seld.idx_to_tag` a reverse mapping of `self.type_to_idx['tag']`.
-        """
-        self.idx_to_tag = {v: k for k, v in self.type_to_idx['tag'].items()}
+                self.idx_seq[partition]['tag'] = to_categorical(self.idx_seq[partition]['tag'])
