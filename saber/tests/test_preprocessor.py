@@ -35,30 +35,40 @@ def test_process_text(preprocessor, nlp):
     assert preprocessor._process_text(simple_text) == simple_expected
     assert preprocessor._process_text(blank_test) == blank_expected
 
-def test_type_to_idx():
-    """Asserts that call to Preprocessor.test_type_to_idx() returns the
-    expected results."""
-    # simple test and its expected value
-    simple_test = ["This", "is", "a", "test", "."]
-    simple_expected = {'This': 0, 'is': 1, 'a': 2, 'test': 3, '.': 4}
-    # result of simple test with an offset arg value of 1
-    offset_expected = {'This': 1, 'is': 2, 'a': 3, 'test': 4, '.': 5}
-    # blank value test and its expected value
-    blank_test = []
-    blank_expected = {}
+def test_type_to_idx_value_error():
+    """
+    """
+    with pytest.raises(ValueError):
+        invalid_input = {'a': 0, 'b': 2, 'c': 3}
+        Preprocessor.type_to_idx([], initial_mapping=invalid_input)
 
-    simple_actual = Preprocessor.type_to_idx(simple_test)
-    offset_actual = Preprocessor.type_to_idx(simple_test, offset=1)
-    blank_actual = Preprocessor.type_to_idx(blank_test)
+def test_type_to_idx_empty_input():
+    """Asserts that call to Preprocessor.test_type_to_idx() returns the expected results when
+    an empty list is passed as input."""
+    expected = {}
+    actual = Preprocessor.type_to_idx([])
 
-    assert all([k in simple_expected for k in simple_actual]) # check keys
-    assert all([v in simple_expected.values() for v in simple_actual.values()]) # check values
+    assert actual == expected
 
-    assert all([k in offset_expected for k in offset_actual]) # check keys
-    assert all([v in offset_expected.values() for v in offset_actual.values()]) # check values
+def test_type_to_idx_simple_input():
+    """Asserts that call to Preprocessor.test_type_to_idx() returns the expected results when
+    a simple list of strings is passed as input."""
+    test = ["This", "is", "a", "test", "."]
+    expected = {'This': 0, 'is': 1, 'a': 2, 'test': 3, '.': 4}
+    actual = Preprocessor.type_to_idx(test)
 
-    assert all([k in blank_expected for k in blank_actual]) # check keys
-    assert all([v in simple_expected.values() for v in blank_actual.values()]) # check values
+    assert actual == expected
+
+def test_type_to_idx_intial_mapping():
+    """Asserts that call to Preprocessor.test_type_to_idx() returns the expected results when
+    a simple list of strings is passed as input and a supplied `intitial_mapping` argument"""
+    test = ["This", "is", "a", "test", "."]
+    initial_mapping = {'This': 0, 'is': 1}
+
+    expected = {'This': 0, 'is': 1, 'a': 2, 'test': 3, '.': 4}
+    actual = Preprocessor.type_to_idx(test, initial_mapping=initial_mapping)
+
+    assert actual == expected
 
 def test_get_type_to_idx_sequence():
     """"""
