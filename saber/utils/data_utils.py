@@ -5,8 +5,6 @@ import logging
 import os
 from itertools import chain
 
-import numpy as np
-from keras.utils import to_categorical
 from sklearn.model_selection import KFold, train_test_split
 
 from .. import constants
@@ -84,78 +82,58 @@ def load_compound_dataset(config):
     Returns:
         A list containing multiple Dataset objects.
     """
-
     from ..dataset import Dataset # breaks circular import
+
     # accumulate and load each dataset
-    compound_ds = [Dataset(directory=dir_, replace_rare_tokens=config.replace_rare_tokens)
-                   for dir_ in config.dataset_folder]
-    for dataset in compound_ds:
+    compound_dataset = []
+    for dir_ in config.dataset_folder:
+        dataset = Dataset(directory=dir_, replace_rare_tokens=config.replace_rare_tokens)
         dataset.load()
+        compound_dataset.append(dataset)
 
     # to generate a compound dataset, we need to:
     # 1. pool word and char types
     # 2. compute mappings of these pooled types to unique integer IDs
-    # 3. update each datasets type_to_idx mappings
+    # 3. update each datasets type_to_idx mappings (for word and char types only)
     # 4. re-compute the index sequences
 
     # 1. pool word and char types
-    combined_types = {'word': [ds.types['word'] for ds in compound_ds],
-                      'char': [ds.types['char'] for ds in compound_ds]}
+    combined_types = {'word': [dataset.type_to_idx['word'] for dataset in compound_dataset],
+                      'char': [dataset.type_to_idx['char'] for dataset in compound_dataset]}
     combined_types['word'] = list(set(chain.from_iterable(combined_types['word'])))
     combined_types['char'] = list(set(chain.from_iterable(combined_types['char'])))
-
     # 2. compute mappings of these pooled types to unique integer IDs
     type_to_idx = {
-        'word': Preprocessor.type_to_idx(types=combined_types['word'],
-                                         initial_mapping=constants.INITIAL_MAPPING['word']),
-        'char': Preprocessor.type_to_idx(types=combined_types['char'],
-                                         initial_mapping=constants.INITIAL_MAPPING['word']),
+        'word': Preprocessor.type_to_idx(combined_types['word'], constants.INITIAL_MAPPING['word']),
+        'char': Preprocessor.type_to_idx(combined_types['char'], constants.INITIAL_MAPPING['word']),
     }
-
-    for dataset in compound_ds:
-        # 3. update each datasets type_to_idx mappings
-        dataset.type_to_idx.update(type_to_idx)
+    for dataset in compound_dataset:
+        # 3. update each datasets type_to_idx mappings (for word and char types only)
+        dataset.type_to_idx['word'].update(type_to_idx['word'])
+        dataset.type_to_idx['char'].update(type_to_idx['char'])
         # 4. re-compute the index sequences
         dataset.get_idx_seq()
 
-    return compound_ds
+    return compound_dataset
 
 def setup_dataset_for_transfer(dataset, type_to_idx):
     """Modifys a `Dataset` object when transfer learning.
 
-    Performs a series of steps to setup a loaded Dataset object (`dataset`) to serve as the
-    target dataset when transfer learning.
+    Performs a series of steps to a loaded Dataset object (`dataset`) so that it can be used as
+    the target dataset when transfer learning. Namely, it replaces the `type_to_idx` mappings
+    for words and characters with those of the source dataset and used them to re-generate
+    `idx_seq`. This way, the target dataset contains only words and characters that appeared in the
+    source dataset.
 
     Args:
         dataset (Dataset): A Dataset object for which `Dataset.load()` has been called.
         type_to_idx (dict): A dictionary mapping word, char and tag types to unique integer IDs.
     """
-    dataset.type_to_idx.update(type_to_idx)
-    # ensures that tags present in both source and target datasets map to same ID
-    dataset.type_to_idx['tag'] = Preprocessor.type_to_idx(dataset.types['tag'],
-                                                          type_to_idx['tag'])
-    dataset.get_idx_to_tag() # re-generate index to tag mapping
-    dataset.get_idx_seq() # re-generate index sequence
-
-def one_hot_encode(idx_seq, num_classes=None):
-    """One-hot encodes a given class vector.
-
-    Converts a class matrix of integers, `idx_seq`, of shape (num examples, sequence length) to a
-    one-hot encoded matrix of shape (num_examples, sequence length, num_classes).
-
-    Args:
-        idx_seq: class matrix of integers of shape (num examples, sequence length), representing a
-            sequence of tags.
-
-    Returns:
-        numpy array, one-hot encoded matrix representation of `idx_seq` of shape
-            (num examples, sequence length, num_classes)
-    """
-    # convert to one-hot encoding
-    one_hots = [to_categorical(s, num_classes) for s in idx_seq]
-    one_hots = np.array(one_hots)
-
-    return one_hots
+    # overwrite type to index maps
+    dataset.type_to_idx['word'] = type_to_idx['word']
+    dataset.type_to_idx['char'] = type_to_idx['char']
+    # re-generate index sequence
+    dataset.get_idx_seq()
 
 def collect_valid_data(training_data, test_size=0.10):
     """Splits training data (`training_data`) into train and validation partitions.
