@@ -12,7 +12,7 @@ from keras.preprocessing.sequence import pad_sequences
 import en_coref_md
 
 from . import constants
-from .utils import text_utils
+from .utils import generic_utils, text_utils
 
 LOGGER = logging.getLogger(__name__)
 
@@ -100,37 +100,42 @@ class Preprocessor(object):
         return sentences, offsets
 
     @staticmethod
-    def type_to_idx(types, initial_mapping=None, offset=0):
+    def type_to_idx(types, initial_mapping=None):
         """Returns a dictionary which maps each item in `types` to a unique integer ID.
 
-        Given a list `types`, returns a dictionary of length `len(types)`` + offset, where the
-        keys are elements of `types` and the values are unique integer ids.
+        Given a list `types`, returns a dictionary of length `len(types)`, where the keys are
+        elements of `types` and the values are unique integer ids from 0 to `len(types) - 1`.
 
         Args:
             types (list): A list of unique types (words, characters, or tags)
             initial_mapping (dict): An initial mapping of types to integers. If not None, the
-                mapping of types to integers will update this dictionary, with the integer count
-                begginning at `len(initial_mapping)`.
-            offset (int): Used when computing the mapping. An offset a 1 means we begin computing
-                the mapping at 1, useful if we want to use 0 as a padding value. Has no effect if
-                initial_mapping is not None.
+                returned mapping of types to integers will include all key, value pairs in this
+                dictionary.
+
         Returns:
             A mapping from items in `types` to unique integer ids.
-        """
-        types = copy.deepcopy(types) # make a deep copy
-        types = list(set(types)) # ensure we have only unique elements
 
-        # update types according to initial_mapping
-        if initial_mapping is not None:
-            for type_, idx in initial_mapping.items():
-                # if a type in initial_mapping already exists in types, move it to correct index
-                if type_ in types:
-                    types.insert(idx, types.pop(types.index(type_)))
-                # otherwise add it
-                else:
-                    types.insert(idx, type_)
-        # offset accounts for sequence pad
-        return {e: i + offset for i, e in enumerate(types)}
+        Raises:
+            ValueError if the values of `initial_mapping` are not a consecutive series of ints
+            from 0 to `len(initial_mapping)`.
+        """
+        if initial_mapping is None:
+            return {e: i for i, e in enumerate(types)}
+
+        else:
+            if not generic_utils.is_consecutive(initial_mapping.values()):
+                err_msg = ("`initial_mapping.values()` must be a consecutive list of ints from 0 "
+                           "to `len(initial_mapping)`")
+                LOGGER.error('ValueError: %s', err_msg)
+                raise ValueError(err_msg)
+            # start mapping from end of initial_mapping
+            mapping = copy.deepcopy(initial_mapping)
+            offset = max(initial_mapping.values()) + 1
+            for type_ in types:
+                if type_ not in initial_mapping:
+                    mapping[type_] = offset
+                    offset += 1
+            return mapping
 
     @staticmethod
     def get_type_idx_sequence(seq, type_to_idx, type_='word'):
@@ -139,8 +144,8 @@ class Preprocessor(object):
         Maps `seq`, which contains a sequence of elements (words, characters, or tags), for each
         sentence in a corpora, to a corresponding sequence where all elements have been mapped to
         indicies based on the provided `type_to_idx` map. Sentences are either truncated or
-        right-padded to match a length of constants.MAX_SENT_LEN, and words (character sequences)
-        are truncated or right-padded to match a length of constants.MAX_CHAR_LEN.
+        right-padded to match a length of `constants.MAX_SENT_LEN`, and words (character sequences)
+        are truncated or right-padded to match a length of `constants.MAX_CHAR_LEN`.
 
         Args:
             seq (list): list of lists where each list represents a sentence and each inner list
@@ -160,18 +165,17 @@ class Preprocessor(object):
             LOGGER.error('ValueError: %s', err_msg)
             raise ValueError(err_msg)
 
-        # Word type
+        # word type
         if type_ == 'word':
-            type_seq = [[type_to_idx.get(x, type_to_idx[constants.UNK]) for x \
-                in s] for s in seq]
-        # Tag type
+            type_seq = [[type_to_idx.get(x, type_to_idx[constants.UNK]) for x in s] for s in seq]
+        # tag type
         elif type_ == 'tag':
             type_seq = [[type_to_idx.get(x) for x in s] for s in seq]
-        # Char type
+        # char type
         elif type_ == 'char':
             # get index sequence of chars
-            type_seq = [[[type_to_idx.get(c, type_to_idx[constants.UNK]) for \
-                c in w] for w in s] for s in seq]
+            type_seq = [[[type_to_idx.get(c, type_to_idx[constants.UNK]) for c in w] for w in s] for
+                        s in seq]
 
             # create a sequence of padded character vectors
             for i, char_seq in enumerate(type_seq):
@@ -180,7 +184,6 @@ class Preprocessor(object):
                                             padding="post",
                                             truncating='post',
                                             value=constants.PAD_VALUE)
-
         # pad sequences
         type_seq = pad_sequences(maxlen=constants.MAX_SENT_LEN,
                                  sequences=type_seq,
