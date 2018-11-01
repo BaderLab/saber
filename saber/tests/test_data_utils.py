@@ -4,9 +4,48 @@ import numpy as np
 
 import pytest
 
+from ..config import Config
+from ..dataset import Dataset
 from ..utils import data_utils
+from .resources.dummy_constants import *
 
 ######################################### PYTEST FIXTURES #########################################
+
+@pytest.fixture
+def dummy_config():
+    """Returns an instance of a Config object."""
+    dummy_config = Config(PATH_TO_DUMMY_CONFIG)
+    return dummy_config
+
+@pytest.fixture
+def dummy_dataset_1():
+    """Returns a single dummy Dataset instance after calling Dataset.load().
+    """
+    # Don't replace rare tokens for the sake of testing
+    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
+    dataset.load()
+
+    return dataset
+
+@pytest.fixture
+def dummy_dataset_2():
+    """Returns a single dummy Dataset instance after calling `Dataset.load()`.
+    """
+    # Don't replace rare tokens for the sake of testing
+    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_2, replace_rare_tokens=False)
+    dataset.load()
+
+    return dataset
+
+@pytest.fixture
+def dummy_compound_dataset(dummy_config):
+    """
+    """
+    dummy_config.dataset_folder = [PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2]
+    dummy_config.replace_rare_tokens = False
+    dataset = data_utils.load_compound_dataset(dummy_config)
+
+    return dataset
 
 @pytest.fixture(scope='session')
 def dummy_dataset_paths_all(tmpdir_factory):
@@ -73,45 +112,76 @@ def test_get_filepaths_no_valid(dummy_dataset_paths_no_valid):
 
     assert actual == expected
 
-def test_one_hot_encode():
-    """Asserts that the one-hot encoding returned by `data_utils.one_hot_encode()` is as expected.
+def test_load_single_dataset(dummy_config, dummy_dataset_1):
+    """Asserts that `data_utils.load_single_dataset()` returns the expected value.
     """
-    # empty list test
-    empty_test = []
-    # simple list test and its expected value
-    simple_test = [[0, 1, 3], [2, 1, 3]]
-    simple_expected = np.asarray([[[1, 0, 0, 0],
-                                   [0, 1, 0, 0],
-                                   [0, 0, 0, 1]],
-                                  [[0, 0, 1, 0],
-                                   [0, 1, 0, 0],
-                                   [0, 0, 0, 1]]])
+    actual = data_utils.load_single_dataset(dummy_config)
+    expected = [dummy_dataset_1]
 
-    assert data_utils.one_hot_encode(empty_test).size == 0
-    assert np.allclose(data_utils.one_hot_encode(simple_test), simple_expected)
+    # essentially redundant, but if we dont return a [Dataset] object then the error message from
+    # the final test could be cryptic
+    assert isinstance(actual, list)
+    assert len(actual) == 1
+    assert isinstance(actual[0], Dataset)
+    # the test we actually care about, least roundabout way of asking if the two Dataset objects
+    # are identical
+    assert dir(actual[0].__dict__) == dir(expected[0].__dict__)
 
-'''
-def test_get_train_valid_indices(multi_task_lstm_crf_single_model, train_valid_indices_single_model):
-    """Asserts that indices returned by the _get_train_valid_indices() of
-    a MutliTaskLSTMCRf object are as expected."""
-    # len of outer list
-    assert len(train_valid_indices_single_model) == len(multi_task_lstm_crf_single_model.ds)
-    # len of inner list
-    assert len(train_valid_indices_single_model[0]) == multi_task_lstm_crf_single_model.config.k_folds
-    # len of inner tuples
-    assert len(train_valid_indices_single_model[0][0]) == 2
+def test_load_compound_dataset_unchanged_attributes(dummy_dataset_1,
+                                                    dummy_dataset_2,
+                                                    dummy_compound_dataset):
+    """Asserts that attributes of `Dataset` objects which are expected to remain unchanged
+    are unchanged after call to `data_utils.load_compound_dataset()`.
+    """
+    actual = dummy_compound_dataset
+    expected = [dummy_dataset_1, dummy_dataset_2]
 
-def test_get_data_partitions(multi_task_lstm_crf_single_model, data_partitions_single_model):
-    """Asserts that partitions returned by the get_data_partitions() of
-    a MutliTaskLSTMCRf object are as expected."""
-    assert len(data_partitions_single_model) == len(multi_task_lstm_crf_single_model.ds)
-    assert len(data_partitions_single_model[0]) == 6
+    # essentially redundant, but if we dont return a [Dataset, Dataset] object then the error
+    # messages from the downstream tests could be cryptic
+    assert isinstance(actual, list)
+    assert len(actual) == 2
+    assert all([isinstance(ds, Dataset) for ds in actual])
 
-def test_get_metrics(multi_task_lstm_crf_single_model, metrics_single_model):
-    """Asserts that list of Metrics objects returned by get_metrics() is as expected."""
-    ds_ = multi_task_lstm_crf_single_model.ds
+    # attributes that are unchanged in case of compound dataset
+    assert actual[0].directory == expected[0].directory
+    assert actual[0].replace_rare_tokens == expected[0].replace_rare_tokens
+    assert actual[0].type_seq == expected[0].type_seq
+    assert actual[0].type_to_idx['tag'] == expected[0].type_to_idx['tag']
+    assert actual[0].idx_to_tag == expected[0].idx_to_tag
 
-    assert all(isinstance(m, Metrics) for m in metrics_single_model)
-    assert isinstance(metrics_single_model, list)
-    assert len(metrics_single_model) == len(ds_)
-'''
+    assert actual[-1].directory == expected[-1].directory
+    assert actual[-1].replace_rare_tokens == expected[-1].replace_rare_tokens
+    assert actual[-1].type_seq == expected[-1].type_seq
+    assert actual[-1].type_to_idx['tag'] == expected[-1].type_to_idx['tag']
+    assert actual[-1].idx_to_tag == expected[-1].idx_to_tag
+
+def test_load_compound_dataset_changed_attributes(dummy_dataset_1,
+                                                  dummy_dataset_2,
+                                                  dummy_compound_dataset):
+    """Asserts that attributes of `Dataset` objects which are expected to be changed are changed
+    after call to `data_utils.load_compound_dataset()`.
+    """
+    actual = dummy_compound_dataset
+    expected = [dummy_dataset_1, dummy_dataset_2]
+
+    # essentially redundant, but if we dont return a [Dataset, Dataset] object then the error
+    # messages from the downstream tests could be cryptic
+    assert isinstance(actual, list)
+    assert len(actual) == 2
+    assert all([isinstance(ds, Dataset) for ds in actual])
+
+    # attributes that are changed in case of compound dataset
+    assert actual[0].type_to_idx['word'] == actual[-1].type_to_idx['word']
+    assert actual[0].type_to_idx['char'] == actual[-1].type_to_idx['char']
+
+    # TODO: Need to assert that all types in idx_seq map to the same integers
+    # across the compound datasets
+
+def test_setup_dataset_for_transfer(dummy_dataset_1, dummy_dataset_2):
+    """Asserts that the `type_to_idx` attribute of a "source" dataset and a "target" dataset are
+    as expected after call to `data_utils.setup_dataset_for_transfer()`.
+    """
+    source_type_to_idx = dummy_dataset_1.type_to_idx
+    data_utils.setup_dataset_for_transfer(dummy_dataset_2, source_type_to_idx)
+
+    assert all(dummy_dataset_2.type_to_idx[type_] == source_type_to_idx[type_] for type_ in ['word', 'char'])
