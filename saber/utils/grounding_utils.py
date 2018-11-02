@@ -18,7 +18,7 @@ def _query_uniprot(text, organisms=('9606'), limit=1):
 
      Args:
         text: Gene or gene product name, synonym, or id.
-        organisms: Names or taxonomy ids; can be number, string or tupleself.
+        organisms: Names or taxonomy ids; can be number, string or tuple.
         limit: Max number of hits (result rows ordered by relevance).
 
     Returns:

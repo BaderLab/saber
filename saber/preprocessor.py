@@ -139,11 +139,11 @@ class Preprocessor(object):
 
     @staticmethod
     def get_type_idx_sequence(seq, type_to_idx, type_='word'):
-        """Maps `seq` to a correspoding sequence of indices using `type_to_idx` map.
+        """Maps `seq` to a corresponding sequence of indices using `type_to_idx` map.
 
         Maps `seq`, which contains a sequence of elements (words, characters, or tags), for each
         sentence in a corpora, to a corresponding sequence where all elements have been mapped to
-        indicies based on the provided `type_to_idx` map. Sentences are either truncated or
+        indices based on the provided `type_to_idx` map. Sentences are either truncated or
         right-padded to match a length of `constants.MAX_SENT_LEN`, and words (character sequences)
         are truncated or right-padded to match a length of `constants.MAX_CHAR_LEN`.
 
@@ -195,7 +195,7 @@ class Preprocessor(object):
 
     @staticmethod
     def chunk_entities(seq):
-        """Chunks enities in the BIO or BIOES format.
+        """Chunks entities in the BIO or BIOES format.
 
         For a given sequence of entities in the BIO or BIOES format, returns the chunked entities.
         Note that invalid tag sequences will not be returned as chunks.
@@ -261,7 +261,7 @@ class Preprocessor(object):
     def sterilize(text, lower=False):
         """Sterilize input text.
 
-        For given input `text`, removes proceeding and preeceding spaces, and replaces spans of
+        For given input `text`, removes proceeding and preceding spaces, and replaces spans of
         multiple spaces with a single space. Optionally, lowercases `text`.
 
         Args:
@@ -269,7 +269,7 @@ class Preprocessor(object):
             lower (bool): True if text should be lower cased
 
         Returns:
-            `text`, where proceeding/preeceding spaces have been removed, spans of multiple spaces
+            `text`, where proceeding/preceding spaces have been removed, spans of multiple spaces
             have been replaced with a single space, and optionally, the text has been lowercased.
         """
         sterilized_text = re.sub(r'\s+', ' ', text.strip())
