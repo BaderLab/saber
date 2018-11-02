@@ -36,7 +36,7 @@ VALID_FILE = 'valid.*'
 TEST_FILE = 'test.*'
 # pre-trained models
 PRETRAINED_MODELS = ['PRGE']
-# relative path to pretrained model directory
+# relative path to pre-trained model directory
 PRETRAINED_MODEL_DIR = resource_filename(__name__, 'pretrained_models')
 MODEL_FILENAME = 'model_params.json'
 WEIGHTS_FILENAME = 'model_weights.hdf5'

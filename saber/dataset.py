@@ -58,8 +58,8 @@ class Dataset(object):
     def load(self):
         """Coordinates the loading of a given data set at `self.directory`.
 
-        For a given dataset in CoNLL format at `self.directory`, cordinates the loading of data and
-        updates the approriate instance attributes. Expects `self.directory` to be a directory
+        For a given dataset in CoNLL format at `self.directory`, coordinates the loading of data and
+        updates the appropriate instance attributes. Expects `self.directory` to be a directory
         containing a single file, `train.*` and optionally two additional files, `valid.*` and
         `test.*`.
 
@@ -85,9 +85,9 @@ class Dataset(object):
         self.idx_to_tag = generic_utils.reverse_dict(self.type_to_idx['tag'])
 
     def _get_types(self):
-        """Collects the sets of all words, characters and tags in a CoNLL formated dataset.
+        """Collects the sets of all words, characters and tags in a CoNLL formatted dataset.
 
-        For the CoNLL formated dataset given at `self.directory`, updates `self.types` with the
+        For the CoNLL formatted dataset given at `self.directory`, updates `self.types` with the
         sets of all words (word types), characters (character types) and tags (tag types). All types
         are shared across all partitions, that is, word, char and tag types are collected from the
         train and, if provided, valid/test partitions found at `self.directory/train.*`,
@@ -115,8 +115,8 @@ class Dataset(object):
     def _get_type_seq(self):
         """Loads sequence data from a CoNLL format data set given at `self.directory`.
 
-        For the CoNLL formated dataset given at `self.directory`, updates `self.type_seq` with
-        lists containg the word, character and tag sequences for the train and, if provided,
+        For the CoNLL formatted dataset given at `self.directory`, updates `self.type_seq` with
+        lists containing the word, character and tag sequences for the train and, if provided,
         valid/test partitions found at `self.directory/train.*`, `self.directory/valid.*` and
         `self.directory/test.*`.
         """

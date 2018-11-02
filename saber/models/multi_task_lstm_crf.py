@@ -1,4 +1,4 @@
-"""Contains the Multi-task BiLSTM-CRF (MT-BILSTM-CRF) Keras model for squence labelling.
+harmonized"""Contains the Multi-task BiLSTM-CRF (MT-BILSTM-CRF) Keras model for squence labelling.
 """
 import logging
 
@@ -18,7 +18,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
     """A Keras implementation of a BiLSTM-CRF for sequence labeling.
 
     A BiLSTM-CRF for NER implementation in Keras. Supports multi-task learning by default, just pass
-    multiple Dataset objects via `ddatasets` to the constructor and the model will share the
+    multiple Dataset objects via `datasets` to the constructor and the model will share the
     parameters of all layers, except for the final output layer, across all datasets, where each
     dataset represents a sequence labelling task.
 
@@ -55,7 +55,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
     def specify(self):
         """Specifies a multi-task BiLSTM-CRF for sequence tagging using Keras.
 
-        Implements a hybrid bidirectional ong short-term memory network-condition random
+        Implements a hybrid bidirectional long short-term memory network-condition random
         field (BiLSTM-CRF) multi-task model for sequence tagging.
         """
         # specify any shared layers outside the for loop
@@ -172,7 +172,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         """Prepares the BiLSTM-CRF for transfer learning by recreating its last layer.
 
         Prepares the BiLSTM-CRF model(s) at `self.models` for transfer learning by removing their
-        CRF classifiers and replacing them with un-trained CRF classifiers of the approriate size
+        CRF classifiers and replacing them with un-trained CRF classifiers of the appropriate size
         (i.e. number of units equal to number of output tags) for the target datasets.
 
         References:
