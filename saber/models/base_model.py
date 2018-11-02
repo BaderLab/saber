@@ -1,10 +1,12 @@
 """Contains the BaseModel class, the parent class to all Keras models in Saber.
 """
 import json
+import logging
 
 from keras import optimizers
 from keras.models import model_from_json
 
+LOGGER = logging.getLogger(__name__)
 
 class BaseKerasModel(object):
     """Parent class of all Keras model classes implemented by Saber.
@@ -41,7 +43,7 @@ class BaseKerasModel(object):
         and its weights from a hdf5 file at `model_filepath`.
 
         Args:
-            weights_filepath (str): filepath to the models wieghts (.hdf5 file).
+            weights_filepath (str): filepath to the models weights (.hdf5 file).
             model_filepath (str): filepath to the models architecture (.json file).
         """
         with open(model_filepath) as f:
@@ -79,7 +81,7 @@ class BaseKerasModel(object):
     def _compile(self, model, loss_function, optimizer, lr=0.01, decay=0.0, clipnorm=0.0):
         """Compiles a model specified with Keras.
 
-        See https://keras.io/optimizers/ for more info on each optmizer.
+        See https://keras.io/optimizers/ for more info on each optimizer.
 
         Args:
             model: Keras model object to compile
@@ -109,5 +111,9 @@ class BaseKerasModel(object):
             optimizer_ = optimizers.Adadelta(clipnorm=clipnorm)
         elif optimizer == 'nadam':
             optimizer_ = optimizers.Nadam(clipnorm=clipnorm)
+        else:
+            err_msg = "Argument for `optimizer` is invalid, got: {}".format(optimizer)
+            LOGGER.error('ValueError %s', err_msg)
+            raise ValueError(err_msg)
 
         model.compile(optimizer=optimizer_, loss=loss_function)
