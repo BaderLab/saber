@@ -13,7 +13,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/BaderLab/saber",
-    python_requires='>=3.6',
+    python_requires='>=3.5',
     packages=setuptools.find_packages(),
     classifiers=(
         "Development Status :: 3 - Alpha",
