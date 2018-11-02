@@ -43,7 +43,7 @@ class BaseKerasModel(object):
         and its weights from a hdf5 file at `model_filepath`.
 
         Args:
-            weights_filepath (str): filepath to the models wieghts (.hdf5 file).
+            weights_filepath (str): filepath to the models weights (.hdf5 file).
             model_filepath (str): filepath to the models architecture (.json file).
         """
         with open(model_filepath) as f:
@@ -81,7 +81,7 @@ class BaseKerasModel(object):
     def _compile(self, model, loss_function, optimizer, lr=0.01, decay=0.0, clipnorm=0.0):
         """Compiles a model specified with Keras.
 
-        See https://keras.io/optimizers/ for more info on each optmizer.
+        See https://keras.io/optimizers/ for more info on each optimizer.
 
         Args:
             model: Keras model object to compile

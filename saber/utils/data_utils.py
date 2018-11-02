@@ -54,7 +54,7 @@ def load_single_dataset(config):
     Creates and loads a single dataset object for a dataset at `config.dataset_folder[0]`.
 
     Args:
-        config (Config): A Config object which contains a set of harmonzied arguments provided in
+        config (Config): A Config object which contains a set of harmonized arguments provided in
             a *.ini file and, optionally, from the command line.
 
     Returns:
@@ -76,7 +76,7 @@ def load_compound_dataset(config):
     mappings). Loads such a dataset for each dataset at `config.dataset_folder`.
 
     Args:
-        config (Config): A Config object which contains a set of harmonzied arguments provided in
+        config (Config): A Config object which contains a set of harmonized arguments provided in
             a *.ini file and, optionally, from the command line.
 
     Returns:

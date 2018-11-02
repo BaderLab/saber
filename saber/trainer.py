@@ -11,7 +11,7 @@ class Trainer(object):
     """A class for co-ordinating the training of Keras model(s).
 
     Args:
-        config (Config): A Config object which contains a set of harmonzied arguments provided in
+        config (Config): A Config object which contains a set of harmonized arguments provided in
             a *.ini file and, optionally, from the command line.
         datasets (list): A list containing one or more Dataset objects.
         model (BaseModel): The model to train.

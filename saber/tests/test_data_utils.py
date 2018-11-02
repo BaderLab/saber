@@ -164,7 +164,7 @@ def test_load_compound_dataset_changed_attributes(dummy_dataset_1,
     actual = dummy_compound_dataset
     expected = [dummy_dataset_1, dummy_dataset_2]
 
-    # essentially redundant, but if we dont return a [Dataset, Dataset] object then the error
+    # essentially redundant, but if we don't return a [Dataset, Dataset] object then the error
     # messages from the downstream tests could be cryptic
     assert isinstance(actual, list)
     assert len(actual) == 2

@@ -31,7 +31,7 @@ def prepare_output_directory(config):
     (`config`) to the top level of this directory.
 
     Args:
-        config (Config): A Config object which contains a set of harmonzied arguments provided in
+        config (Config): A Config object which contains a set of harmonized arguments provided in
             a *.ini file and, optionally, from the command line.
 
     Returns:
@@ -71,7 +71,7 @@ def prepare_pretrained_model_dir(config):
     |   └── <constants.PRETRAINED_MODEL_DIR>
     |       └── <first_dataset_name_second_dataset_name_nth_dataset_name>
 
-    config (Config): A Config object which contains a set of harmonzied arguments provided in
+    config (Config): A Config object which contains a set of harmonized arguments provided in
         a *.ini file and, optionally, from the command line.
 
     Returns:
@@ -87,7 +87,7 @@ def setup_checkpoint_callback(config, output_dir):
     """Sets up per epoch model checkpointing.
 
     Sets up model checkpointing by creating a Keras CallBack for each output directory in
-    `output_dir` (correspondings to individual datasets).
+    `output_dir` (corresponding to individual datasets).
 
     Args:
         output_dir (lst): A list of output directories, one for each dataset.
@@ -123,7 +123,7 @@ def setup_tensorboard_callback(output_dir):
         output_dir (lst): A list of output directories, one for each dataset.
 
     Returns:
-        A list of Keras CallBack object for logging TensorBoard visulizations.
+        A list of Keras CallBack object for logging TensorBoard visualizations.
 
     Example:
         >>> tensorboard --logdir=/path_to_tensorboard_logs
@@ -165,7 +165,7 @@ def setup_callbacks(config, output_dir):
     """Returns a list of Keras Callback objects to use during training.
 
     Args:
-        config (Config): A Config object which contains a set of harmonzied arguments provided in
+        config (Config): A Config object which contains a set of harmonized arguments provided in
             a *.ini file and, optionally, from the command line.
         output_dir (list): A list of filepaths, one for each dataset in `self.datasets`.
 
@@ -215,7 +215,7 @@ def load_pretrained_model(config, datasets, weights_filepath, model_filepath):
     `config.model_name`.
 
     Args:
-        config (Config): config (Config): A Config object which contains a set of harmonzied
+        config (Config): config (Config): A Config object which contains a set of harmonized
             arguments provided in a *.ini file and, optionally, from the command line.
         datasets (Dataset): A list of Dataset objects.
         weights_filepath (str): A filepath to the weights of a pre-trained Keras model.
