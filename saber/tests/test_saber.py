@@ -23,6 +23,26 @@ def dummy_config_single_dataset():
     return Config(PATH_TO_DUMMY_CONFIG)
 
 @pytest.fixture
+def dummy_dataset_1():
+    """Returns a single dummy Dataset instance after calling Dataset.load().
+    """
+    # Don't replace rare tokens for the sake of testing
+    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
+    dataset.load()
+
+    return dataset
+
+@pytest.fixture
+def dummy_dataset_2():
+    """Returns a single dummy Dataset instance after calling `Dataset.load()`.
+    """
+    # Don't replace rare tokens for the sake of testing
+    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_2, replace_rare_tokens=False)
+    dataset.load()
+
+    return dataset
+
+@pytest.fixture
 def saber_blank(dummy_config_single_dataset):
     """Returns instance of `Saber` initialized with the dummy config file and no dataset.
     """
@@ -130,15 +150,16 @@ def test_load_dataset_value_error(saber_single_dataset):
     with pytest.raises(ValueError):
         saber_single_dataset.load_dataset()
 
-def test_tag_to_idx_after_load_single_dataset_with_transfer(saber_single_dataset_model):
-    """Asserts that `saber.datasets[0].type_to_idx['tag']` is as expected after we load a single
+def test_tag_to_idx_after_load_single_dataset_with_transfer(dummy_dataset_2,
+                                                            saber_single_dataset_model):
+    """Asserts that `saber.datasets[0].type_to_idx['tag']` is unchanged after we load a single
     target dataset for transfer learning.
     """
-    expected = saber_single_dataset_model.datasets[0].type_to_idx['tag']
+    expected = dummy_dataset_2.type_to_idx['tag']
     saber_single_dataset_model.load_dataset(PATH_TO_DUMMY_DATASET_2)
     actual = saber_single_dataset_model.datasets[0].type_to_idx['tag']
 
-    assert all([actual[k] == expected[k] for k in actual if k in expected])
+    assert actual == expected
 
 def test_load_embeddings(saber_single_dataset_embeddings):
     """Assert that the `datasets` attribute of a `Saber` instance was updated as expected after
@@ -234,17 +255,20 @@ def test_load_compound_dataset(saber_compound_dataset):
     """
     assert all([isinstance(ds, Dataset) for ds in saber_compound_dataset.datasets])
 
-def test_tag_to_idx_after_load_compound_dataset_with_transfer(saber_single_dataset_model):
-    """Asserts that `saber.datasets[0].type_to_idx['tag']` is as expected after we load a compound
-    target dataset for transfer learning.
+def test_tag_to_idx_after_load_compound_dataset_with_transfer(dummy_dataset_1,
+                                                              dummy_dataset_2,
+                                                              saber_single_dataset_model):
+    """Asserts that `type_to_idx['tag']` is unchanged after we load a compound target dataset for
+    transfer learning.
     """
-    expected = saber_single_dataset_model.datasets[0].type_to_idx['tag']
+    expected = [dummy_dataset_1.type_to_idx['tag'],
+                dummy_dataset_2.type_to_idx['tag']]
     saber_compound_dataset_model = saber_single_dataset_model
     saber_compound_dataset_model.load_dataset([PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2])
     actual = [ds.type_to_idx['tag'] for ds in saber_compound_dataset_model.datasets]
 
-    for dataset in actual:
-        assert all([dataset[k] == expected[k] for k in dataset if k in expected])
+    for i, result in enumerate(actual):
+        assert result == expected[i]
 
 def test_build_compound_dataset(saber_compound_dataset_model):
     """Assert that the `model` attribute of a `Saber` instance was updated as expected after

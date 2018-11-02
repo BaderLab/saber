@@ -11,7 +11,7 @@ class Trainer(object):
     """A class for co-ordinating the training of Keras model(s).
 
     Args:
-        config (Config): A Config object which contains a set of harmonzied arguments provided in
+        config (Config): A Config object which contains a set of harmonized arguments provided in
             a *.ini file and, optionally, from the command line.
         datasets (list): A list containing one or more Dataset objects.
         model (BaseModel): The model to train.
@@ -116,8 +116,8 @@ class Trainer(object):
                 ds_idx = random.sample(range(0, len(self.datasets)), len(self.datasets))
                 for i in ds_idx:
                     self.model.models[i].fit(
-                        self.training_data[i][fold]['x_train'],
-                        self.training_data[i][fold]['y_train'],
+                        x=self.training_data[i][fold]['x_train'],
+                        y=self.training_data[i][fold]['y_train'],
                         batch_size=self.config.batch_size,
                         callbacks=[cb[i] for cb in self.callbacks] + [metrics[i]],
                         validation_data=(self.training_data[i][fold]['x_valid'],

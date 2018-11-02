@@ -19,17 +19,20 @@ from ..saber import Saber
 def main():
     """Coordinates a complete training cycle, including reading in a config, loading dataset(s),
     training the model, and saving the models weights."""
-    # create and collect model and training parameters
     config = Config(cli=True)
-
-    # currently performs training by default
     saber = Saber(config)
+
+    if config.pretrained_model:
+        saber.load(config.pretrained_model)
+
     saber.load_dataset()
 
-    # if pretrained token embeddings are provided, load them
-    if config.pretrained_embeddings:
-        saber.load_embeddings()
-    saber.build()
+    # don't build a new model if pre-trained one was provided
+    if not config.pretrained_model:
+        # don't load embeddings if a pre-trained model was provided
+        if config.pretrained_embeddings:
+            saber.load_embeddings()
+        saber.build()
 
     try:
         saber.train()
@@ -37,7 +40,6 @@ def main():
         print("\nQutting Saber...")
         logging.warning('Saber was terminated early due to KeyboardInterrupt')
     finally:
-        # save the model
         if config.save_model:
             saber.save()
 

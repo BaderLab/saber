@@ -17,7 +17,7 @@ from ..utils import generic_utils
 LOGGER = logging.getLogger(__name__)
 
 def get_pubmed_xml(pmid):
-    """Uses the Entrez Utilities Web Service API to fetch XML representation of pubmed document.
+    """Uses the Entrez Utilities Web Service API to fetch XML representation of PubMed document.
 
     Args:
         pmid (int): the PubMed ID of the abstract to fetch
@@ -61,7 +61,7 @@ def get_pubmed_xml(pmid):
     return response
 
 def get_pubmed_text(pmid):
-    """Returns the abstract title and text for a given pubmed id using the the Entrez Utilities Web
+    """Returns the abstract title and text for a given PubMed id using the the Entrez Utilities Web
     Service API.
 
     Args:
@@ -132,7 +132,7 @@ def harmonize_entities(default_ents, requested_ents):
             entities should be predicted in a given text.
 
     Returns: a dictionary containing all key, value pairs in `default_ents`, where values in
-        `requested_ents` overide those in default_ents. Any key in `default_ents` but not in
+        `requested_ents` override those in default_ents. Any key in `default_ents` but not in
         `requested_ents` will have its value set to False by default.
     """
     entities = {}
