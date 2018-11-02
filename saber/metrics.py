@@ -23,7 +23,7 @@ class Metrics(Callback):
     """A class for handling performance metrics, inherits from Callback.
 
     Args:
-        config (Config): Contains a set of harmonzied arguments provided in a *.ini file and,
+        config (Config): Contains a set of harmonized arguments provided in a *.ini file and,
             optionally, from the command line.
         data (dict): Contains the data and targets for each partition: 'train', 'valid' and 'test'.
         index_map (dict): A dictionary mapping unique integers to each target (a label).
@@ -125,7 +125,7 @@ class Metrics(Callback):
     def get_precision_recall_f1_support(y_true, y_pred, criteria):
         """Returns precision, recall, f1 and support.
 
-        For given gold (`y_true`) and predicited (`y_pred`) labels, returns the precision, recall,
+        For given gold (`y_true`) and predicted (`y_pred`) labels, returns the precision, recall,
         f1 and support per label, and the average of these scores across labels. Expects `y_true`
         and `y_pred` to be a sequence of entity chunks.
 
@@ -187,7 +187,7 @@ class Metrics(Callback):
             FP_total += FP
             TP_total += TP
 
-        # get macro and micro peformance metrics averages
+        # get macro and micro performance metrics averages
         macro_p = mean([v[0] for v in performance_scores.values()])
         macro_r = mean([v[1] for v in performance_scores.values()])
         macro_f1 = mean([v[2] for v in performance_scores.values()])

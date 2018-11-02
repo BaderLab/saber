@@ -9,6 +9,16 @@ from setuptools.archive_util import unpack_archive
 
 LOGGER = logging.getLogger(__name__)
 
+def is_consecutive(lst):
+    """Returns True if `lst` contains all numbers from 0 to `len(lst)` with no duplicates.
+    """
+    return sorted(lst) == list(range(len(lst)))
+
+def reverse_dict(mapping):
+    """Returns a dictionary composed of the reverse v, k pairs of a dictionary `mapping`.
+    """
+    return {v: k for k, v in mapping.items()}
+
 # https://stackoverflow.com/questions/273192/how-can-i-create-a-directory-if-it-does-not-exist#273227
 def make_dir(directory):
     """Creates a directory at `directory` if it does not already exist.

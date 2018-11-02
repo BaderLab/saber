@@ -12,6 +12,6 @@ INFIX_RE = re.compile(r'''([0-9a-zA-Z]+|[^0-9a-zA-Z])''')
 # https://spacy.io/usage/linguistic-features#native-tokenizers
 def biomedical_tokenizer(nlp):
     """
-    Customizes spaCy's tokenizer class for better handeling of biomedical text.
+    Customizes spaCy's tokenizer class for better handling of biomedical text.
     """
     return Tokenizer(nlp.vocab, infix_finditer=INFIX_RE.finditer)
