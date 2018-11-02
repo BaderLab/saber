@@ -69,7 +69,7 @@ ENTITIES = {'ANAT': False,
             'TRIG': False}
 # CONFIG
 CONFIG_ARGS = ['model_name', 'save_model', 'dataset_folder', 'output_folder',
-               'pretrained_model_weights', 'pretrained_embeddings', 'word_embed_dim',
+               'pretrained_model', 'pretrained_embeddings', 'word_embed_dim',
                'char_embed_dim', 'optimizer', 'activation', 'learning_rate', 'decay', 'grad_norm',
                'dropout_rate', 'batch_size', 'k_folds', 'epochs', 'criteria', 'verbose',
                'debug', 'save_all_weights', 'tensorboard', 'replace_rare_tokens',
