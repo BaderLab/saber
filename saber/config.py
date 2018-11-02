@@ -141,7 +141,7 @@ class Config(object):
             # data
             args['dataset_folder'] = config['data']['dataset_folder'].split(',')
             args['output_folder'] = config['data']['output_folder']
-            args['pretrained_model_weights'] = config['data']['pretrained_model_weights']
+            args['pretrained_model'] = config['data']['pretrained_model']
             args['pretrained_embeddings'] = config['data']['pretrained_embeddings']
             # model
             args['word_embed_dim'] = config['model'].getint('word_embed_dim')
@@ -198,8 +198,8 @@ class Config(object):
         # create normalized absolutized versions of paths
         args['dataset_folder'] = [generic_utils.clean_path(ds) for ds in args['dataset_folder']]
         args['output_folder'] = generic_utils.clean_path(args['output_folder'])
-        if args['pretrained_model_weights']:
-            args['pretrained_model_weights'] = generic_utils.clean_path(args['pretrained_model_weights'])
+        if args['pretrained_model'] and args['pretrained_model'] not in constants.PRETRAINED_MODELS:
+            args['pretrained_model'] = generic_utils.clean_path(args['pretrained_model'])
         if args['pretrained_embeddings']:
             args['pretrained_embeddings'] = generic_utils.clean_path(args['pretrained_embeddings'])
         # build dictionary for dropout rates
@@ -271,7 +271,8 @@ class Config(object):
                                   "'nadam'."))
         parser.add_argument('--output_folder', required=False, type=str,
                             help='Path to top-level directory to save all output files.')
-        parser.add_argument('--pretrained_model_weights', required=False, type=str, help='TODO')
+        parser.add_argument('--pretrained_model', required=False, type=str,
+                            help='Filepath to pre-trained Saber model.')
         parser.add_argument('--replace_rare_tokens', required=False, action='store_true',
                             help=('If True, word types that occur only once in the training '
                                   'dataset will be replaced with a special unknown token.'))
