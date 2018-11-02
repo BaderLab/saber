@@ -167,7 +167,7 @@ class Saber(object):
         start = time.time()
         print('Loading model...', end=' ', flush=True)
 
-        # Allows user to provide names of pretrained models (e.g. 'PRGE') rather than filepaths
+        # Allows user to provide names of pre-trained models (e.g. 'PRGE') rather than filepaths
         if directory.upper() in constants.PRETRAINED_MODELS:
             directory = os.path.join(constants.PRETRAINED_MODEL_DIR, directory.upper())
 
