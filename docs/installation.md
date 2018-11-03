@@ -1,10 +1,10 @@
 # Installation
 
-To install Saber, you will need `python==3.6`. If not already installed, `python==3.6` can be installed via
+To install Saber, you will need `python>=3.5`. If not already installed, `python>=3.5` can be installed via
 
- - the [official installer](https://www.python.org/downloads/)
- - [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
- - [Miniconda3](https://conda.io/miniconda.html) / [Anaconda3](https://www.anaconda.com/download/)
+- The [official installer](https://www.python.org/downloads/)
+- [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
+- [Miniconda3](https://conda.io/miniconda.html) / [Anaconda3](https://www.anaconda.com/download/)
 
 !!! note
     Run `python --version` at the command line to make sure installation was successful. You may need to type `python3` (not just `python`) depending on your install method.
@@ -34,7 +34,7 @@ or by cloning the repository and then using `pip` to install the package
 !!! tip
     You can also install Saber by cloning this repository and running `python setup.py install`.
 
-Finally, you must also `pip` install the required [Spacy](https://spacy.io) model and the [keras-contrib](https://github.com/keras-team/keras-contrib) repositories
+finally, install the required [Spacy](https://spacy.io) model and the [keras-contrib](https://github.com/keras-team/keras-contrib) repository
 
 ```
 # keras-contrib
