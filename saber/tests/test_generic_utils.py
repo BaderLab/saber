@@ -15,7 +15,7 @@ def dummy_dir(tmpdir_factory):
     """Returns the path to a temporary directory.
     """
     dummy_dir = tmpdir_factory.mktemp('dummy_dir')
-    return dummy_dir
+    return dummy_dir.strpath
 
 @pytest.fixture
 def dummy_config():
@@ -142,7 +142,7 @@ def test_make_dir_new(tmpdir):
     """Assert that `generic_utils.make_dir()` creates a directory as expected when it does not
     already exist.
     """
-    dummy_dirpath = os.path.join(tmpdir, 'dummy_dir')
+    dummy_dirpath = os.path.join(tmpdir.strpath, 'dummy_dir')
     generic_utils.make_dir(dummy_dirpath)
     assert os.path.isdir(dummy_dirpath)
 
