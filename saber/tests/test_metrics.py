@@ -33,7 +33,7 @@ def dummy_dataset():
 def dummy_output_dir(tmpdir, dummy_config):
     """Returns list of output directories."""
     # make sure top-level directory is the pytest tmpdir
-    dummy_config.output_folder = tmpdir
+    dummy_config.output_folder = tmpdir.strpath
     output_dirs = model_utils.prepare_output_directory(dummy_config)
 
     return output_dirs

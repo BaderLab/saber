@@ -107,14 +107,14 @@ def test_key_error(tmpdir):
     `filepath` that does does contain a valid *.ini file.
     """
     with pytest.raises(KeyError):
-        dummy_config = config.Config(tmpdir)
+        dummy_config = config.Config(tmpdir.strpath)
 
 def test_save_no_cli_args(config_no_cli_args, tmpdir):
     """Asserts that a saved config file contains the correct arguments and values."""
     # save the config to temporary directory created by py.test
-    config_no_cli_args.save(tmpdir)
+    config_no_cli_args.save(tmpdir.strpath)
     # load the saved config
-    saved_config = load_saved_config(tmpdir)
+    saved_config = load_saved_config(tmpdir.strpath)
     # need to 'unprocess' the args to check them against the saved config file
     unprocessed_args = unprocess_args(DUMMY_ARGS_NO_CLI_ARGS)
     # ensure the saved config file matches the original arguments used to create it
@@ -127,9 +127,9 @@ def test_save_with_cli_args(config_with_cli_args, tmpdir):
     account command line arguments, which take precedence over config arguments.
     """
     # save the config to temporary directory created by py.test
-    config_with_cli_args.save(tmpdir)
+    config_with_cli_args.save(tmpdir.strpath)
     # load the saved config
-    saved_config = load_saved_config(tmpdir)
+    saved_config = load_saved_config(tmpdir.strpath)
     # need to 'unprocess' the args to check them against the saved config file
     unprocessed_args = unprocess_args(DUMMY_ARGS_WITH_CLI_ARGS)
     # ensure the saved config file matches the original arguments used to create it
