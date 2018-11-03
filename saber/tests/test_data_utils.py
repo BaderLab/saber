@@ -61,7 +61,7 @@ def dummy_dataset_paths_all(tmpdir_factory):
     test_file = dummy_dir.join('test.tsv')
     test_file.write('arbitrary')
 
-    return dummy_dir, train_file, valid_file, test_file
+    return dummy_dir.strpath, train_file.strpath, valid_file.strpath, test_file.strpath
 
 @pytest.fixture(scope='session')
 def dummy_dataset_paths_no_valid(tmpdir_factory):
@@ -75,7 +75,7 @@ def dummy_dataset_paths_no_valid(tmpdir_factory):
     test_file = dummy_dir.join('test.tsv')
     test_file.write('arbitrary')
 
-    return dummy_dir, train_file, test_file
+    return dummy_dir.strpath, train_file.strpath, test_file.strpath
 
 ############################################ UNIT TESTS ############################################
 
@@ -84,7 +84,7 @@ def test_get_filepaths_value_error(tmpdir):
     no file '<tmpdir>/train.*' exists.
     """
     with pytest.raises(ValueError):
-        data_utils.get_filepaths(tmpdir)
+        data_utils.get_filepaths(tmpdir.strpath)
 
 def test_get_filepaths_all(dummy_dataset_paths_all):
     """Asserts that `data_utils.get_filepaths()` returns the expected filepaths when all partitions
