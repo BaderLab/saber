@@ -12,7 +12,7 @@ To use Saber as a **local** web-service, run
 
 or, if you prefer, you can pull & run the Saber image from **Docker Hub**
 
-```bash
+```
 # Pull Saber image from Docker Hub
 $ docker pull pathwaycommons/saber
 # Run docker (use `-dt` instead of `-it` to run container in background)
@@ -70,7 +70,7 @@ First, import `Saber`. This class coordinates training, annotation, saving and l
 from saber.saber import Saber
 ```
 
-To load a pre-trained model, we first create a `Saber` object
+To load a pre-trained model, first create a `Saber` object
 
 ```python
 saber = Saber()
@@ -82,7 +82,7 @@ and then load the model of our choice
 saber.load('PRGE')
 ```
 
-You can see all the pre-trained models in the [web-service API docs](https://baderlab.github.io/saber-api-docs/) or, alternatively, by running the following line of code
+You can see all the pre-trained models in the [web-service API docs](https://baderlab.github.io/saber-api-docs/) or, the [saber/pretrained_models](saber/pretrained_models) folder in this repository, or by running the following line of code
 
 ```python
 from saber.constants import ENTITIES; print(list(ENTITIES.keys()))
