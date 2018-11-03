@@ -6,9 +6,6 @@
   Saber
 </h1>
 
-<p align="center"><b>Saber</b> (<b>S</b>equence <b>A</b>nnotator for <b>B</b>iomedical <b>E</b>ntities and <b>R</b>elations) is a deep-learning based tool for <b>information extraction</b> in the biomedical domain.
-</p>
-
 <p align="center">
   <a href="https://travis-ci.org/BaderLab/saber">
     <img src="https://travis-ci.org/BaderLab/saber.svg?branch=master"
@@ -23,9 +20,15 @@
   <a href='https://spacy.io'>
     <img src='https://img.shields.io/badge/spaCy-v2-09a3d5.svg' alt='Spacy Version'/>
   </a>
+  <a href='http://makeapullrequest.com'>
+    <img src='https://img.shields.io/badge/PRs-welcome-blue.svg?style=shields' alt='PRs Welcome'/>
+  </a>
   <a href='https://opensource.org/licenses/MIT'>
     <img src='https://img.shields.io/badge/License-MIT-blue.svg' alt='License'/>
   </a>
+</p>
+
+<p align="center"><b>Saber</b> (<b>S</b>equence <b>A</b>nnotator for <b>B</b>iomedical <b>E</b>ntities and <b>R</b>elations) is a deep-learning based tool for <b>information extraction</b> in the biomedical domain.
 </p>
 
 <p align="center">
@@ -101,17 +104,16 @@ $ source /path/to/new/venv/saber/bin/activate
 
 #### Using Conda
 
-If you use [Conda](https://conda.io/docs/) / [Miniconda](https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh), you can create an environment named `saber` by running
+If you use [Conda](https://conda.io/docs/), you can create an environment named `saber` by running
 
 ```
 $ conda create -n saber python=3.6
 ```
 
-To activate the environment:
+then activate the environment with
 
 ```
 $ conda activate saber
-
 # Again, your command prompt should change to indicate that the environment is active
 (saber) $
 ```
@@ -155,7 +157,7 @@ or
 
 For example, running the web-service locally and using `cURL`
 
-```bash
+```
 $ curl -X POST 'http://localhost:5000/annotate/text' \
 --data '{"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."}'
 ```
@@ -170,7 +172,7 @@ First, import the `Saber` class. This is the interface to Saber
 from saber.saber import Saber
 ```
 
-To load a pre-trained model, we first create a `Saber` object
+To load a pre-trained model, first create a `Saber` object
 
 ```python
 saber = Saber()
@@ -193,7 +195,6 @@ To annotate text with the model, just call the `annotate()` method
 ```python
 saber.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.")
 ```
-
 See the [documentation](https://baderlab.github.io/saber/quick_start/) for more details.
 
 ## Documentation
