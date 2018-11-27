@@ -48,7 +48,7 @@ class Saber(object):
             pprint({arg: getattr(self.config, arg) for arg in constants.CONFIG_ARGS})
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
-    def annotate(self, text, model_idx=0, title=None, coref=False, jupyter=False):
+    def annotate(self, text, model_idx=0, jupyter=False, coref=False, ground=False):
         """Uses a trained model (`self.model`) to annotate `text`, returns a dictionary.
 
         For the model at `self.model.models[model_idx]`, coordinates a prediction step on `text`.
@@ -107,8 +107,9 @@ class Saber(object):
             ents.append({'start': start, 'end': end, 'text': text, 'label': label})
 
         # create the final annotation and ground it
-        annotation = {'text': transformed_text['text'], 'ents': ents, 'title': title}
-        annotation = grounding_utils.ground(annotation)
+        annotation = {'text': transformed_text['text'], 'ents': ents}
+        if ground:
+            annotation = grounding_utils.ground(annotation)
 
         if jupyter:
             displacy.render(annotation, jupyter=True, style='ent', manual=True,
@@ -278,11 +279,20 @@ class Saber(object):
         self.embeddings = Embeddings(filepath=self.config.pretrained_embeddings,
                                      token_map=self.datasets[0].type_to_idx['word'],
                                      debug=self.config.debug)
-        self.embeddings.load(binary=binary)
+        # when all embeddings loaded a new type_to_index mapping is generated, so update datasets
+        # current type to index mappings
+        if self.config.load_all_embeddings:
+            type_to_idx = self.embeddings.load(binary, load_all=self.config.load_all_embeddings)
+            for dataset in self.datasets:
+                dataset.type_to_idx['word'].update(type_to_idx['word'])
+                dataset.type_to_idx['char'].update(type_to_idx['char'])
+                dataset.get_idx_seq()
+        else:
+            self.embeddings.load(binary)
 
         end = time.time() - start
-        words, dims = self.embeddings.num_loaded, self.embeddings.dimension
-        info_msg = 'Found {} word vectors of dimension {}.'.format(words, dims)
+        embed, found, dims = self.embeddings.num_embed, self.embeddings.num_found, self.embeddings.dimension
+        info_msg = 'Loaded {}/{} word vectors of dimension {}.'.format(embed, found, dims)
         print('Done ({0:.2f} seconds).'.format(end))
         print(info_msg)
         LOGGER.info(info_msg)
