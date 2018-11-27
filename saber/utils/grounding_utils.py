@@ -4,6 +4,8 @@ import logging
 
 import requests
 
+from ..preprocessor import Preprocessor
+
 LOGGER = logging.getLogger(__name__)
 
 def _query_uniprot(text, organisms=('9606'), limit=1):
@@ -59,7 +61,8 @@ def _query_uniprot(text, organisms=('9606'), limit=1):
         if response.status_code == 200:
             lines = response.text.splitlines()
             if len(lines) > 1:
-                col_names = lines[0].split('\t')
+                # text returned by uniprot api has weird spacing, so clean it
+                col_names = [Preprocessor.sterilize(line) for line in lines[0].split('\t')]
             for line in lines[1:]:
                 col_vals = line.split('\t')
                 xref = dict(zip(col_names, col_vals))
