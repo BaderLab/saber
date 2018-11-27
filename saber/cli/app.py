@@ -27,19 +27,14 @@ def annotate_text():
     Returns:
         JSON formatted string.
     """
-    # force=True means Content-Type does not need to be application/json as JSON in payload is valid
-    data = request.get_json(force=True)
-    # get args from request json
-    text = data.get('text', None)
-    requested_ents = data.get('ents', None)
-    coref = data.get('coref', False)
+    parsed_request_json = app_utils.parse_request_json(request)
+    # raw text to perform annotation on
+    text = parsed_request_json['text']
 
-    # decide which entities to annotate
-    ents = constants.ENTITIES
-    if requested_ents is not None:
-        ents = app_utils.harmonize_entities(ents, requested_ents)
-
-    annotation = predict(text, ents, coref=coref)
+    annotation = predict(text=text,
+                         ents=parsed_request_json['ents'],
+                         coref=parsed_request_json['coref'],
+                         ground=parsed_request_json['ground'])
 
     return jsonify(annotation)
 
@@ -50,25 +45,19 @@ def annotate_pmid():
     Returns:
         JSON formatted string.
     """
-    data = request.get_json(force=True)
-    # get args from request json
-    pmid = data.get('pmid', None)
-    requested_ents = data.get('ents', None)
-    coref = data.get('coref', False)
-
-    # decide which entities to annotate
-    ents = constants.ENTITIES
-    if requested_ents is not None:
-        ents = app_utils.harmonize_entities(ents, requested_ents)
-
+    parsed_request_json = app_utils.parse_request_json(request)
     # use Entrez Utilities Web Service API to get the abtract text
-    title, abstract = app_utils.get_pubmed_text(pmid)
+    title, abstract = app_utils.get_pubmed_text(parsed_request_json['pmid'])
+    text = '{}\n{}'.format(title, abstract)
 
-    annotation = predict(abstract, ents, title=title, coref=coref)
+    annotation = predict(text=text,
+                         ents=parsed_request_json['ents'],
+                         coref=parsed_request_json['coref'],
+                         ground=parsed_request_json['ground'])
 
     return jsonify(annotation)
 
-def predict(text, ents, title=None, coref=False):
+def predict(text, ents, coref=False, ground=False):
     """Annotates raw text (`text`) for entities according to their boolean value in `ents`.
 
     Args:
@@ -85,7 +74,7 @@ def predict(text, ents, title=None, coref=False):
             # TEMP: Weird solution to a weird bug
             # https://github.com/tensorflow/tensorflow/issues/14356#issuecomment-385962623
             with GRAPH.as_default():
-                annotations.append(MODELS[ent].annotate(text, title=title, coref=coref))
+                annotations.append(MODELS[ent].annotate(text, coref=coref, ground=ground))
 
     # if multiple models, combine annotations into one object
     final_annotation = annotations[0]
