@@ -246,7 +246,7 @@ class Saber(object):
         end = time.time() - start
         print('Done ({0:.2f} seconds).'.format(end))
 
-    def load_embeddings(self, filepath=None, binary=True):
+    def load_embeddings(self, filepath=None, binary=True, load_all=None):
         """Coordinates the loading of pre-trained token embeddings.
 
         Args:
@@ -254,6 +254,8 @@ class Saber(object):
                 'self.config.pretrained_embeddings'.
             binary (bool): True if pre-trained embeddings are in C binary format, False if they are
                 in C text format.
+            load_all (bool): True if all pre-trained embeddings should be loaded. Otherwise only
+                embeddings for tokens found in the training set are loaded. Defaults to None.
 
         Raises:
             MissingStepException: If no dataset has been loaded.
@@ -262,9 +264,13 @@ class Saber(object):
         start = time.time()
         print('Loading embeddings...', end=' ', flush=True)
 
+        # allow user to provide select args in function call
+        if load_all is not None:
+            self.config.load_all_embeddings = load_all
         if filepath is not None:
             filepath = generic_utils.clean_path(filepath)
             self.config.pretrained_embeddings = filepath
+
         if not self.datasets:
             err_msg = "You need to call `load_dataset()` before calling `load_embeddings()`"
             LOGGER.error('MissingStepException: %s', err_msg)
