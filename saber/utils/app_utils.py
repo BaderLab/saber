@@ -144,6 +144,27 @@ def harmonize_entities(default_ents, requested_ents):
 
     return entities
 
+def parse_request_json(request):
+    """Returns a dictionary of data parsed from a JSON payload passed in a POST request to Saber.
+    """
+    request_json = request.get_json(force=True)
+    parsed_request_json = {
+        'text': request_json.get('text', None),
+        'pmid': request_json.get('pmid', None),
+        'ents': request_json.get('ents', None),
+        'coref': request_json.get('coref', False),
+        'ground': request_json.get('ground', False),
+    }
+
+    # decide which entities to annotate
+    default_ents, requested_ents = constants.ENTITIES, parsed_request_json['ents']
+    if requested_ents is not None:
+        parsed_request_json['ents'] = harmonize_entities(default_ents, requested_ents)
+    else:
+        parsed_request_json['ents'] = default_ents
+
+    return parsed_request_json
+
 def combine_annotations(annotations):
     """Given a list of annotations made by a Saber model, combines all annotations under one dict.
 
