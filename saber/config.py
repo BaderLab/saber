@@ -160,9 +160,10 @@ class Config(object):
             # advanced
             args['verbose'] = config['advanced'].getboolean('verbose')
             args['debug'] = config['advanced'].getboolean('debug')
-            args['save_all_weights'] = config['advanced'].getboolean('save_all_weights')
             args['tensorboard'] = config['advanced'].getboolean('tensorboard')
+            args['save_all_weights'] = config['advanced'].getboolean('save_all_weights')
             args['replace_rare_tokens'] = config['advanced'].getboolean('replace_rare_tokens')
+            args['load_all_embeddings'] = config['advanced'].getboolean('load_all_embeddings')
             args['fine_tune_word_embeddings'] = config['advanced'].getboolean('fine_tune_word_embeddings')
             # TEMP
             args['variational_dropout'] = config['advanced'].getboolean('variational_dropout')
@@ -260,6 +261,10 @@ class Config(object):
         parser.add_argument('--learning_rate', required=False, type=float,
                             help=('float >= 0. Learning rate. Note that for certain optimizers '
                                   'this value is ignored'))
+        parser.add_argument('--load_all_embeddings', required=False, action='store_true',
+                            help=('Pass this argument if all pre-trained embeddings should be '
+                                  'loaded, and not just those found in the dataset(s). Has no '
+                                  'effect if --pretrained_embeddings argument is empty.'))
         parser.add_argument('--epochs', required=False, type=int,
                             help=('Integer. Number of epochs to train the model. An epoch is an '
                                   'iteration over all data provided.'))

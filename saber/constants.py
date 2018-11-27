@@ -73,4 +73,4 @@ CONFIG_ARGS = ['model_name', 'save_model', 'dataset_folder', 'output_folder',
                'char_embed_dim', 'optimizer', 'activation', 'learning_rate', 'decay', 'grad_norm',
                'dropout_rate', 'batch_size', 'k_folds', 'epochs', 'criteria', 'verbose',
                'debug', 'save_all_weights', 'tensorboard', 'replace_rare_tokens',
-               'fine_tune_word_embeddings', 'variational_dropout']
+               'load_all_embeddings', 'fine_tune_word_embeddings', 'variational_dropout']
