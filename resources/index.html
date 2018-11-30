@@ -474,6 +474,19 @@ $ mkdir path/to/word_embeddings
 $ wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin -O path/to/word_embeddings
 </pre></div>
 
+<p>To use these word embeddings with Saber, provide their path in the <code>pretrained_embeddings</code> argument (either in the <code>config</code> file or at the command line). Alternatively, you their path to <code>Saber.load_embeddings()</code>. For example:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber.saber</span> <span class="kn">import</span> <span class="n">Saber</span>
+
+<span class="n">saber</span> <span class="o">=</span> <span class="n">Saber</span><span class="p">()</span>
+
+<span class="n">saber</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/dataset&#39;</span><span class="p">)</span>
+<span class="c1"># load the embeddings here</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">load_embeddings</span><span class="p">(</span><span class="s1">&#39;path/to/word_embeddings&#39;</span><span class="p">)</span>
+
+<span class="n">saber</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+</pre></div>
+
 <h3 id="glove">GloVe<a class="headerlink" href="#glove" title="Permanent link">&para;</a></h3>
 <p>To use <a href="https://nlp.stanford.edu/projects/glove/">GloVe</a> embeddings, just convert them to the <a href="https://code.google.com/archive/p/word2vec/">word2vec</a> format first:</p>
 <div class="codehilite"><pre><span></span><span class="p">(</span><span class="n">saber</span><span class="p">)</span> <span class="err">$</span> <span class="n">python</span>
