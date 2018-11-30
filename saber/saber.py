@@ -290,8 +290,10 @@ class Saber(object):
         if self.config.load_all_embeddings:
             type_to_idx = self.embeddings.load(binary, load_all=self.config.load_all_embeddings)
             for dataset in self.datasets:
-                dataset.type_to_idx['word'].update(type_to_idx['word'])
-                dataset.type_to_idx['char'].update(type_to_idx['char'])
+                word_types = list(dataset.type_to_idx['word'])
+                char_types = list(dataset.type_to_idx['char'])
+                dataset.type_to_idx['word'] = Preprocessor.type_to_idx(word_types, type_to_idx['word'])
+                dataset.type_to_idx['char'] = Preprocessor.type_to_idx(char_types, type_to_idx['char'])
                 dataset.get_idx_seq()
         else:
             self.embeddings.load(binary)
