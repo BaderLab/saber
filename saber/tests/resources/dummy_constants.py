@@ -19,7 +19,9 @@ PATH_TO_DUMMY_EMBEDDINGS = resource_filename(__name__, 'dummy_word_embeddings/du
 ######################################### DUMMY EMBEDDINGS #########################################
 
 # for testing embeddings
-DUMMY_TOKEN_MAP = {'the': 0, 'quick': 1, 'brown': 2, 'fox': 3}
+DUMMY_TOKEN_MAP = {'<PAD>': 0, '<UNK>': 1, 'the': 2, 'quick': 3, 'brown': 4, 'fox': 5}
+DUMMY_CHAR_MAP = {'<PAD>': 0, '<UNK>': 1, 'r': 2, 'u': 3, 'c': 4, 'f': 5, 'e': 6, 'o': 7, 'x': 8,
+                  'h': 9, 'b': 10, 'n': 11, 'w': 12, 'i': 13, 't': 14, 'q': 15, 'k': 16}
 DUMMY_EMBEDDINGS_INDEX = {
     'the': [0.15580128, -0.07108746, 0.055198, -0.14199848, 0.0005317868],
     'quick': [-0.011208724, 0.21213274, -0.17233513, -0.4401193, 0.13930725],
@@ -27,6 +29,8 @@ DUMMY_EMBEDDINGS_INDEX = {
     'fox': [0.2947119, 0.14794342, 0.10318808, 0.09019197, -0.24244581]
 }
 DUMMY_EMBEDDINGS_MATRIX = np.array([
+    [0.0, 0.0, 0.0, 0.0, 0.0],
+    [0.0, 0.0, 0.0, 0.0, 0.0],
     [0.15580128, -0.07108746, 0.055198, -0.14199848, 0.0005317868],
     [-0.011208724, 0.21213274, -0.17233513, -0.4401193, 0.13930725],
     [0.12754257, -0.07938199, 0.083904505, -0.24103324, 0.0084449835],
@@ -93,6 +97,7 @@ DUMMY_ARGS_NO_PROCESSING = {'model_name': 'MT-LSTM-CRF',
                             'save_all_weights': 'False',
                             'tensorboard': 'False',
                             'replace_rare_tokens': 'False',
+                            'load_all_embeddings': 'False',
                             'fine_tune_word_embeddings': 'False',
                             # TEMP
                             'variational_dropout': 'False',
@@ -121,6 +126,7 @@ DUMMY_ARGS_NO_CLI_ARGS = {'model_name': 'mt-lstm-crf',
                           'save_all_weights': False,
                           'tensorboard': False,
                           'replace_rare_tokens': False,
+                          'load_all_embeddings': False,
                           'fine_tune_word_embeddings': False,
                           # TEMP
                           'variational_dropout': False,
@@ -159,8 +165,9 @@ DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'mt-lstm-crf',
                             'debug': False,
                             'save_all_weights': False,
                             'tensorboard': False,
-                            'fine_tune_word_embeddings': False,
                             'replace_rare_tokens': False,
+                            'load_all_embeddings': False,
+                            'fine_tune_word_embeddings': False,
                             # TEMP
                             'variational_dropout': False,
                            }
