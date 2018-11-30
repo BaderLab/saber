@@ -109,8 +109,9 @@ def load_compound_dataset(config):
     }
     for dataset in compound_dataset:
         # 3. update each datasets type_to_idx mappings (for word and char types only)
-        dataset.type_to_idx['word'].update(type_to_idx['word'])
-        dataset.type_to_idx['char'].update(type_to_idx['char'])
+        word_types, char_types = list(dataset.type_to_idx['word']), list(dataset.type_to_idx['char'])
+        dataset.type_to_idx['word'] = Preprocessor.type_to_idx(word_types, type_to_idx['word'])
+        dataset.type_to_idx['char'] = Preprocessor.type_to_idx(char_types, type_to_idx['char'])
         # 4. re-compute the index sequences
         dataset.get_idx_seq()
 

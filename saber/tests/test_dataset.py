@@ -90,10 +90,10 @@ def test_get_type_seq_single_dataset_before_load(empty_dummy_dataset):
 
 def test_get_idx_maps_single_dataset_before_load(empty_dummy_dataset):
     """Asserts that `Dataset.type_to_idx` is updated as expected after successive calls to
-    `Dataset._get_types()` and `Dataset.get_idx_maps()`.
+    `Dataset._get_types()` and `Dataset._get_idx_maps()`.
     """
     types = empty_dummy_dataset._get_types()
-    empty_dummy_dataset.get_idx_maps(types)
+    empty_dummy_dataset._get_idx_maps(types)
 
     # ensure that index mapping is a contigous sequence of numbers starting at 0
     assert generic_utils.is_consecutive(empty_dummy_dataset.type_to_idx['word'].values())
@@ -106,10 +106,10 @@ def test_get_idx_maps_single_dataset_before_load(empty_dummy_dataset):
 
 def test_get_idx_maps_single_dataset_before_load_special_tokens(empty_dummy_dataset):
     """Asserts that `Dataset.type_to_idx` contains the special tokens as keys with expected values
-     after successive calls to `Dataset._get_types()` and `Dataset.get_idx_maps()`.
+     after successive calls to `Dataset._get_types()` and `Dataset._get_idx_maps()`.
     """
     types = empty_dummy_dataset._get_types()
-    empty_dummy_dataset.get_idx_maps(types)
+    empty_dummy_dataset._get_idx_maps(types)
     # assert special tokens are mapped to the correct indices
     assert all(empty_dummy_dataset.type_to_idx['word'][k] == v for k, v in constants.INITIAL_MAPPING['word'].items())
     assert all(empty_dummy_dataset.type_to_idx['char'][k] == v for k, v in constants.INITIAL_MAPPING['word'].items())
@@ -117,11 +117,11 @@ def test_get_idx_maps_single_dataset_before_load_special_tokens(empty_dummy_data
 
 def test_get_idx_seq_single_dataset_before_load(empty_dummy_dataset):
     """Asserts that `Dataset.idx_seq` is updated as expected after successive calls to
-    `Dataset._get_type_seq()`, `Dataset.get_idx_maps()` and `Dataset.get_idx_seq()`.
+    `Dataset._get_type_seq()`, `Dataset._get_idx_maps()` and `Dataset.get_idx_seq()`.
     """
     types = empty_dummy_dataset._get_types()
     empty_dummy_dataset._get_type_seq()
-    empty_dummy_dataset.get_idx_maps(types)
+    empty_dummy_dataset._get_idx_maps(types)
     empty_dummy_dataset.get_idx_seq()
 
     # as a workaround to testing this directly, just check that shapes are as expected
