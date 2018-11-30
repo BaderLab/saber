@@ -6,8 +6,10 @@ from ..config import Config
 from ..dataset import Dataset
 from ..embeddings import Embeddings
 from ..models.base_model import BaseKerasModel
+from ..preprocessor import Preprocessor
 from ..saber import MissingStepException, Saber
 from .resources.dummy_constants import *
+from .resources import helpers
 
 # TODO (johngiorgi): Write tests for compound dataset
 
@@ -162,10 +164,32 @@ def test_tag_to_idx_after_load_single_dataset_with_transfer(dummy_dataset_2,
     assert actual == expected
 
 def test_load_embeddings(saber_single_dataset_embeddings):
-    """Assert that the `datasets` attribute of a `Saber` instance was updated as expected after
+    """Assert that the `embeddings` attribute of a `Saber` instance was updated as expected after
     call to `Saber.load_embeddings()`
     """
     assert isinstance(saber_single_dataset_embeddings.embeddings, Embeddings)
+
+def test_load_embeddings_with_load_all(saber_single_dataset):
+    """Assert that the `datasets` and `embeddings` attributes of a `Saber` instance are updated as
+    expected after call to `Saber.load_embeddings()`
+    """
+    # get the dataset object
+    dataset = saber_single_dataset.datasets[0]
+    # create our expected values
+    word_types, char_types = list(dataset.type_to_idx['word']), list(dataset.type_to_idx['char'])
+    expected = {'word': Preprocessor.type_to_idx(word_types, DUMMY_TOKEN_MAP),
+                'char': Preprocessor.type_to_idx(char_types, DUMMY_CHAR_MAP)}
+
+    # load the embeddings
+    saber_single_dataset.load_embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS,
+                                         binary=False,
+                                         load_all=True)
+
+    # test for saber.datasets
+    helpers.assert_type_to_idx_as_expected(dataset.type_to_idx, expected)
+    # tests for saber.embeddings
+    assert isinstance(saber_single_dataset.embeddings, Embeddings)
+
 
 def test_load_embeddings_missing_step_exception(saber_blank):
     """Asserts that `Saber` object raises a MissingStepException when we try to load embeddings
@@ -222,7 +246,7 @@ def test_annotate_single(saber_single_dataset_model):
     """Asserts that call to `Saber.annotate()` returns the expected results with a single dataset
     loaded."""
     test = "This is a simple test. With multiple sentences"
-    expected = {'text': test, 'ents': [], 'title': None}
+    expected = {'text': test, 'ents': []}
 
     actual = saber_single_dataset_model.annotate(test)
     actual['ents'] = [] # wipe the predicted ents as they are stochastic.
@@ -281,7 +305,7 @@ def test_annotate_compound(saber_compound_dataset_model):
     """Asserts that call to `Saber.annotate()` returns the expected results with a compound dataset
     loaded."""
     test = "This is a simple test. With multiple sentences"
-    expected = {'text': test, 'ents': [], 'title': None}
+    expected = {'text': test, 'ents': []}
 
     actual = saber_compound_dataset_model.annotate(test)
     actual['ents'] = [] # wipe the predicted ents as they are stochastic
