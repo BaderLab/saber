@@ -88,6 +88,7 @@ class Config(object):
         for arg, value in args.items():
             setattr(self, arg, value)
 
+    @classmethod
     def _load_config(self, filepath):
         """Returns a parsed ConfigParser object for config file at 'filepath'.
 
@@ -102,6 +103,7 @@ class Config(object):
 
         return config
 
+    @classmethod
     def _resolve_filepath(self, filepath, cli_args):
         """Return appropriate filepath based on how Config class was invoked.
 
@@ -179,6 +181,7 @@ class Config(object):
 
         return args
 
+    @classmethod
     def _post_process_config_args(self, args):
         """Post process parameters retried from python config file.
 
@@ -212,6 +215,7 @@ class Config(object):
 
         return args
 
+    @classmethod
     def _parse_cli_args(self):
         """Parse command line arguments passed with call to Saber CLI.
 
