@@ -59,6 +59,21 @@ $ mkdir path/to/word_embeddings
 $ wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin -O path/to/word_embeddings
 ```
 
+To use these word embeddings with Saber, provide their path in the `pretrained_embeddings` argument (either in the `config` file or at the command line). Alternatively, you their path to `Saber.load_embeddings()`. For example:
+
+```python
+from saber.saber import Saber
+
+saber = Saber()
+
+saber.load_dataset('path/to/dataset')
+# load the embeddings here
+saber.load_embeddings('path/to/word_embeddings')
+
+saber.build()
+saber.train()
+```
+
 ### GloVe
 
 To use [GloVe](https://nlp.stanford.edu/projects/glove/) embeddings, just convert them to the [word2vec](https://code.google.com/archive/p/word2vec/) format first:
