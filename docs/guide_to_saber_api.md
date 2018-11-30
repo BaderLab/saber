@@ -17,7 +17,7 @@ along with any command line arguments. For example, to train the model on the [N
 ```
 
 !!! tip
-    See [Resources](https://baderlab.github.io/saber/resources/) for help preparing datasets for training.
+    See [Resources](https://baderlab.github.io/saber/resources/) for help preparing datasets and word embeddings for training.
 
 Run `python -m saber.cli.train --help` to see all possible arguments.
 
