@@ -105,6 +105,7 @@ class Embeddings(object):
 
         return embedding_matrix, type_to_idx
 
+    @classmethod
     def _generate_type_to_idx(self, embedding_idx):
         """Returns a dictionary mapping tokens in  `embedding_idx` to unique integer IDs.
         """
