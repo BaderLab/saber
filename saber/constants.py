@@ -7,6 +7,7 @@ __version__ = '0.0.1'
 # DISPLACY OPTIONS
 # entity colours
 COLOURS = {'PRGE': 'linear-gradient(90deg, #aa9cfc, #fc9ce7)',
+           'DISO': 'linear-gradient(90deg, #ef9a9a, #f44336)',
            'CHED': 'linear-gradient(90deg, #1DE9B6, #A7FFEB)',
            'LIVB': 'linear-gradient(90deg, #FF4081, #F8BBD0)',
            'CL': 'linear-gradient(90deg, #00E5FF, #84FFFF)',
@@ -35,7 +36,13 @@ TRAIN_FILE = 'train.*'
 VALID_FILE = 'valid.*'
 TEST_FILE = 'test.*'
 # pre-trained models
-PRETRAINED_MODELS = ['PRGE']
+ENTITIES = {'ANAT': False,
+            'CHED': False,
+            'DISO': True,
+            'LIVB': False,
+            'PRGE': True,
+            'TRIG': False}
+PRETRAINED_MODELS = [ent for ent, value in ENTITIES.items() if value]
 # relative path to pre-trained model directory
 PRETRAINED_MODEL_DIR = resource_filename(__name__, 'pretrained_models')
 MODEL_FILENAME = 'model_params.json'
@@ -61,16 +68,10 @@ MODEL_NAMES = ['mt-lstm-crf',]
 # endpoint for Entrez Utilities Web Service API
 EUTILS_API_ENDPOINT = ('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?retmode=xml&db='
                        'pubmed&id=')
-ENTITIES = {'ANAT': False,
-            'CHED': False,
-            'DISO': False,
-            'LIVB': False,
-            'PRGE': True,
-            'TRIG': False}
 # CONFIG
 CONFIG_ARGS = ['model_name', 'save_model', 'dataset_folder', 'output_folder',
                'pretrained_model', 'pretrained_embeddings', 'word_embed_dim',
                'char_embed_dim', 'optimizer', 'activation', 'learning_rate', 'decay', 'grad_norm',
                'dropout_rate', 'batch_size', 'k_folds', 'epochs', 'criteria', 'verbose',
                'debug', 'save_all_weights', 'tensorboard', 'replace_rare_tokens',
-               'fine_tune_word_embeddings', 'variational_dropout']
+               'load_all_embeddings', 'fine_tune_word_embeddings', 'variational_dropout']
