@@ -4,11 +4,14 @@ import logging
 
 import requests
 
+import asyncio
+
 from ..preprocessor import Preprocessor
 
 LOGGER = logging.getLogger(__name__)
 
-def _query_uniprot(text, organisms=('9606'), limit=1):
+
+def _query_uniprot(text, organisms='9606', limit=1):
     """Query for accession numbers using UniProt REST api
     Example:
       https://www.uniprot.org/uniprot/?query=name:mk2&columns=id&format=tab
@@ -63,10 +66,10 @@ def _query_uniprot(text, organisms=('9606'), limit=1):
             if len(lines) > 1:
                 # text returned by uniprot api has weird spacing, so clean it
                 col_names = [Preprocessor.sterilize(line) for line in lines[0].split('\t')]
-            for line in lines[1:]:
-                col_vals = line.split('\t')
-                xref = dict(zip(col_names, col_vals))
-                xrefs.append(xref)
+                for line in lines[1:]:
+                    col_vals = line.split('\t')
+                    xref = dict(zip(col_names, col_vals))
+                    xrefs.append(xref)
         else:
             LOGGER.error('Uniprot returned: %i, params: %s', response.status_code, str(params))
     except requests.exceptions.RequestException as err:
@@ -74,17 +77,21 @@ def _query_uniprot(text, organisms=('9606'), limit=1):
 
     return xrefs
 
-def ground(annotation, organisms=(9606), limit=10):
+
+async def _ground_ent(ent, organisms='9606', limit=1):
+    ent.update(xrefs=_query_uniprot(ent['text'], organisms, limit))
+
+
+def ground(annotation, organisms='9606', limit=1):
     """
     """
+    loop = asyncio.get_event_loop()
+    tasks = []
     for ent in annotation['ents']:
         if ent['label'] == 'PRGE':
-            xrefs = _query_uniprot(ent['text'], organisms, limit)
-            ent.update(xrefs=xrefs)
+            tasks.append(asyncio.ensure_future(_ground_ent(ent, organisms, limit)))
+
+    loop.run_until_complete(asyncio.wait(tasks))
+    loop.close()
     return annotation
 
-# TODO try with HGNC rest api
-def _query_hgnc(text):
-    """
-    """
-    return None

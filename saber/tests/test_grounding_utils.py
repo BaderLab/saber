@@ -22,7 +22,7 @@ def test_query_uniprot(annotation):
     """
     """
     text = annotation['ents'][1]['text']
-    actual = grounding_utils._query_uniprot(text, 9606, limit=1)
+    actual = grounding_utils._query_uniprot(text, 9606, 1)
     assert len(actual) == 1
     assert actual[0]['Entry'] == 'P49137'
     assert len(actual[0].keys()) == 3
@@ -33,14 +33,9 @@ def test_query_uniprot(annotation):
 def test_ground(annotation):
     """
     """
-    actual = grounding_utils.ground(annotation, ('human', 'mouse'), limit=2)
+    actual = grounding_utils.ground(annotation, ('human', 'mouse'), 2)
     assert actual is not None
+    assert len(actual) == 3
     for ent in actual['ents']:
         assert 'xrefs' in ent.keys()
-
-def test_query_hgnc(annotation):
-    """
-    """
-    actual = grounding_utils._query_hgnc(annotation)
-    assert actual is None
-    #TODO: implement _query_hgnc, make test fail, then fix
+        assert len(ent['xrefs']) == 2
