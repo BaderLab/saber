@@ -88,6 +88,7 @@ class Config(object):
         for arg, value in args.items():
             setattr(self, arg, value)
 
+    @classmethod
     def _load_config(self, filepath):
         """Returns a parsed ConfigParser object for config file at 'filepath'.
 
@@ -102,6 +103,7 @@ class Config(object):
 
         return config
 
+    @classmethod
     def _resolve_filepath(self, filepath, cli_args):
         """Return appropriate filepath based on how Config class was invoked.
 
@@ -160,9 +162,10 @@ class Config(object):
             # advanced
             args['verbose'] = config['advanced'].getboolean('verbose')
             args['debug'] = config['advanced'].getboolean('debug')
-            args['save_all_weights'] = config['advanced'].getboolean('save_all_weights')
             args['tensorboard'] = config['advanced'].getboolean('tensorboard')
+            args['save_all_weights'] = config['advanced'].getboolean('save_all_weights')
             args['replace_rare_tokens'] = config['advanced'].getboolean('replace_rare_tokens')
+            args['load_all_embeddings'] = config['advanced'].getboolean('load_all_embeddings')
             args['fine_tune_word_embeddings'] = config['advanced'].getboolean('fine_tune_word_embeddings')
             # TEMP
             args['variational_dropout'] = config['advanced'].getboolean('variational_dropout')
@@ -178,6 +181,7 @@ class Config(object):
 
         return args
 
+    @classmethod
     def _post_process_config_args(self, args):
         """Post process parameters retried from python config file.
 
@@ -211,6 +215,7 @@ class Config(object):
 
         return args
 
+    @classmethod
     def _parse_cli_args(self):
         """Parse command line arguments passed with call to Saber CLI.
 
@@ -260,6 +265,10 @@ class Config(object):
         parser.add_argument('--learning_rate', required=False, type=float,
                             help=('float >= 0. Learning rate. Note that for certain optimizers '
                                   'this value is ignored'))
+        parser.add_argument('--load_all_embeddings', required=False, action='store_true',
+                            help=('Pass this argument if all pre-trained embeddings should be '
+                                  'loaded, and not just those found in the dataset(s). Has no '
+                                  'effect if --pretrained_embeddings argument is empty.'))
         parser.add_argument('--epochs', required=False, type=int,
                             help=('Integer. Number of epochs to train the model. An epoch is an '
                                   'iteration over all data provided.'))
