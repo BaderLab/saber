@@ -1,11 +1,10 @@
 """Contains any and all unit tests for the config.Config class (saber/config.py).
 """
-import configparser
-
 import pytest
 
 from .. import config
 from .resources.dummy_constants import *
+from .resources.helpers import *
 
 ######################################### PYTEST FIXTURES #########################################
 
@@ -136,43 +135,3 @@ def test_save_with_cli_args(config_with_cli_args, tmpdir):
     for section in CONFIG_SECTIONS:
         for arg, value in saved_config[section].items():
             assert value == unprocessed_args[arg]
-
-######################################### HELPER FUNCTIONS #########################################
-
-def load_saved_config(filepath):
-    """Load a saved config.ConfigParser object at 'filepath/config.ini'.
-
-    Args:
-        filepath (str): filepath to the saved config file 'config.ini'
-
-    Returns:
-        parsed config.ConfigParser object at 'filepath/config.ini'.
-    """
-    saved_config_filepath = os.path.join(filepath, 'config.ini')
-    saved_config = configparser.ConfigParser()
-    saved_config.read(saved_config_filepath)
-
-    return saved_config
-
-def unprocess_args(args):
-    """Unprocesses processed config args.
-
-    Given a dictionary of arguments ('arg'), returns a dictionary where all values have been
-    converted to string representation.
-
-    Returns:
-        args, where all values have been replaced by a str representation.
-    """
-    unprocessed_args = {}
-    for arg, value in args.items():
-        if isinstance(value, list):
-            unprocessed_arg = ', '.join(value)
-        elif isinstance(value, dict):
-            dict_values = [str(v) for v in value.values()]
-            unprocessed_arg = ', '.join(dict_values)
-        else:
-            unprocessed_arg = str(value)
-
-        unprocessed_args[arg] = unprocessed_arg
-
-    return unprocessed_args

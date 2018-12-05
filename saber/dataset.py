@@ -74,7 +74,7 @@ class Dataset(object):
         # unique words, chars and tags from CoNLL formatted dataset
         types = self._get_types()
         # map each word, char, and tag type to a unique integer
-        self.get_idx_maps(types)
+        self._get_idx_maps(types)
 
         # get word, char, and tag sequences from CoNLL formatted dataset
         self._get_type_seq()
@@ -135,7 +135,7 @@ class Dataset(object):
                 # update the class attributes
                 self.type_seq[partition] = {'word': word_seq, 'char': char_seq, 'tag': tag_seq}
 
-    def get_idx_maps(self, types, initial_mapping=None):
+    def _get_idx_maps(self, types, initial_mapping=None):
         """Updates `self.type_to_idx` with mappings from word, char and tag types to unique int IDs.
         """
         initial_mapping = constants.INITIAL_MAPPING if initial_mapping is None else initial_mapping

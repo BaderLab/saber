@@ -3,6 +3,9 @@
 import numpy as np
 from gensim.models import KeyedVectors
 
+from . import constants
+from .preprocessor import Preprocessor
+
 
 class Embeddings(object):
     """A class for loading and working with pre-trained word embeddings.
@@ -15,33 +18,38 @@ class Embeddings(object):
         self.filepath = filepath
         self.token_map = token_map
 
-        self.matrix = None # token embeddings tied to this instance
-        self.num_loaded = None # number of loaded embeddings
+        self.matrix = None # matrix containing row vectors for all embedded tokens
+        self.num_found = None # number of loaded embeddings
         self.num_embed = None # final count of embedded words
         self.dimension = None # dimension of these embeddings
 
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def load(self, binary=True):
+    def load(self, binary=True, load_all=False):
         """Coordinates the loading of pre-trained word embeddings.
 
         Creates an embedding matrix from the pre-trained word embeddings given at `self.filepath`,
         whose ith row corresponds to the word embedding for the word with value i in
-        `self.token_map`. Updates the instance attributes `self.matrix, `self.num_loaded`,
+        `self.token_map`. Updates the instance attributes `self.matrix, `self.num_found`,
         `self.dimension`, and `self.num_embed`.
 
         Args:
             binary (bool): True if pre-trained embeddings are in C binary format, False if they are
                 in C text format. Defaults to True.
+            load_all (bool): True if all embeddings should be loaded. False if only words that
+            appear in `self.token_map` should be loaded. Defaults to False.
+
+        Returns:
+            The token map used to map the embeddings to an embedding matrix.
         """
         # prepare the embedding indices
         embedding_idx = self._prepare_embedding_index(binary)
-        self.num_loaded, self.dimension = len(embedding_idx), len(list(embedding_idx.values())[0])
-        self.matrix = self._prepare_embedding_matrix(embedding_idx)
+        self.num_found, self.dimension = len(embedding_idx), len(list(embedding_idx.values())[0])
+        self.matrix, type_to_idx = self._prepare_embedding_matrix(embedding_idx, load_all)
         self.num_embed = self.matrix.shape[0] # num of embedded words
 
-        return True
+        return type_to_idx
 
     def _prepare_embedding_index(self, binary=True):
         """Returns an embedding index for pre-trained token embeddings.
@@ -63,7 +71,7 @@ class Embeddings(object):
 
         return embedding_idx
 
-    def _prepare_embedding_matrix(self, embedding_idx):
+    def _prepare_embedding_matrix(self, embedding_idx, load_all=False):
         """Returns an embedding matrix containing all pre-trained embeddings in `embedding_idx`.
 
         Creates an embedding matrix from `embedding_idx`, where the ith row contains the
@@ -72,11 +80,19 @@ class Embeddings(object):
 
         Args:
             embedding_idx (dict): A Dictionary mapping words to their embeddings.
+            load_all (bool): True if all embeddings should be loaded. False if only words that
+            appear in `self.token_map` should be loaded. Defaults to False.
 
         Returns:
             A matrix whos ith row corresponds to the word embedding for the word with value i in
             `self.token_map`.
         """
+        type_to_idx = None
+        if load_all:
+            # overwrite provided token map
+            type_to_idx = self._generate_type_to_idx(embedding_idx)
+            self.token_map = type_to_idx['word']
+
         # initialize the embeddings matrix
         embedding_matrix = np.zeros((len(self.token_map), self.dimension))
 
@@ -87,4 +103,20 @@ class Embeddings(object):
                 # words not found in embedding index will be all-zeros.
                 embedding_matrix[i] = token_embedding
 
-        return embedding_matrix
+        return embedding_matrix, type_to_idx
+
+    @classmethod
+    def _generate_type_to_idx(self, embedding_idx):
+        """Returns a dictionary mapping tokens in  `embedding_idx` to unique integer IDs.
+        """
+        word_types, char_types = list(embedding_idx.keys()), []
+        for word in word_types:
+            char_types.extend(list(word))
+        char_types = list(set(char_types))
+
+        type_to_idx = {
+            'word': Preprocessor.type_to_idx(word_types, constants.INITIAL_MAPPING['word']),
+            'char': Preprocessor.type_to_idx(char_types, constants.INITIAL_MAPPING['word'])
+        }
+
+        return type_to_idx
