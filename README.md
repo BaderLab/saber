@@ -26,6 +26,9 @@
   <a href='https://opensource.org/licenses/MIT'>
     <img src='https://img.shields.io/badge/License-MIT-blue.svg' alt='License'/>
   </a>
+    <a href='https://colab.research.google.com/drive/1WD7oruVuTo6p_908MQWXRBdLF3Vw2MPo'>
+    <img src='https://img.shields.io/badge/launch-Google%20Colab-orange.svg' alt='Colab'/>
+  </a>
 </p>
 
 <p align="center"><b>Saber</b> (<b>S</b>equence <b>A</b>nnotator for <b>B</b>iomedical <b>E</b>ntities and <b>R</b>elations) is a deep-learning based tool for <b>information extraction</b> in the biomedical domain.
@@ -120,7 +123,13 @@ $ conda activate saber
 
 ## Quickstart
 
-If your goal is simply to use Saber to annotate biomedical text, then you can either use the [web-service](#web-service) or a [pre-trained model](#pre-trained-models)
+
+If your goal is to use Saber to annotate biomedical text, then you can either use the [web-service](#web-service) or a [pre-trained model](#pre-trained-models). If you simply want to check Saber out, without installing anything locally, try the [Google Colaboratory](#google-colaboratory) notebook.
+
+### Google Colaboratory
+
+The fastest way to check out Saber is by using the  notebook here: 
+[![Colab](https://img.shields.io/badge/launch-Google%20Colab-orange.svg)](https://colab.research.google.com/drive/1WD7oruVuTo6p_908MQWXRBdLF3Vw2MPo). In order to be able to run the cells, select "Open in Playground" or, alternatively, save a copy to your own Google Drive account (File > Save a copy in Drive).
 
 ### Web-service
 
