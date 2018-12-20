@@ -8,6 +8,7 @@ from keras.layers import (LSTM, Bidirectional, Concatenate, Dense, Dropout,
 from keras.models import Input, Model, model_from_json
 from keras.utils import multi_gpu_model
 from keras_contrib.layers.crf import CRF
+from keras_contrib.losses.crf_losses import crf_loss
 
 from .. import constants
 from .base_model import BaseKerasModel
@@ -150,8 +151,6 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         capable of training on all of them is compiled.
         """
         for i in range(len(self.models)):
-            # need to grab the loss function from models CRF instance
-            crf_loss_function = self.models[i].layers[-1].loss_function
             # parallize the model if multiple GPUs are available
             # https://github.com/keras-team/keras/pull/9226
             # awfully bad practice but this was the example given by Keras documentation
@@ -162,7 +161,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                 LOGGER.info('Compiling the model on a single CPU or GPU')
 
             self._compile(model=self.models[i],
-                          loss_function=crf_loss_function,
+                          loss_function=crf_loss,
                           optimizer=self.config.optimizer,
                           lr=self.config.learning_rate,
                           decay=self.config.decay,
