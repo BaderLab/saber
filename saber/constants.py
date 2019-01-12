@@ -16,10 +16,10 @@ COLOURS = {'PRGE': 'linear-gradient(90deg, #aa9cfc, #fc9ce7)',
 OPTIONS = {'colors': COLOURS}
 
 # SPECIAL TOKENS
-UNK = '<UNK>' # out-of-vocabulary token
-PAD = '<PAD>' # sequence pad token
-START = '<START>' # start-of-sentence token
-END = '<END>' # end-of-sentence token
+UNK = '[UNK]' # out-of-vocabulary token
+PAD = '[PAD]' # sequence pad token
+START = '[START]' # start-of-sentence token
+END = '[END]' # end-of-sentence token
 OUTSIDE_TAG = 'O' # 'outside' tag of the IOB, BIO, and IOBES tag formats
 
 # MISC.
