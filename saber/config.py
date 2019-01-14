@@ -273,7 +273,7 @@ class Config(object):
                             help=('Integer. Number of epochs to train the model. An epoch is an '
                                   'iteration over all data provided.'))
         parser.add_argument('--model_name', required=False, type=str,
-                            help="Which model architecture to use. Must be one of ['MT-LSTM-CRF,']")
+                            help="Which model architecture to use. Must be one of ['BILSTM-CRF-NER,']")
         parser.add_argument('--optimizer', required=False, type=str,
                             help=("Name of the optimization function to use during training. All "
                                   "optimizers implemented in Keras are supported. Defaults to "

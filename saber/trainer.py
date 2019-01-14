@@ -7,7 +7,7 @@ from .utils import data_utils, model_utils
 
 LOGGER = logging.getLogger(__name__)
 
-class Trainer(object):
+class KerasTrainer(object):
     """A class for co-ordinating the training of Keras model(s).
 
     Args:

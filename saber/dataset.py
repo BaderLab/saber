@@ -82,7 +82,7 @@ class Dataset(object):
         self.get_idx_seq()
 
         # useful during prediction / annotation
-        self.idx_to_tag = generic_utils.reverse_dict(self.type_to_idx['tag'])
+        self.get_idx_to_tag()
 
     def _get_types(self):
         """Collects the sets of all words, characters and tags in a CoNLL formatted dataset.
@@ -167,3 +167,12 @@ class Dataset(object):
                 }
                 # one-hot encode our targets
                 self.idx_seq[partition]['tag'] = to_categorical(self.idx_seq[partition]['tag'])
+
+    def get_idx_to_tag(self):
+        """Updates `self.idx_to_tag` with a reverse mapping of `self.type_to_idx['tag']`.
+
+        Updates `self.idx_to_tag` with a dictionary that maps all values in
+        `self.type_to_idx['tag']` to keys in `self.type_to_idx['tag']`. This mapping is useful
+        for decoding the predictions made by a model back to the corresponding tag sequence.
+        """
+        self.idx_to_tag = generic_utils.reverse_dict(self.type_to_idx['tag'])
