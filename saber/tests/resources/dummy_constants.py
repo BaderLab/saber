@@ -72,7 +72,7 @@ DUMMY_TAG_TYPES = ['O', 'B-DISO', 'I-DISO', 'E-DISO', constants.PAD]
 CONFIG_SECTIONS = ['mode', 'data', 'model', 'training', 'advanced']
 
 # Arg values before any processing
-DUMMY_ARGS_NO_PROCESSING = {'model_name': 'MT-LSTM-CRF',
+DUMMY_ARGS_NO_PROCESSING = {'model_name': 'BILSTM-CRF-NER',
                             'save_model': 'False',
                             'dataset_folder': 'saber/tests/resources/dummy_dataset_1',
                             'output_folder': '../output',
@@ -103,7 +103,7 @@ DUMMY_ARGS_NO_PROCESSING = {'model_name': 'MT-LSTM-CRF',
                             'variational_dropout': 'False',
                            }
 # Final arg values when args provided in only config file
-DUMMY_ARGS_NO_CLI_ARGS = {'model_name': 'mt-lstm-crf',
+DUMMY_ARGS_NO_CLI_ARGS = {'model_name': 'bilstm-crf-ner',
                           'save_model': False,
                           'dataset_folder': [PATH_TO_DUMMY_DATASET_1],
                           'output_folder': os.path.abspath('../output'),
@@ -143,7 +143,7 @@ DUMMY_COMMAND_LINE_ARGS = {'optimizer': 'sgd',
                            'dataset_folder': [PATH_TO_DUMMY_DATASET_1],
                            'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
                           }
-DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'mt-lstm-crf',
+DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'bilstm-crf-ner',
                             'save_model': False,
                             'dataset_folder': [PATH_TO_DUMMY_DATASET_1],
                             'output_folder': os.path.abspath('../output'),

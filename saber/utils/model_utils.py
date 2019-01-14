@@ -224,7 +224,7 @@ def load_pretrained_model(config, datasets, weights_filepath, model_filepath):
     Returns:
         A pre-trained Keras model.
     """
-    if config.model_name == 'mt-lstm-crf':
+    if config.model_name == 'bilstm-crf-ner':
         from ..models.multi_task_lstm_crf import MultiTaskLSTMCRF
         model = MultiTaskLSTMCRF(config, datasets)
     model.load(weights_filepath, model_filepath)
