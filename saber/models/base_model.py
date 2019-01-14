@@ -23,7 +23,7 @@ class BaseKerasModel(object):
     def save(self, weights_filepath, model_filepath, model=0):
         """Save a model to disk.
 
-        Saves a keras model to disk, by saving its architecture as a json file at `model_filepath`
+        Saves a Keras model to disk, by saving its architecture as a json file at `model_filepath`
         and its weights as a hdf5 file at `model_filepath`.
 
         Args:
@@ -39,7 +39,7 @@ class BaseKerasModel(object):
     def load(self, weights_filepath, model_filepath):
         """Load a model from disk.
 
-        Loads a keras model from disk by loading its architecture from a json file at `model_filepath`
+        Loads a Keras model from disk by loading its architecture from a json file at `model_filepath`
         and its weights from a hdf5 file at `model_filepath`.
 
         Args:
@@ -117,3 +117,31 @@ class BaseKerasModel(object):
             raise ValueError(err_msg)
 
         model.compile(optimizer=optimizer_, loss=loss_function)
+
+class BasePyTorchModel(object):
+    """Parent class of all PyTorch model classes implemented by Saber.
+    """
+    def __init__(self, config, datasets, embeddings=None, **kwargs):
+        self.config = config # hyperparameters and model details
+        self.datasets = datasets # dataset(s) tied to this instance
+        self.embeddings = embeddings # pre-trained word embeddings tied to this instance
+        self.models = [] # PyTorch model(s) tied to this instance
+
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def save(self):
+        """Save a model to disk.
+
+        Saves a PyTorch model to disk.
+        """
+        # TODO (James): Fill this in based on your stuff in the notebook
+        pass
+
+    def load(self, weights_filepath, model_filepath):
+        """Load a model from disk.
+
+        Loads a PyTorch model from disk.
+        """
+        # TODO (James): Fill this in based on your stuff in the notebook
+        pass

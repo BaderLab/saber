@@ -16,11 +16,12 @@ COLOURS = {'PRGE': 'linear-gradient(90deg, #aa9cfc, #fc9ce7)',
 OPTIONS = {'colors': COLOURS}
 
 # SPECIAL TOKENS
-UNK = '[UNK]' # out-of-vocabulary token
-PAD = '[PAD]' # sequence pad token
-START = '[START]' # start-of-sentence token
-END = '[END]' # end-of-sentence token
-OUTSIDE_TAG = 'O' # 'outside' tag of the IOB, BIO, and IOBES tag formats
+UNK = '[UNK]'  # out-of-vocabulary token
+PAD = '[PAD]'  # sequence pad token
+START = '[START]'  # start-of-sentence token
+END = '[END]'  # end-of-sentence token
+OUTSIDE_TAG = 'O'  # 'outside' tag of the IOB, BIO, and IOBES tag formats
+WORDPIECE_TAG = 'X'  # special tag used by BERTs wordpiece tokenizer
 
 # MISC.
 PAD_VALUE = 0 # value of sequence pad
@@ -62,7 +63,7 @@ UNITS_WORD_LSTM = 200
 UNITS_CHAR_LSTM = 200
 UNITS_DENSE = UNITS_WORD_LSTM // 2
 # possible models
-MODEL_NAMES = ['mt-lstm-crf',]
+MODEL_NAMES = ['bilstm-crf-ner', 'bert-ner']
 
 # RESTful API
 # endpoint for Entrez Utilities Web Service API
