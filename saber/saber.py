@@ -14,7 +14,7 @@ from .config import Config
 from .dataset import Dataset
 from .embeddings import Embeddings
 from .preprocessor import Preprocessor
-from .trainer import Trainer
+from .trainer import KerasTrainer
 from .utils import data_utils, generic_utils, grounding_utils, model_utils
 
 print('Saber version: {0}'.format(constants.__version__))
@@ -331,16 +331,20 @@ class Saber(object):
             raise ValueError(err_msg)
 
         # setup the chosen model
-        if self.config.model_name == 'mt-lstm-crf':
+        if self.config.model_name == 'bilstm-crf-ner':
             print('Building the multi-task BiLSTM-CRF model...', end=' ', flush=True)
             from .models.multi_task_lstm_crf import MultiTaskLSTMCRF
             model = MultiTaskLSTMCRF(config=self.config,
                                      datasets=self.datasets,
                                      embeddings=self.embeddings)
+            model.specify()
+            model.compile()
 
-        # create the model
-        model.specify()
-        model.compile()
+        elif self.config.model_name == 'bert-ner':
+            from .models.bert_token_classifier import BertTokenClassifier
+            model = BertTokenClassifier(config=self.config, datasets=self.datasets)
+            model.specify()
+
         self.model = model
 
         elapsed_time = time.time() - start_time
@@ -351,7 +355,12 @@ class Saber(object):
             for i, model in enumerate(self.model.models):
                 ds_name = os.path.basename(self.config.dataset_folder[i])
                 print('Model architecture for dataset {}:'.format(ds_name))
-                model.summary()
+                # if this is a Keras model, use summary() method, otherwise we expect it to be
+                # a PyTorch model so we print it
+                try:
+                    model.summary()
+                except AttributeError:
+                    print(model)
 
     def train(self):
         """Initiates training of model at `self.model`.
@@ -368,8 +377,12 @@ class Saber(object):
             LOGGER.error('MissingStepException: %s', err_msg)
             raise MissingStepException(err_msg)
 
-        trainer = Trainer(self.config, self.datasets, self.model)
-        trainer.train()
+        # TODO (johnmgiorgi): This is only temporary! Need to make a decision on the training API
+        if self.config.model_name == 'bert-ner':
+            self.model.train()
+        else:
+            trainer = KerasTrainer(self.config, self.datasets, self.model)
+            trainer.train()
 
 # https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
 class MissingStepException(Exception):

@@ -155,15 +155,16 @@ class Metrics(Callback):
                            "Got: {}").format(criteria)
                 LOGGER.error("ValueError %s", err_msg)
                 raise ValueError(err_msg)
+            # construct these as sets because lookup is O(1), makes computing metrics much faster
             if criteria == 'exact':
-                y_true_lab = [chunk for chunk in y_true if chunk[0] == lab]
-                y_pred_lab = [chunk for chunk in y_pred if chunk[0] == lab]
+                y_true_lab = {chunk for chunk in y_true if chunk[0] == lab}
+                y_pred_lab = {chunk for chunk in y_pred if chunk[0] == lab}
             elif criteria == 'left':
-                y_true_lab = [chunk[:2] for chunk in y_true if chunk[0] == lab]
-                y_pred_lab = [chunk[:2] for chunk in y_pred if chunk[0] == lab]
+                y_true_lab = {chunk[:2] for chunk in y_true if chunk[0] == lab}
+                y_pred_lab = {chunk[:2] for chunk in y_pred if chunk[0] == lab}
             elif criteria == 'right':
-                y_true_lab = [chunk[::2] for chunk in y_true if chunk[0] == lab]
-                y_pred_lab = [chunk[::2] for chunk in y_pred if chunk[0] == lab]
+                y_true_lab = {chunk[::2] for chunk in y_true if chunk[0] == lab}
+                y_pred_lab = {chunk[::2] for chunk in y_pred if chunk[0] == lab}
 
             # per label performance accumulators
             FN, FP, TP = 0, 0, 0
