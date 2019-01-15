@@ -27,8 +27,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         config (Config): Contains a set of harmonzied arguments provided in a *.ini file and,
             optionally, from the command line.
         datasets (list): A list of Dataset objects.
-        embeddings (numpy.ndarray): A numpy array where ith row contains the vector embedding for
-            the ith word type.
+        embeddings (Embeddings): An object containing loaded word embeddings.
 
     References:
         - Guillaume Lample, Miguel Ballesteros, Sandeep Subramanian, Kazuya Kawakami, Chris Dyer.
@@ -166,6 +165,33 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                           lr=self.config.learning_rate,
                           decay=self.config.decay,
                           clipnorm=self.config.grad_norm)
+
+    def prepare_data_for_training(self):
+        """Returns a list containing the training data for each dataset at `self.datasets`.
+
+        For each dataset at `self.datasets`, collects the data to be used for training.
+        Each dataset is represented by a dictionary, where the keys 'x_<partition>' and
+        'y_<partition>' contain the inputs and targets for each partition 'train', 'valid', and
+        'test'.
+        """
+        training_data = []
+        for ds in self.datasets:
+            # collect train data, must be provided
+            x_train = [ds.idx_seq['train']['word'], ds.idx_seq['train']['char']]
+            y_train = ds.idx_seq['train']['tag']
+            # collect valid and test data, may not be provided
+            x_valid, y_valid, x_test, y_test = None, None, None, None
+            if ds.idx_seq['valid'] is not None:
+                x_valid = [ds.idx_seq['valid']['word'], ds.idx_seq['valid']['char']]
+                y_valid = ds.idx_seq['valid']['tag']
+            if ds.idx_seq['test'] is not None:
+                x_test = [ds.idx_seq['test']['word'], ds.idx_seq['test']['char']]
+                y_test = ds.idx_seq['test']['tag']
+
+            training_data.append({'x_train': x_train, 'y_train': y_train, 'x_valid': x_valid,
+                                  'y_valid': y_valid, 'x_test': x_test, 'y_test': y_test})
+
+        return training_data
 
     def prepare_for_transfer(self, datasets):
         """Prepares the BiLSTM-CRF for transfer learning by recreating its last layer.
