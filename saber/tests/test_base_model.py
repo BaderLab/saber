@@ -101,24 +101,3 @@ def test_attributes_init_of_single_model_embeddings(dummy_config, dummy_dataset_
     assert single_model_embeddings.models == []
     # test that we can pass arbitrary keyword arguments
     assert single_model_embeddings.totally_arbitrary == 'arbitrary'
-
-def test_prepare_data_for_training(dummy_dataset_1, single_model):
-    """Assert that the values returned from call to `BaseKerasModel.prepare_data_for_training()` are
-    as expected.
-    """
-    training_data = single_model.prepare_data_for_training()
-    partitions = ['x_train', 'y_train', 'x_valid', 'y_valid', 'x_test', 'y_test']
-
-    # assert each item in training_data contains the expected keys
-    assert all(partition in data for data in training_data for partition in partitions)
-
-    # assert that the items in training_data contain the expected values
-    assert all(data['x_train'] == [dummy_dataset_1.idx_seq['train']['word'], dummy_dataset_1.idx_seq['train']['char']]
-               for data in training_data)
-    assert all(data['x_valid'] == [dummy_dataset_1.idx_seq['valid']['word'], dummy_dataset_1.idx_seq['valid']['char']]
-               for data in training_data)
-    assert all(data['x_test'] == [dummy_dataset_1.idx_seq['test']['word'], dummy_dataset_1.idx_seq['test']['char']]
-               for data in training_data)
-    assert all(np.array_equal(data['y_train'], dummy_dataset_1.idx_seq['train']['tag']) for data in training_data)
-    assert all(np.array_equal(data['y_valid'], dummy_dataset_1.idx_seq['valid']['tag']) for data in training_data)
-    assert all(np.array_equal(data['y_test'], dummy_dataset_1.idx_seq['test']['tag']) for data in training_data)

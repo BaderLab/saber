@@ -5,8 +5,8 @@ import numpy as np
 import pytest
 
 from ..embeddings import Embeddings
-from .resources.dummy_constants import *
 from .resources import helpers
+from .resources.dummy_constants import *
 
 # TODO (johngiorgi): write tests using a binary format file
 # TODO (johngiorgi): write tests to test for debug functionality
