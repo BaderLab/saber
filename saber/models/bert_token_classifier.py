@@ -18,7 +18,6 @@ from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
 from .. import constants
 from ..metrics import Metrics
 from ..preprocessor import Preprocessor
-from ..utils import generic_utils
 from .base_model import BasePyTorchModel
 
 LOGGER = logging.getLogger(__name__)
@@ -42,21 +41,47 @@ class BertTokenClassifier(BasePyTorchModel):
     """
     def __init__(self, config, datasets, **kwargs):
         super().__init__(config, datasets, **kwargs)
+        # TEMP (johnmgiorgi): This is to allow old saber models to still work. Eventually they
+        # will need to be retrained and this can be removed.
+        constants.UNK = '[UNK]'
+        constants.PAD = '[PAD]'
 
-    def load(self, weights_filepath, model_filepath):
+    def load(self, model_filepath):
         """Load a model from disk.
 
-        Loads a PyTorch model from disk.
+        Loads a PyTorch model from disk by loading its architecture and weights from a `.bin` file
+        at `model_filepath`.
+
+        Args:
+            model_filepath (str): filepath to the models architecture (`.bin` file).
         """
-        # TODO (James): Is there anything specific about the loading of THIS PyTorch model?
-        # if so, overwrite BasePyTorchModel.load(), if not, delete this entirely.
+        # TODO (James): Fill this in based on your stuff in the notebook
+        # TODO (James): In the future, we would like to support MTL. So self.models is a list.
+        ### YOUR CODE STARTS HERE ####
+        # model_state_dict = torch.load(output_model_file)
+        # num_labels = len(model_state_dict['classifier.bias'])
+        # model = BertForTokenClassification.from_pretrained(PYTORCH_BERT_MODEL,
+        #                                                    num_labels=num_labels,
+        #                                                    state_dict=model_state_dict)
+        ### YOUR CODE ENDS HERE ####
+        # self.models.append(model)
         pass
 
     def specify(self):
-        # plus 1 is necc to account for 'X' tag introduced by workpiece tokenization
-        num_labels = len(self.datasets[0].type_to_idx['tag']) + 1
-        model = BertForTokenClassification.from_pretrained(PYTORCH_BERT_MODEL, num_labels=num_labels)
-        self.models.append(model)
+        """Specifies an op-for-op PyTorch implementation of Google's BERT for sequence tagging.
+
+        Specifies and initilizaties an op-for-op PyTorch implementation of Google's BERT. Model
+        is appended to `self.models`.
+        """
+        # (TODO): In future, it would be nice to support MTL. For now, initializing
+        # BertTokenClassifier with multiple datasets will simply create an independent model for
+        # for each dataset.
+        for dataset in self.datasets:
+            # plus 1 is necessary to account for 'X' tag introduced by workpiece tokenization
+            num_labels = len(dataset[-1].type_to_idx['tag']) + 1
+            model = BertForTokenClassification.from_pretrained(PYTORCH_BERT_MODEL,
+                                                               num_labels=num_labels)
+            self.models.append(model)
 
     def prepare_data_for_training(self):
         """Returns a list containing the training data for each dataset at `self.datasets`.
@@ -158,19 +183,6 @@ class BertTokenClassifier(BasePyTorchModel):
 
         # generate attention masks for padded data
         bert_attention_masks = [[float(idx > 0) for idx in sent] for sent in bert_word_indices]
-
-        from prettytable import PrettyTable
-
-        table = PrettyTable()
-
-        table.field_names = ['Input ID', 'Reverse Input ID', 'Label ID', 'Reverse Label ID']
-
-        for input_, tag in zip(bert_word_indices[0], bert_tag_indices[0]):
-            row = [input_, tokenizer.ids_to_tokens[input_], tag, self.datasets[0].idx_to_tag[tag]]
-            table.add_row(row)
-
-        # print the first 30 rows from the first input example as a sanity check
-        print(table[:30])
 
         return bert_word_indices, bert_tag_indices, bert_attention_masks
 
