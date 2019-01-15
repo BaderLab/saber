@@ -46,6 +46,19 @@ class BertTokenClassifier(BasePyTorchModel):
         constants.UNK = '[UNK]'
         constants.PAD = '[PAD]'
 
+    def save(self, model_filepath, model_idx=0):
+        """Save a PyTorch model to disk.
+
+        Saves a PyTorch model to disk, by saving its architecture and weights as a `.bin` file
+        at `model_filepath`.
+
+        Args:
+            model_filepath (str): filepath to the models architecture (`.bin` file).
+            model_idx (int): Index to model in `self.models` that will be saved. Defaults to 0.
+        """
+        torch.save(self.models[model_idx].state_dict(), model_filepath)
+        return
+
     def load(self, model_filepath):
         """Load a model from disk.
 
@@ -55,17 +68,24 @@ class BertTokenClassifier(BasePyTorchModel):
         Args:
             model_filepath (str): filepath to the models architecture (`.bin` file).
         """
-        # TODO (James): Fill this in based on your stuff in the notebook
-        # TODO (James): In the future, we would like to support MTL. So self.models is a list.
-        ### YOUR CODE STARTS HERE ####
-        # model_state_dict = torch.load(output_model_file)
-        # num_labels = len(model_state_dict['classifier.bias'])
-        # model = BertForTokenClassification.from_pretrained(PYTORCH_BERT_MODEL,
-        #                                                    num_labels=num_labels,
-        #                                                    state_dict=model_state_dict)
-        ### YOUR CODE ENDS HERE ####
-        # self.models.append(model)
-        pass
+        # use a GPU if available
+        if torch.cuda.is_available():
+            model_state_dict = torch.load(model_filepath)
+            num_labels = len(model_state_dict['classifier.bias'])
+            model = BertForTokenClassification.from_pretrained(PYTORCH_BERT_MODEL, num_labels=num_labels, state_dict=model_state_dict)
+            device = torch.device("cuda")
+            n_gpu = torch.cuda.device_count()
+            model.cuda()
+            print('Using CUDA device with name: {}'.format(torch.cuda.get_device_name(0)))
+        else:
+            model_state_dict = torch.load(model_filepath, map_location=lambda storage, loc: storage)
+            num_labels = len(model_state_dict['classifier.bias'])
+            model = BertForTokenClassification.from_pretrained(PYTORCH_BERT_MODEL, num_labels=num_labels, state_dict=model_state_dict)
+            device = torch.device("cpu")
+            model.cpu()
+            print('No GPU available for training')
+        self.models.append(model)
+        return
 
     def specify(self):
         """Specifies an op-for-op PyTorch implementation of Google's BERT for sequence tagging.
