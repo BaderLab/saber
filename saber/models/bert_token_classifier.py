@@ -98,7 +98,7 @@ class BertTokenClassifier(BasePyTorchModel):
         # for each dataset.
         for dataset in self.datasets:
             # plus 1 is necessary to account for 'X' tag introduced by workpiece tokenization
-            num_labels = len(dataset[-1].type_to_idx['tag']) + 1
+            num_labels = len(dataset.type_to_idx['tag']) + 1
             model = BertForTokenClassification.from_pretrained(PYTORCH_BERT_MODEL,
                                                                num_labels=num_labels)
             self.models.append(model)
