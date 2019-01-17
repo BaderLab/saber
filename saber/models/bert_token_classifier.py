@@ -46,19 +46,6 @@ class BertTokenClassifier(BasePyTorchModel):
         constants.UNK = '[UNK]'
         constants.PAD = '[PAD]'
 
-    def save(self, model_filepath, model_idx=0):
-        """Save a PyTorch model to disk.
-
-        Saves a PyTorch model to disk, by saving its architecture and weights as a `.bin` file
-        at `model_filepath`.
-
-        Args:
-            model_filepath (str): filepath to the models architecture (`.bin` file).
-            model_idx (int): Index to model in `self.models` that will be saved. Defaults to 0.
-        """
-        torch.save(self.models[model_idx].state_dict(), model_filepath)
-        return
-
     def load(self, model_filepath):
         """Load a model from disk.
 
