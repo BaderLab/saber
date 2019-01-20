@@ -15,13 +15,20 @@ setuptools.setup(
     url="https://github.com/BaderLab/saber",
     python_requires='>=3.5',
     packages=setuptools.find_packages(),
-    classifiers=(
+    classifiers=[
         "Development Status :: 3 - Alpha",
         "Framework :: Flask",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.6"
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "Operating System :: OS Independent",
-    ),
+    ],
+    keywords=[
+        'Natural Language Processing',
+        'Named Entity Recognition',
+    ],
     install_requires=[
         'scikit-learn>=0.20.1',
         'tensorflow>=1.12.0',
@@ -42,4 +49,5 @@ setuptools.setup(
     # https://docs.pytest.org/en/latest/goodpractices.html#integrating-with-setuptools-python-setup-py-test-pytest-runner
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
+    zip_safe=False,
 )
