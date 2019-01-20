@@ -32,6 +32,8 @@ setuptools.setup(
         'spacy>=2.0.11, <=2.0.13',
         'gensim>=3.4.0',
         'nltk>=3.3',
+        'keras-contrib @ git+https://www.github.com/keras-team/keras-contrib.git',
+        'en-coref-md @ https://github.com/huggingface/neuralcoref-models/releases/download/en_coref_md-3.0.0/en_coref_md-3.0.0.tar.gz',
     ],
     include_package_data=True,
     # allows us to install + run tests with `python setup.py test`
