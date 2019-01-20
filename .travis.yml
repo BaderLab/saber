@@ -9,6 +9,7 @@ env: TOXENV=py
 matrix:
   include:
     - env: TOXENV=manifest
+    - env: TOXENV=pyroma
   allow_failures:
     - os: osx
     - python: "3.5"
