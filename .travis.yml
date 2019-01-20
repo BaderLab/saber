@@ -12,20 +12,13 @@ python:
   - "3.5"
   - "3.6"
 
-branches:
-  only:
-    - master
-
 install:
-  - pip install -r requirements.txt
-  - pip install pytest-cov
-  - pip install coveralls
+  - pip install tox pytest-cov coveralls
   # TEMP: fixes weird issue caused by Gensim
   - pip install google-compute-engine
   # TEMP: fixes weird issue caused by msgpack
   - pip install msgpack==0.5.6
 
-script:
-  - pytest --cov=saber -v
+script: tox
 
 after_success: coveralls
