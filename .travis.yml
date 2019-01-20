@@ -4,7 +4,11 @@ os:
   - linux
   - osx
 
+env: TOXENV=py
+
 matrix:
+  include:
+    - env: TOXENV=manifest
   allow_failures:
     - os: osx
     - python: "3.5"
