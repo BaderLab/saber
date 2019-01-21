@@ -7,12 +7,6 @@ include LICENSE.txt
 # Include config file(s)
 global-include *.ini *.yml
 
-# Include 'default' dataset(s)
-# graft saber/datasets
-
-# Include pretrained model(s)
-graft saber/pretrained_models
-
 # Include the test resources
 graft saber/tests
 
