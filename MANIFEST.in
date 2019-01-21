@@ -1,17 +1,26 @@
 # Include the README(s)
-include README.md
+include README.md CONTRIBUTING.md Dockerfile
 
 # Include the license file
 include LICENSE.txt
 
 # Include config file(s)
-global-include *.ini
+global-include *.ini *.yml
 
 # Include 'default' dataset(s)
-# graft saber/datasets/
+# graft saber/datasets
 
 # Include pretrained model(s)
-graft saber/pretrained_models/
+graft saber/pretrained_models
 
 # Include the test resources
-graft saber/tests/
+graft saber/tests
+
+# Include documentation
+recursive-include docs *.md
+
+# Don't include notebooks
+prune notebooks
+
+# Don't include images
+prune img
