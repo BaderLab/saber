@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="saber",
-    version="0.1.0",
+    version="0.0.1",
     author="John Giorgi",
     author_email="johnmgiorgi@gmail.com",
     license="MIT",
@@ -41,8 +41,8 @@ setuptools.setup(
         'nltk>=3.3',
         'google-compute-engine',
         'msgpack==0.5.6',
-        # 'keras-contrib @ git+https://www.github.com/keras-team/keras-contrib.git',
-        # 'en-coref-md @ https://github.com/huggingface/neuralcoref-models/releases/download/en_coref_md-3.0.0/en_coref_md-3.0.0.tar.gz',
+        'keras-contrib @ git+https://www.github.com/keras-team/keras-contrib.git',
+        'en-coref-md @ https://github.com/huggingface/neuralcoref-models/releases/download/en_coref_md-3.0.0/en_coref_md-3.0.0.tar.gz',
     ],
     include_package_data=True,
     # allows us to install + run tests with `python setup.py test`
