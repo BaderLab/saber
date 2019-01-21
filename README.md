@@ -56,10 +56,16 @@ $ conda activate saber
 (saber) $
 ```
 
-then install Saber right from this repository with `pip`
+then install Saber
 
 ```sh
-(saber) $ pip install git+https://github.com/BaderLab/saber.git
+(saber) $ pip install saber
+```
+
+To get the latest development version of Saber, install it right from this repository with `pip`
+
+```sh
+(saber) $ pip install https://github.com/BaderLab/saber.git
 ```
 
 or by cloning the repository and then using `pip` to install the package
@@ -70,7 +76,7 @@ or by cloning the repository and then using `pip` to install the package
 (saber) $ pip install .
 ```
 
-finally, install the required [Spacy](https://spacy.io) model and the [keras-contrib](https://github.com/keras-team/keras-contrib) repository
+For now, you will need to install the required [Spacy](https://spacy.io) model and the [keras-contrib](https://github.com/keras-team/keras-contrib) repository (even if you installed with `pip install saber`)
 
 ```sh
 # keras-contrib
