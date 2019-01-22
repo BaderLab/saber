@@ -40,7 +40,7 @@ setuptools.setup(
         'gensim>=3.4.0',
         'nltk>=3.3',
         'google-compute-engine',
-        'msgpack==0.5.6',
+        'msgpack==0.6.0',
         'keras-contrib @ git+https://www.github.com/keras-team/keras-contrib.git',
         'en-coref-md @ https://github.com/huggingface/neuralcoref-models/releases/download/en_coref_md-3.0.0/en_coref_md-3.0.0.tar.gz',
     ],
