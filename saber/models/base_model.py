@@ -157,13 +157,8 @@ class BasePyTorchModel(BaseModel):
             model_filepath (str): filepath to the models architecture (`.bin` file).
             model_idx (int): Index to model in `self.models` that will be saved. Defaults to 0.
         """
-        # TODO (James): Fill this in based on your stuff in the notebook
-        # TODO (James): In the future, we would like to support MTL. So self.models is a list.
-        # by default, this function should save the first model in that list
-        ### YOUR CODE STARTS HERE ####
-        # torch.save(self.models[model].state_dict(), model_filepath)
-        ### YOUR CODE ENDS HERE ####
-        pass
+        torch.save(self.models[model_idx].state_dict(), model_filepath)
+        return
 
     def load(self, model_filepath):
         """Load a model from disk.
