@@ -4,26 +4,22 @@ os:
   - linux
   - osx
 
+env: TOXENV=py
+
 matrix:
+  include:
+    - env: TOXENV=manifest
+    - env: TOXENV=pyroma
   allow_failures:
     - os: osx
+    - python: "3.5"
 
 python:
-  - "3.5"
   - "3.6"
+  - "3.5"
 
-branches:
-  only:
-    - master
+install: pip install tox pytest-cov coveralls
 
-install:
-  - pip install -r requirements.txt
-  - pip install pytest-cov
-  - pip install coveralls
-  # TEMP: fixes weird issue caused by Gensim
-  - pip install google-compute-engine
-
-script:
-  - pytest --cov=saber -v
+script: tox
 
 after_success: coveralls
