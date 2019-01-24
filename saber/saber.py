@@ -20,7 +20,6 @@ from .utils import data_utils, generic_utils, grounding_utils, model_utils
 print('Saber version: {0}'.format(constants.__version__))
 LOGGER = logging.getLogger(__name__)
 
-
 class Saber(object):
     """The interface for Saber.
 
@@ -46,7 +45,6 @@ class Saber(object):
         if self.config.verbose:
             print('Hyperparameters and model details:')
             pprint({arg: getattr(self.config, arg) for arg in constants.CONFIG_ARGS})
-            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
     def annotate(self, text, model_idx=0, jupyter=False, coref=False, ground=False):
         """Uses a trained model (`self.model`) to annotate `text`, returns a dictionary.
@@ -59,7 +57,7 @@ class Saber(object):
         text (str): Raw text to annotate.
         model_idx (int): Index of model to use for prediction, defaults to 0.
         title (str): Title of the document, defaults to None.
-        coref (book): True if coreference resolution should be performed before annotation, defaults
+        coref (bool): True if coreference resolution should be performed before annotation, defaults
             to False.
         jupyter (bool): True if annotations made by the model should be rendered in HTML, which can
             be visualized in a jupter notebook, defaults to false.
@@ -139,14 +137,24 @@ class Saber(object):
         directory = generic_utils.clean_path(directory)
         generic_utils.make_dir(directory)
 
-        weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
         model_filepath = os.path.join(directory, constants.MODEL_FILENAME)
-        self.model.save(weights_filepath, model_filepath, model_idx)
-        # beside the architecture and weights, save only the objects we need for model prediction
+
+        # model saving works slightly different based on models framework
+        if self.model.models[model_idx].framework == constants.KERAS:
+            weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
+            model_attributes = {'model_name': self.config.model_name,
+                                'type_to_idx': self.datasets[model_idx].type_to_idx,
+                                'idx_to_tag': self.datasets[model_idx].idx_to_tag}
+
+            self.model.save(weights_filepath, model_filepath, model_idx)
+        elif self.model.models[model_idx].framework == constants.PYTORCH:
+            model_filepath = os.path.join(directory, constants.MODEL_FILENAME)
+            model_attributes = {'model_name': self.config.model_name}
+
+            self.model.save(model_filepath, model_idx)
+
+        # beside the architecture and weights, save the objects we need for model prediction
         attributes_filepath = os.path.join(directory, constants.ATTRIBUTES_FILENAME)
-        model_attributes = {'model_name': self.config.model_name,
-                            'type_to_idx': self.datasets[model_idx].type_to_idx,
-                            'idx_to_tag': self.datasets[model_idx].idx_to_tag}
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
         # save config for reproducibility
         self.config.save(directory)
