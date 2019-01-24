@@ -1,23 +1,16 @@
 """Contains the BertForTokenClassification PyTorch model for squence labelling.
 """
 import logging
-from itertools import chain
 
 import numpy as np
-from keras.preprocessing.sequence import pad_sequences
-from sklearn.model_selection import train_test_split
-from tqdm import tqdm
-
 import torch
-from pytorch_pretrained_bert import (BertAdam, BertConfig,
-                                     BertForTokenClassification, BertTokenizer)
-from torch.optim import Adam
-from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
-                              TensorDataset)
+from pytorch_pretrained_bert import (BertConfig, BertForTokenClassification, BertTokenizer)
+from tqdm import tqdm
 
 from .. import constants
 from ..metrics import Metrics
 from ..preprocessor import Preprocessor
+from ..utils import data_utils, model_utils
 from .base_model import BasePyTorchModel
 
 LOGGER = logging.getLogger(__name__)
@@ -41,10 +34,6 @@ class BertTokenClassifier(BasePyTorchModel):
     """
     def __init__(self, config, datasets, **kwargs):
         super().__init__(config, datasets, **kwargs)
-        # TEMP (johnmgiorgi): This is to allow old saber models to still work. Eventually they
-        # will need to be retrained and this can be removed.
-        constants.UNK = '[UNK]'
-        constants.PAD = '[PAD]'
 
     def load(self, model_filepath):
         """Load a model from disk.
@@ -78,9 +67,12 @@ class BertTokenClassifier(BasePyTorchModel):
         # for each dataset.
         for dataset in self.datasets:
             # plus 1 is necessary to account for 'X' tag introduced by workpiece tokenization
-            num_labels = len(dataset[-1].type_to_idx['tag']) + 1
+            num_labels = len(dataset.type_to_idx['tag']) + 1
             model = BertForTokenClassification.from_pretrained(PYTORCH_BERT_MODEL,
                                                                num_labels=num_labels)
+            # Get the device the model will live on
+            self.device = model_utils.get_device(model)
+
             self.models.append(model)
 
     def prepare_data_for_training(self):
@@ -91,233 +83,153 @@ class BertTokenClassifier(BasePyTorchModel):
         'y_<partition>' contain the inputs and targets for each partition 'train', 'valid', and
         'test'.
         """
-        tokenizer = BertTokenizer.from_pretrained(PYTORCH_BERT_MODEL, do_lower_case=False)
-
+        bert_tokenizer = BertTokenizer.from_pretrained(PYTORCH_BERT_MODEL, do_lower_case=False)
         # (TEMP): In future, would be nice to support mt learning, hence why training_data is a list
         training_data = []
         for ds in self.datasets:
-            # necc for dataset to be compatible with BERTS wordpiece tokenization
-            ds.type_to_idx['tag']['X'] = len(ds.type_to_idx['tag'])
-            ds.get_idx_to_tag()
+            # type to idx must be modified to be compatible with BERT model
+            model_utils.setup_type_to_idx_for_bert(ds)
+            # collect data for each partition (train, valid, test) in a dataset
+            data = {}
+            for partition in constants.PARTITIONS:
+                # some partitions (valid, test) may not be provided by user
+                if ds.type_seq[partition] is not None:
+                    x_idx, y_idx, attention_masks = \
+                        model_utils.process_data_for_bert(tokenizer=bert_tokenizer,
+                                                   word_seq=ds.type_seq[partition]['word'],
+                                                   tag_seq=ds.type_seq[partition]['tag'],
+                                                   tag_to_idx=ds.type_to_idx['tag'])
+                    data['x_{}'.format(partition)] = [x_idx, attention_masks]
+                    data['y_{}'.format(partition)] = y_idx
+                else:
+                    data['x_{}'.format(partition)] = None
+                    data['y_{}'.format(partition)] = None
 
-            # collect train data, must be provided
-            x_train_type, y_train_type = \
-                self.tokenize_for_bert(tokenizer, ds.type_seq['train']['word'], ds.type_seq['train']['tag'])
-            x_train_idx, y_train_idx, attention_mask_train = \
-                self.type_to_idx_for_bert(tokenizer, x_train_type, y_train_type, ds.type_to_idx['tag'])
-
-
-            attention_mask_train, attention_mask_valid, _, _ = train_test_split(attention_mask_train, x_train_idx, random_state=2018, test_size=0.1)
-            x_train_idx, x_valid_idx, y_train_idx, y_valid_idx = train_test_split(x_train_idx, y_train_idx, random_state=2018, test_size=0.1)
-
-
-            train_dataloader = self.get_dataloader_for_ber(x_train_idx, y_train_idx, attention_mask_train, data_partition='train')
-            valid_dataloader = self.get_dataloader_for_ber(x_valid_idx, y_valid_idx, attention_mask_valid, data_partition='eval')
-
-            '''
-            # collect valid and test data, may not be provided
-            valid_dataloader, test_dataloader = None, None
-            if ds.idx_seq['valid'] is not None:
-                x_valid_type, y_valid_type = \
-                    self.tokenize_for_bert(tokenizer, ds.type_seq['valid']['word'], ds.type_seq['valid']['tag'])
-                x_valid_idx, y_valid_idx, attention_mask_valid = \
-                    self.type_to_idx_for_bert(tokenizer, x_valid_type, y_valid_type, ds.type_to_idx['tag'])
-                valid_dataloader = self.get_dataloader_for_ber(x_valid_idx, y_valid_idx, attention_mask_valid, data_partition='eval')
-            if ds.idx_seq['test'] is not None:
-                x_test_type, y_test_type = \
-                    self.tokenize_for_bert(tokenizer, ds.type_seq['test']['word'], ds.type_seq['test']['tag'])
-                x_test_idx, y_test_idx, attention_mask_test = \
-                    self.type_to_idx_for_bert(tokenizer, x_test_type, y_test_type, ds.type_to_idx['tag'])
-                test_dataloader = self.get_dataloader_for_ber(x_test_idx, y_test_idx, attention_mask_test, data_partition='eval')
-            '''
-
-            training_data.append({'train': train_dataloader,
-                                  'valid': valid_dataloader,
-                                  # 'test': test_dataloader,
-                                 })
+            training_data.append(data)
 
         return training_data
 
-
-    def tokenize_for_bert(self, tokenizer, word_seq, tag_seq):
-        """
-        """
-        # produces a list of list of lists, with the innermost list containing wordpieces
-        bert_tokenized_text = [[tokenizer.wordpiece_tokenizer.tokenize(token) for token in sent] for
-                               sent in word_seq]
-        # recreate the label sequence by adding special 'X' tag for wordpieces
-        bert_tokenized_labels = []
-
-        for i, _ in enumerate(bert_tokenized_text):
-            tokenized_labels = []
-            for token, label in zip(bert_tokenized_text[i], tag_seq[i]):
-                tokenized_labels.append([label] + ['X'] * (len(token) - 1))
-            bert_tokenized_labels.append(list(chain.from_iterable(tokenized_labels)))
-
-        # flatten the tokenized text back to a list of lists
-        bert_tokenized_text = [list(chain.from_iterable(sent)) for sent in bert_tokenized_text]
-
-        # check that we didn't screw anything up
-        assert np.asarray(bert_tokenized_text).shape == np.asarray(bert_tokenized_labels).shape
-
-        return bert_tokenized_text, bert_tokenized_labels
-
-    def type_to_idx_for_bert(self, tokenizer, word_seq, tag_seq, tag_to_idx):
-        """
-        """
-        # process words
-        bert_word_indices = [tokenizer.convert_tokens_to_ids(sent) for sent in word_seq]
-        bert_word_indices = pad_sequences(bert_word_indices,
-                                          maxlen=constants.MAX_SENT_LEN,
-                                          dtype="long",
-                                          truncating="post",
-                                          padding="post")
-        # process tags
-        bert_tag_indices = [[tag_to_idx.get(tag, constants.UNK) for tag in sent] for sent in tag_seq]
-        bert_tag_indices = pad_sequences(bert_tag_indices,
-                                         maxlen=constants.MAX_SENT_LEN,
-                                         value=tag_to_idx[constants.PAD],
-                                         padding="post",
-                                         dtype="long",
-                                         truncating="post")
-
-        # generate attention masks for padded data
-        bert_attention_masks = [[float(idx > 0) for idx in sent] for sent in bert_word_indices]
-
-        return bert_word_indices, bert_tag_indices, bert_attention_masks
-
-    def get_dataloader_for_ber(self, x, y, attention_mask, data_partition='train'):
-        """
-        """
-        if data_partition not in {'train', 'eval'}:
-            err_msg = ("Expected one of 'train', 'eval' for argument `data_partition` to "
-                       "`get_dataloader_for_ber`. Got: '{}'".format(data_partition))
-            LOGGER.error('ValueError %s', err_msg)
-            raise ValueError(err_msg)
-
-        x = torch.tensor(x)
-        y = torch.tensor(y)
-        attention_mask = torch.tensor(attention_mask)
-
-        if data_partition == 'train':
-            data = TensorDataset(x, attention_mask, y)
-            sampler = RandomSampler(data)
-            dataloader = DataLoader(data, sampler=sampler, batch_size=self.config.batch_size)
-        elif data_partition == 'eval':
-            data = TensorDataset(x, attention_mask, y)
-            sampler = SequentialSampler(data)
-            dataloader = DataLoader(data, sampler=sampler, batch_size=self.config.batch_size)
-
-        return dataloader
-
     def train(self):
+        """Trains a PyTorch model with a cross-validation strategy.
+
+        Trains a PyTorch model (`self.model.models`) or models in the case of multi-task learning
+        (`self.model.models` is a list of PyTorch models) using a cross-validation strategy. Expects
+        only a train partition to have been supplied.
+        """
+        print('Using {}-fold cross-validation strategy...'.format(self.config.k_folds))
+        LOGGER.info('Using a %s-fold cross-validation strategy for training', self.config.k_folds)
+
+        # get the train/valid partitioned data for all datasets and all folds
+        training_data = self.prepare_data_for_training()
+        training_data = data_utils.collect_cv_data(training_data, self.config.k_folds)[0]
+
+        output_dir = model_utils.prepare_output_directory(self.config)[0]
+
+        for fold in range(self.config.k_folds):
+            # in the future, it would be nice to support MTL, hence why these are lists
+            model = self.models[0]
+            dataset = self.datasets[0]
+            optimizer = model_utils.get_optimizers(self.models, self.config)[0]
+
+            # append dataloaders to training_data
+            training_data[fold]['train_dataloader'] = \
+                model_utils.get_dataloader_for_ber(x=training_data[fold]['x_train'][0],
+                                                   y=training_data[fold]['y_train'],
+                                                   attention_mask=training_data[fold]['x_train'][-1],
+                                                   config=self.config,
+                                                   data_partition='train')
+            training_data[fold]['valid_dataloader'] = \
+                model_utils.get_dataloader_for_ber(x=training_data[fold]['x_valid'][0],
+                                                   y=training_data[fold]['y_valid'],
+                                                   attention_mask=training_data[fold]['x_valid'][-1],
+                                                   config=self.config,
+                                                   data_partition='eval')
+
+            # metrics object
+            metrics = Metrics(config=self.config,
+                              training_data=training_data[fold],
+                              idx_to_tag=dataset.idx_to_tag,
+                              output_dir=output_dir,
+                              model=self,
+                              fold=fold)
+
+            # get optimizers for each model
+            for epoch in range(self.config.epochs):
+                train_info = (fold + 1, self.config.k_folds, epoch + 1, self.config.epochs)
+                print('Fold: {}/{}; Global epoch: {}/{}\n{}'.format(*train_info, '-' * 30))
+
+                # get the device model will train on
+                device = model_utils.get_device(model)
+                # TRAIN loop
+                model.train()
+                tr_loss = 0
+                nb_tr_steps = 0
+                for _ , batch in enumerate(tqdm(training_data[fold]['train_dataloader'], desc='Epoch {}'.format(nb_tr_steps + 1))):
+                    model.zero_grad()
+                    # add batch to gpu
+                    batch = tuple(t.to(device) for t in batch)
+                    b_input_ids, b_input_mask, b_labels = batch
+                    # forward pass
+                    loss = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask, labels=b_labels)
+                    # backward pass
+                    loss.backward()
+                    # track train loss
+                    tr_loss += loss.item()
+                    nb_tr_steps += 1
+                    # gradient clipping
+                    torch.nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=self.config.grad_norm)
+                    # update parameters
+                    optimizer.step()
+                # print train loss per epoch
+                print("Train loss: {}".format(tr_loss / nb_tr_steps))
+                # computes metrics, saves to disk
+                # need to feed epoch argument manually, as this is a keras callback object
+                metrics.on_epoch_end(epoch=metrics.current_epoch)
+
+            # clear and rebuild the model at end of each fold (except for the last fold)
+            if fold < self.config.k_folds - 1:
+                self.reset_model()
+
+    def prediction_step(self, training_data, partition):
         """
         """
-        # (TODO): In future, would be nice to support mt learning, hence why these are all lists
+        # TEMP: This will cause MT to break, but should work for now
+        # TEMP: In future the model or its index will need to be passed to this function
         model = self.models[0]
-        dataset = self.datasets[0]
-        training_data = self.prepare_data_for_training()[0]
-
-        # use a GPU if available
-        if torch.cuda.is_available():
-            device = torch.device("cuda")
-            n_gpu = torch.cuda.device_count()
-
-            model.cuda()
-
-            print('Using CUDA(s) device with name: {}'.format(torch.cuda.get_device_name(0)))
-        else:
-            device = torch.device("cpu")
-            print('No GPU available for training. Using CPU')
-
-        FULL_FINETUNING = True
-        if FULL_FINETUNING:
-            param_optimizer = list(model.named_parameters())
-            no_decay = ['bias', 'gamma', 'beta']
-            optimizer_grouped_parameters = [
-                {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay_rate': 0.01},
-                {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay_rate': 0.0}
-            ]
-        else:
-            param_optimizer = list(model.classifier.named_parameters())
-            optimizer_grouped_parameters = [{"params": [p for n, p in param_optimizer]}]
-
-        optimizer = Adam(optimizer_grouped_parameters, lr=self.config.learning_rate)
-
-        for _ in range(self.config.epochs):
-            # TRAIN loop
-            model.train()
-            tr_loss = 0
-            nb_tr_steps = 0
-            # position 0 is only to make the progress bar work on Colab, delete when we move to script
-            for _ , batch in enumerate(tqdm(training_data['train'], desc='Epoch {}'.format(nb_tr_steps + 1))):
-                model.zero_grad()
-                # add batch to gpu
-                batch = tuple(t.to(device) for t in batch)
-                b_input_ids, b_input_mask, b_labels = batch
-                # forward pass
-                loss = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask, labels=b_labels)
-                # backward pass
-                loss.backward()
-                # track train loss
-                tr_loss += loss.item()
-                nb_tr_steps += 1
-                # gradient clipping
-                torch.nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=self.config.grad_norm)
-                # update parameters
-                optimizer.step()
-            # print train loss per epoch
-            print("Train loss: {}".format(tr_loss / nb_tr_steps))
-            # VALIDATION on validation set
-            self.evaluate(model, training_data, device, dataset.idx_to_tag)
-
-    def evaluate(self, model, dataloaders, device, idx_to_tag):
-        """
-        """
         model.eval()  # puts the model in evaluation mode
 
-        for partition in ['train', 'valid']:
-            predictions, true_labels = [], []
-            eval_loss, nb_eval_steps = 0, 0
-            dataloader = dataloaders[partition]
+        y_pred, y_true = [], []
+        eval_loss, nb_eval_steps = 0, 0
 
-            for batch in dataloader:
-                batch = tuple(t.to(device) for t in batch)
-                b_input_ids, b_input_mask, b_labels = batch
+        # get the dataloader for the given partition
+        dataloader = training_data['{}_dataloader'.format(partition)]
 
-                with torch.no_grad():
-                    tmp_eval_loss = model(b_input_ids,
-                                          token_type_ids=None,
-                                          attention_mask=b_input_mask,
-                                          labels=b_labels)
-                    logits = model(b_input_ids,
-                                   token_type_ids=None,
-                                   attention_mask=b_input_mask)
+        for batch in dataloader:
+            batch = tuple(t.to(self.device) for t in batch)
+            b_input_ids, b_input_mask, b_labels = batch
 
-                # put the true labels & logits on the cpu and convert to numpy array
-                logits = logits.detach().cpu().numpy()
-                label_ids = b_labels.to('cpu').numpy()
+            with torch.no_grad():
+                tmp_eval_loss = model(b_input_ids,
+                                      token_type_ids=None,
+                                      attention_mask=b_input_mask,
+                                      labels=b_labels)
+                logits = model(b_input_ids,
+                               token_type_ids=None,
+                               attention_mask=b_input_mask)
 
-                true_labels.append(label_ids)
-                predictions.extend([list(p) for p in np.argmax(logits, axis=2)])
+            # put the true labels & logits on the cpu and convert to numpy array
+            logits = logits.detach().cpu().numpy()
+            label_ids = b_labels.to('cpu').numpy()
 
-                eval_loss += tmp_eval_loss.mean().item()
-                nb_eval_steps += 1
+            y_true.append(label_ids)
+            y_pred.extend([list(p) for p in np.argmax(logits, axis=2)])
 
-            # flatten 3D array to 2D array
-            # TODO (johnmgiorgi): Can I use chain.iterable for this?
-            labels = [[l_ii for l_ii in l_i] for l in true_labels for l_i in l]
+            eval_loss += tmp_eval_loss.mean().item()
+            nb_eval_steps += 1
 
-            y_true_tag = [idx_to_tag[idx] for idx in np.asarray(labels).ravel()]
-            y_pred_tag = [idx_to_tag[idx] for idx in np.asarray(predictions).ravel()]
+        # flatten arrays
+        y_true = [[l_ii for l_ii in l_i] for l in y_true for l_i in l]
+        y_true = np.asarray(y_true).ravel()
+        y_pred = np.asarray(y_pred).ravel()
 
-            # Use Saber to chunk entities and compute performance metrics
-            y_true_chunks = Preprocessor.chunk_entities(y_true_tag)
-            y_pred_chunks = Preprocessor.chunk_entities(y_pred_tag)
-
-            results = Metrics.get_precision_recall_f1_support(y_true=y_true_chunks,
-                                                              y_pred=y_pred_chunks,
-                                                              criteria='exact')
-            print()
-            Metrics.print_performance_scores(results, title=partition)
-            print("Valid/Test loss: {}".format(eval_loss / nb_eval_steps))
+        return y_true, y_pred
