@@ -2,11 +2,13 @@
 """
 import json
 import logging
+import os
 
+import torch
 from keras import optimizers
 from keras.models import model_from_json
 
-import torch
+from .. import constants
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,11 +30,36 @@ class BaseModel(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+    def reset_model(self):
+        """Clears and rebuilds the model.
+
+        Clear and rebuilds the model(s) at `self.models`. This is useful, for example, at the end
+        of a cross-validation fold.
+        """
+        self.models = []
+        self.specify()
+        self.compile()
+
 class BaseKerasModel(BaseModel):
     """Parent class of all Keras model classes implemented by Saber.
+
+    config (Config): A Config object which contains a set of harmonized arguments provided in a
+        *.ini file and, optionally, from the command line.
+    datasets (list): A list containing one or more Dataset objects.
+    embeddings (Embeddings): An object containing loaded word embeddings.
+    models (list): A list of Keras models.
     """
     def __init__(self, config, datasets, embeddings=None, **kwargs):
         super().__init__(config, datasets, embeddings, **kwargs)
+
+        # attribute we can use to identify which framework / library model is written in
+        self.framework = constants.KERAS
+
+        # set Tensorflow logging level
+        if self.config.verbose:
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
+        else:
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
     def save(self, weights_filepath, model_filepath, model_idx=0):
         """Save a Keras model to disk.
@@ -107,9 +134,18 @@ class BaseKerasModel(BaseModel):
 
 class BasePyTorchModel(BaseModel):
     """Parent class of all PyTorch model classes implemented by Saber.
+
+    config (Config): A Config object which contains a set of harmonized arguments provided in a
+        *.ini file and, optionally, from the command line.
+    datasets (list): A list containing one or more Dataset objects.
+    embeddings (Embeddings): An object containing loaded word embeddings.
+    models (list): A list of PyTorch models.
     """
     def __init__(self, config, datasets, embeddings=None, **kwargs):
         super().__init__(config, datasets, embeddings, **kwargs)
+
+        # attribute we can use to identify which framework / library model is written in
+        self.framework = constants.PYTORCH
 
     def save(self, model_filepath, model_idx=0):
         """Save a PyTorch model to disk.
@@ -144,4 +180,13 @@ class BasePyTorchModel(BaseModel):
         ### YOUR CODE STARTS HERE ####
         ### YOUR CODE ENDS HERE ####
         # self.models.append(model)
+        pass
+
+    def compile(self):
+        """Dummy function, does nothing.
+
+        This is a dummy function which makes code simpler elsewhere in Saber. PyTorch models
+        don't need to be compiled, but Keras models do. To avoid writing extra code, both
+        Keras and PyTorch models implement a `compile` method.
+        """
         pass
