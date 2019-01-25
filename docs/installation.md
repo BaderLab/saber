@@ -9,34 +9,37 @@ To install Saber, you will need `python>=3.5`. If not already installed, `python
 !!! note
     Run `python --version` at the command line to make sure installation was successful. You may need to type `python3` (not just `python`) depending on your install method.
 
-(OPTIONAL) First, activate your virtual environment (see [below](#optional-creating-and-activating-virtual-environments) for help)
+(OPTIONAL) Activate your virtual environment (see [below](#optional-creating-and-activating-virtual-environments) for help)
 
-```
+```sh
 $ conda activate saber
 # Notice your command prompt has changed to indicate that the environment is active
 (saber) $
 ```
 
-then install Saber right from the repository with `pip`
+then install Saber
 
+```sh
+(saber) $ pip install saber
 ```
-(saber) $ pip install git+https://github.com/BaderLab/saber.git
+
+To get the latest development version of Saber, install it right from this repository with `pip`
+
+```sh
+(saber) $ pip install https://github.com/BaderLab/saber.git
 ```
 
 or by cloning the repository and then using `pip` to install the package
 
-```
+```sh
 (saber) $ git clone https://github.com/BaderLab/saber.git
 (saber) $ cd saber
 (saber) $ pip install .
 ```
 
-!!! tip
-    You can also install Saber by cloning this repository and running `python setup.py install`.
+For now, you will need to install the required [Spacy](https://spacy.io) model and the [keras-contrib](https://github.com/keras-team/keras-contrib) repository (even if you installed with `pip install saber`)
 
-finally, install the required [Spacy](https://spacy.io) model and the [keras-contrib](https://github.com/keras-team/keras-contrib) repository
-
-```
+```sh
 # keras-contrib
 (saber) $ pip install git+https://www.github.com/keras-team/keras-contrib.git
 # NeuralCoref medium model built on top of Spacy, this might take a few minutes to download!
