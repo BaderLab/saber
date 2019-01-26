@@ -4,6 +4,9 @@ include README.md CONTRIBUTING.md Dockerfile
 # Include the license file
 include LICENSE.txt
 
+# Include Logo
+include saber_logo.png
+
 # Include config file(s)
 global-include *.ini *.yml
 
@@ -18,6 +21,3 @@ recursive-include docs *.md
 
 # Don't include notebooks
 prune notebooks
-
-# Don't include images
-prune img
