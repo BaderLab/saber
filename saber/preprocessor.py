@@ -193,40 +193,6 @@ class Preprocessor(object):
         return np.asarray(type_seq)
 
     @staticmethod
-    def chunk_entities(seq):
-        """Chunks entities in the BIO or BIOES format.
-
-        For a given sequence of entities in the BIO or BIOES format, returns the chunked entities.
-        Note that invalid tag sequences will not be returned as chunks.
-
-        Args:
-            seq (list): sequence of labels.
-
-        Returns:
-            list: list of [chunk_type, chunk_start (inclusive), chunk_end (exclusive)].
-
-        Example:
-            >>> seq = ['B-PRGE', 'I-PRGE', 'O', 'B-PRGE']
-            >>> chunk_entities(seq)
-            [('PRGE', 0, 2), ('PRGE', 3, 4)]
-        """
-        i = 0
-        chunks = []
-        seq = seq + ['O']  # add sentinel
-        types = [tag.split('-')[-1] for tag in seq]
-        while i < len(seq):
-            if seq[i].startswith('B'):
-                for j in range(i+1, len(seq)):
-                    if seq[j].startswith('I') and types[j] == types[i]:
-                        continue
-                    break
-                chunks.append((types[i], i, j))
-                i = j
-            else:
-                i += 1
-        return chunks
-
-    @staticmethod
     def replace_rare_tokens(sentences, count=constants.NUM_RARE):
         """
         Replaces rare tokens in `sentences` with a special unknown token.
