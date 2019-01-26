@@ -8,6 +8,7 @@ from itertools import chain
 from pprint import pprint
 
 from spacy import displacy
+from seqeval.metrics.sequence_labeling import get_entities
 
 from . import constants
 from .config import Config
@@ -92,7 +93,7 @@ class Saber(object):
         y_pred = model.predict(model_input, constants.PRED_BATCH_SIZE).argmax(-1).ravel()
         # convert predictions to tags (removing pads) and then chunk
         pred_tag_seq = [ds.idx_to_tag[idx] for idx in y_pred if ds.idx_to_tag[idx] != constants.PAD]
-        pred_chunk_seq = self.preprocessor.chunk_entities(pred_tag_seq)
+        pred_chunk_seq = get_entities(pred_tag_seq)
         # flatten the token offsets
         offsets = list(chain.from_iterable(transformed_text['offsets']))
 
