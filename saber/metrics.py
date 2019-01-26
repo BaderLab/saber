@@ -10,6 +10,7 @@ from statistics import mean
 import numpy as np
 from keras.callbacks import Callback
 from prettytable import PrettyTable
+from seqeval.metrics.sequence_labeling import get_entities
 
 from . import constants
 from .preprocessor import Preprocessor
@@ -25,7 +26,8 @@ class Metrics(Callback):
     Args:
         config (Config): Contains a set of harmonized arguments provided in a *.ini file and,
             optionally, from the command line.
-        training_data (dict): Contains the data and targets for each partition: 'train', 'valid' and 'test'.
+        training_data (dict): Contains the data (at key `x_partition`) and targets
+            (at key `y_partition`) for each partition: 'train', 'valid' and 'test'.
         idx_to_tag (dict): A dictionary mapping unique integers to labels.
         output_dir (str): Base directory to save all output to.
     """
@@ -83,8 +85,8 @@ class Metrics(Callback):
         y_true_tag = [self.idx_to_tag[idx] for idx in y_true]
         y_pred_tag = [self.idx_to_tag[idx] for idx in y_pred]
         # chunk the entities
-        y_true_chunks = Preprocessor.chunk_entities(y_true_tag)
-        y_pred_chunks = Preprocessor.chunk_entities(y_pred_tag)
+        y_true_chunks = get_entities(y_true_tag)
+        y_pred_chunks = get_entities(y_pred_tag)
 
         # get performance scores per label
         return self.get_precision_recall_f1_support(y_true=y_true_chunks,
@@ -130,8 +132,8 @@ class Metrics(Callback):
         and `y_pred` to be a sequence of entity chunks.
 
         Args:
-            y_true: List of (chunk_type, chunk_start, chunk_end).
-            y_pred: List of (chunk_type, chunk_start, chunk_end).
+            y_true (list): List of (chunk_type, chunk_start, chunk_end).
+            y_pred (list): List of (chunk_type, chunk_start, chunk_end).
             criteria (str): Criteria to use for evaluation, 'exact' matches boundaries directly,
             'left' requires only a left boundary match and 'right' requires only a right boundary
             match.
