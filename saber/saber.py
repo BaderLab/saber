@@ -10,6 +10,7 @@ from pprint import pprint
 from spacy import displacy
 
 from . import constants
+from google_drive_downloader import GoogleDriveDownloader as gdd
 from .config import Config
 from .dataset import Dataset
 from .embeddings import Embeddings
@@ -168,9 +169,16 @@ class Saber(object):
         start = time.time()
         print('Loading model...', end=' ', flush=True)
 
-        # Allows user to provide names of pre-trained models (e.g. 'PRGE') rather than filepaths
-        if directory.upper() in constants.PRETRAINED_MODELS:
-            directory = os.path.join(constants.PRETRAINED_MODEL_DIR, directory.upper())
+        # get what might be a pretrained model name
+        pretrained_model = os.path.splitext(directory)[0].strip().upper()
+
+        # allows user to provide names of pre-trained models (e.g. 'PRGE-base')
+        if pretrained_model in constants.PRETRAINED_MODELS:
+            directory = os.path.join(constants.PRETRAINED_MODEL_DIR, pretrained_model)
+            # downlaod model from Google Drive, will skip if already exists
+            file_id = constants.PRETRAINED_MODELS[pretrained_model]
+            dest_path = '{}.tar.bz2'.format(directory)
+            gdd.download_file_from_google_drive(file_id=file_id, dest_path=dest_path)
 
         directory = generic_utils.clean_path(directory)
         generic_utils.extract_directory(directory)
