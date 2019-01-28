@@ -7,9 +7,6 @@ include LICENSE.txt
 # Include config file(s)
 global-include *.ini *.yml
 
-# Include pretrained model(s)
-include saber/pretrained_models/PRGE.tar.bz2
-
 # Include the test resources
 graft saber/tests
 
