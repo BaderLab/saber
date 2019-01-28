@@ -39,6 +39,7 @@ setuptools.setup(
         'spacy>=2.0.11, <=2.0.13',
         'gensim>=3.4.0',
         'nltk>=3.3',
+        'googledrivedownloader>=0.3'
         'google-compute-engine',
         'msgpack==0.5.6',
         'keras-contrib @ git+https://www.github.com/keras-team/keras-contrib.git',
