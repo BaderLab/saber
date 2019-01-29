@@ -1,6 +1,6 @@
 # Installation
 
-To install Saber, you will need `python>=3.5`. If not already installed, `python>=3.5` can be installed via
+To install Saber, you will need `python3.6`. If not already installed, `python3` can be installed via
 
 - The [official installer](https://www.python.org/downloads/)
 - [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
@@ -17,43 +17,59 @@ $ conda activate saber
 (saber) $
 ```
 
-then install Saber
+## Latest PyPI stable release
+
+[![PyPI-Status](https://img.shields.io/pypi/v/saber.svg?colorB=blue&style=flat-square)](https://pypi.org/project/saber/)
+[![PyPI-Downloads](https://img.shields.io/pypi/dm/saber.svg?colorB=blue&style=flat-square&logo=python&logoColor=white)](https://pypi.org/project/saber)
+[![Libraries-Dependents](https://img.shields.io/librariesio/dependent-repos/pypi/saber.svg?colorB=blue&style=flat-square&logo=koding&logoColor=white)](https://github.com/baderlab/saber/network/dependents)
 
 ```sh
 (saber) $ pip install saber
 ```
 
-To get the latest development version of Saber, install it right from this repository with `pip`
+!!! error
+    The install from PyPI is currently broken, please install using the instructions below.
+
+## Latest development release on GitHub
+
+[![GitHub-Status](https://img.shields.io/github/tag-date/baderlab/saber.svg?logo=github&style=flat-square)](https://github.com/baderlab/saber/releases)
+[![GitHub-Stars](https://img.shields.io/github/stars/baderlab/saber.svg?logo=github&label=stars&style=flat-square)](https://github.com/baderlab/saber/stargazers)
+[![GitHub-Forks](https://img.shields.io/github/forks/baderlab/saber.svg?colorB=blue&logo=github&logoColor=white&style=flat-square)](https://github.com/BaderLab/saber/network/members)
+[![GitHub-Commits](https://img.shields.io/github/commit-activity/y/baderlab/saber.svg?logo=git&logoColor=white&style=flat-square)](https://github.com/baderlab/saber/graphs/commit-activity)
+[![GitHub-Updated](https://img.shields.io/github/last-commit/baderlab/saber.svg?colorB=blue&logo=github&style=flat-square)](https://github.com/baderlab/saber/pulse)
+
+Pull and install straight from GitHub
 
 ```sh
-(saber) $ pip install https://github.com/BaderLab/saber.git
+(saber) $ pip install git+https://github.com/BaderLab/saber.git
 ```
 
-or by cloning the repository and then using `pip` to install the package
+or install by cloning the repository
 
 ```sh
 (saber) $ git clone https://github.com/BaderLab/saber.git
 (saber) $ cd saber
-(saber) $ pip install .
 ```
 
-For now, you will need to install the required [Spacy](https://spacy.io) model and the [keras-contrib](https://github.com/keras-team/keras-contrib) repository (even if you installed with `pip install saber`)
+and then using either `pip`
 
 ```sh
-# keras-contrib
-(saber) $ pip install git+https://www.github.com/keras-team/keras-contrib.git
-# NeuralCoref medium model built on top of Spacy, this might take a few minutes to download!
-(saber) $ pip install https://github.com/huggingface/neuralcoref-models/releases/download/en_coref_md-3.0.0/en_coref_md-3.0.0.tar.gz
+(saber) $ pip install -e .
+```
+or `setuptools`
+
+```sh
+(saber) $ python setup.py install
 ```
 
 !!! note
     See [Running tests](#running-tests) for a way to verify your installation.
 
-### (OPTIONAL) Creating and activating virtual environments
+## (OPTIONAL) Creating and activating virtual environments
 
 When using `pip` it is generally recommended to install packages in a virtual environment to avoid modifying system state. To create a virtual environment named `saber`
 
-#### Using virtualenv or venv
+### Using virtualenv or venv
 
 Using [virtualenv](https://virtualenv.pypa.io/en/stable/)
 
@@ -75,7 +91,7 @@ $ source /path/to/new/venv/saber/bin/activate
 (saber) $
 ```
 
-#### Using Conda
+### Using Conda
 
 If you use [Conda](https://conda.io/docs/) / [Miniconda](https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh), you can create an environment named `saber` by running
 
