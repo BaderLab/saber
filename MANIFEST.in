@@ -1,20 +1,17 @@
-# Include the README(s)
-include README.md CONTRIBUTING.md Dockerfile
+# Include README(s)
+include README.md CONTRIBUTING.md
 
-# Include the license file
+# Include Dockerfile
+include Dockerfile
+
+# Include license file
 include LICENSE.txt
 
 # Include config file(s)
 global-include *.ini *.yml
 
-# Include the test resources
+# Include test resources
 graft saber/tests
 
 # Include documentation
-recursive-include docs *.md
-
-# Don't include notebooks
-prune notebooks
-
-# Don't include images
-prune img
+graft docs
