@@ -2,7 +2,7 @@
 
 
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="no-js">
   <head>
     
@@ -38,7 +38,7 @@
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
       <link rel="shortcut icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-3.0.4">
+      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-3.2.0">
     
     
       
@@ -46,7 +46,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/application.451f80e5.css">
+      <link rel="stylesheet" href="../assets/stylesheets/application.572ca0f0.css">
       
         <link rel="stylesheet" href="../assets/stylesheets/application-palette.22915126.css">
       
@@ -57,7 +57,7 @@
       
     
     
-      <script src="../assets/javascripts/modernizr.1aa3b519.js"></script>
+      <script src="../assets/javascripts/modernizr.8c900955.js"></script>
     
     
       
@@ -67,6 +67,7 @@
       
     
     <link rel="stylesheet" href="../assets/fonts/material-icons.css">
+    
     
     
   </head>
@@ -104,7 +105,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
     
-      <a href="../#quick-start" tabindex="1" class="md-skip">
+      <a href="#quick-start" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -247,8 +248,8 @@
 
 
   <li class="md-nav__item">
-    <a href=".." title="Home" class="md-nav__link">
-      Home
+    <a href=".." title="About" class="md-nav__link">
+      About
     </a>
   </li>
 
@@ -296,6 +297,13 @@
   
     <label class="md-nav__title" for="__toc">Table of contents</label>
     <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#google-colaboratory" title="Google Colaboratory" class="md-nav__link">
+    Google Colaboratory
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#web-service" title="Web-service" class="md-nav__link">
@@ -400,6 +408,13 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#google-colaboratory" title="Google Colaboratory" class="md-nav__link">
+    Google Colaboratory
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#web-service" title="Web-service" class="md-nav__link">
     Web-service
   </a>
@@ -466,7 +481,9 @@
                 
                 
                 <h1 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h1>
-<p>If your goal is simply to use Saber to annotate biomedical text, then you can either use the <a href="#web-service">web-service</a> or a <a href="#pre-trained-models">pre-trained model</a>.</p>
+<p>If your goal is to use Saber to annotate biomedical text, then you can either use the <a href="#web-service">web-service</a> or a <a href="#pre-trained-models">pre-trained model</a>. If you simply want to check Saber out, without installing anything locally, try the <a href="#google-colaboratory">Google Colaboratory</a> notebook.</p>
+<h2 id="google-colaboratory">Google Colaboratory<a class="headerlink" href="#google-colaboratory" title="Permanent link">&para;</a></h2>
+<p>The fastest way to check out Saber is by following along with the Google Colaboratory notebook (<a href="https://colab.research.google.com/drive/1WD7oruVuTo6p_908MQWXRBdLF3Vw2MPo"><img alt="Colab" src="https://img.shields.io/badge/launch-Google%20Colab-orange.svg?style=flat-square" /></a>). In order to be able to run the cells, select "Open in Playground" or, alternatively, save a copy to your own Google Drive account (File &gt; Save a copy in Drive).</p>
 <h2 id="web-service">Web-service<a class="headerlink" href="#web-service" title="Permanent link">&para;</a></h2>
 <p>To use Saber as a <strong>local</strong> web-service, run</p>
 <div class="codehilite"><pre><span></span>(saber) $ python -m saber.cli.app
@@ -514,8 +531,12 @@ $ docker run -it --rm -p 5000:5000 --name saber pathwaycommons/saber
 <span class="k">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">reason</span><span class="p">)</span>
 </pre></div></div>
 </div>
-<details class="warning"><summary>Warning</summary><p>The first request to the web-service will be slow (~30s). This is because a large language
-model needs to be loaded into memory.</p></details><p>Documentation for the Saber web-service API can be found <a href="https://baderlab.github.io/saber-api-docs/">here</a>. We hope to provide a live version of the web-service soon!</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The first request to the web-service will be slow (~60s). This is because a large language
+model needs to be loaded into memory.</p>
+</div>
+<p>Documentation for the Saber web-service API can be found <a href="https://baderlab.github.io/saber-api-docs/">here</a>. We hope to provide a live version of the web-service soon!</p>
 <h2 id="pre-trained-models">Pre-trained models<a class="headerlink" href="#pre-trained-models" title="Permanent link">&para;</a></h2>
 <p>First, import <code>Saber</code>. This class coordinates training, annotation, saving and loading of models and datasets. In short, this is the interface to Saber.</p>
 <div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber.saber</span> <span class="kn">import</span> <span class="n">Saber</span>
@@ -529,18 +550,22 @@ model needs to be loaded into memory.</p></details><p>Documentation for the Sabe
 <div class="codehilite"><pre><span></span><span class="n">saber</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;PRGE&#39;</span><span class="p">)</span>
 </pre></div>
 
-<p>You can see all the pre-trained models in the <a href="https://baderlab.github.io/saber-api-docs/">web-service API docs</a> or, the <a href="saber/pretrained_models">saber/pretrained_models</a> folder in this repository, or by running the following line of code</p>
-<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">saber.constants</span> <span class="kn">import</span> <span class="n">ENTITIES</span><span class="p">;</span> <span class="k">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">ENTITIES</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
-</pre></div>
-
-<p>To annotate text with the model, just call the <code>annotate()</code> method</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>See <a href="https://baderlab.github.io/saber/resources/#pre-trained-models">Resources: Pre-trained models</a> for pre-trained model names and details. You will need an internet connection to download a pre-trained model.</p>
+</div>
+<p>To annotate text with the model, just call the <code>Saber.annotate()</code> method</p>
 <div class="codehilite"><pre><span></span><span class="n">saber</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">)</span>
 </pre></div>
 
-<details class="warning"><summary>Warning</summary><p>The <code>annotate</code> method will be slow the first time you call it (~30s). This is because a large language model needs to be loaded into memory.</p></details><h3 id="coreference-resolution">Coreference Resolution<a class="headerlink" href="#coreference-resolution" title="Permanent link">&para;</a></h3>
-<p><a href="http://www.wikiwand.com/en/Coreference"><strong>Coreference</strong></a> occurs when two or more expressions in a text refer to the same person or thing, that is, they have the same <strong>referent</strong>. Take the following example:</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The <code>Saber.annotate()</code> method will be slow the first time you call it (~60s). This is because a large language model needs to be loaded into memory.</p>
+</div>
+<h3 id="coreference-resolution">Coreference Resolution<a class="headerlink" href="#coreference-resolution" title="Permanent link">&para;</a></h3>
+<p><a href="https://en.wikipedia.org/wiki/Coreference"><strong>Coreference</strong></a> occurs when two or more expressions in a text refer to the same person or thing, that is, they have the same <strong>referent</strong>. Take the following example:</p>
 <p><em>"<strong>IL-6</strong> supports tumour growth and metastasising in terminal patients, and <strong>it</strong> significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy."</em></p>
-<p>Clearly, "<strong>it</strong>" referes to "<strong>IL-6</strong>". If we do not resolve this coreference, then "<strong>it</strong>" will not be labeled as an entity and any relation or event it is mentioned in will not be extracted. Saber uses <a href="https://github.com/huggingface/neuralcoref">NeuralCoref</a>, a state-of-the-art coreference resolution tool based on neural nets and built on top of <a href="https://spacy.io">Spacy</a>. To use it, just supply the argument <code>coref=True</code> (which is <code>False</code> by default) to the <code>annotate()</code> method</p>
+<p>Clearly, "<strong>it</strong>" referes to "<strong>IL-6</strong>". If we do not resolve this coreference, then "<strong>it</strong>" will not be labeled as an entity and any relation or event it is mentioned in will not be extracted. Saber uses <a href="https://github.com/huggingface/neuralcoref">NeuralCoref</a>, a state-of-the-art coreference resolution tool based on neural nets and built on top of <a href="https://spacy.io">Spacy</a>. To use it, just supply the argument <code>coref=True</code> (which is <code>False</code> by default) to the <code>Saber.annotate()</code> method</p>
 <div class="codehilite"><pre><span></span><span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;IL-6 supports tumour growth and metastasising in terminal patients, and it significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy.&quot;</span>
 <span class="c1"># WITHOUT coreference resolution</span>
 <span class="n">saber</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">coref</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
@@ -554,7 +579,7 @@ model needs to be loaded into memory.</p></details><p>Documentation for the Sabe
 </div>
 <p>Saber currently takes the simplest possible approach: replace all coreference mentions with their referent, and then feed the resolved text to the model that identifies named entities.</p>
 <h3 id="working-with-annotations">Working with annotations<a class="headerlink" href="#working-with-annotations" title="Permanent link">&para;</a></h3>
-<p>The <code>annotate()</code> method returns a simple <code>dict</code> object</p>
+<p>The <code>Saber.annotate()</code> method returns a simple <code>dict</code> object</p>
 <div class="codehilite"><pre><span></span><span class="n">ann</span> <span class="o">=</span> <span class="n">saber</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">)</span>
 </pre></div>
 
@@ -569,7 +594,7 @@ model needs to be loaded into memory.</p></details><p>Documentation for the Sabe
 </pre></div>
 
 <h4 id="converting-annotations-to-json">Converting annotations to JSON<a class="headerlink" href="#converting-annotations-to-json" title="Permanent link">&para;</a></h4>
-<p>The <code>annotate()</code> method returns a <code>dict</code> object, but can be converted to a <code>JSON</code> formatted string for ease-of-use in downstream applications</p>
+<p>The <code>Saber.annotate()</code> method returns a <code>dict</code> object, but can be converted to a <code>JSON</code> formatted string for ease-of-use in downstream applications</p>
 <div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
 
 <span class="c1"># convert to json object</span>
@@ -656,7 +681,7 @@ model needs to be loaded into memory.</p></details><p>Documentation for the Sabe
       
     </div>
     
-      <script src="../assets/javascripts/application.583bbe55.js"></script>
+      <script src="../assets/javascripts/application.b41f3d20.js"></script>
       
       <script>app.initialize({version:"1.0.4",url:{base:".."}})</script>
       

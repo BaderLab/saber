@@ -2,7 +2,7 @@
 
 
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="no-js">
   <head>
     
@@ -38,7 +38,7 @@
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
       <link rel="shortcut icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-3.0.4">
+      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-3.2.0">
     
     
       
@@ -46,7 +46,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/application.451f80e5.css">
+      <link rel="stylesheet" href="../assets/stylesheets/application.572ca0f0.css">
       
         <link rel="stylesheet" href="../assets/stylesheets/application-palette.22915126.css">
       
@@ -57,7 +57,7 @@
       
     
     
-      <script src="../assets/javascripts/modernizr.1aa3b519.js"></script>
+      <script src="../assets/javascripts/modernizr.8c900955.js"></script>
     
     
       
@@ -67,6 +67,7 @@
       
     
     <link rel="stylesheet" href="../assets/fonts/material-icons.css">
+    
     
     
   </head>
@@ -104,7 +105,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
     
-      <a href="../#guide-to-the-saber-api" tabindex="1" class="md-skip">
+      <a href="#guide-to-the-saber-api" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -247,8 +248,8 @@
 
 
   <li class="md-nav__item">
-    <a href=".." title="Home" class="md-nav__link">
-      Home
+    <a href=".." title="About" class="md-nav__link">
+      About
     </a>
   </li>
 
@@ -377,13 +378,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#juypter-notebooks" title="Juypter notebooks" class="md-nav__link">
-    Juypter notebooks
-  </a>
-  
-</li>
-      
       
       
       
@@ -495,13 +489,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#juypter-notebooks" title="Juypter notebooks" class="md-nav__link">
-    Juypter notebooks
-  </a>
-  
-</li>
-      
       
       
       
@@ -522,7 +509,7 @@
                 
                 
                 <h1 id="guide-to-the-saber-api">Guide to the Saber API<a class="headerlink" href="#guide-to-the-saber-api" title="Permanent link">&para;</a></h1>
-<p>You can interact with Saber as a web-service (explained in <a href="https://baderlab.github.io/saber/quick_start/">Quick start</a>), command line tool, python package, or via the Juypter notebooks. If you created a virtual environment, <em>remember to activate it first</em>.</p>
+<p>You can interact with Saber as a web-service (explained in <a href="https://baderlab.github.io/saber/quick_start/#web-service">Quick Start: Web-service</a>), <a href="#command-line-tool">command line tool</a>, or as a <a href="#python-package">python package</a>. If you created a virtual environment, <em>remember to activate it first</em>.</p>
 <h3 id="command-line-tool">Command line tool<a class="headerlink" href="#command-line-tool" title="Permanent link">&para;</a></h3>
 <p>Currently, the command line tool simply trains the model. To use it, call</p>
 <div class="codehilite"><pre><span></span>(saber) $ python -m saber.cli.train
@@ -534,7 +521,7 @@
 
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>See <a href="https://baderlab.github.io/saber/resources/">Resources</a> for help preparing datasets and word embeddings for training.</p>
+<p>See <a href="https://baderlab.github.io/saber/resources/#datasets">Resources: Datasets</a> for help preparing datasets and word embeddings for training.</p>
 </div>
 <p>Run <code>python -m saber.cli.train --help</code> to see all possible arguments.</p>
 <p>Of course, supplying arguments at the command line can quickly become cumbersome. Saber also allows you to provide a configuration file, which can be specified like so</p>
@@ -559,7 +546,7 @@
 
 <span class="c1"># Load a dataset and create a model (provide a list of datasets to use multi-task learning!)</span>
 <span class="n">saber</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/GENIA&#39;</span><span class="p">)</span>
-<span class="n">saber</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">model_name</span><span class="o">=</span><span class="s1">&#39;MT-LSTM-CRF&#39;</span><span class="p">)</span>
 
 <span class="c1"># Train and save a model</span>
 <span class="n">saber</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
@@ -584,7 +571,7 @@
 <div class="codehilite"><pre><span></span><span class="c1"># Create and train a model on GENIA corpus</span>
 <span class="n">saber</span> <span class="o">=</span> <span class="n">Saber</span><span class="p">()</span>
 <span class="n">saber</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s1">&#39;path/to/datasets/GENIA&#39;</span><span class="p">)</span>
-<span class="n">saber</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">model_name</span><span class="o">=</span><span class="s1">&#39;MT-LSTM-CRF&#39;</span><span class="p">)</span>
 <span class="n">saber</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
 <span class="n">saber</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">&#39;pretrained_models/GENIA&#39;</span><span class="p">)</span>
 
@@ -598,9 +585,9 @@
 <span class="n">saber</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
 </pre></div>
 
-<div class="admonition info">
-<p class="admonition-title">Info</p>
-<p>There is currently no easy way to do this with the command line interface, but I am working on it!</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is currently only supported by the <code>mt-lstm-crf</code> model.</p>
 </div>
 <h4 id="multi-task-learning">Multi-task learning<a class="headerlink" href="#multi-task-learning" title="Permanent link">&para;</a></h4>
 <p>Multi-task learning is as easy as specifying multiple dataset paths, either in the <code>config</code> file, at the command line via the flag <code>--dataset_folder</code>, or as an argument to <code>load_dataset()</code>. The number of datasets is arbitrary.</p>
@@ -610,10 +597,14 @@
 <span class="c1"># Simply pass multiple dataset paths as a list to load_dataset to use multi-task learning.</span>
 <span class="n">saber</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">([</span><span class="s1">&#39;path/to/datasets/NCBI_Disease&#39;</span><span class="p">,</span> <span class="s1">&#39;path/to/datasets/Linnaeus&#39;</span><span class="p">])</span>
 
-<span class="n">saber</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<span class="n">saber</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">model_name</span><span class="o">=</span><span class="s1">&#39;MT-LSTM-CRF&#39;</span><span class="p">)</span>
 <span class="n">saber</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
 </pre></div>
 
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is currently only supported by the <code>mt-lstm-crf</code> model.</p>
+</div>
 <h4 id="training-on-gpus">Training on GPUs<a class="headerlink" href="#training-on-gpus" title="Permanent link">&para;</a></h4>
 <p>Saber will automatically train on as many GPUs as are available. In order for this to work, you must have <a href="https://developer.nvidia.com/cuda-downloads">CUDA</a> and, optionally, <a href="https://developer.nvidia.com/cudnn">CudDNN</a> installed. If you are using conda to manage your environment, then these are installed for you when you call</p>
 <div class="codehilite"><pre><span></span>(saber) $ conda install tensorflow-gpu
@@ -623,7 +614,7 @@
 <div class="codehilite"><pre><span></span>(saber) $ pip install tensorflow-gpu
 </pre></div>
 
-<details class="warning"><summary>Warning</summary><p>Use <code>pip install tensorflow-gpu==1.7.0</code> if you would like to train on multiple GPUs as <code>tensorflow-gpu</code> versions <code>&gt;1.7.0</code> are currently throwing errors.</p></details><p>To control which GPUs Saber trains on, you can use the <code>CUDA_VISIBLE_DEVICES</code> environment variable, e.g.,</p>
+<p>To control which GPUs Saber trains on, you can use the <code>CUDA_VISIBLE_DEVICES</code> environment variable, e.g.,</p>
 <div class="codehilite"><pre><span></span># To train exclusively on CPU
 (saber) $ CUDA_VISIBLE_DEVICES=&quot;&quot; python -m saber.cli.train
 
@@ -655,21 +646,6 @@
 <span class="c1"># Load a previous model</span>
 <span class="n">saber</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path_to_saved_model</span><span class="p">)</span>
 </pre></div>
-
-<h3 id="juypter-notebooks">Juypter notebooks<a class="headerlink" href="#juypter-notebooks" title="Permanent link">&para;</a></h3>
-<p>First, grab the notebook. Go <a href="https://raw.githubusercontent.com/BaderLab/saber/master/notebooks/lightning_tour.ipynb">here</a>, then press <code>command</code> / <code>control</code> + <code>s</code>, and save the notebook as <code>lightning_tour.ipynb</code> somewhere on your computer.</p>
-<p>Next, install <a href="https://github.com/jupyterlab/jupyterlab">JupyterLab</a> by following the instructions <a href="https://github.com/jupyterlab/jupyterlab#installation">here</a>. Once installed, run:</p>
-<div class="codehilite"><pre><span></span>(saber) $ jupyter lab
-</pre></div>
-
-<p>A new window will open in your browser. Use it to search for <code>lightning_tour.ipynb</code> on your computer.</p>
-<div class="admonition notes">
-<p class="admonition-title">Notes</p>
-<ul>
-<li>If you activated a virtual environment, "<code>myenv</code>", make sure you see <strong>Python [venv:myenv]</strong> in the top right of the Jupyter notebook.</li>
-<li>If you are using conda, you need to run <code>conda install nb_conda</code> with your environment activated (you only need to do this once!).</li>
-</ul>
-</div>
                 
                   
                 
@@ -748,7 +724,7 @@
       
     </div>
     
-      <script src="../assets/javascripts/application.583bbe55.js"></script>
+      <script src="../assets/javascripts/application.b41f3d20.js"></script>
       
       <script>app.initialize({version:"1.0.4",url:{base:".."}})</script>
       
