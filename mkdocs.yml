@@ -10,7 +10,7 @@ repo_url: 'https://github.com/BaderLab/saber'
 
 # Site map
 nav:
-    - Home: index.md
+    - About: index.md
     - Installation: installation.md
     - Quick Start: quick_start.md
     - Guide to the Saber API: guide_to_saber_api.md
