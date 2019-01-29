@@ -44,8 +44,8 @@ ENTITIES = {'ANAT': False,
             'TRIG': False}
 # Google Drive File IDs for the pre-trained models
 PRETRAINED_MODELS = {
-    'PRGE-BASE': '1xOmxpgNjQJK8OJSvih9wW5AITGQX6ODT',
-    'DISO-BASE': '1qmrBuqz75KM57Ug5MiDBfp0d5H3S_5ih'
+    'PRGE': '1xOmxpgNjQJK8OJSvih9wW5AITGQX6ODT',
+    'DISO': '1qmrBuqz75KM57Ug5MiDBfp0d5H3S_5ih'
 }
 # relative path to pre-trained model directory
 PRETRAINED_MODEL_DIR = resource_filename(__name__, 'pretrained_models')

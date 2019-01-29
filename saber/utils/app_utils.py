@@ -96,15 +96,15 @@ def load_models(ents):
     Given a dict with key (str): value (bool) pairs, loads each model (key) for which value is True.
 
     Args:
-        ents (dict): a dictionary where the keys correspond to entities and the values are booleans.
+        ents (dict): A dictionary where the keys correspond to entities and the values are booleans.
 
     Returns:
-        a dictionary with keys representing the model and values a loaded Saber object.
+        A dictionary with keys representing the model and values a Saber object with a loaded model.
     """
     models = {} # acc for models
     for ent, value in ents.items():
         if value:
-            path_to_model = os.path.join(constants.PRETRAINED_MODEL_DIR, ent)
+            path_to_model = os.path.join(constants.PRETRAINED_MODEL_DIR, '{}'.format(ent))
             generic_utils.extract_directory(path_to_model)
             # create and load the pre-trained models
             saber = Saber()
@@ -112,7 +112,6 @@ def load_models(ents):
             models[ent] = saber
     # TEMP: Weird solution to a weird bug.
     # https://github.com/tensorflow/tensorflow/issues/14356#issuecomment-385962623
-    # Unclear if this will work for multiple models! If not, return a graph for each.
     graph = tf.get_default_graph()
 
     return models, graph
