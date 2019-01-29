@@ -175,10 +175,12 @@ class Saber(object):
         # allows user to provide names of pre-trained models (e.g. 'PRGE-base')
         if pretrained_model in constants.PRETRAINED_MODELS:
             directory = os.path.join(constants.PRETRAINED_MODEL_DIR, pretrained_model)
-            # downlaod model from Google Drive, will skip if already exists
+            # download model from Google Drive, will skip if already exists
             file_id = constants.PRETRAINED_MODELS[pretrained_model]
             dest_path = '{}.tar.bz2'.format(directory)
             gdd.download_file_from_google_drive(file_id=file_id, dest_path=dest_path)
+
+            LOGGER.info('Loaded pre-trained model %s from Google Drive', pretrained_model)
 
         directory = generic_utils.clean_path(directory)
         generic_utils.extract_directory(directory)
