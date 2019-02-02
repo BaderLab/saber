@@ -7,8 +7,8 @@ import time
 from itertools import chain
 from pprint import pprint
 
-from spacy import displacy
 from seqeval.metrics.sequence_labeling import get_entities
+from spacy import displacy
 
 from . import constants
 from .config import Config
@@ -207,25 +207,27 @@ class Saber(object):
         end = time.time() - start
         print('Done ({0:.2f} seconds).'.format(end))
 
-    def load_dataset(self, directory=None):
+    def load_dataset(self, dataset_folder=None):
         """Coordinates the loading of a dataset.
 
         Args:
-            directory (str): Path to a dataset folder. If not None, overwrites
+            dataset_folder (str): Path to a dataset folder. If not None, overwrites
                 `self.config.dataset_folder`
 
         Raises:
-            ValueError: If `self.config.dataset_folder` is None and `directory` is None.
+            ValueError: If `self.config.dataset_folder` is None and `dataset_folder` is None.
         """
         start = time.time()
         # allows a user to provide the dataset directory when function is called
-        if directory is not None:
-            directory = directory if isinstance(directory, list) else [directory]
-            directory = [generic_utils.clean_path(dir_) for dir_ in directory]
-            self.config.dataset_folder = directory
+        if dataset_folder is not None:
+            dataset_folder = dataset_folder if isinstance(dataset_folder, list) else [dataset_folder]
+            dataset_folder = [generic_utils.clean_path(dir_) for dir_ in dataset_folder]
+            self.config.dataset_folder = dataset_folder
 
         if not self.config.dataset_folder:
-            err_msg = "Must provide at least one dataset via the `dataset_folder` parameter"
+            err_msg = ("Must provide at least one dataset via the `dataset_folder` parameter, "
+                       "either in the `*.ini` file, at the command line, or in "
+                       "`Saber.load_dataset()`")
             LOGGER.error('ValueError %s', err_msg)
             raise ValueError(err_msg)
 
@@ -369,7 +371,9 @@ class Saber(object):
                 try:
                     model.summary()
                 except AttributeError:
-                    print(model)
+                    # TODO (johnmgiorgi): Need nicer way to print representation of PyTorch model.
+                    # print(model)
+                    pass
 
     def train(self):
         """Initiates training of model at `self.model`.

@@ -1,15 +1,16 @@
 """A collection of model-related helper/utility functions.
 """
+import logging
 import os
 from itertools import chain
 from time import strftime
 
 import numpy as np
 import torch
-from pytorch_pretrained_bert import BertAdam
-from torch.optim import Adam
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras.preprocessing.sequence import pad_sequences
+from pytorch_pretrained_bert import BertAdam
+from torch.optim import Adam
 from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
                               TensorDataset)
 
@@ -17,8 +18,10 @@ from .. import constants
 from ..metrics import Metrics
 from .generic_utils import make_dir
 
+LOGGER = logging.getLogger(__name__)
 # TODO (johnmgiorgi): This should be handeled better. Maybe as a config argument.
 FULL_FINETUNING = True
+
 
 # I/O
 
@@ -153,7 +156,9 @@ def setup_metrics_callback(config, datasets, training_data, output_dir, fold=Non
         config (Config): Contains a set of harmonzied arguments provided in a *.ini file and,
             optionally, from the command line.
         datasets (list): A list of Dataset objects.
-        training_data (dict): A dictionary containing training data (inputs and targets).
+        training_data (list): A list of dictionaries, where the ith element contains the data
+            for the ith dataset indices and the dictionaries keys are dataset partitions
+            ('x_train', 'y_train', 'x_valid', ...)
         output_dir (list): List of directories to save model output to, one for each model.
         fold (int): The current fold in k-fold cross-validation. Defaults to None.
 
@@ -165,7 +170,7 @@ def setup_metrics_callback(config, datasets, training_data, output_dir, fold=Non
         eval_data = training_data[i] if fold is None else training_data[i][fold]
         metric = Metrics(config=config,
                          training_data=eval_data,
-                         index_map=dataset.idx_to_tag,
+                         idx_to_tag=dataset.idx_to_tag,
                          output_dir=output_dir[i],
                          fold=fold)
         metrics.append(metric)
@@ -216,6 +221,27 @@ def precision_recall_f1_support(true_positives, false_positives, false_negatives
 
     return precision, recall, f1_score, support
 
+def mask_pads(y_true, y_pred, tag_to_idx):
+    """Masks pads from `y_true` and `y_pred`.
+
+    Masks (removes) all indices in `y_true` and `y_pred` where `y_true` is equal to
+    `tag_to_idx[constants.PAD]`. This step is necessary for discarding the sequence pad labels
+    (and predictions made on these sequence pad labels) from the gold labels and model predictions
+    before performance metrics are computed.
+
+    y_true (np.array): 1D numpy array containing gold labels.
+    y_pred (np.array): 1D numpy array containing predicted labels.
+    tag_to_idx: A dictionary mapping label types to unique integers.
+
+    Returns:
+        `y_true` and `y_pred`, where all indices where `y_true` was equal to
+        `tag_to_idx[constants.PAD]` have been removed.
+    """
+    pad_mask = y_true != tag_to_idx[constants.PAD]
+    y_true, y_pred = y_true[pad_mask], y_pred[pad_mask]
+
+    return y_true, y_pred
+
 # Saving/loading
 
 def load_pretrained_model(config, datasets, weights_filepath, model_filepath):
@@ -253,18 +279,16 @@ def get_device(model=None):
 
     Args:
         (Torch.nn.Module) PyTorch model, if CUDA device is available this function with call
-            `model.cuda()`.
+            `model.cuda()`).
 
     Returns:
-        a CUDA device if available, otherise returns a CPU device.
+        A CUDA device if available, otherwise returns a CPU device.
     """
     # use a GPU if available
     if torch.cuda.is_available():
         device = torch.device("cuda")
         # n_gpu = torch.cuda.device_count()
-
-        model.cuda()
-
+        if model: model.cuda()
         print('Using CUDA(s) device with name: {}.'.format(torch.cuda.get_device_name(0)))
     else:
         device = torch.device("cpu")
@@ -285,7 +309,7 @@ def setup_type_to_idx_for_bert(dataset):
     Args:
         dataset (Dataset): Dataset object.
     """
-    # necc for dataset to be compatible with BERTS wordpiece tokenization
+    # necc for dataset to be compatible with BERTs wordpiece tokenization
     dataset.type_to_idx['tag']['X'] = len(dataset.type_to_idx['tag'])
     dataset.get_idx_to_tag()
 
@@ -306,13 +330,10 @@ def process_data_for_bert(tokenizer, word_seq, tag_seq, tag_to_idx):
     x_type, y_type = tokenize_for_bert(tokenizer, word_seq, tag_seq)
     # map these new tokens to indices using pre-trained BERT model
     x_idx, y_idx, attention_masks = type_to_idx_for_bert(tokenizer, x_type, y_type, tag_to_idx)
-    # TODO (johnmgiorgi): These should have been created as numpy arrays to begin with...
-    # fix this!
-    # convert to numpy arrays
-    x_idx, y_idx, attention_masks = np.array(x_idx), np.array(y_idx), np.array(attention_masks)
 
     return x_idx, y_idx, attention_masks
 
+# TODO (johnmgiorgi): See the BERT GitHub repo for code to do this more cleanly
 def tokenize_for_bert(tokenizer, word_seq, tag_seq):
     """Using `tokenizer`, tokenizes `word_seq` and `tag_seq` such that they are compatible with
     BERT.
@@ -350,23 +371,27 @@ def type_to_idx_for_bert(tokenizer, word_seq, tag_seq, tag_to_idx):
     """
     """
     # process words
-    bert_word_indices = [tokenizer.convert_tokens_to_ids(sent) for sent in word_seq]
-    bert_word_indices = pad_sequences(bert_word_indices,
-                                      maxlen=constants.MAX_SENT_LEN,
-                                      dtype="long",
-                                      truncating="post",
-                                      padding="post")
+    bert_word_indices = \
+        pad_sequences(sequences=[tokenizer.convert_tokens_to_ids(sent) for sent in word_seq],
+                      maxlen=constants.MAX_SENT_LEN,
+                      dtype='long',
+                      padding='post',
+                      truncating='post',
+                      value=constants.PAD_VALUE)
     # process tags
-    bert_tag_indices = [[tag_to_idx.get(tag, constants.UNK) for tag in sent] for sent in tag_seq]
-    bert_tag_indices = pad_sequences(bert_tag_indices,
-                                     maxlen=constants.MAX_SENT_LEN,
-                                     value=tag_to_idx[constants.PAD],
-                                     padding="post",
-                                     dtype="long",
-                                     truncating="post")
+    bert_tag_indices = \
+        pad_sequences(sequences=[[tag_to_idx[tag] for tag in sent] for sent in tag_seq],
+                      maxlen=constants.MAX_SENT_LEN,
+                      dtype='long',
+                      padding="post",
+                      truncating="post",
+                      value=constants.PAD_VALUE)
 
     # generate attention masks for padded data
     bert_attention_masks = [[float(idx > 0) for idx in sent] for sent in bert_word_indices]
+
+    bert_word_indices, bert_tag_indices, bert_attention_masks = \
+        np.asarray(bert_word_indices), np.asarray(bert_tag_indices), np.asarray(bert_attention_masks)
 
     return bert_word_indices, bert_tag_indices, bert_attention_masks
 
@@ -379,18 +404,19 @@ def get_dataloader_for_ber(x, y, attention_mask, config, data_partition='train')
         LOGGER.error('ValueError %s', err_msg)
         raise ValueError(err_msg)
 
-    x = torch.tensor(x)
-    y = torch.tensor(y)
-    attention_mask = torch.tensor(attention_mask)
+    x = torch.as_tensor(x)
+    y = torch.as_tensor(y)
+    attention_mask = torch.as_tensor(attention_mask)
+
+    data = TensorDataset(x, attention_mask, y)
 
     if data_partition == 'train':
-        data = TensorDataset(x, attention_mask, y)
         sampler = RandomSampler(data)
         dataloader = DataLoader(data, sampler=sampler, batch_size=config.batch_size)
     elif data_partition == 'eval':
-        data = TensorDataset(x, attention_mask, y)
         sampler = SequentialSampler(data)
-        dataloader = DataLoader(data, sampler=sampler, batch_size=config.batch_size)
+
+    dataloader = DataLoader(data, sampler=sampler, batch_size=config.batch_size)
 
     return dataloader
 

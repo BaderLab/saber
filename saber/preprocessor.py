@@ -160,7 +160,8 @@ class Preprocessor(object):
             ValueError, if `type_` is not one of 'word', 'char', 'tag'
         """
         if type_ not in ['word', 'char', 'tag']:
-            err_msg = "Argument `type_` must be one 'word', 'char' or 'type'"
+            err_msg = ("Argument `type_` to `Preprocessor.get_type_idx_sequence()` must be one "
+                       "'word', 'char' or 'type'")
             LOGGER.error('ValueError: %s', err_msg)
             raise ValueError(err_msg)
 
@@ -178,19 +179,49 @@ class Preprocessor(object):
 
             # create a sequence of padded character vectors
             for i, char_seq in enumerate(type_seq):
-                type_seq[i] = pad_sequences(maxlen=constants.MAX_CHAR_LEN,
-                                            sequences=char_seq,
+                type_seq[i] = pad_sequences(sequences=char_seq,
+                                            maxlen=constants.MAX_CHAR_LEN,
                                             padding="post",
                                             truncating='post',
                                             value=constants.PAD_VALUE)
         # pad sequences
-        type_seq = pad_sequences(maxlen=constants.MAX_SENT_LEN,
-                                 sequences=type_seq,
+        type_seq = pad_sequences(sequences=type_seq,
+                                 maxlen=constants.MAX_SENT_LEN,
                                  padding='post',
                                  truncating='post',
                                  value=constants.PAD_VALUE)
 
         return np.asarray(type_seq)
+
+    @staticmethod
+    def chunk_entities(seq):
+        """Chunks entities in the BIO or BIOES format.
+        For a given sequence of entities in the BIO or BIOES format, returns the chunked entities.
+        Note that invalid tag sequences will not be returned as chunks.
+        Args:
+            seq (list): sequence of labels.
+        Returns:
+            list: list of [chunk_type, chunk_start (inclusive), chunk_end (exclusive)].
+        Example:
+            >>> seq = ['B-PRGE', 'I-PRGE', 'O', 'B-PRGE']
+            >>> chunk_entities(seq)
+            [('PRGE', 0, 2), ('PRGE', 3, 4)]
+        """
+        i = 0
+        chunks = []
+        seq = seq + ['O']  # add sentinel
+        types = [tag.split('-')[-1] for tag in seq]
+        while i < len(seq):
+            if seq[i].startswith('B'):
+                for j in range(i + 1, len(seq)):
+                    if seq[j].startswith('I') and types[j] == types[i]:
+                        continue
+                    break
+                chunks.append((types[i], i, j))
+                i = j
+            else:
+                i += 1
+        return chunks
 
     @staticmethod
     def replace_rare_tokens(sentences, count=constants.NUM_RARE):

@@ -30,6 +30,20 @@ class BaseModel(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+    def train(self):
+        """Co-ordinates the training of model(s) at `self.models`.
+
+        Coordinates the training of one or more models (given at `self.model.models`). If a
+        valid or test set is provided (`Dataset.dataset_folder['valid']` or
+        `Dataset.dataset_folder['test']` are not None) a simple train/valid/test strategy is used.
+        Otherwise, cross-validation is used.
+        """
+        # TODO: ugly, is there a better way to check for this? what if dif ds follow dif schemes?
+        if all([dataset.dataset_folder['test'] for dataset in self.datasets]):
+            self.train_valid_test()
+        else:
+            self.cross_validation()
+
     def reset_model(self):
         """Clears and rebuilds the model.
 
@@ -57,7 +71,7 @@ class BaseKerasModel(BaseModel):
 
         # set Tensorflow logging level
         if self.config.verbose:
-            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
         else:
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
