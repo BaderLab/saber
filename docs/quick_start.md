@@ -1,6 +1,10 @@
 # Quick Start
 
-If your goal is simply to use Saber to annotate biomedical text, then you can either use the [web-service](#web-service) or a [pre-trained model](#pre-trained-models).
+If your goal is to use Saber to annotate biomedical text, then you can either use the [web-service](#web-service) or a [pre-trained model](#pre-trained-models). If you simply want to check Saber out, without installing anything locally, try the [Google Colaboratory](#google-colaboratory) notebook.
+
+## Google Colaboratory
+
+The fastest way to check out Saber is by following along with the Google Colaboratory notebook ([![Colab](https://img.shields.io/badge/launch-Google%20Colab-orange.svg?style=flat-square)](https://colab.research.google.com/drive/1WD7oruVuTo6p_908MQWXRBdLF3Vw2MPo)). In order to be able to run the cells, select "Open in Playground" or, alternatively, save a copy to your own Google Drive account (File > Save a copy in Drive).
 
 ## Web-service
 
@@ -56,8 +60,8 @@ print(response.text)
 print(response.status_code, response.reason)
 ```
 
-??? warning
-    The first request to the web-service will be slow (~30s). This is because a large language
+!!! warning
+    The first request to the web-service will be slow (~60s). This is because a large language
     model needs to be loaded into memory.
 
 Documentation for the Saber web-service API can be found [here](https://baderlab.github.io/saber-api-docs/). We hope to provide a live version of the web-service soon!
@@ -82,28 +86,25 @@ and then load the model of our choice
 saber.load('PRGE')
 ```
 
-You can see all the pre-trained models in the [web-service API docs](https://baderlab.github.io/saber-api-docs/) or, the [saber/pretrained_models](saber/pretrained_models) folder in this repository, or by running the following line of code
+!!! tip
+    See [Resources: Pre-trained models](https://baderlab.github.io/saber/resources/#pre-trained-models) for pre-trained model names and details. You will need an internet connection to download a pre-trained model.
 
-```python
-from saber.constants import ENTITIES; print(list(ENTITIES.keys()))
-```
-
-To annotate text with the model, just call the `annotate()` method
+To annotate text with the model, just call the `Saber.annotate()` method
 
 ```python
 saber.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.")
 ```
 
-??? warning
-    The `annotate` method will be slow the first time you call it (~30s). This is because a large language model needs to be loaded into memory.
+!!! warning
+    The `Saber.annotate()` method will be slow the first time you call it (~60s). This is because a large language model needs to be loaded into memory.
 
 ### Coreference Resolution
 
-[**Coreference**](http://www.wikiwand.com/en/Coreference) occurs when two or more expressions in a text refer to the same person or thing, that is, they have the same **referent**. Take the following example:
+[**Coreference**](https://en.wikipedia.org/wiki/Coreference) occurs when two or more expressions in a text refer to the same person or thing, that is, they have the same **referent**. Take the following example:
 
 _"__IL-6__ supports tumour growth and metastasising in terminal patients, and __it__ significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy."_
 
-Clearly, "__it__" referes to "__IL-6__". If we do not resolve this coreference, then "__it__" will not be labeled as an entity and any relation or event it is mentioned in will not be extracted. Saber uses [NeuralCoref](https://github.com/huggingface/neuralcoref), a state-of-the-art coreference resolution tool based on neural nets and built on top of [Spacy](https://spacy.io). To use it, just supply the argument `coref=True` (which is `False` by default) to the `annotate()` method
+Clearly, "__it__" referes to "__IL-6__". If we do not resolve this coreference, then "__it__" will not be labeled as an entity and any relation or event it is mentioned in will not be extracted. Saber uses [NeuralCoref](https://github.com/huggingface/neuralcoref), a state-of-the-art coreference resolution tool based on neural nets and built on top of [Spacy](https://spacy.io). To use it, just supply the argument `coref=True` (which is `False` by default) to the `Saber.annotate()` method
 
 ```python
 text = "IL-6 supports tumour growth and metastasising in terminal patients, and it significantly engages in cancer cachexia (including anorexia) and depression associated with malignancy."
@@ -120,7 +121,7 @@ Saber currently takes the simplest possible approach: replace all coreference me
 
 ### Working with annotations
 
-The `annotate()` method returns a simple `dict` object
+The `Saber.annotate()` method returns a simple `dict` object
 
 ```python
 ann = saber.annotate("The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.")
@@ -140,7 +141,7 @@ ann['ents']
 
 #### Converting annotations to JSON
 
-The `annotate()` method returns a `dict` object, but can be converted to a `JSON` formatted string for ease-of-use in downstream applications
+The `Saber.annotate()` method returns a `dict` object, but can be converted to a `JSON` formatted string for ease-of-use in downstream applications
 
 ```python
 import json
