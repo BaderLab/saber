@@ -1,6 +1,6 @@
 # Guide to the Saber API
 
-You can interact with Saber as a web-service (explained in [Quick start](https://baderlab.github.io/saber/quick_start/)), command line tool, python package, or via the Juypter notebooks. If you created a virtual environment, _remember to activate it first_.
+You can interact with Saber as a web-service (explained in [Quick Start: Web-service](https://baderlab.github.io/saber/quick_start/#web-service)), [command line tool](#command-line-tool), or as a [python package](#python-package). If you created a virtual environment, _remember to activate it first_.
 
 ### Command line tool
 
@@ -17,7 +17,7 @@ along with any command line arguments. For example, to train the model on the [N
 ```
 
 !!! tip
-    See [Resources](https://baderlab.github.io/saber/resources/) for help preparing datasets and word embeddings for training.
+    See [Resources: Datasets](https://baderlab.github.io/saber/resources/#datasets) for help preparing datasets and word embeddings for training.
 
 Run `python -m saber.cli.train --help` to see all possible arguments.
 
@@ -50,7 +50,7 @@ saber = Saber()
 
 # Load a dataset and create a model (provide a list of datasets to use multi-task learning!)
 saber.load_dataset('path/to/datasets/GENIA')
-saber.build()
+saber.build(model_name='MT-LSTM-CRF')
 
 # Train and save a model
 saber.train()
@@ -78,7 +78,7 @@ Transfer learning is as easy as training, saving, loading, and then continuing t
 # Create and train a model on GENIA corpus
 saber = Saber()
 saber.load_dataset('path/to/datasets/GENIA')
-saber.build()
+saber.build(model_name='MT-LSTM-CRF')
 saber.train()
 saber.save('pretrained_models/GENIA')
 
@@ -92,8 +92,8 @@ saber.load_dataset('path/to/datasets/CRAFT')
 saber.train()
 ```
 
-!!! info
-    There is currently no easy way to do this with the command line interface, but I am working on it!
+!!! note
+    This is currently only supported by the `mt-lstm-crf` model.
 
 #### Multi-task learning
 
@@ -107,9 +107,12 @@ saber = Saber()
 # Simply pass multiple dataset paths as a list to load_dataset to use multi-task learning.
 saber.load_dataset(['path/to/datasets/NCBI_Disease', 'path/to/datasets/Linnaeus'])
 
-saber.build()
+saber.build(model_name='MT-LSTM-CRF')
 saber.train()
 ```
+
+!!! note
+    This is currently only supported by the `mt-lstm-crf` model.
 
 #### Training on GPUs
 
@@ -124,9 +127,6 @@ Otherwise, install them yourself and use `pip` to install `tensorflow-gpu`
 ```
 (saber) $ pip install tensorflow-gpu
 ```
-
-??? warning
-     Use `pip install tensorflow-gpu==1.7.0` if you would like to train on multiple GPUs as `tensorflow-gpu` versions `>1.7.0` are currently throwing errors.
 
 To control which GPUs Saber trains on, you can use the `CUDA_VISIBLE_DEVICES` environment variable, e.g.,
 
@@ -169,20 +169,3 @@ saber = Saber()
 # Load a previous model
 saber.load(path_to_saved_model)
 ```
-
-### Juypter notebooks
-
-First, grab the notebook. Go [here](https://raw.githubusercontent.com/BaderLab/saber/master/notebooks/lightning_tour.ipynb), then press `command` / `control` + `s`, and save the notebook as `lightning_tour.ipynb` somewhere on your computer.
-
-
-Next, install [JupyterLab](https://github.com/jupyterlab/jupyterlab) by following the instructions [here](https://github.com/jupyterlab/jupyterlab#installation). Once installed, run:
-
-```
-(saber) $ jupyter lab
-```
-
-A new window will open in your browser. Use it to search for `lightning_tour.ipynb` on your computer.
-
-!!! notes
-    - If you activated a virtual environment, "`myenv`", make sure you see **Python [venv:myenv]** in the top right of the Jupyter notebook.
-    - If you are using conda, you need to run `conda install nb_conda` with your environment activated (you only need to do this once!).
