@@ -2,6 +2,7 @@
 """
 import logging
 import random
+import shutil
 
 from .utils import data_utils, model_utils
 
@@ -32,10 +33,6 @@ class KerasTrainer(object):
         valid or test set is provided (`Dataset.directory['valid']` or `Dataset.directory['test']`
         are not None) a simple train/valid/test strategy is used. Otherwise, cross-validation is
         used.
-
-        Args:
-            callbacks (dict): Dictionary containing Keras callback objects.
-            output_dir (list): List of directories to save model output to, one for each model.
         """
         # TODO: ugly, is there a better way to check for this? what if dif ds follow dif schemes?
         if (self.training_data[0]['x_valid'] is not None or
@@ -68,7 +65,9 @@ class KerasTrainer(object):
                                                      output_dir=self.output_dir)
         # training loop
         for epoch in range(self.config.epochs):
-            print('Global epoch: {}/{}\n{}'.format(epoch + 1, self.config.epochs, '-' * 20))
+            # create our text header
+            width, _ = shutil.get_terminal_size()
+            print('Global epoch: {}/{}\n{}'.format(epoch + 1, self.config.epochs, '-' * width))
             # get a random ordering of the dataset/model indices
             ds_idx = random.sample(range(0, len(self.datasets)), len(self.datasets))
             for i in ds_idx:
@@ -91,9 +90,9 @@ class KerasTrainer(object):
         only a train partition to be supplied in `training_data`.
 
         Args:
-            training_data (dict): a dictionary of dictionaries, where the first set of keys are
-                dataset indices (0, 1, ...) and the second set of keys are dataset partitions
-                ('X_train', 'y_train', 'X_valid', ...)
+            training_data (list): a list of dictionaries, where the ith element contains the data
+                for the ith dataset indices and the dictionaries keys are dataset partitions
+                ('x_train', 'y_train', 'x_valid', ...).
             output_dir (lst): a list of output directories, one for each dataset
             callbacks: a Keras CallBack object for per epoch model checkpointing.
         """
@@ -110,8 +109,10 @@ class KerasTrainer(object):
                                                          output_dir=self.output_dir,
                                                          fold=fold)
             for epoch in range(self.config.epochs):
+                # create our text header
+                width, _ = shutil.get_terminal_size()
                 train_info = (fold + 1, self.config.k_folds, epoch + 1, self.config.epochs)
-                print('Fold: {}/{}; Global epoch: {}/{}\n{}'.format(*train_info, '-' * 30))
+                print('Fold: {}/{}; Global epoch: {}/{}\n{}'.format(*train_info, '-' * width))
                 # get a random ordering of the dataset/model indices
                 ds_idx = random.sample(range(0, len(self.datasets)), len(self.datasets))
                 for i in ds_idx:
