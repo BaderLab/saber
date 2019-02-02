@@ -22,6 +22,7 @@ START = '<START>'  # start-of-sentence token
 END = '<END>'  # end-of-sentence token
 OUTSIDE_TAG = 'O'  # 'outside' tag of the IOB, BIO, and IOBES tag formats
 WORDPIECE_TAG = 'X'  # special tag used by BERTs wordpiece tokenizer
+CLASSIFICATION_TAG = '[CLS]'  # special tag used by BERTs classifiers
 
 # DATA
 RANDOM_STATE = 42  # random seed
@@ -68,6 +69,8 @@ MODEL_NAMES = ['bilstm-crf-ner', 'bert-ner']
 # identifies a model by the framework it was written in
 KERAS = 'keras'
 PYTORCH = 'pytorch'
+# which pre-trained BERT model to use
+PYTORCH_BERT_MODEL = 'bert-base-cased'
 
 # RESTful API
 # endpoint for Entrez Utilities Web Service API
