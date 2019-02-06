@@ -1,7 +1,7 @@
-# Include the README(s)
-include README.md CONTRIBUTING.md Dockerfile
+# Include README(s)
+include README.md CONTRIBUTING.md
 
-# Include the license file
+# Include license file
 include LICENSE.txt
 
 # Include Logo
@@ -10,14 +10,14 @@ include saber_logo.png
 # Include config file(s)
 global-include *.ini *.yml
 
-# Include pretrained model(s)
-include saber/pretrained_models/PRGE.tar.bz2
+# Include Dockerfile
+include Dockerfile
 
-# Include the test resources
+# Include test resources
 graft saber/tests
 
-# Include documentation
-recursive-include docs *.md
+# Include docs
+graft docs
 
 # Don't include notebooks
 prune notebooks
