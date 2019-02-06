@@ -79,6 +79,27 @@ def test_get_type_to_idx_sequence():
 
     pass
 
+def test_chunk_entities():
+    """Asserts that call to Preprocessor.chunk_entities() returns the
+    expected results."""
+    simple_seq = ['B-PRGE', 'I-PRGE', 'O', 'B-PRGE']
+    simple_expected = [('PRGE', 0, 2), ('PRGE', 3, 4)]
+
+    two_type_seq = ['B-LIVB', 'I-LIVB', 'O', 'B-PRGE']
+    two_type_expected = [('LIVB', 0, 2), ('PRGE', 3, 4)]
+
+    invalid_seq = ['O', 'I-CHED', 'I-CHED', 'O']
+    invalid_expected = []
+
+    blank_seq = []
+    blank_expected = []
+
+    assert Preprocessor.chunk_entities(simple_seq) == simple_expected
+    assert Preprocessor.chunk_entities(two_type_seq) == two_type_expected
+    assert Preprocessor.chunk_entities(invalid_seq) == invalid_expected
+    assert Preprocessor.chunk_entities(blank_seq) == blank_expected
+
+
 def test_sterilize():
     """Asserts that call to Preprocessor.sterilize() returns the
     expected results."""
