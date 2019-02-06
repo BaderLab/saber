@@ -24,7 +24,7 @@ def dummy_dataset():
     """Returns a single dummy Dataset instance after calling Dataset.load().
     """
     # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
+    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
     dataset.load()
 
     return dataset
@@ -59,7 +59,7 @@ def dummy_metrics(dummy_config, dummy_dataset, dummy_training_data, dummy_output
     """
     metrics = Metrics(config=dummy_config,
                       training_data=dummy_training_data,
-                      index_map=dummy_dataset.idx_to_tag,
+                      idx_to_tag=dummy_dataset.idx_to_tag,
                       output_dir=dummy_output_dir,
                       # to test passing of arbitrary keyword args to constructor
                       totally_arbitrary='arbitrary')
@@ -76,7 +76,7 @@ def test_attributes_after_initilization(dummy_config,
     # attributes that are passed to __init__
     assert dummy_metrics.config is dummy_config
     assert dummy_metrics.training_data is dummy_training_data
-    assert dummy_metrics.index_map is dummy_dataset.idx_to_tag
+    assert dummy_metrics.idx_to_tag is dummy_dataset.idx_to_tag
     assert dummy_metrics.output_dir == dummy_output_dir
     # other instance attributes
     assert dummy_metrics.current_epoch == 0
