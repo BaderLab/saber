@@ -8,9 +8,9 @@ from itertools import chain
 from pprint import pprint
 
 from spacy import displacy
-from seqeval.metrics.sequence_labeling import get_entities
 
 from . import constants
+from google_drive_downloader import GoogleDriveDownloader as gdd
 from .config import Config
 from .dataset import Dataset
 from .embeddings import Embeddings
@@ -93,7 +93,7 @@ class Saber(object):
         y_pred = model.predict(model_input, constants.PRED_BATCH_SIZE).argmax(-1).ravel()
         # convert predictions to tags (removing pads) and then chunk
         pred_tag_seq = [ds.idx_to_tag[idx] for idx in y_pred if ds.idx_to_tag[idx] != constants.PAD]
-        pred_chunk_seq = get_entities(pred_tag_seq)
+        pred_chunk_seq = self.preprocessor.chunk_entities(pred_tag_seq)
         # flatten the token offsets
         offsets = list(chain.from_iterable(transformed_text['offsets']))
 
@@ -177,9 +177,18 @@ class Saber(object):
         start = time.time()
         print('Loading model...', end=' ', flush=True)
 
-        # Allows user to provide names of pre-trained models (e.g. 'PRGE') rather than filepaths
-        if directory.upper() in constants.PRETRAINED_MODELS:
-            directory = os.path.join(constants.PRETRAINED_MODEL_DIR, directory.upper())
+        # get what might be a pretrained model name
+        pretrained_model = os.path.splitext(directory)[0].strip().upper()
+
+        # allows user to provide names of pre-trained models (e.g. 'PRGE-base')
+        if pretrained_model in constants.PRETRAINED_MODELS:
+            directory = os.path.join(constants.PRETRAINED_MODEL_DIR, pretrained_model)
+            # download model from Google Drive, will skip if already exists
+            file_id = constants.PRETRAINED_MODELS[pretrained_model]
+            dest_path = '{}.tar.bz2'.format(directory)
+            gdd.download_file_from_google_drive(file_id=file_id, dest_path=dest_path)
+
+            LOGGER.info('Loaded pre-trained model %s from Google Drive', pretrained_model)
 
         directory = generic_utils.clean_path(directory)
         generic_utils.extract_directory(directory)
@@ -207,25 +216,27 @@ class Saber(object):
         end = time.time() - start
         print('Done ({0:.2f} seconds).'.format(end))
 
-    def load_dataset(self, directory=None):
+    def load_dataset(self, dataset_folder=None):
         """Coordinates the loading of a dataset.
 
         Args:
-            directory (str): Path to a dataset folder. If not None, overwrites
+            dataset_folder (str): Path to a dataset folder. If not None, overwrites
                 `self.config.dataset_folder`
 
         Raises:
-            ValueError: If `self.config.dataset_folder` is None and `directory` is None.
+            ValueError: If `self.config.dataset_folder` is None and `dataset_folder` is None.
         """
         start = time.time()
         # allows a user to provide the dataset directory when function is called
-        if directory is not None:
-            directory = directory if isinstance(directory, list) else [directory]
-            directory = [generic_utils.clean_path(dir_) for dir_ in directory]
-            self.config.dataset_folder = directory
+        if dataset_folder is not None:
+            dataset_folder = dataset_folder if isinstance(dataset_folder, list) else [dataset_folder]
+            dataset_folder = [generic_utils.clean_path(dir_) for dir_ in dataset_folder]
+            self.config.dataset_folder = dataset_folder
 
         if not self.config.dataset_folder:
-            err_msg = "Must provide at least one dataset via the `dataset_folder` parameter"
+            err_msg = ("Must provide at least one dataset via the `dataset_folder` parameter, "
+                       "either in the `*.ini` file, at the command line, or in "
+                       "`Saber.load_dataset()`")
             LOGGER.error('ValueError %s', err_msg)
             raise ValueError(err_msg)
 
@@ -369,7 +380,9 @@ class Saber(object):
                 try:
                     model.summary()
                 except AttributeError:
-                    print(model)
+                    # TODO (johnmgiorgi): Need nicer way to print representation of PyTorch model.
+                    # print(model)
+                    pass
 
     def train(self):
         """Initiates training of model at `self.model`.
