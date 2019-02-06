@@ -1,7 +1,6 @@
 """Any and all unit tests for the data_utils (saber/utils/data_utils.py).
 """
 import numpy as np
-
 import pytest
 
 from ..config import Config
@@ -22,7 +21,7 @@ def dummy_dataset_1():
     """Returns a single dummy Dataset instance after calling Dataset.load().
     """
     # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
+    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
     dataset.load()
 
     return dataset
@@ -32,7 +31,7 @@ def dummy_dataset_2():
     """Returns a single dummy Dataset instance after calling `Dataset.load()`.
     """
     # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_2, replace_rare_tokens=False)
+    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_2, replace_rare_tokens=False)
     dataset.load()
 
     return dataset
@@ -90,12 +89,12 @@ def test_get_filepaths_all(dummy_dataset_paths_all):
     """Asserts that `data_utils.get_filepaths()` returns the expected filepaths when all partitions
     (train/test/valid) are provided.
     """
-    dummy_dataset_directory, train_filepath, valid_filepath, test_filepath = dummy_dataset_paths_all
+    dummy_dataset_folder, train_filepath, valid_filepath, test_filepath = dummy_dataset_paths_all
     expected = {'train': train_filepath,
                 'valid': valid_filepath,
                 'test': test_filepath
                }
-    actual = data_utils.get_filepaths(dummy_dataset_directory)
+    actual = data_utils.get_filepaths(dummy_dataset_folder)
 
     assert actual == expected
 
@@ -103,12 +102,12 @@ def test_get_filepaths_no_valid(dummy_dataset_paths_no_valid):
     """Asserts that `data_utils.get_filepaths()` returns the expected filepaths when train and
     test partitions are provided.
     """
-    dummy_dataset_directory, train_filepath, test_filepath = dummy_dataset_paths_no_valid
+    dummy_dataset_folder, train_filepath, test_filepath = dummy_dataset_paths_no_valid
     expected = {'train': train_filepath,
                 'valid': None,
                 'test': test_filepath
                }
-    actual = data_utils.get_filepaths(dummy_dataset_directory)
+    actual = data_utils.get_filepaths(dummy_dataset_folder)
 
     assert actual == expected
 
@@ -143,13 +142,13 @@ def test_load_compound_dataset_unchanged_attributes(dummy_dataset_1,
     assert all([isinstance(ds, Dataset) for ds in actual])
 
     # attributes that are unchanged in case of compound dataset
-    assert actual[0].directory == expected[0].directory
+    assert actual[0].dataset_folder == expected[0].dataset_folder
     assert actual[0].replace_rare_tokens == expected[0].replace_rare_tokens
     assert actual[0].type_seq == expected[0].type_seq
     assert actual[0].type_to_idx['tag'] == expected[0].type_to_idx['tag']
     assert actual[0].idx_to_tag == expected[0].idx_to_tag
 
-    assert actual[-1].directory == expected[-1].directory
+    assert actual[-1].dataset_folder == expected[-1].dataset_folder
     assert actual[-1].replace_rare_tokens == expected[-1].replace_rare_tokens
     assert actual[-1].type_seq == expected[-1].type_seq
     assert actual[-1].type_to_idx['tag'] == expected[-1].type_to_idx['tag']

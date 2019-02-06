@@ -1,7 +1,6 @@
 """Any and all unit tests for the Embeddings class (saber/embeddings.py).
 """
 import numpy as np
-
 import pytest
 
 from ..embeddings import Embeddings
