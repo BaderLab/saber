@@ -73,7 +73,7 @@ $ wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w
 To use these word embeddings with Saber, provide their path in the `pretrained_embeddings` argument (either in the `config` file or at the command line). Alternatively, pass their path to `Saber.load_embeddings()`. For example:
 
 ```python
-from saber.saber import Saber
+from saber import Saber
 
 saber = Saber()
 

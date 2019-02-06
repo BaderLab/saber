@@ -1,10 +1,8 @@
 import logging
 import os
-
 from datetime import datetime
-
-# set Tensorflow logging level
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+# make Saber, the interface for the entire package, importable from root
+from .saber import Saber
 
 # if applicable, delete the existing log file to generate a fresh log file during each execution
 try:

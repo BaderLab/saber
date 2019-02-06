@@ -15,12 +15,11 @@ from .config import Config
 from .dataset import Dataset
 from .embeddings import Embeddings
 from .preprocessor import Preprocessor
-from .trainer import Trainer
+from .trainer import KerasTrainer
 from .utils import data_utils, generic_utils, grounding_utils, model_utils
 
 print('Saber version: {0}'.format(constants.__version__))
 LOGGER = logging.getLogger(__name__)
-
 
 class Saber(object):
     """The interface for Saber.
@@ -47,7 +46,6 @@ class Saber(object):
         if self.config.verbose:
             print('Hyperparameters and model details:')
             pprint({arg: getattr(self.config, arg) for arg in constants.CONFIG_ARGS})
-            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
     def annotate(self, text, model_idx=0, jupyter=False, coref=False, ground=False):
         """Uses a trained model (`self.model`) to annotate `text`, returns a dictionary.
@@ -60,7 +58,7 @@ class Saber(object):
         text (str): Raw text to annotate.
         model_idx (int): Index of model to use for prediction, defaults to 0.
         title (str): Title of the document, defaults to None.
-        coref (book): True if coreference resolution should be performed before annotation, defaults
+        coref (bool): True if coreference resolution should be performed before annotation, defaults
             to False.
         jupyter (bool): True if annotations made by the model should be rendered in HTML, which can
             be visualized in a jupter notebook, defaults to false.
@@ -140,14 +138,24 @@ class Saber(object):
         directory = generic_utils.clean_path(directory)
         generic_utils.make_dir(directory)
 
-        weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
         model_filepath = os.path.join(directory, constants.MODEL_FILENAME)
-        self.model.save(weights_filepath, model_filepath, model_idx)
-        # beside the architecture and weights, save only the objects we need for model prediction
+
+        # model saving works slightly different based on models framework
+        if self.model.models[model_idx].framework == constants.KERAS:
+            weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
+            model_attributes = {'model_name': self.config.model_name,
+                                'type_to_idx': self.datasets[model_idx].type_to_idx,
+                                'idx_to_tag': self.datasets[model_idx].idx_to_tag}
+
+            self.model.save(weights_filepath, model_filepath, model_idx)
+        elif self.model.models[model_idx].framework == constants.PYTORCH:
+            model_filepath = os.path.join(directory, constants.MODEL_FILENAME)
+            model_attributes = {'model_name': self.config.model_name}
+
+            self.model.save(model_filepath, model_idx)
+
+        # beside the architecture and weights, save the objects we need for model prediction
         attributes_filepath = os.path.join(directory, constants.ATTRIBUTES_FILENAME)
-        model_attributes = {'model_name': self.config.model_name,
-                            'type_to_idx': self.datasets[model_idx].type_to_idx,
-                            'idx_to_tag': self.datasets[model_idx].idx_to_tag}
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
         # save config for reproducibility
         self.config.save(directory)
@@ -208,25 +216,27 @@ class Saber(object):
         end = time.time() - start
         print('Done ({0:.2f} seconds).'.format(end))
 
-    def load_dataset(self, directory=None):
+    def load_dataset(self, dataset_folder=None):
         """Coordinates the loading of a dataset.
 
         Args:
-            directory (str): Path to a dataset folder. If not None, overwrites
+            dataset_folder (str): Path to a dataset folder. If not None, overwrites
                 `self.config.dataset_folder`
 
         Raises:
-            ValueError: If `self.config.dataset_folder` is None and `directory` is None.
+            ValueError: If `self.config.dataset_folder` is None and `dataset_folder` is None.
         """
         start = time.time()
         # allows a user to provide the dataset directory when function is called
-        if directory is not None:
-            directory = directory if isinstance(directory, list) else [directory]
-            directory = [generic_utils.clean_path(dir_) for dir_ in directory]
-            self.config.dataset_folder = directory
+        if dataset_folder is not None:
+            dataset_folder = dataset_folder if isinstance(dataset_folder, list) else [dataset_folder]
+            dataset_folder = [generic_utils.clean_path(dir_) for dir_ in dataset_folder]
+            self.config.dataset_folder = dataset_folder
 
         if not self.config.dataset_folder:
-            err_msg = "Must provide at least one dataset via the `dataset_folder` parameter"
+            err_msg = ("Must provide at least one dataset via the `dataset_folder` parameter, "
+                       "either in the `*.ini` file, at the command line, or in "
+                       "`Saber.load_dataset()`")
             LOGGER.error('ValueError %s', err_msg)
             raise ValueError(err_msg)
 
@@ -341,16 +351,20 @@ class Saber(object):
             raise ValueError(err_msg)
 
         # setup the chosen model
-        if self.config.model_name == 'mt-lstm-crf':
+        if self.config.model_name == 'bilstm-crf-ner':
             print('Building the multi-task BiLSTM-CRF model...', end=' ', flush=True)
             from .models.multi_task_lstm_crf import MultiTaskLSTMCRF
             model = MultiTaskLSTMCRF(config=self.config,
                                      datasets=self.datasets,
                                      embeddings=self.embeddings)
+            model.specify()
+            model.compile()
 
-        # create the model
-        model.specify()
-        model.compile()
+        elif self.config.model_name == 'bert-ner':
+            from .models.bert_token_classifier import BertTokenClassifier
+            model = BertTokenClassifier(config=self.config, datasets=self.datasets)
+            model.specify()
+
         self.model = model
 
         elapsed_time = time.time() - start_time
@@ -361,7 +375,14 @@ class Saber(object):
             for i, model in enumerate(self.model.models):
                 ds_name = os.path.basename(self.config.dataset_folder[i])
                 print('Model architecture for dataset {}:'.format(ds_name))
-                model.summary()
+                # if this is a Keras model, use summary() method, otherwise we expect it to be
+                # a PyTorch model so we print it
+                try:
+                    model.summary()
+                except AttributeError:
+                    # TODO (johnmgiorgi): Need nicer way to print representation of PyTorch model.
+                    # print(model)
+                    pass
 
     def train(self):
         """Initiates training of model at `self.model`.
@@ -378,8 +399,12 @@ class Saber(object):
             LOGGER.error('MissingStepException: %s', err_msg)
             raise MissingStepException(err_msg)
 
-        trainer = Trainer(self.config, self.datasets, self.model)
-        trainer.train()
+        # TODO (johnmgiorgi): This is only temporary! Need to make a decision on the training API
+        if self.config.model_name == 'bert-ner':
+            self.model.train()
+        else:
+            trainer = KerasTrainer(self.config, self.datasets, self.model)
+            trainer.train()
 
 # https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
 class MissingStepException(Exception):

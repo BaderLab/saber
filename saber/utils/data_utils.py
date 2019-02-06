@@ -62,7 +62,7 @@ def load_single_dataset(config):
     """
     from ..dataset import Dataset # breaks circular import
 
-    dataset = Dataset(directory=config.dataset_folder[0],
+    dataset = Dataset(dataset_folder=config.dataset_folder[0],
                       replace_rare_tokens=config.replace_rare_tokens)
     dataset.load()
 
@@ -87,7 +87,7 @@ def load_compound_dataset(config):
     # accumulate and load each dataset
     compound_dataset = []
     for dir_ in config.dataset_folder:
-        dataset = Dataset(directory=dir_, replace_rare_tokens=config.replace_rare_tokens)
+        dataset = Dataset(dataset_folder=dir_, replace_rare_tokens=config.replace_rare_tokens)
         dataset.load()
         compound_dataset.append(dataset)
 
