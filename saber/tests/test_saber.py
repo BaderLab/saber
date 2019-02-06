@@ -8,8 +8,8 @@ from ..embeddings import Embeddings
 from ..models.base_model import BaseKerasModel
 from ..preprocessor import Preprocessor
 from ..saber import MissingStepException, Saber
-from .resources.dummy_constants import *
 from .resources import helpers
+from .resources.dummy_constants import *
 
 # TODO (johngiorgi): Write tests for compound dataset
 
@@ -29,7 +29,7 @@ def dummy_dataset_1():
     """Returns a single dummy Dataset instance after calling Dataset.load().
     """
     # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
+    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
     dataset.load()
 
     return dataset
@@ -39,7 +39,7 @@ def dummy_dataset_2():
     """Returns a single dummy Dataset instance after calling `Dataset.load()`.
     """
     # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_2, replace_rare_tokens=False)
+    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_2, replace_rare_tokens=False)
     dataset.load()
 
     return dataset
@@ -57,7 +57,7 @@ def saber_single_dataset(dummy_config_single_dataset):
     """Returns instance of `Saber` initialized with the dummy config file and a single dataset.
     """
     saber = Saber(config=dummy_config_single_dataset)
-    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
+    saber.load_dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1)
 
     return saber
 
@@ -67,7 +67,7 @@ def saber_single_dataset_embeddings(dummy_config_single_dataset):
     embeddings.
     """
     saber = Saber(config=dummy_config_single_dataset)
-    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
+    saber.load_dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1)
     saber.load_embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, binary=False)
 
     return saber
@@ -77,7 +77,7 @@ def saber_single_dataset_model(dummy_config_single_dataset):
     """Returns an instance of `Saber` initialized with the dummy config file, a single dataset
     a Keras model."""
     saber = Saber(config=dummy_config_single_dataset)
-    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
+    saber.load_dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1)
     saber.build()
 
     return saber
@@ -104,7 +104,7 @@ def saber_compound_dataset(dummy_config_compound_dataset):
     """
     compound_dataset = [PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_1]
     saber = Saber(config=dummy_config_compound_dataset)
-    saber.load_dataset(directory=compound_dataset)
+    saber.load_dataset(dataset_folder=compound_dataset)
 
     return saber
 
@@ -113,7 +113,7 @@ def saber_compound_dataset_model(dummy_config_compound_dataset):
     """Returns an instance of `Saber` initialized with the dummy config file, a single dataset
     a Keras model."""
     saber = Saber(config=dummy_config_compound_dataset)
-    saber.load_dataset(directory=[PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2])
+    saber.load_dataset(dataset_folder=[PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2])
     saber.build()
 
     return saber

@@ -99,6 +99,7 @@ def test_chunk_entities():
     assert Preprocessor.chunk_entities(invalid_seq) == invalid_expected
     assert Preprocessor.chunk_entities(blank_seq) == blank_expected
 
+
 def test_sterilize():
     """Asserts that call to Preprocessor.sterilize() returns the
     expected results."""
