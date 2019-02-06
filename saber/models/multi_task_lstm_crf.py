@@ -2,6 +2,7 @@
 """
 import logging
 
+import numpy as np
 import tensorflow as tf
 from keras.layers import (LSTM, Bidirectional, Concatenate, Dense, Dropout,
                           Embedding, SpatialDropout1D, TimeDistributed)
@@ -11,6 +12,7 @@ from keras_contrib.layers.crf import CRF
 from keras_contrib.losses.crf_losses import crf_loss
 
 from .. import constants
+from ..utils import model_utils
 from .base_model import BaseKerasModel
 
 LOGGER = logging.getLogger(__name__)
@@ -165,6 +167,43 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                           lr=self.config.learning_rate,
                           decay=self.config.decay,
                           clipnorm=self.config.grad_norm)
+
+    def prediction_step(self, training_data, model_idx, partition='train'):
+        """Get `y_true` and `y_pred` for given inputs and targets in `training_data`.
+
+        Performs prediction for the current model (`self.model`), and returns a 2-tuple containing
+        the true (gold) labels and the predicted labels, where labels are integers corresponding to
+        mapping at `self.idx_to_tag`. Inputs are given at `training_data[x_partition]` and gold
+        labels at `training_data[y_partition]`.
+
+        Args:
+            training_data (dict): Contains the data (at key `x_partition`) and targets
+                (at key `y_partition`) for each partition: 'train', 'valid' and 'test'.
+            partition (str): Which partition to perform a prediction step on, must be one of
+                'train', 'valid', 'test'.
+
+        Returns:
+            A two-tuple containing the gold label integer sequences and the predicted integer label
+            sequences.
+        """
+        X, y = training_data['x_{}'.format(partition)], training_data['y_{}'.format(partition)]
+        # gold labels
+        y_true = y.argmax(axis=-1) # get class label
+        y_true = np.asarray(y_true).ravel() # flatten to 1D array
+        # predicted labels
+        y_pred = self.model.predict(X, batch_size=constants.PRED_BATCH_SIZE)
+        y_pred = np.asarray(y_pred.argmax(axis=-1)).ravel()
+        # mask out pads
+        y_true, y_pred = model_utils.mask_pads(y_true, y_pred, dataset.type_to_idx['tag'])
+
+        # sanity check
+        if not y_true.shape == y_pred.shape:
+            err_msg = ("'y_true' and 'y_pred' in 'MultiTaskLSTMCRF.prediction_step() have different"
+                       " shapes ({} and {} respectively)".format(y_true.shape, y_pred.shape))
+            LOGGER.error('AssertionError: %s', err_msg)
+            raise AssertionError(err_msg)
+
+        return y_true, y_pred
 
     def prepare_data_for_training(self):
         """Returns a list containing the training data for each dataset at `self.datasets`.
