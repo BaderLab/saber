@@ -10,7 +10,6 @@ from statistics import mean
 import numpy as np
 from keras.callbacks import Callback
 from prettytable import PrettyTable
-from seqeval.metrics.sequence_labeling import get_entities
 
 from . import constants
 from .preprocessor import Preprocessor
