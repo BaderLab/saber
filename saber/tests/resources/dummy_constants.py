@@ -3,8 +3,9 @@
 import logging
 import os
 
-import numpy as np
 from pkg_resources import resource_filename
+
+import numpy as np
 
 from ... import constants
 
@@ -19,9 +20,10 @@ PATH_TO_DUMMY_EMBEDDINGS = resource_filename(__name__, 'dummy_word_embeddings/du
 ######################################### DUMMY EMBEDDINGS #########################################
 
 # for testing embeddings
-DUMMY_TOKEN_MAP = {'<PAD>': 0, '<UNK>': 1, 'the': 2, 'quick': 3, 'brown': 4, 'fox': 5}
-DUMMY_CHAR_MAP = {'<PAD>': 0, '<UNK>': 1, 'r': 2, 'u': 3, 'c': 4, 'f': 5, 'e': 6, 'o': 7, 'x': 8,
-                  'h': 9, 'b': 10, 'n': 11, 'w': 12, 'i': 13, 't': 14, 'q': 15, 'k': 16}
+DUMMY_TOKEN_MAP = {constants.PAD: 0, constants.UNK: 1, 'the': 2, 'quick': 3, 'brown': 4, 'fox': 5}
+DUMMY_CHAR_MAP = {constants.PAD: 0, constants.UNK: 1, 'r': 2, 'u': 3, 'c': 4, 'f': 5, 'e': 6,
+                  'o': 7, 'x': 8, 'h': 9, 'b': 10, 'n': 11, 'w': 12, 'i': 13, 't': 14, 'q': 15,
+                  'k': 16}
 DUMMY_EMBEDDINGS_INDEX = {
     'the': [0.15580128, -0.07108746, 0.055198, -0.14199848, 0.0005317868],
     'quick': [-0.011208724, 0.21213274, -0.17233513, -0.4401193, 0.13930725],
