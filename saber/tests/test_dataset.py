@@ -3,9 +3,8 @@
 import os
 
 import numpy as np
-from nltk.corpus.reader.conll import ConllCorpusReader
-
 import pytest
+from nltk.corpus.reader.conll import ConllCorpusReader
 
 from .. import constants
 from ..dataset import Dataset
@@ -21,7 +20,7 @@ def empty_dummy_dataset():
     """Returns an empty single dummy Dataset instance.
     """
     # Don't replace rare tokens for the sake of testing
-    return Dataset(directory=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False,
+    return Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False,
                    # to test passing of arbitrary keyword args to constructor
                    totally_arbitrary='arbitrary')
 
@@ -30,7 +29,7 @@ def loaded_dummy_dataset():
     """Returns a single dummy Dataset instance after calling Dataset.load().
     """
     # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
+    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
     dataset.load()
 
     return dataset
@@ -44,9 +43,9 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     `Dataset.load()` has not been called).
     """
     # attributes that are passed to __init__
-    for partition in empty_dummy_dataset.directory:
+    for partition in empty_dummy_dataset.dataset_folder:
         expected = os.path.join(PATH_TO_DUMMY_DATASET_1, '{}.tsv'.format(partition))
-        assert empty_dummy_dataset.directory[partition] == expected
+        assert empty_dummy_dataset.dataset_folder[partition] == expected
     assert not empty_dummy_dataset.replace_rare_tokens
     # other instance attributes
     assert empty_dummy_dataset.conll_parser.root == PATH_TO_DUMMY_DATASET_1
@@ -58,10 +57,10 @@ def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
     assert empty_dummy_dataset.totally_arbitrary == 'arbitrary'
 
 def test_value_error_load(empty_dummy_dataset):
-    """Asserts that `Dataset.load()` raises a ValueError when `Dataset.directory` is None.
+    """Asserts that `Dataset.load()` raises a ValueError when `Dataset.dataset_folder` is None.
     """
-    # Set directory to None to force error to arise
-    empty_dummy_dataset.directory = None
+    # Set `dataset_folder` to None to force error to arise
+    empty_dummy_dataset.dataset_folder = None
     with pytest.raises(ValueError):
         empty_dummy_dataset.load()
 
@@ -149,14 +148,15 @@ def test_get_idx_maps_single_dataset_after_load(loaded_dummy_dataset):
     """Asserts that `Dataset.type_to_idx` is updated as expected after call to `Dataset.load()`.
     """
     # ensure that index mapping is a contigous sequence of numbers starting at 0
-    # ensure that index mapping is a contigous sequence of numbers starting at 0
     assert generic_utils.is_consecutive(loaded_dummy_dataset.type_to_idx['word'].values())
     assert generic_utils.is_consecutive(loaded_dummy_dataset.type_to_idx['char'].values())
     assert generic_utils.is_consecutive(loaded_dummy_dataset.type_to_idx['tag'].values())
     # ensure that type to index mapping contains the expected keys
-    assert all(key in DUMMY_WORD_TYPES for key in loaded_dummy_dataset.type_to_idx['word'])
-    assert all(key in DUMMY_CHAR_TYPES for key in loaded_dummy_dataset.type_to_idx['char'])
-    assert all(key in DUMMY_TAG_TYPES for key in loaded_dummy_dataset.type_to_idx['tag'])
+    print(DUMMY_CHAR_TYPES)
+    print(loaded_dummy_dataset.type_to_idx['char'])
+    assert all(item in DUMMY_WORD_TYPES for item in loaded_dummy_dataset.type_to_idx['word'])
+    assert all(item in DUMMY_CHAR_TYPES for item in loaded_dummy_dataset.type_to_idx['char'])
+    assert all(item in DUMMY_TAG_TYPES for item in loaded_dummy_dataset.type_to_idx['tag'])
 
 def test_get_idx_maps_single_dataset_after_load_special_tokens(loaded_dummy_dataset):
     """Asserts that `Dataset.type_to_idx` contains the special tokens as keys with expected values

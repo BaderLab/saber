@@ -20,7 +20,7 @@ def dummy_dataset_1():
     """Returns a single dummy Dataset instance after calling `Dataset.load()`.
     """
     # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
+    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
     dataset.load()
 
     return dataset
@@ -30,7 +30,7 @@ def dummy_dataset_2():
     """Returns a single dummy Dataset instance after calling `Dataset.load()`.
     """
     # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(directory=PATH_TO_DUMMY_DATASET_2, replace_rare_tokens=False)
+    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_2, replace_rare_tokens=False)
     dataset.load()
 
     return dataset
