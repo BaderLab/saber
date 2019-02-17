@@ -7,10 +7,10 @@ import time
 from itertools import chain
 from pprint import pprint
 
+from google_drive_downloader import GoogleDriveDownloader as gdd
 from spacy import displacy
 
 from . import constants
-from google_drive_downloader import GoogleDriveDownloader as gdd
 from .config import Config
 from .dataset import Dataset
 from .embeddings import Embeddings
@@ -74,7 +74,11 @@ class Saber(object):
         """
         # this takes about a minute to load, so only do it once!
         if self.preprocessor is None:
+            start = time.time()
+            print('Loading preprocessor... (note this only happens once)', end=' ', flush=True)
             self.preprocessor = Preprocessor()
+            end = time.time() - start
+            print('Done ({0:.2f} seconds).'.format(end))
 
         if not isinstance(text, str) or not text:
             err_msg = "Argument `text` must be a valid, non-empty string."
