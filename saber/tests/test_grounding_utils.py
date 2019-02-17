@@ -4,43 +4,98 @@ import pytest
 
 from ..utils import grounding_utils
 
-
 @pytest.fixture
-def annotation():
-    """Returns a dictionary object similar to one that might be returned by `Saber.annotate()`
+def ched_annotation():
     """
-    annotation = {"ents": [{"text": "Hdm2", "label": "PRGE", "start": 23, "end": 27},
-                           {"text": "MK2", "label": "PRGE", "start": 31, "end": 34},
-                           {"text": "p53", "label": "PRGE", "start": 66, "end": 69}
-                          ],
-                  "text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.",
+    """
+    annotation = {"ents": [{"text": "glucose", "label": "CHED", "start": 0, "end": 6}],
+                  "text": "glucose",
                   "title": ""}
-
     return annotation
 
-def test_query_uniprot(annotation):
+@pytest.fixture
+def diso_annotation():
     """
     """
-    text = annotation['ents'][1]['text']
-    actual = grounding_utils._query_uniprot(text, 9606, limit=1)
-    assert len(actual) == 1
-    assert actual[0]['Entry'] == 'P49137'
-    assert len(actual[0].keys()) == 3
-    #short text
-    actual = grounding_utils._query_uniprot("p")
-    assert actual == []
+    annotation = {"ents": [{"text": "cancer", "label": "DISO", "start": 0, "end": 5}],
+                  "text": "cancer",
+                  "title": ""}
+    return annotation
 
-def test_ground(annotation):
+@pytest.fixture
+def livb_annotation():
     """
     """
-    actual = grounding_utils.ground(annotation, ('human', 'mouse'), limit=2)
-    assert actual is not None
-    for ent in actual['ents']:
-        assert 'xrefs' in ent.keys()
+    annotation = {"ents": [{"text": "mouse", "label": "LIVB", "start": 0, "end": 4}],
+                  "text": "mouse",
+                  "title": ""}
+    return annotation
 
-def test_query_hgnc(annotation):
+@pytest.fixture
+def prge_annotation():
     """
     """
-    actual = grounding_utils._query_hgnc(annotation)
-    assert actual is None
-    #TODO: implement _query_hgnc, make test fail, then fix
+    annotation = {"ents": [{"text": "p53", "label": "PRGE", "start": 0, "end": 3}],
+                  "text": "p53",
+                  "title": ""}
+    return annotation
+
+def test_ground_chemicals(ched_annotation):
+    """Asserts that `grounding_utils.ground()` returns the expected value for a simple example with
+    chemical entities.
+    """
+    xrefs = [
+        {'namespace': 'TODO', 'id': 'CIDs00005793'},
+        {'namespace': 'TODO', 'id': 'CIDs10954115'},
+        {'namespace': 'TODO', 'id': 'CIDs53782692'},
+    ]
+
+    actual = grounding_utils.ground(ched_annotation)
+    ched_annotation['ents'][0].update(xrefs=xrefs)
+    expected = ched_annotation
+
+    assert actual == expected
+
+def test_ground_diso(diso_annotation):
+    """Asserts that `grounding_utils.ground()` returns the expected value for a simple example with
+    disease entities.
+    """
+    xrefs = [
+        {'namespace': 'TODO', 'id': 'DOID:162'},
+    ]
+
+    actual = grounding_utils.ground(diso_annotation)
+    diso_annotation['ents'][0].update(xrefs=xrefs)
+    expected = diso_annotation
+
+    assert actual == expected
+
+def test_ground_livb(livb_annotation):
+    """Asserts that `grounding_utils.ground()` returns the expected value for a simple example with
+    species entities.
+    """
+    xrefs = [
+        {'namespace': 'TODO', 'id': '10090'},
+        {'namespace': 'TODO', 'id': '10088'},
+    ]
+
+    actual = grounding_utils.ground(livb_annotation)
+    livb_annotation['ents'][0].update(xrefs=xrefs)
+    expected = livb_annotation
+
+    assert actual == expected
+
+def test_ground_prge(prge_annotation):
+    """Asserts that `grounding_utils.ground()` returns the expected value for a simple example with
+    species entities.
+    """
+    xrefs = [
+        {'namespace': 'TODO', 'id': 'ENSP00000269305', 'organism-id': '9606'},
+        {'namespace': 'TODO', 'id': '10088'},
+    ]
+
+    actual = grounding_utils.ground(prge_annotation)
+    prge_annotation['ents'][0].update(xrefs=xrefs)
+    expected = prge_annotation
+
+    assert actual == expected
