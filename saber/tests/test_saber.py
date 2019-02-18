@@ -246,7 +246,7 @@ def test_annotate_single(saber_single_dataset_model):
     """Asserts that call to `Saber.annotate()` returns the expected results with a single dataset
     loaded."""
     test = "This is a simple test. With multiple sentences"
-    expected = {'text': test, 'ents': []}
+    expected = {'text': test, 'title': '', 'ents': []}
 
     actual = saber_single_dataset_model.annotate(test)
     actual['ents'] = [] # wipe the predicted ents as they are stochastic.
