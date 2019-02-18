@@ -6,12 +6,12 @@ Saber is ready to go out-of-the box when using the __web-service__ or a __pre-tr
 
 Pre-trained model names can be passed to `Saber.load()` (see [Quick Start: Pre-trained Models](https://baderlab.github.io/saber/quick_start/#pre-trained-models)). Appending `"*-large"` to the model name (e.g. `"PRGE-large"` will download a much larger model, which should perform slightly better than the base model.
 
-Identifier | Semantic Group | Identified entity types
----------- | -------------- | -----------------------
-`CHED` | Chemicals | Abbreviations and Acronyms, Molecular Formulas, Chemical database identifiers, IUPAC names, Trivial (common names of chemicals and trademark names), Family (chemical families with a defined structure) and Multiple (non-continuous mentions of chemicals in text)
-`DISO` | Disorders | Acquired Abnormality, Anatomical Abnormality, Cell or Molecular Dysfunction, Congenital Abnormality, Disease or Syndrome, Mental or Behavioral Dysfunction, Neoplastic Process, Pathologic Function, Sign or Symptom
-`LIVB` | Organisms | Species, Taxa
-`PRGE` | Genes and Gene Products | Genes, Gene Products
+Identifier | Semantic Group | Identified entity types | Namespace |
+---------- | -------------- | ----------------------- | --------- |
+`CHED` | Chemicals | Abbreviations and Acronyms, Molecular Formulas, Chemical database identifiers, IUPAC names, Trivial (common names of chemicals and trademark names), Family (chemical families with a defined structure) and Multiple (non-continuous mentions of chemicals in text) | [PubChem Compounds](https://pubchem.ncbi.nlm.nih.gov/)
+`DISO` | Disorders | Acquired Abnormality, Anatomical Abnormality, Cell or Molecular Dysfunction, Congenital Abnormality, Disease or Syndrome, Mental or Behavioral Dysfunction, Neoplastic Process, Pathologic Function, Sign or Symptom | [Disease Ontology](http://disease-ontology.org/)
+`LIVB` | Organisms | Species, Taxa | [NCBI Taxonomy](https://www.ncbi.nlm.nih.gov/taxonomy)
+`PRGE` | Genes and Gene Products | Genes, Gene Products | [STRING](https://string-db.org/)
 
 ## Datasets
 
