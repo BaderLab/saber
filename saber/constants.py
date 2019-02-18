@@ -40,7 +40,7 @@ VALID_FILE = 'valid.*'
 TEST_FILE = 'test.*'
 # pre-trained models
 ENTITIES = {'ANAT': False,
-            'CHED': False,
+            'CHED': True,
             'DISO': True,
             'LIVB': False,
             'PRGE': True,
@@ -76,6 +76,16 @@ KERAS = 'keras'
 PYTORCH = 'pytorch'
 # which pre-trained BERT model to use
 PYTORCH_BERT_MODEL = 'bert-base-cased'
+
+# EXTRACT 2.0 API
+# arguments passed in a get request to the EXTRACT 2.0 API to specify entity type
+ENTITY_TYPES = {'CHED': -1, 'DISO': -26, 'LIVB': -2}
+# the namespaces of the external resources that EXTRACT 2.0 grounds too
+NAMESPACES = {'CHED': 'PubChem Compound',
+              'DISO': 'Disease Ontology',
+              'LIVB': 'NCBI Taxonomy',
+              'PRGE': 'STRING',
+              }
 
 # RESTful API
 # endpoint for Entrez Utilities Web Service API
