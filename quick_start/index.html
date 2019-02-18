@@ -328,6 +328,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#grounding" title="Grounding" class="md-nav__link">
+    Grounding
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#working-with-annotations" title="Working with annotations" class="md-nav__link">
     Working with annotations
   </a>
@@ -432,6 +439,13 @@
           <li class="md-nav__item">
   <a href="#coreference-resolution" title="Coreference Resolution" class="md-nav__link">
     Coreference Resolution
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grounding" title="Grounding" class="md-nav__link">
+    Grounding
   </a>
   
 </li>
@@ -552,7 +566,7 @@ model needs to be loaded into memory.</p>
 
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>See <a href="https://baderlab.github.io/saber/resources/#pre-trained-models">Resources: Pre-trained models</a> for pre-trained model names and details. You will need an internet connection to download a pre-trained model.</p>
+<p>See <a href="../resources#pre-trained-models">Resources: Pre-trained models</a> for pre-trained model names and details. You will need an internet connection to download a pre-trained model.</p>
 </div>
 <p>To annotate text with the model, just call the <code>Saber.annotate()</code> method</p>
 <div class="codehilite"><pre><span></span><span class="n">saber</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">)</span>
@@ -578,6 +592,17 @@ model needs to be loaded into memory.</p>
 <p>If you are using the web-service, simply supply <code>"coref": true</code> in your <code>JSON</code> payload to resolve coreferences.</p>
 </div>
 <p>Saber currently takes the simplest possible approach: replace all coreference mentions with their referent, and then feed the resolved text to the model that identifies named entities.</p>
+<h3 id="grounding">Grounding<a class="headerlink" href="#grounding" title="Permanent link">&para;</a></h3>
+<p><strong>Grounding</strong> (sometimes called <strong>entity linking</strong> or <strong>normalization</strong>) involves mapping each annotated entity to a unique identifier in an external resource such as a database or ontology. To ground entities in a call to <code>Saber.annotate()</code>, simply pass the argument <code>ground=True</code></p>
+<div class="codehilite"><pre><span></span><span class="n">saber</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s1">&#39;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&#39;</span><span class="p">,</span> <span class="n">ground</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+
+<p>The grounding functionality is implemented by the <a href="https://extract.jensenlab.org/">EXTRACT 2.0 API</a>. Note that you will need an internet connection or grounding will fail. Also note that <code>Saber.annotate()</code> will take slightly longer to return a response when <code>ground=True</code> (up to a few seconds).</p>
+<p>See <a href="../resources#pre-trained-models">Resources: Pre-trained models</a> for a list of the the external resources each entity type (annotated by the pre-trained models) is grounded to.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you are using the web-service, simply supply <code>"ground": true</code> in your <code>JSON</code> payload to ground entities.</p>
+</div>
 <h3 id="working-with-annotations">Working with annotations<a class="headerlink" href="#working-with-annotations" title="Permanent link">&para;</a></h3>
 <p>The <code>Saber.annotate()</code> method returns a simple <code>dict</code> object</p>
 <div class="codehilite"><pre><span></span><span class="n">ann</span> <span class="o">=</span> <span class="n">saber</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s2">&quot;The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.&quot;</span><span class="p">)</span>
