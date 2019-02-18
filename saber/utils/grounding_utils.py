@@ -26,35 +26,44 @@ def ground(annotation):
     """
     request = 'https://tagger.jensenlab.org/GetEntities?format=tsv&document='
 
-    for ent in annotation['ents']:
+    # collect annotations made by Saber in a dictionary
+    annotations = {
+        'CHED': [ent for ent in annotation['ents'] if ent['label'] == 'CHED'],
+        'DISO': [ent for ent in annotation['ents'] if ent['label'] == 'DISO'],
+        'LIVB': [ent for ent in annotation['ents'] if ent['label'] == 'LIVB'],
+        'PRGE': [ent for ent in annotation['ents'] if ent['label'] == 'PRGE'],
+    }
+    # mapping of labels to entity_types argument required by EXTRACT 2.0 API
+    entity_types = {'CHED': -1, 'DISO': -26, 'LIVB': -2}
 
-        current_request = '{}{}'.format(request, ent['text'])
+    for label, anns in annotations.items():
+        if anns:
+            # prepand to GET request the text to ground along with its entity type
+            current_request = '{}{}'.format(request, '+'.join([ann['text'] for ann in anns]))
+            if label in entity_types:
+                current_request += '&entity_types={}'.format(entity_types[label])
 
-        # need to specify entity types for anything but PRGE
-        if ent['label'] == 'CHED':
-            current_request += '&entity_types=-1'
-        elif ent['label'] == 'DISO':
-            current_request += '&entity_types=-26'
-        elif ent['label'] == 'LIVB':
-            current_request += '&entity_types=-2'
+            # request to EXTRACT 2.0 API
+            response = requests.get(current_request).text
+            entries = [entry.split('\t') for entry in response.split('\n')] if response else []
 
-        r = requests.get(current_request)
-        response = r.text
+            xrefs = {}
 
-        if response:
-            xrefs = []
-            entries = response.split('\n')
-
+            # collect unique identifiers returned by EXTRACT 2.0 API
             for entry in entries:
-                _, organism_id, entry_id = entry.split('\t')
+                xref = {'namespace': 'TODO', 'id': entry[-1]}
+                # in the future, EXTRACT 2.0 API will to assign organim-ids to PRGE labels
+                if label == 'PRGE':
+                    xref['organism-id'] = entry[1]
 
-                xref = {'namespace': 'TODO', 'id': entry_id}
+                if entry[0] in xrefs:
+                    xrefs[entry[0]].append(xref)
+                else:
+                    xrefs[entry[0]] = [xref]
 
-                if int(organism_id) > 0:
-                    xref['organism-id'] = organism_id
-
-                xrefs.append(xref)
-
-            ent.update(xrefs=xrefs)
+            # update annotations with xrefs field
+            for ann in anns:
+                if ann['text'] in xrefs:
+                    ann.update(xrefs=xrefs[ann['text']])
 
     return annotation
