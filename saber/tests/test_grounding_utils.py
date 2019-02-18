@@ -1,8 +1,12 @@
 """Any and all unit tests for the grounding_utils (saber/utils/grounding_utils.py).
 """
+import copy
+
 import pytest
 
+from .. import constants
 from ..utils import grounding_utils
+
 
 @pytest.fixture
 def blank_annotation():
@@ -71,17 +75,19 @@ def test_ground_chemicals(ched_annotation):
     """Asserts that `grounding_utils.ground()` returns the expected value for a simple example with
     chemical entities.
     """
+    actual = grounding_utils.ground(copy.deepcopy(ched_annotation))
+
+    # create expected value
     glucose_xrefs = [
-        {'namespace': 'TODO', 'id': 'CIDs00005793'},
-        {'namespace': 'TODO', 'id': 'CIDs10954115'},
-        {'namespace': 'TODO', 'id': 'CIDs53782692'},
+        {'namespace': constants.NAMESPACES['CHED'], 'id': 'CIDs00005793'},
+        {'namespace': constants.NAMESPACES['CHED'], 'id': 'CIDs10954115'},
+        {'namespace': constants.NAMESPACES['CHED'], 'id': 'CIDs53782692'},
     ]
-    fructose_xrefs = [{'namespace': 'TODO', 'id': 'CIDs00439709'}]
+    fructose_xrefs = [{'namespace': constants.NAMESPACES['CHED'], 'id': 'CIDs00439709'}]
 
     ched_annotation['ents'][0].update(xrefs=glucose_xrefs)
     ched_annotation['ents'][1].update(xrefs=fructose_xrefs)
 
-    actual = grounding_utils.ground(ched_annotation)
     expected = ched_annotation
 
     assert actual == expected
@@ -90,13 +96,15 @@ def test_ground_diso(diso_annotation):
     """Asserts that `grounding_utils.ground()` returns the expected value for a simple example with
     disease entities.
     """
-    cancer_xrefs = [{'namespace': 'TODO', 'id': 'DOID:162'}]
-    cystic_fibrosis_xrefs = [{'namespace': 'TODO', 'id': 'DOID:1485'}]
+    actual = grounding_utils.ground(copy.deepcopy(diso_annotation))
+
+    # create expected value
+    cancer_xrefs = [{'namespace': constants.NAMESPACES['DISO'], 'id': 'DOID:162'}]
+    cystic_fibrosis_xrefs = [{'namespace': constants.NAMESPACES['DISO'], 'id': 'DOID:1485'}]
 
     diso_annotation['ents'][0].update(xrefs=cancer_xrefs)
     diso_annotation['ents'][1].update(xrefs=cystic_fibrosis_xrefs)
 
-    actual = grounding_utils.ground(diso_annotation)
     expected = diso_annotation
 
     assert actual == expected
@@ -105,16 +113,18 @@ def test_ground_livb(livb_annotation):
     """Asserts that `grounding_utils.ground()` returns the expected value for a simple example with
     species entities.
     """
+    actual = grounding_utils.ground(copy.deepcopy(livb_annotation))
+
+    # create expected value
     mouse_xrefs = [
-        {'namespace': 'TODO', 'id': '10090'},
-        {'namespace': 'TODO', 'id': '10088'},
+        {'namespace': constants.NAMESPACES['LIVB'], 'id': '10090'},
+        {'namespace': constants.NAMESPACES['LIVB'], 'id': '10088'},
     ]
-    human_xrefs = [{'namespace': 'TODO', 'id': '9606'}]
+    human_xrefs = [{'namespace': constants.NAMESPACES['LIVB'], 'id': '9606'}]
 
     livb_annotation['ents'][0].update(xrefs=mouse_xrefs)
     livb_annotation['ents'][1].update(xrefs=human_xrefs)
 
-    actual = grounding_utils.ground(livb_annotation)
     expected = livb_annotation
 
     assert actual == expected
@@ -123,16 +133,20 @@ def test_ground_prge(prge_annotation):
     """Asserts that `grounding_utils.ground()` returns the expected value for a simple example with
     species entities.
     """
-    p53_xrefs = [{'namespace': 'TODO', 'id': 'ENSP00000269305', 'organism-id': '9606'}]
+    actual = grounding_utils.ground(copy.deepcopy(prge_annotation))
+
+    # create expected value
+    p53_xrefs = [
+        {'namespace': constants.NAMESPACES['PRGE'], 'id': 'ENSP00000269305', 'organism-id': '9606'}
+    ]
     mk2_xrefs = [
-        {'namespace': 'TODO', 'id': 'ENSP00000356070', 'organism-id': '9606'},
-        {'namespace': 'TODO', 'id': 'ENSP00000433109', 'organism-id': '9606'},
+        {'namespace': constants.NAMESPACES['PRGE'], 'id': 'ENSP00000356070', 'organism-id': '9606'},
+        {'namespace': constants.NAMESPACES['PRGE'], 'id': 'ENSP00000433109', 'organism-id': '9606'},
     ]
 
     prge_annotation['ents'][0].update(xrefs=p53_xrefs)
     prge_annotation['ents'][1].update(xrefs=mk2_xrefs)
 
-    actual = grounding_utils.ground(prge_annotation)
     expected = prge_annotation
 
     assert actual == expected
