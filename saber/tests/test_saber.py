@@ -8,8 +8,8 @@ from ..embeddings import Embeddings
 from ..models.base_model import BaseKerasModel
 from ..preprocessor import Preprocessor
 from ..saber import MissingStepException, Saber
-from .resources.dummy_constants import *
 from .resources import helpers
+from .resources.dummy_constants import *
 
 # TODO (johngiorgi): Write tests for compound dataset
 
