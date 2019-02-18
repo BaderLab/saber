@@ -4,6 +4,7 @@ import logging
 
 import requests
 
+from .. import constants
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,15 +34,13 @@ def ground(annotation):
         'LIVB': [ent for ent in annotation['ents'] if ent['label'] == 'LIVB'],
         'PRGE': [ent for ent in annotation['ents'] if ent['label'] == 'PRGE'],
     }
-    # mapping of labels to entity_types argument required by EXTRACT 2.0 API
-    entity_types = {'CHED': -1, 'DISO': -26, 'LIVB': -2}
 
     for label, anns in annotations.items():
         if anns:
             # prepand to GET request the text to ground along with its entity type
             current_request = '{}{}'.format(request, '+'.join([ann['text'] for ann in anns]))
-            if label in entity_types:
-                current_request += '&entity_types={}'.format(entity_types[label])
+            if label in constants.ENTITY_TYPES:
+                current_request += '&entity_types={}'.format(constants.ENTITY_TYPES[label])
 
             # request to EXTRACT 2.0 API
             response = requests.get(current_request).text
@@ -51,8 +50,8 @@ def ground(annotation):
 
             # collect unique identifiers returned by EXTRACT 2.0 API
             for entry in entries:
-                xref = {'namespace': 'TODO', 'id': entry[-1]}
-                # in the future, EXTRACT 2.0 API will to assign organim-ids to PRGE labels
+                xref = {'namespace': constants.NAMESPACES[label], 'id': entry[-1]}
+                # in the future, EXTRACT 2.0 API will to assign organism-ids to PRGE labels
                 if label == 'PRGE':
                     xref['organism-id'] = entry[1]
 
