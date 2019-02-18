@@ -4,8 +4,11 @@ import os
 
 import pytest
 from keras.callbacks import ModelCheckpoint, TensorBoard
+<<<<<<< HEAD
 from keras.preprocessing.sequence import pad_sequences
 from pytorch_pretrained_bert import BertTokenizer
+=======
+>>>>>>> b39392691ba588f5d4a4704d89758b0ac890c335
 
 from .. import constants
 from ..config import Config
