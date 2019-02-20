@@ -8,8 +8,8 @@ from ..embeddings import Embeddings
 from ..models.base_model import BaseKerasModel
 from ..preprocessor import Preprocessor
 from ..saber import MissingStepException, Saber
-from .resources.dummy_constants import *
 from .resources import helpers
+from .resources.dummy_constants import *
 
 # TODO (johngiorgi): Write tests for compound dataset
 
@@ -246,7 +246,7 @@ def test_annotate_single(saber_single_dataset_model):
     """Asserts that call to `Saber.annotate()` returns the expected results with a single dataset
     loaded."""
     test = "This is a simple test. With multiple sentences"
-    expected = {'text': test, 'ents': []}
+    expected = {'text': test, 'title': '', 'ents': []}
 
     actual = saber_single_dataset_model.annotate(test)
     actual['ents'] = [] # wipe the predicted ents as they are stochastic.
