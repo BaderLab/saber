@@ -2,9 +2,8 @@
 """
 import os
 
-from keras.callbacks import ModelCheckpoint, TensorBoard
-
 import pytest
+from keras.callbacks import ModelCheckpoint, TensorBoard
 
 from ..config import Config
 from ..utils import model_utils

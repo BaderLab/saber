@@ -104,11 +104,9 @@ def load_models(ents):
     models = {} # acc for models
     for ent, value in ents.items():
         if value:
-            path_to_model = os.path.join(constants.PRETRAINED_MODEL_DIR, '{}'.format(ent))
-            generic_utils.extract_directory(path_to_model)
             # create and load the pre-trained models
             saber = Saber()
-            saber.load(path_to_model)
+            saber.load(ent)
             models[ent] = saber
     # TEMP: Weird solution to a weird bug.
     # https://github.com/tensorflow/tensorflow/issues/14356#issuecomment-385962623

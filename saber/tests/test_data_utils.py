@@ -1,7 +1,6 @@
 """Any and all unit tests for the data_utils (saber/utils/data_utils.py).
 """
 import numpy as np
-
 import pytest
 
 from ..config import Config

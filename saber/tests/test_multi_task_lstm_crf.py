@@ -1,8 +1,7 @@
 """Any and all unit tests for the MultiTaskLSTMCRF (saber/models/multi_task_lstm_crf.py).
 """
-from keras.engine.training import Model
-
 import pytest
+from keras.engine.training import Model
 
 from ..config import Config
 from ..dataset import Dataset
