@@ -37,7 +37,7 @@ VALID_FILE = 'valid.*'
 TEST_FILE = 'test.*'
 # pre-trained models
 ENTITIES = {'ANAT': False,
-            'CHED': False,
+            'CHED': True,
             'DISO': True,
             'LIVB': False,
             'PRGE': True,
@@ -68,6 +68,16 @@ UNITS_CHAR_LSTM = 200
 UNITS_DENSE = UNITS_WORD_LSTM // 2
 # possible models
 MODEL_NAMES = ['mt-lstm-crf',]
+
+# EXTRACT 2.0 API
+# arguments passed in a get request to the EXTRACT 2.0 API to specify entity type
+ENTITY_TYPES = {'CHED': -1, 'DISO': -26, 'LIVB': -2}
+# the namespaces of the external resources that EXTRACT 2.0 grounds too
+NAMESPACES = {'CHED': 'PubChem Compound',
+              'DISO': 'Disease Ontology',
+              'LIVB': 'NCBI Taxonomy',
+              'PRGE': 'STRING',
+              }
 
 # RESTful API
 # endpoint for Entrez Utilities Web Service API

@@ -4,87 +4,65 @@ import logging
 
 import requests
 
-from ..preprocessor import Preprocessor
+from .. import constants
 
 LOGGER = logging.getLogger(__name__)
 
-def _query_uniprot(text, organisms=('9606'), limit=1):
-    """Query for accession numbers using UniProt REST api
-    Example:
-      https://www.uniprot.org/uniprot/?query=name:mk2&columns=id&format=tab
-    See:
-      https://www.uniprot.org/help/api_queries
-      https://www.uniprot.org/help/query-fields
-      https://www.uniprot.org/help/uniprotkb_column_names
-      https://www.uniprot.org/help/programmatic_access
+def ground(annotation):
+    """Maps entities in `annotation` to unique indentifiers in an external database or ontology.
 
-     Args:
-        text: Gene or gene product name, synonym, or id.
-        organisms: Names or taxonomy ids; can be number, string or tuple.
-        limit: Max number of hits (result rows ordered by relevance).
+    For each entry in `annotation[ents]`, the text representing the annotation (`ent['text']`) is
+    mapped to a unique identifier in an external database or ontology (if such a unique identifier
+    is found). Each annotation in `annotation` is updated with an 'xrefs' key which contains a
+    dictionary with information representing the mapping.
 
-    Returns:
-        xrefs, a list of dictionaries [{'col1':'val1', 'col2':'val2',..},..]
+    This function relies on the EXTRACT API to perform the mapping.
+
+    Args:
+        annotation (dict): A dict containing a list of annotations at key 'ents'. Each annotation
+            is expected to have a key 'text'.
+
+    Resources:
+        - EXTRACT 2.0 API: https://extract.jensenlab.org/
     """
-    if len(text) < 2:
-        logging.error('query text must be at least two characters long')
-        return []
+    request = 'https://tagger.jensenlab.org/GetEntities?format=tsv&document='
 
-    xrefs = []
-    # fields, columns can be parameters too if we'd generalize later
-    fields = ('name', 'gene_exact', 'mnemonic')
-    columns = ('id', 'organism-id', 'genes(PREFERRED)')
-    params = {"sort": "score", "format": "tab"}
+    # collect annotations made by Saber in a dictionary
+    annotations = {
+        'CHED': [ent for ent in annotation['ents'] if ent['label'] == 'CHED'],
+        'DISO': [ent for ent in annotation['ents'] if ent['label'] == 'DISO'],
+        'LIVB': [ent for ent in annotation['ents'] if ent['label'] == 'LIVB'],
+        'PRGE': [ent for ent in annotation['ents'] if ent['label'] == 'PRGE'],
+    }
 
-    query = text
-    if fields is not None:
-        query = " OR ".join([f + ':' + str(text) for f in fields])
-    # filter by organism
-    if organisms is not None:
-        if isinstance(organisms, (int, str)):
-            subquery = "organism:" + str(organisms)
-        else:
-            subquery = " OR ".join(['organism:'+str(o) for o in organisms])
-        query = "({query}) AND ({subquery})".format(query=query, subquery=subquery)
-    params.update(query=query)
+    for label, anns in annotations.items():
+        if anns:
+            # prepand to GET request the text to ground along with its entity type
+            current_request = '{}{}'.format(request, '+'.join([ann['text'] for ann in anns]))
+            if label in constants.ENTITY_TYPES:
+                current_request += '&entity_types={}'.format(constants.ENTITY_TYPES[label])
 
-    # set output data columns
-    if columns is not None:
-        params.update(columns=",".join(columns))
+            # request to EXTRACT 2.0 API
+            response = requests.get(current_request).text
+            entries = [entry.split('\t') for entry in response.split('\n')] if response else []
 
-    # max no. result rows (hits)
-    if limit != None:
-        params.update(limit=limit)
+            xrefs = {}
 
-    try:
-        response = requests.get('https://www.uniprot.org/uniprot/', params=params)
-        if response.status_code == 200:
-            lines = response.text.splitlines()
-            if len(lines) > 1:
-                # text returned by uniprot api has weird spacing, so clean it
-                col_names = [Preprocessor.sterilize(line) for line in lines[0].split('\t')]
-            for line in lines[1:]:
-                col_vals = line.split('\t')
-                xref = dict(zip(col_names, col_vals))
-                xrefs.append(xref)
-        else:
-            LOGGER.error('Uniprot returned: %i, params: %s', response.status_code, str(params))
-    except requests.exceptions.RequestException as err:
-        logging.error(err)
+            # collect unique identifiers returned by EXTRACT 2.0 API
+            for entry in entries:
+                xref = {'namespace': constants.NAMESPACES[label], 'id': entry[-1]}
+                # in the future, EXTRACT 2.0 API will to assign organism-ids to PRGE labels
+                if label == 'PRGE':
+                    xref['organism-id'] = entry[1]
 
-    return xrefs
+                if entry[0] in xrefs:
+                    xrefs[entry[0]].append(xref)
+                else:
+                    xrefs[entry[0]] = [xref]
 
-def ground(annotation, organisms=(9606), limit=10):
-    """
-    """
-    for ent in annotation['ents']:
-        if ent['label'] == 'PRGE':
-            xrefs = _query_uniprot(ent['text'], organisms, limit)
-            ent.update(xrefs=xrefs)
+            # update annotations with xrefs field
+            for ann in anns:
+                if ann['text'] in xrefs:
+                    ann.update(xrefs=xrefs[ann['text']])
+
     return annotation
-
-# TODO try with HGNC rest api
-def _query_hgnc(text):
-    """
-    """
-    return None
