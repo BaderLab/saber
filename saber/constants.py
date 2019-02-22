@@ -41,7 +41,7 @@ VALID_FILE = 'valid.*'
 TEST_FILE = 'test.*'
 # pre-trained models
 ENTITIES = {'ANAT': False,
-            'CHED': False,
+            'CHED': True,
             'DISO': True,
             'LIVB': False,
             'PRGE': True,
