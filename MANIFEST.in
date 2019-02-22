@@ -4,6 +4,9 @@ include README.md CONTRIBUTING.md
 # Include license file
 include LICENSE.txt
 
+# Include Logo
+include saber_logo.png
+
 # Include config file(s)
 global-include *.ini *.yml
 

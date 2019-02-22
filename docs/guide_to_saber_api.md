@@ -43,7 +43,7 @@ Copy the contents of the [default config file](https://github.com/BaderLab/saber
 You can also import Saber and interact with it as a python package. Saber exposes its functionality through the `Saber` class. Here is just about everything Saber does in one script:
 
 ```python
-from saber.saber import Saber
+from saber import Saber
 
 # First, create a Saber object, which exposes Sabers functionality
 saber = Saber()

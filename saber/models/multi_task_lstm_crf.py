@@ -2,6 +2,7 @@
 """
 import logging
 
+import numpy as np
 import tensorflow as tf
 from keras.layers import (LSTM, Bidirectional, Concatenate, Dense, Dropout,
                           Embedding, SpatialDropout1D, TimeDistributed)
@@ -11,6 +12,8 @@ from keras_contrib.layers.crf import CRF
 from keras_contrib.losses.crf_losses import crf_loss
 
 from .. import constants
+from ..utils import model_utils
+from ..preprocessor import Preprocessor
 from .base_model import BaseKerasModel
 
 LOGGER = logging.getLogger(__name__)
@@ -27,8 +30,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         config (Config): Contains a set of harmonzied arguments provided in a *.ini file and,
             optionally, from the command line.
         datasets (list): A list of Dataset objects.
-        embeddings (numpy.ndarray): A numpy array where ith row contains the vector embedding for
-            the ith word type.
+        embeddings (Embeddings): An object containing loaded word embeddings.
 
     References:
         - Guillaume Lample, Miguel Ballesteros, Sandeep Subramanian, Kazuya Kawakami, Chris Dyer.
@@ -38,7 +40,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
     def __init__(self, config, datasets, embeddings=None, **kwargs):
         super().__init__(config, datasets, embeddings, **kwargs)
 
-    def load(self, weights_filepath, model_filepath):
+    def load(self, model_filepath, weights_filepath):
         """Load a model from disk.
 
         Loads a model from disk by loading its architecture from a json file at `model_filepath`
@@ -166,6 +168,102 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                           lr=self.config.learning_rate,
                           decay=self.config.decay,
                           clipnorm=self.config.grad_norm)
+
+    def eval(self, training_data, model_idx, partition='train'):
+        """Get `y_true` and `y_pred` for given inputs and targets in `training_data`.
+
+        Performs prediction for the current model (`self.model`), and returns a 2-tuple containing
+        the true (gold) labels and the predicted labels, where labels are integers corresponding to
+        mapping at `self.idx_to_tag`. Inputs are given at `training_data[x_partition]` and gold
+        labels at `training_data[y_partition]`.
+
+        Args:
+            training_data (dict): Contains the data (at key `x_partition`) and targets
+                (at key `y_partition`) for each partition: 'train', 'valid' and 'test'.
+            partition (str): Which partition to perform a prediction step on, must be one of
+                'train', 'valid', 'test'.
+
+        Returns:
+            A two-tuple containing the gold label integer sequences and the predicted integer label
+            sequences.
+        """
+        model, dataset = self.models[model_idx], self.datasets[model_idx]
+
+        X, y = training_data['x_{}'.format(partition)], training_data['y_{}'.format(partition)]
+        # gold labels
+        y_true = y.argmax(axis=-1) # get class label
+        y_true = np.asarray(y_true).ravel() # flatten to 1D array
+        # predicted labels
+        y_pred = model.predict(X)
+        y_pred = np.asarray(y_pred.argmax(axis=-1)).ravel()
+        # mask out pads
+        y_true, y_pred = \
+            model_utils.mask_labels(y_true, y_pred, dataset.type_to_idx['tag'][constants.PAD])
+
+        # sanity check
+        if not y_true.shape == y_pred.shape:
+            err_msg = ("'y_true' and 'y_pred' in 'MultiTaskLSTMCRF.eval() have different"
+                       " shapes ({} and {} respectively)".format(y_true.shape, y_pred.shape))
+            LOGGER.error('AssertionError: %s', err_msg)
+            raise AssertionError(err_msg)
+
+        return y_true, y_pred
+
+    def predict(self, sents, model_idx=0):
+        """Perform inference on tokenized and sentence segmented text.
+
+        Using the model at `self.models[model_idx]`, performs inference on `sents`, a list of lists
+        containing tokenized sentences. The result of this inference is a list of lists, where the
+        outer lists correspond to sentences in `sents` and inner lists contains predicted indices
+        for the corresponding tokens in `sents`.
+
+        Args:
+            sents (list): List of lists containing tokenized sentences to annotate.
+            model_idx (int): Index to model in `self.models` that will be used for inference.
+                Defaults to 0.
+        """
+        model, dataset = self.models[model_idx], self.datasets[model_idx]
+
+        # map sequences to integer IDs
+        word_idx_seq = Preprocessor.get_type_idx_sequence(seq=sents,
+                                                          type_to_idx=dataset.type_to_idx['word'],
+                                                          type_='word')
+        char_idx_seq = Preprocessor.get_type_idx_sequence(seq=sents,
+                                                          type_to_idx=dataset.type_to_idx['char'],
+                                                          type_='char')
+
+        # perform prediction, convert from one-hot to predicted indices, flatten results
+        model_input = [word_idx_seq, char_idx_seq]
+        X, y_pred = word_idx_seq, model.predict(model_input).argmax(-1).ravel()
+
+        return X, y_pred
+
+    def prepare_data_for_training(self):
+        """Returns a list containing the training data for each dataset at `self.datasets`.
+
+        For each dataset at `self.datasets`, collects the data to be used for training.
+        Each dataset is represented by a dictionary, where the keys 'x_<partition>' and
+        'y_<partition>' contain the inputs and targets for each partition 'train', 'valid', and
+        'test'.
+        """
+        training_data = []
+        for ds in self.datasets:
+            # collect train data, must be provided
+            x_train = [ds.idx_seq['train']['word'], ds.idx_seq['train']['char']]
+            y_train = ds.idx_seq['train']['tag']
+            # collect valid and test data, may not be provided
+            x_valid, y_valid, x_test, y_test = None, None, None, None
+            if ds.idx_seq['valid'] is not None:
+                x_valid = [ds.idx_seq['valid']['word'], ds.idx_seq['valid']['char']]
+                y_valid = ds.idx_seq['valid']['tag']
+            if ds.idx_seq['test'] is not None:
+                x_test = [ds.idx_seq['test']['word'], ds.idx_seq['test']['char']]
+                y_test = ds.idx_seq['test']['tag']
+
+            training_data.append({'x_train': x_train, 'y_train': y_train, 'x_valid': x_valid,
+                                  'y_valid': y_valid, 'x_test': x_test, 'y_test': y_test})
+
+        return training_data
 
     def prepare_for_transfer(self, datasets):
         """Prepares the BiLSTM-CRF for transfer learning by recreating its last layer.
