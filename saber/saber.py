@@ -21,7 +21,7 @@ from .utils import data_utils, generic_utils, grounding_utils, model_utils
 print('Saber version: {0}'.format(constants.__version__))
 LOGGER = logging.getLogger(__name__)
 
-class Saber(object):
+class Saber():
     """The interface for Saber.
 
     As the interface to Saber, this class exposes all of Sabers functionality, including the
@@ -47,7 +47,7 @@ class Saber(object):
             print('Hyperparameters and model details:')
             pprint({arg: getattr(self.config, arg) for arg in constants.CONFIG_ARGS})
 
-    def annotate(self, text, model_idx=0, jupyter=False, coref=False, ground=False):
+    def annotate(self, text, title='', jupyter=False, coref=False, ground=False, model_idx=0):
         """Uses a trained model (`self.model`) to annotate `text`, returns a dictionary.
 
         For the model at `self.model.models[model_idx]`, coordinates a prediction step on `text`.
@@ -56,9 +56,8 @@ class Saber(object):
         by the model, for use in a jupyter notebook.
 
         text (str): Raw text to annotate.
-        model_idx (int): Index of model to use for prediction, defaults to 0.
         title (str): Title of the document, defaults to None.
-        coref (bool): True if coreference resolution should be performed before annotation, defaults
+        coref (book): True if coreference resolution should be performed before annotation, defaults
             to False.
         jupyter (bool): True if annotations made by the model should be rendered in HTML, which can
             be visualized in a jupter notebook, defaults to false.
@@ -79,34 +78,34 @@ class Saber(object):
             LOGGER.error("ValueError: %s", err_msg)
             raise ValueError(err_msg)
 
-        # model and its corresponding dataset
-        ds = self.datasets[model_idx]
-        model = self.model.models[model_idx]
+        # corresponding dataset for model at model_idx
+        dataset = self.datasets[model_idx]
 
-        # process raw input text, collect input to ML model
-        transformed_text = self.preprocessor.transform(text=text,
-                                                       word2idx=ds.type_to_idx['word'],
-                                                       char2idx=ds.type_to_idx['char'],
-                                                       coref=coref)
-        model_input = [transformed_text['word_idx_seq'], transformed_text['char_idx_seq']]
-        # perform prediction, convert from one-hot to predicted indices, flatten results
-        y_pred = model.predict(model_input, constants.PRED_BATCH_SIZE).argmax(-1).ravel()
-        # convert predictions to tags (removing pads) and then chunk
-        pred_tag_seq = [ds.idx_to_tag[idx] for idx in y_pred if ds.idx_to_tag[idx] != constants.PAD]
+        processed_text, sents, char_offsets = self.preprocessor.transform(text, coref=coref)
+
+        X, y_pred = self.model.predict(sents, model_idx)
+
+        # flatten prediction and character offsets
+        X, y_pred = X.ravel(), y_pred.ravel()
+        char_offsets = list(chain.from_iterable(char_offsets))
+
+        # we need to mask predictions where the input to the model was a pad or wordpiece token
+        X, y_pred = model_utils.mask_labels(X, y_pred, dataset.type_to_idx['word'][constants.PAD])
+        _, y_pred = model_utils.mask_labels(X, y_pred, dataset.type_to_idx['word'][constants.WORDPIECE])
+
+        pred_tag_seq = [dataset.idx_to_tag[idx] for idx in y_pred]
         pred_chunk_seq = self.preprocessor.chunk_entities(pred_tag_seq)
-        # flatten the token offsets
-        offsets = list(chain.from_iterable(transformed_text['offsets']))
 
         # accumulate predicted entities
         ents = []
         for chunk in pred_chunk_seq:
             # chunks are tuples (label, start, end), offsets is a lists of lists of tuples
-            label, start, end = chunk[0], offsets[chunk[1]][0], offsets[chunk[-1] - 1][-1]
-            text = transformed_text['text'][start:end]
+            label, start, end = chunk[0], char_offsets[chunk[1]][0], char_offsets[chunk[-1] - 1][-1]
+            text = processed_text[start:end]
             ents.append({'start': start, 'end': end, 'text': text, 'label': label})
 
         # create the final annotation and ground it
-        annotation = {'text': transformed_text['text'], 'ents': ents}
+        annotation = {'text': processed_text, 'title': title, 'ents': ents}
         if ground:
             annotation = grounding_utils.ground(annotation)
 
@@ -138,25 +137,29 @@ class Saber(object):
         directory = generic_utils.clean_path(directory)
         generic_utils.make_dir(directory)
 
-        model_filepath = os.path.join(directory, constants.MODEL_FILENAME)
+        # save attributes that we need for inference
+        attributes_filepath = os.path.join(directory, constants.ATTRIBUTES_FILENAME)
+        model_attributes = {'model_name': self.config.model_name,
+                            'framework': self.model.framework,
+                            'type_to_idx': self.datasets[model_idx].type_to_idx,
+                            'idx_to_tag': self.datasets[model_idx].idx_to_tag,
+                            }
 
-        # model saving works slightly different based on models framework
-        if self.model.models[model_idx].framework == constants.KERAS:
+
+        # saving Keras models requires a seperate file for weights
+
+        if self.model.framework == constants.KERAS:
+            model_filepath = os.path.join(directory, constants.KERAS_MODEL_FILENAME)
             weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
-            model_attributes = {'model_name': self.config.model_name,
-                                'type_to_idx': self.datasets[model_idx].type_to_idx,
-                                'idx_to_tag': self.datasets[model_idx].idx_to_tag}
-
-            self.model.save(weights_filepath, model_filepath, model_idx)
-        elif self.model.models[model_idx].framework == constants.PYTORCH:
-            model_filepath = os.path.join(directory, constants.MODEL_FILENAME)
-            model_attributes = {'model_name': self.config.model_name}
-
+            self.model.save(model_filepath, weights_filepath, model_idx)
+        elif self.model.framework == constants.PYTORCH:
+            model_attributes['pretrained_model_name_or_path'] = \
+                self.model.pretrained_model_name_or_path
+            model_filepath = os.path.join(directory, constants.PYTORCH_MODEL_FILENAME)
             self.model.save(model_filepath, model_idx)
 
-        # beside the architecture and weights, save the objects we need for model prediction
-        attributes_filepath = os.path.join(directory, constants.ATTRIBUTES_FILENAME)
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
+
         # save config for reproducibility
         self.config.save(directory)
 
@@ -198,20 +201,28 @@ class Saber(object):
         model_attributes = pickle.load(open(attributes_filepath, "rb"))
         # its easiest to use a Dataset object to hold these data objects
         self.datasets = [Dataset()]
-        self.datasets[0].type_to_idx = model_attributes['type_to_idx']
         self.datasets[0].idx_to_tag = model_attributes['idx_to_tag']
-        # prevents user from having to specify pre-trained models name
-        # TEMP: the get statement is for older models that didn't save this attribute, will
-        # remove when those models are gone
-        self.config.model_name = model_attributes.get('model_name', self.config.model_name)
+        self.datasets[0].type_to_idx = model_attributes['type_to_idx']
+        # prevents user from having to specify pre-trained models name / framework
+        self.config.model_name = model_attributes['model_name']
 
-        # create new instance of model, load pre-trained weights
-        weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
-        model_filepath = os.path.join(directory, constants.MODEL_FILENAME)
-        self.model = model_utils.load_pretrained_model(config=self.config,
-                                                       datasets=self.datasets,
-                                                       weights_filepath=weights_filepath,
-                                                       model_filepath=model_filepath)
+        # Accounts for slight differences in saved Keras vs. PyTorch models
+        if model_attributes['framework'] == constants.KERAS:
+            model_filepath = os.path.join(directory, constants.KERAS_MODEL_FILENAME)
+            weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
+        elif model_attributes['framework'] == constants.PYTORCH:
+            model_filepath = os.path.join(directory, constants.PYTORCH_MODEL_FILENAME)
+            weights_filepath = None
+
+        # we need to know what pre-trained BERT model was used to load the correct weights
+        pretrained_model_name_or_path = model_attributes.get('pretrained_model_name_or_path')
+
+        self.model = \
+            model_utils.load_pretrained_model(config=self.config,
+                                              datasets=self.datasets,
+                                              model_filepath=model_filepath,
+                                              weights_filepath=weights_filepath,
+                                              pretrained_model_name_or_path=pretrained_model_name_or_path)
 
         end = time.time() - start
         print('Done ({0:.2f} seconds).'.format(end))
@@ -362,7 +373,9 @@ class Saber(object):
 
         elif self.config.model_name == 'bert-ner':
             from .models.bert_token_classifier import BertTokenClassifier
-            model = BertTokenClassifier(config=self.config, datasets=self.datasets)
+            model = BertTokenClassifier(config=self.config,
+                                        datasets=self.datasets,
+                                        pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
             model.specify()
 
         self.model = model
