@@ -2,11 +2,14 @@
 """
 import os
 
-from keras.callbacks import ModelCheckpoint, TensorBoard
-
 import pytest
+from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.preprocessing.sequence import pad_sequences
+from pytorch_pretrained_bert import BertTokenizer
 
+from .. import constants
 from ..config import Config
+from ..dataset import Dataset
 from ..utils import model_utils
 from .resources.dummy_constants import *
 
@@ -25,6 +28,26 @@ def dummy_output_dir(tmpdir, dummy_config):
     output_dirs = model_utils.prepare_output_directory(dummy_config)
 
     return output_dirs
+
+@pytest.fixture
+def dummy_dataset():
+    """Returns a single dummy Dataset instance after calling Dataset.load().
+    """
+    # Don't replace rare tokens for the sake of testing
+    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
+    dataset.load()
+
+    return dataset
+
+@pytest.fixture
+def bert_tokenizer():
+    """
+    """
+    bert_tokenizer = BertTokenizer.from_pretrained(constants.PYTORCH_BERT_MODEL,
+                                                   do_lower_case=False)
+
+    return bert_tokenizer
+
 
 ############################################ UNIT TESTS ############################################
 
@@ -129,3 +152,110 @@ def test_precision_recall_f1_support():
     assert test_scores_FP_null == (1., rec_dummy, f1_FP_null, support_dummy)
     assert test_scores_FN_null == (prec_dummy, 1., f1_FN_null, TP_dummy)
     assert test_scores_all_null == (0., 0., 0., 0)
+
+
+def test_mask_labels_no_pads():
+    """Assert that `model_utils.mask_pads()` returns the expected values for a set of simple inputs.
+    """
+    empty_input = np.ones([100, ])
+
+    expected = empty_input, empty_input
+    actual = model_utils.mask_labels(empty_input, empty_input, constants.PAD_VALUE)
+
+    assert np.array_equal(expected, actual)
+
+def test_mask_labels_with_pads():
+    """Assert that `model_utils.mask_pads()` returns the expected values for a set of simple inputs.
+    """
+    empty_input = np.concatenate((np.ones([90, ]), np.zeros([10, ])), axis=None)
+
+    expected = empty_input[empty_input == 1], empty_input[empty_input == 1]
+    actual = model_utils.mask_labels(empty_input, empty_input, constants.PAD_VALUE)
+
+    assert np.array_equal(expected, actual)
+
+def test_setup_type_to_idx_for_bert(dummy_dataset):
+    """Assert that `dummy_dataset.type_to_idx['tag']` is updated as expected after call to
+    `model_utils.setup_type_to_idx_for_bert`.
+    """
+    # check that the wordpiece tag ('X') is not in type_to_idx['tag'] by default
+    assert constants.WORDPIECE not in dummy_dataset.type_to_idx['tag']
+
+    model_utils.setup_type_to_idx_for_bert(dummy_dataset)
+
+    # check that setup_type_to_idx_for_bert has added the wordpiece tag ('X') with the correct index
+    assert dummy_dataset.type_to_idx['tag'][constants.WORDPIECE] == \
+        len(dummy_dataset.type_to_idx['tag']) - 1
+
+def test_process_data_for_bert(bert_tokenizer):
+    """
+    """
+    pass
+
+def test_tokenize_for_bert(bert_tokenizer):
+    """Asserts that the tokenized text and labels returned by `model_utils.tokenize_for_bert()` are
+    as expected.
+    """
+    x = constants.WORDPIECE
+    outside = constants.OUTSIDE
+
+    dummy_word_seq = [['Jim', 'Henson', 'was', 'a', 'puppeteer', '.']]
+    dummy_tag_seq = [['I-PER', 'I-PER', outside, outside, outside, outside]]
+
+    expected_word_seq = [['Jim', 'He', '##nson', 'was', 'a', 'puppet', '##eer', '.']]
+    expected_tag_seq = [['I-PER', 'I-PER', x, outside, outside, outside, x, outside]]
+
+    expected = (expected_word_seq, expected_tag_seq)
+    actual = model_utils.tokenize_for_bert(bert_tokenizer, dummy_word_seq, dummy_tag_seq)
+
+    assert expected == actual
+
+def test_type_to_idx_for_bert(bert_tokenizer):
+    """
+    """
+    x = constants.WORDPIECE
+    pad = constants.PAD
+    unk = constants.UNK
+    outside = constants.OUTSIDE
+
+    dummy_word_seq = [['Jim', 'He', '##nson', 'was', 'a', 'puppet', '##eer', '.']]
+    dummy_tag_seq = [['I-PER', 'I-PER', x, outside, outside, outside, x, outside]]
+    dummy_type_to_idx = {pad: 0, unk: 1, x: 2, 'I-PER': 3, outside: 4}
+
+    actual = model_utils.type_to_idx_for_bert(bert_tokenizer,
+                                              dummy_word_seq, dummy_tag_seq,
+                                              dummy_type_to_idx)
+
+    expected_word_indices = \
+        pad_sequences([bert_tokenizer.convert_tokens_to_ids(sent) for sent in dummy_word_seq],
+                      maxlen=constants.MAX_SENT_LEN,
+                      dtype='long',
+                      padding="post",
+                      truncating="post",
+                      value=constants.PAD_VALUE)
+
+    expected_tag_indices = \
+        pad_sequences([[dummy_type_to_idx.get(tag, dummy_type_to_idx[constants.UNK]) for tag in sent] for sent in dummy_tag_seq],
+                      maxlen=constants.MAX_SENT_LEN,
+                      dtype='long',
+                      padding="post",
+                      truncating="post",
+                      value=constants.PAD_VALUE)
+
+    expected_attention_indices = [[float(idx > 0) for idx in sent] for sent in expected_word_indices]
+
+    expected = (expected_word_indices, expected_tag_indices, expected_attention_indices)
+
+    assert np.allclose(expected[0], actual[0])
+    assert np.allclose(expected[1], actual[1])
+    assert np.allclose(expected[2], actual[2])
+
+def test_get_dataloader_for_ber():
+    """
+    """
+    pass
+
+def test_process_get_optimizers(bert_tokenizer):
+    """
+    """
+    pass

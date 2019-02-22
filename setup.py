@@ -32,6 +32,7 @@ setuptools.setup(
     install_requires=[
         'scikit-learn>=0.20.1',
         'tensorflow>=1.12.0',
+        'pytorch-pretrained-bert>=0.4.0',
         'Flask>=1.0.2',
         'waitress>=1.1.0',
         'keras>=2.2.4',
