@@ -87,7 +87,7 @@ saber.load('PRGE')
 ```
 
 !!! tip
-    See [Resources: Pre-trained models](https://baderlab.github.io/saber/resources/#pre-trained-models) for pre-trained model names and details. You will need an internet connection to download a pre-trained model.
+    See [Resources: Pre-trained models](../resources#pre-trained-models) for pre-trained model names and details. You will need an internet connection to download a pre-trained model.
 
 To annotate text with the model, just call the `Saber.annotate()` method
 
@@ -118,6 +118,21 @@ saber.annotate(text, coref=True)
     If you are using the web-service, simply supply `"coref": true` in your `JSON` payload to resolve coreferences.
 
 Saber currently takes the simplest possible approach: replace all coreference mentions with their referent, and then feed the resolved text to the model that identifies named entities.
+
+### Grounding
+
+**Grounding** (sometimes called **entity linking** or **normalization**) involves mapping each annotated entity to a unique identifier in an external resource such as a database or ontology. To ground entities in a call to `Saber.annotate()`, simply pass the argument `ground=True`
+
+```python
+saber.annotate('The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53.', ground=True)
+```
+
+The grounding functionality is implemented by the [EXTRACT 2.0 API](https://extract.jensenlab.org/). Note that you will need an internet connection or grounding will fail. Also note that `Saber.annotate()` will take slightly longer to return a response when `ground=True` (up to a few seconds).
+
+See [Resources: Pre-trained models](../resources#pre-trained-models) for a list of the the external resources each entity type (annotated by the pre-trained models) is grounded to.
+
+!!! note
+    If you are using the web-service, simply supply `"ground": true` in your `JSON` payload to ground entities.
 
 ### Working with annotations
 
