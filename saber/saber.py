@@ -57,7 +57,7 @@ class Saber():
 
         text (str): Raw text to annotate.
         title (str): Title of the document, defaults to None.
-        coref (bool): True if coreference resolution should be performed before annotation, defaults
+        coref (book): True if coreference resolution should be performed before annotation, defaults
             to False.
         jupyter (bool): True if annotations made by the model should be rendered in HTML, which can
             be visualized in a jupter notebook, defaults to false.
