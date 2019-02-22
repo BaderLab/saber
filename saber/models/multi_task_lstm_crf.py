@@ -39,7 +39,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
     def __init__(self, config, datasets, embeddings=None, **kwargs):
         super().__init__(config, datasets, embeddings, **kwargs)
 
-    def load(self, weights_filepath, model_filepath):
+    def load(self, model_filepath, weights_filepath):
         """Load a model from disk.
 
         Loads a model from disk by loading its architecture from a json file at `model_filepath`
@@ -168,7 +168,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                           decay=self.config.decay,
                           clipnorm=self.config.grad_norm)
 
-    def prediction_step(self, training_data, model_idx, partition='train'):
+    def eval(self, training_data, model_idx, partition='train'):
         """Get `y_true` and `y_pred` for given inputs and targets in `training_data`.
 
         Performs prediction for the current model (`self.model`), and returns a 2-tuple containing
@@ -198,12 +198,17 @@ class MultiTaskLSTMCRF(BaseKerasModel):
 
         # sanity check
         if not y_true.shape == y_pred.shape:
-            err_msg = ("'y_true' and 'y_pred' in 'MultiTaskLSTMCRF.prediction_step() have different"
+            err_msg = ("'y_true' and 'y_pred' in 'MultiTaskLSTMCRF.eval() have different"
                        " shapes ({} and {} respectively)".format(y_true.shape, y_pred.shape))
             LOGGER.error('AssertionError: %s', err_msg)
             raise AssertionError(err_msg)
 
         return y_true, y_pred
+
+    def predict(self, sents, model_idx=0):
+        """
+        """
+        pass
 
     def prepare_data_for_training(self):
         """Returns a list containing the training data for each dataset at `self.datasets`.

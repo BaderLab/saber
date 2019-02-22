@@ -79,7 +79,7 @@ class Metrics(Callback):
             containing precision, recall, f1 and support for that class.
         """
         # get predictions and gold labels
-        y_true, y_pred = self.model.prediction_step(training_data,
+        y_true, y_pred = self.model.eval(training_data,
                                                     model_idx=self.model_idx,
                                                     partition=partition)
         # convert index sequence to tag sequence
@@ -90,8 +90,8 @@ class Metrics(Callback):
         y_pred_chunks = Preprocessor.chunk_entities(y_pred_tag)
 
         # remove predictions for wordpiece tags
-        # y_true_chunks = [chunk for chunk in y_true_chunks if chunk[0] != constants.WORDPIECE_TAG]
-        # y_pred_chunks = [chunk for chunk in y_pred_chunks if chunk[0] != constants.WORDPIECE_TAG]
+        # y_true_chunks = [chunk for chunk in y_true_chunks if chunk[0] != constants.WORDPIECE]
+        # y_pred_chunks = [chunk for chunk in y_pred_chunks if chunk[0] != constants.WORDPIECE]
 
         # get performance scores per label
         return self.get_precision_recall_f1_support(y_true=y_true_chunks,
