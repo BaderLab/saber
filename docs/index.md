@@ -6,7 +6,7 @@ The goal is that Saber will eventually perform all the important steps in text-m
 
 - Coreference resolution (:white_check_mark:)
 - Biomedical named entity recognition (BioNER) (:white_check_mark:)
-- Entity linking / grounding / normalization (:soon:)
+- Entity linking / grounding / normalization (:white_check_mark:)
 - Simple relation extraction (:soon:)
 - Event extraction (:soon:)
 

@@ -7,10 +7,10 @@ import time
 from itertools import chain
 from pprint import pprint
 
+from google_drive_downloader import GoogleDriveDownloader as gdd
 from spacy import displacy
 
 from . import constants
-from google_drive_downloader import GoogleDriveDownloader as gdd
 from .config import Config
 from .dataset import Dataset
 from .embeddings import Embeddings
@@ -47,7 +47,7 @@ class Saber(object):
             print('Hyperparameters and model details:')
             pprint({arg: getattr(self.config, arg) for arg in constants.CONFIG_ARGS})
 
-    def annotate(self, text, model_idx=0, jupyter=False, coref=False, ground=False):
+    def annotate(self, text, title='', model_idx=0, jupyter=False, coref=False, ground=False):
         """Uses a trained model (`self.model`) to annotate `text`, returns a dictionary.
 
         For the model at `self.model.models[model_idx]`, coordinates a prediction step on `text`.
@@ -72,7 +72,11 @@ class Saber(object):
         """
         # this takes about a minute to load, so only do it once!
         if self.preprocessor is None:
+            start = time.time()
+            print('Loading preprocessor...', end=' ', flush=True)
             self.preprocessor = Preprocessor()
+            end = time.time() - start
+            print('Done ({0:.2f} seconds).'.format(end))
 
         if not isinstance(text, str) or not text:
             err_msg = "Argument `text` must be a valid, non-empty string."
@@ -105,10 +109,15 @@ class Saber(object):
             text = transformed_text['text'][start:end]
             ents.append({'start': start, 'end': end, 'text': text, 'label': label})
 
-        # create the final annotation and ground it
-        annotation = {'text': transformed_text['text'], 'ents': ents}
+        annotation = {'text': transformed_text['text'], 'title': title, 'ents': ents}
+
         if ground:
-            annotation = grounding_utils.ground(annotation)
+            try:
+                annotation = grounding_utils.ground(annotation)
+            except:
+                err_msg = ("Grounding step in `Saber.annotate()` failed (`grounding_utils.ground()`"
+                           " threw an error. Check that you have a stable internet connection.")
+                LOGGER.error(err_msg)
 
         if jupyter:
             displacy.render(annotation, jupyter=True, style='ent', manual=True,
