@@ -12,7 +12,7 @@ from .. import constants
 
 LOGGER = logging.getLogger(__name__)
 
-class BaseModel(object):
+class BaseModel():
     """Parent class of all deep learning models implemented by Saber.
 
     config (Config): A Config object which contains a set of harmonized arguments provided in a
@@ -75,21 +75,21 @@ class BaseKerasModel(BaseModel):
         else:
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-    def save(self, weights_filepath, model_filepath, model_idx=0):
+    def save(self, model_filepath, weights_filepath, model_idx=0):
         """Save a Keras model to disk.
 
         Saves a Keras model to disk, by saving its architecture as a `.json` file at
         `model_filepath` and its weights as a `.hdf5` file at `model_filepath`.
 
         Args:
-            weights_filepath (str): Filepath to the models weights (`.hdf5` file).
             model_filepath (str): Filepath to the models architecture (`.json` file).
+            weights_filepath (str): Filepath to the models weights (`.hdf5` file).
             model_idx (int): Index to model in `self.models` that will be saved. Defaults to 0.
         """
         with open(model_filepath, 'w') as f:
-            model_json = self.models[model].to_json()
+            model_json = self.models[model_idx].to_json()
             json.dump(json.loads(model_json), f, sort_keys=True, indent=4)
-            self.models[model].save_weights(weights_filepath)
+            self.models[model_idx].save_weights(weights_filepath)
 
     def load(self, weights_filepath, model_filepath):
         """Load a Keras model from disk.
@@ -172,24 +172,6 @@ class BasePyTorchModel(BaseModel):
             model_idx (int): Index to model in `self.models` that will be saved. Defaults to 0.
         """
         torch.save(self.models[model_idx].state_dict(), model_filepath)
-        return
-
-    def load(self, model_filepath):
-        """Load a model from disk.
-
-        Loads a PyTorch model from disk by loading its architecture and weights from a `.bin` file
-        at `model_filepath`.
-
-        Args:
-            model_filepath (str): filepath to the models architecture (`.bin` file).
-        """
-        # TODO (James): Fill this in based on your stuff in the notebook
-        # TODO (James): In the future, we would like to support MTL. So self.models is a list.
-        # write the most generic, best practice way to load models here
-        ### YOUR CODE STARTS HERE ####
-        ### YOUR CODE ENDS HERE ####
-        # self.models.append(model)
-        pass
 
     def compile(self):
         """Dummy function, does nothing.
