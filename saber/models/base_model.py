@@ -2,81 +2,109 @@
 """
 import json
 import logging
+import os
 
+import torch
 from keras import optimizers
 from keras.models import model_from_json
 
+from .. import constants
+
 LOGGER = logging.getLogger(__name__)
 
-class BaseKerasModel(object):
-    """Parent class of all Keras model classes implemented by Saber.
+class BaseModel():
+    """Parent class of all deep learning models implemented by Saber.
+
+    config (Config): A Config object which contains a set of harmonized arguments provided in a
+        *.ini file and, optionally, from the command line.
+    datasets (list): A list containing one or more Dataset objects.
+    embeddings (Embeddings): An object containing loaded word embeddings.
+    models (list): A list of Keras or PyTorch models.
     """
     def __init__(self, config, datasets, embeddings=None, **kwargs):
-        self.config = config # hyperparameters and model details
-        self.datasets = datasets # dataset(s) tied to this instance
-        self.embeddings = embeddings # pre-trained word embeddings tied to this instance
-        self.models = [] # Keras model(s) tied to this instance
+        self.config = config  # hyperparameters and model details
+        self.datasets = datasets  # dataset(s) tied to this instance
+        self.embeddings = embeddings  # pre-trained word embeddings tied to this instance
+        self.models = []  # Keras / PyTorch model(s) tied to this instance
 
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def save(self, weights_filepath, model_filepath, model=0):
-        """Save a model to disk.
+    def train(self):
+        """Co-ordinates the training of model(s) at `self.models`.
 
-        Saves a keras model to disk, by saving its architecture as a json file at `model_filepath`
-        and its weights as a hdf5 file at `model_filepath`.
+        Coordinates the training of one or more models (given at `self.model.models`). If a
+        valid or test set is provided (`Dataset.dataset_folder['valid']` or
+        `Dataset.dataset_folder['test']` are not None) a simple train/valid/test strategy is used.
+        Otherwise, cross-validation is used.
+        """
+        # TODO: ugly, is there a better way to check for this? what if dif ds follow dif schemes?
+        if all([dataset.dataset_folder['test'] for dataset in self.datasets]):
+            self.train_valid_test()
+        else:
+            self.cross_validation()
+
+    def reset_model(self):
+        """Clears and rebuilds the model.
+
+        Clear and rebuilds the model(s) at `self.models`. This is useful, for example, at the end
+        of a cross-validation fold.
+        """
+        self.models = []
+        self.specify()
+        self.compile()
+
+class BaseKerasModel(BaseModel):
+    """Parent class of all Keras model classes implemented by Saber.
+
+    config (Config): A Config object which contains a set of harmonized arguments provided in a
+        *.ini file and, optionally, from the command line.
+    datasets (list): A list containing one or more Dataset objects.
+    embeddings (Embeddings): An object containing loaded word embeddings.
+    models (list): A list of Keras models.
+    """
+    def __init__(self, config, datasets, embeddings=None, **kwargs):
+        super().__init__(config, datasets, embeddings, **kwargs)
+
+        # attribute we can use to identify which framework / library model is written in
+        self.framework = constants.KERAS
+
+        # set Tensorflow logging level
+        if self.config.verbose:
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+        else:
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+    def save(self, model_filepath, weights_filepath, model_idx=0):
+        """Save a Keras model to disk.
+
+        Saves a Keras model to disk, by saving its architecture as a `.json` file at
+        `model_filepath` and its weights as a `.hdf5` file at `model_filepath`.
 
         Args:
-            weights_filepath (str): filepath to the models wieghts (.hdf5 file).
-            model_filepath (str): filepath to the models architecture (.json file).
-            model (int): which model from `self.models` to save.
+            model_filepath (str): Filepath to the models architecture (`.json` file).
+            weights_filepath (str): Filepath to the models weights (`.hdf5` file).
+            model_idx (int): Index to model in `self.models` that will be saved. Defaults to 0.
         """
         with open(model_filepath, 'w') as f:
-            model_json = self.models[model].to_json()
+            model_json = self.models[model_idx].to_json()
             json.dump(json.loads(model_json), f, sort_keys=True, indent=4)
-            self.models[model].save_weights(weights_filepath)
+            self.models[model_idx].save_weights(weights_filepath)
 
     def load(self, weights_filepath, model_filepath):
-        """Load a model from disk.
+        """Load a Keras model from disk.
 
-        Loads a keras model from disk by loading its architecture from a json file at `model_filepath`
-        and its weights from a hdf5 file at `model_filepath`.
+        Loads a Keras model from disk by loading its architecture from a `.json` file at
+        `model_filepath` and its weights from a `.hdf5` file at `model_filepath`.
 
         Args:
-            weights_filepath (str): filepath to the models weights (.hdf5 file).
-            model_filepath (str): filepath to the models architecture (.json file).
+            weights_filepath (str): Filepath to the models weights (`.hdf5` file).
+            model_filepath (str): Filepath to the models architecture (`.json` file).
         """
         with open(model_filepath) as f:
             model = model_from_json(f.read())
             model.load_weights(weights_filepath)
             self.models.append(model)
-
-    def prepare_data_for_training(self):
-        """Returns a list containing the training data for each dataset at `self.datasets`.
-
-        For each dataset at `self.datasets`, collects the data to be used for training.
-        Each dataset is represented by a dictionary, where the keys 'x_<partition>' and
-        'y_<partition>' contain the inputs and targets for each partition 'train', 'valid', and
-        'test'.
-        """
-        training_data = []
-        for ds in self.datasets:
-            # collect train data, must be provided
-            x_train = [ds.idx_seq['train']['word'], ds.idx_seq['train']['char']]
-            y_train = ds.idx_seq['train']['tag']
-            # collect valid and test data, may not be provided
-            x_valid, y_valid, x_test, y_test = None, None, None, None
-            if ds.idx_seq['valid'] is not None:
-                x_valid = [ds.idx_seq['valid']['word'], ds.idx_seq['valid']['char']]
-                y_valid = ds.idx_seq['valid']['tag']
-            if ds.idx_seq['test'] is not None:
-                x_test = [ds.idx_seq['test']['word'], ds.idx_seq['test']['char']]
-                y_test = ds.idx_seq['test']['tag']
-
-            training_data.append({'x_train': x_train, 'y_train': y_train, 'x_valid': x_valid,
-                                  'y_valid': y_valid, 'x_test': x_test, 'y_test': y_test})
-
-        return training_data
 
     def _compile(self, model, loss_function, optimizer, lr=0.01, decay=0.0, clipnorm=0.0):
         """Compiles a model specified with Keras.
@@ -84,12 +112,12 @@ class BaseKerasModel(object):
         See https://keras.io/optimizers/ for more info on each optimizer.
 
         Args:
-            model: Keras model object to compile
-            loss_function: Keras loss_function object to compile model with
-            optimizer (str): the optimizer to use during training
-            lr (float): learning rate to use during training
-            decay (float): per epoch decay rate
-            clipnorm (float): gradient normalization threshold
+            model (keras.Model): Keras model object to compile.
+            loss_function: A loss function to be passed to `keras.Model.compile()`.
+            optimizer (str): The optimizer to use during training.
+            lr (float): Learning rate to use during training
+            decay (float): Per epoch decay rate.
+            clipnorm (float): Gradient normalization threshold.
         """
         # The parameters of these optimizers can be freely tuned.
         if optimizer == 'sgd':
@@ -117,3 +145,39 @@ class BaseKerasModel(object):
             raise ValueError(err_msg)
 
         model.compile(optimizer=optimizer_, loss=loss_function)
+
+class BasePyTorchModel(BaseModel):
+    """Parent class of all PyTorch model classes implemented by Saber.
+
+    config (Config): A Config object which contains a set of harmonized arguments provided in a
+        *.ini file and, optionally, from the command line.
+    datasets (list): A list containing one or more Dataset objects.
+    embeddings (Embeddings): An object containing loaded word embeddings.
+    models (list): A list of PyTorch models.
+    """
+    def __init__(self, config, datasets, embeddings=None, **kwargs):
+        super().__init__(config, datasets, embeddings, **kwargs)
+
+        # attribute we can use to identify which framework / library model is written in
+        self.framework = constants.PYTORCH
+
+    def save(self, model_filepath, model_idx=0):
+        """Save a PyTorch model to disk.
+
+        Saves a PyTorch model to disk, by saving its architecture and weights as a `.bin` file
+        at `model_filepath`.
+
+        Args:
+            model_filepath (str): filepath to the models architecture (`.bin` file).
+            model_idx (int): Index to model in `self.models` that will be saved. Defaults to 0.
+        """
+        torch.save(self.models[model_idx].state_dict(), model_filepath)
+
+    def compile(self):
+        """Dummy function, does nothing.
+
+        This is a dummy function which makes code simpler elsewhere in Saber. PyTorch models
+        don't need to be compiled, but Keras models do. To avoid writing extra code, both
+        Keras and PyTorch models implement a `compile` method.
+        """
+        pass

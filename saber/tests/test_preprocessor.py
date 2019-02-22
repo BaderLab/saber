@@ -20,7 +20,7 @@ def nlp():
 
 ############################################ UNIT TESTS ############################################
 
-def test_process_text(preprocessor, nlp):
+def test_tokenize(preprocessor, nlp):
     """Asserts that call to Preprocessor._process_text() returns the expected
     results."""
     # simple test and its expected value
@@ -32,8 +32,8 @@ def test_process_text(preprocessor, nlp):
     blank_test = nlp("")
     blank_expected = ([], [])
 
-    assert preprocessor._process_text(simple_text) == simple_expected
-    assert preprocessor._process_text(blank_test) == blank_expected
+    assert preprocessor.tokenize(simple_text) == simple_expected
+    assert preprocessor.tokenize(blank_test) == blank_expected
 
 def test_type_to_idx_value_error():
     """
@@ -98,6 +98,7 @@ def test_chunk_entities():
     assert Preprocessor.chunk_entities(two_type_seq) == two_type_expected
     assert Preprocessor.chunk_entities(invalid_seq) == invalid_expected
     assert Preprocessor.chunk_entities(blank_seq) == blank_expected
+
 
 def test_sterilize():
     """Asserts that call to Preprocessor.sterilize() returns the
