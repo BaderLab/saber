@@ -7,10 +7,10 @@ import time
 from itertools import chain
 from pprint import pprint
 
+from google_drive_downloader import GoogleDriveDownloader as gdd
 from spacy import displacy
 
 from . import constants
-from google_drive_downloader import GoogleDriveDownloader as gdd
 from .config import Config
 from .dataset import Dataset
 from .embeddings import Embeddings
@@ -57,7 +57,7 @@ class Saber():
 
         text (str): Raw text to annotate.
         title (str): Title of the document, defaults to None.
-        coref (book): True if coreference resolution should be performed before annotation, defaults
+        coref (bool): True if coreference resolution should be performed before annotation, defaults
             to False.
         jupyter (bool): True if annotations made by the model should be rendered in HTML, which can
             be visualized in a jupter notebook, defaults to false.
@@ -71,7 +71,11 @@ class Saber():
         """
         # this takes about a minute to load, so only do it once!
         if self.preprocessor is None:
+            start = time.time()
+            print('Loading preprocessor...', end=' ', flush=True)
             self.preprocessor = Preprocessor()
+            end = time.time() - start
+            print('Done ({0:.2f} seconds).'.format(end))
 
         if not isinstance(text, str) or not text:
             err_msg = "Argument `text` must be a valid, non-empty string."
@@ -108,7 +112,12 @@ class Saber():
         # create the final annotation and ground it
         annotation = {'text': processed_text, 'title': title, 'ents': ents}
         if ground:
-            annotation = grounding_utils.ground(annotation)
+            try:
+                annotation = grounding_utils.ground(annotation)
+            except:
+                err_msg = ("Grounding step in `Saber.annotate()` failed (`grounding_utils.ground()`"
+                           " threw an error. Check that you have a stable internet connection.")
+                LOGGER.error(err_msg)
 
         if jupyter:
             displacy.render(annotation, jupyter=True, style='ent', manual=True,
