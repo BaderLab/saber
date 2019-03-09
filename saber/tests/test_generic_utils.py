@@ -1,6 +1,7 @@
 """Any and all unit tests for the generic_utils (saber/utils/generic_utils.py).
 """
 import os
+import shutil
 
 import pytest
 
@@ -8,22 +9,6 @@ from ..config import Config
 from ..utils import generic_utils
 from .resources.dummy_constants import *
 
-######################################### PYTEST FIXTURES #########################################
-
-@pytest.fixture(scope='session')
-def dummy_dir(tmpdir_factory):
-    """Returns the path to a temporary directory.
-    """
-    dummy_dir = tmpdir_factory.mktemp('dummy_dir')
-    return dummy_dir.strpath
-
-@pytest.fixture
-def dummy_config():
-    """Returns an instance of a Config object."""
-    dummy_config = Config(PATH_TO_DUMMY_CONFIG)
-    return dummy_config
-
-############################################ UNIT TESTS ############################################
 
 def test_is_consecutive_empty():
     """Asserts that `generic_utils.is_consecutive()` returns the expected value when passed an
@@ -153,20 +138,55 @@ def test_make_dir_exists(dummy_dir):
     generic_utils.make_dir(dummy_dir)
     assert os.path.isdir(dummy_dir)
 
-def test_clean_path():
+def test_clean_path_empty():
+    """Asserts that filepath returned by `generic_utils.clean_path()` is as expected when an
+    empty string is passed as argument.
+    """
+    test = ''
+
+    actual = generic_utils.clean_path(test)
+    expected = os.path.abspath('')
+
+    assert expected == actual
+
+
+def test_clean_path_simple():
     """Asserts that filepath returned by `generic_utils.clean_path()` is as expected.
     """
     test = ' this/is//a/test/     '
+
+    actual = generic_utils.clean_path(test)
     expected = os.path.abspath('this/is/a/test')
 
-    assert generic_utils.clean_path(test) == expected
+    assert expected == actual
 
-def test_decompress_model():
-    """Asserts that `generic_utils.decompress_model()` decompresses a given directory.
+def test_extract_directory(tmp_path):
+    """Asserts that `generic_utils.extract_directory()` decompresses a given compressed file.
     """
-    pass
+    # setup
+    directory = tmp_path
+    root_dir = os.path.abspath(''.join(os.path.split(directory)[:-1]))
+    base_dir = os.path.basename(directory)
 
-def test_compress_model():
-    """Asserts that `generic_utils.compress_model()` compresses a given directory.
+    compressed_filename = '{}.tar.bz2'.format(directory)
+
+    # compress the dummy directory, remove uncompressed directory
+    shutil.make_archive(base_name=directory, format='bztar', root_dir=root_dir, base_dir=base_dir)
+    shutil.rmtree(directory)
+
+    # test that directory exists after uncompression
+    generic_utils.extract_directory(directory)
+
+    assert os.path.isdir(directory)
+    assert os.path.isfile(compressed_filename)
+
+def test_compress_directory(tmp_path):
+    """Asserts that `generic_utils.compress_directory()` compresses a given directory, and removes
+    the uncompressed directory.
     """
-    pass
+    generic_utils.compress_directory(tmp_path)
+
+    compressed_filename = '{}.tar.bz2'.format(tmp_path)
+
+    assert not os.path.isfile(tmp_path)
+    assert os.path.isfile(compressed_filename)
