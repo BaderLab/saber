@@ -3,9 +3,8 @@
 import logging
 import os
 
-from pkg_resources import resource_filename
-
 import numpy as np
+from pkg_resources import resource_filename
 
 from ... import constants
 
