@@ -1,21 +1,8 @@
 import en_coref_md
 import pytest
 
-from ..utils import text_utils
 
-######################################### PYTEST FIXTURES #########################################
-
-@pytest.fixture
-def nlp():
-    """Returns an instance of a spaCy's nlp object after replacing the default tokenizer with
-    our modified one."""
-    custom_nlp = en_coref_md.load()
-    custom_nlp.tokenizer = text_utils.biomedical_tokenizer(custom_nlp)
-    return custom_nlp
-
-############################################ UNIT TESTS ############################################
-
-def test_biomedical_tokenizer(nlp):
+def test_biomedical_tokenizer(nlp_with_biomedical_tokenizer):
     """Asserts that call to customized spaCy tokenizer returns the expected results.
     """
     # the empty string
@@ -57,11 +44,11 @@ def test_biomedical_tokenizer(nlp):
                              'hTAFII32', '.']
 
     # generic tests
-    assert [t.text for t in nlp(blank_text)] == blank_expected
-    assert [t.text for t in nlp(simple_text)] == simple_expected
-    assert [t.text for t in nlp(complicated_test)] == complicated_expected
+    assert [t.text for t in nlp_with_biomedical_tokenizer(blank_text)] == blank_expected
+    assert [t.text for t in nlp_with_biomedical_tokenizer(simple_text)] == simple_expected
+    assert [t.text for t in nlp_with_biomedical_tokenizer(complicated_test)] == complicated_expected
     # tests taken straight from training data
-    assert [t.text for t in nlp(from_CHED_ds)] == from_CHED_ds_expected
-    assert [t.text for t in nlp(from_DISO_ds)] == from_DISO_expected
-    assert [t.text for t in nlp(from_LIVB_ds)] == from_LIVB_ds_expected
-    assert [t.text for t in nlp(from_PRGE_ds)] == from_PRGE_ds_expected
+    assert [t.text for t in nlp_with_biomedical_tokenizer(from_CHED_ds)] == from_CHED_ds_expected
+    assert [t.text for t in nlp_with_biomedical_tokenizer(from_DISO_ds)] == from_DISO_expected
+    assert [t.text for t in nlp_with_biomedical_tokenizer(from_LIVB_ds)] == from_LIVB_ds_expected
+    assert [t.text for t in nlp_with_biomedical_tokenizer(from_PRGE_ds)] == from_PRGE_ds_expected
