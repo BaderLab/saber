@@ -79,6 +79,16 @@ PYTORCH = 'pytorch'
 # which pre-trained BERT model to use
 PYTORCH_BERT_MODEL = 'bert-base-cased'
 
+# EXTRACT 2.0 API
+# arguments passed in a get request to the EXTRACT 2.0 API to specify entity type
+ENTITY_TYPES = {'CHED': -1, 'DISO': -26, 'LIVB': -2}
+# the namespaces of the external resources that EXTRACT 2.0 grounds too
+NAMESPACES = {'CHED': 'PubChem Compound',
+              'DISO': 'Disease Ontology',
+              'LIVB': 'NCBI Taxonomy',
+              'PRGE': 'STRING',
+              }
+
 # RESTful API
 # endpoint for Entrez Utilities Web Service API
 EUTILS_API_ENDPOINT = ('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?retmode=xml&db='
