@@ -1,0 +1,9 @@
+[run]
+omit =
+  # omit test files themselves
+  saber/tests/*
+  # omit the file of constants
+  saber/constants.py
+  # omit any init files
+  saber/__init__.py
+  saber/*/__init__.py
