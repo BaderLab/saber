@@ -148,7 +148,6 @@ class BertTokenClassifier(BasePyTorchModel):
         # TODO (johngiorgi): In future, we will support MTL, hence why these are lists
         # get the train / valid partitioned data for all datasets and all folds
         training_data = self.prepare_data_for_training()
-        training_data = data_utils.collect_valid_data(training_data)[0]
 
         output_dir = model_utils.prepare_output_directory(self.config)[0]
 
@@ -158,7 +157,7 @@ class BertTokenClassifier(BasePyTorchModel):
 
         # use 10% of train data as validation data if no validation data provided
         if training_data['x_valid'] is None:
-            training_data = data_utils.collect_valid_data(training_data)
+            training_data = data_utils.collect_valid_data(training_data)[0]
 
         # metrics object
         metrics = Metrics(config=self.config,
@@ -336,13 +335,13 @@ class BertTokenClassifier(BasePyTorchModel):
             if fold < self.config.k_folds - 1:
                 self.reset_model()
 
-    def eval(self, training_data, model_idx, partition='train'):
+    def eval(self, training_data, model_idx=0, partition='train'):
         """Get `y_true` and `y_pred` for given inputs and targets in `training_data`.
 
-        Performs prediction for the current model (`self.model`), and returns a 2-tuple containing
-        the true (gold) labels and the predicted labels, where labels are integers corresponding to
-        mapping at `self.idx_to_tag`. Inputs and labels are stored in a PyTorch Dataloader at
-        `training_data[partition_dataloader]`.
+        Performs prediction for the model at `self.models[model_idx]`), and returns a 2-tuple
+        containing the true (gold) labels and the predicted labels, where labels are integers
+        corresponding to mapping at `self.idx_to_tag`. Inputs and labels are stored in a PyTorch
+        Dataloader at `training_data[partition_dataloader]`.
 
         Args:
             training_data (dict): Contains the data (at key `partition_dataloader`).
@@ -353,10 +352,7 @@ class BertTokenClassifier(BasePyTorchModel):
             A two-tuple containing the gold label integer sequences and the predicted integer label
             sequences.
         """
-        # TEMP: This will cause MT to break, but should work for now
-        # TEMP: In future the model or its index will need to be passed to this function
-        model = self.models[model_idx]
-        dataset = self.datasets[model_idx]
+        model = self.models[model_idx], dataset = self.datasets[model_idx]
         model.eval()  # puts the model in evaluation mode
 
         y_pred, y_true = [], []
@@ -396,7 +392,8 @@ class BertTokenClassifier(BasePyTorchModel):
         y_true = [[l_ii for l_ii in l_i] for l in y_true for l_i in l]
         y_true = np.asarray(y_true).ravel()
         y_pred = np.asarray(y_pred).ravel()
-        # mask out pads
+
+        # mask out pads and wordpiece tokens
         y_true, y_pred = model_utils.mask_labels(y_true, y_pred, dataset.type_to_idx['tag'][constants.PAD])
         y_true, y_pred = model_utils.mask_labels(y_true, y_pred, dataset.type_to_idx['tag'][constants.WORDPIECE])
 

@@ -8,7 +8,7 @@ from .utils import data_utils, model_utils
 
 LOGGER = logging.getLogger(__name__)
 
-class KerasTrainer(object):
+class KerasTrainer():
     """A class for co-ordinating the training of Keras model(s).
 
     Args:
@@ -59,10 +59,11 @@ class KerasTrainer(object):
         if self.training_data[0]['x_valid'] is None:
             self.training_data = data_utils.collect_valid_data(self.training_data)
         # get list of Keras Callback objects for computing/storing metrics
-        metrics = model_utils.setup_metrics_callback(config=self.config,
+        metrics = model_utils.setup_metrics_callback(model=self.model,
+                                                     config=self.config,
                                                      datasets=self.datasets,
                                                      training_data=self.training_data,
-                                                     output_dir=self.output_dir)
+                                                     output_dir=self.output_dir,)
         # training loop
         for epoch in range(self.config.epochs):
             # create our text header
@@ -103,8 +104,9 @@ class KerasTrainer(object):
         # training loop
         for fold in range(self.config.k_folds):
             # get list of Keras Callback objects for computing/storing metrics
-            metrics = model_utils.setup_metrics_callback(config=self.config,
+            metrics = model_utils.setup_metrics_callback(model=self.model,
                                                          datasets=self.datasets,
+                                                         config=self.config,
                                                          training_data=self.training_data,
                                                          output_dir=self.output_dir,
                                                          fold=fold)

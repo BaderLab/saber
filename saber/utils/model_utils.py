@@ -148,13 +148,14 @@ def setup_tensorboard_callback(output_dir):
 
     return tensorboards
 
-def setup_metrics_callback(config, datasets, training_data, output_dir, fold=None):
+def setup_metrics_callback(model, datasets, config, training_data, output_dir, fold=None):
     """Creates Keras Metrics Callback objects, one for each dataset in `datasets`.
 
     Args:
+        model (BaseModel): Model to evaluate, subclass of BaseModel.
+        datasets (list): A list of Dataset objects.
         config (Config): Contains a set of harmonzied arguments provided in a *.ini file and,
             optionally, from the command line.
-        datasets (list): A list of Dataset objects.
         training_data (list): A list of dictionaries, where the ith element contains the data
             for the ith dataset indices and the dictionaries keys are dataset partitions
             ('x_train', 'y_train', 'x_valid', ...)
@@ -168,9 +169,11 @@ def setup_metrics_callback(config, datasets, training_data, output_dir, fold=Non
     for i, dataset in enumerate(datasets):
         eval_data = training_data[i] if fold is None else training_data[i][fold]
         metric = Metrics(config=config,
+                         model_=model,
                          training_data=eval_data,
                          idx_to_tag=dataset.idx_to_tag,
                          output_dir=output_dir[i],
+                         model_idx=i,
                          fold=fold)
         metrics.append(metric)
 
