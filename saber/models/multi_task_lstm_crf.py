@@ -12,8 +12,8 @@ from keras_contrib.layers.crf import CRF
 from keras_contrib.losses.crf_losses import crf_loss
 
 from .. import constants
-from ..utils import model_utils
 from ..preprocessor import Preprocessor
+from ..utils import model_utils
 from .base_model import BaseKerasModel
 
 LOGGER = logging.getLogger(__name__)
@@ -169,13 +169,13 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                           decay=self.config.decay,
                           clipnorm=self.config.grad_norm)
 
-    def eval(self, training_data, model_idx, partition='train'):
+    def eval(self, training_data, model_idx=0, partition='train'):
         """Get `y_true` and `y_pred` for given inputs and targets in `training_data`.
 
-        Performs prediction for the current model (`self.model`), and returns a 2-tuple containing
-        the true (gold) labels and the predicted labels, where labels are integers corresponding to
-        mapping at `self.idx_to_tag`. Inputs are given at `training_data[x_partition]` and gold
-        labels at `training_data[y_partition]`.
+        Performs prediction for the model at `self.models[model_idx]` and returns a 2-tuple
+        containing the true (gold) labels and the predicted labels, where labels are integers
+        corresponding to mapping at `self.idx_to_tag`. Inputs are given at
+        `training_data[x_partition]` and gold labels at `training_data[y_partition]`.
 
         Args:
             training_data (dict): Contains the data (at key `x_partition`) and targets
@@ -190,12 +190,11 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         model, dataset = self.models[model_idx], self.datasets[model_idx]
 
         X, y = training_data['x_{}'.format(partition)], training_data['y_{}'.format(partition)]
+
         # gold labels
-        y_true = y.argmax(axis=-1) # get class label
-        y_true = np.asarray(y_true).ravel() # flatten to 1D array
-        # predicted labels
-        y_pred = model.predict(X)
-        y_pred = np.asarray(y_pred.argmax(axis=-1)).ravel()
+        y_true = y.argmax(axis=-1).ravel()
+        y_pred = model.predict(X).argmax(axis=-1).ravel()
+
         # mask out pads
         y_true, y_pred = \
             model_utils.mask_labels(y_true, y_pred, dataset.type_to_idx['tag'][constants.PAD])
@@ -221,6 +220,11 @@ class MultiTaskLSTMCRF(BaseKerasModel):
             sents (list): List of lists containing tokenized sentences to annotate.
             model_idx (int): Index to model in `self.models` that will be used for inference.
                 Defaults to 0.
+
+        Returns:
+            Two-tuple containing the corresponding index sequence for `sents` (mapped according to
+            `self.datasets[model_idx].type_to_idx['word']` and corresponding one-hot encoded
+            predictions for each token in `sents`.
         """
         model, dataset = self.models[model_idx], self.datasets[model_idx]
 
@@ -234,7 +238,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
 
         # perform prediction, convert from one-hot to predicted indices, flatten results
         model_input = [word_idx_seq, char_idx_seq]
-        X, y_pred = word_idx_seq, model.predict(model_input).argmax(-1).ravel()
+        X, y_pred = word_idx_seq, model.predict(model_input)
 
         return X, y_pred
 
