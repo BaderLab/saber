@@ -89,16 +89,15 @@ class Saber():
 
         X, y_pred = self.model.predict(sents, model_idx)
 
-        # flatten prediction and character offsets
-        X, y_pred = X.ravel(), y_pred.ravel()
+        # flatten inputs, predictions and character offsets
+        X, y_pred = X.ravel(), y_pred.argmax(axis=-1).ravel()
         char_offsets = list(chain.from_iterable(char_offsets))
 
-        # we need to mask predictions where the input to the model was a pad or wordpiece token
-        # TODO: Would be better if `mask_labels` could take a list of items to mask
+        # we need to mask predictions where the input to the model was a pad
         X, y_pred = model_utils.mask_labels(X, y_pred, dataset.type_to_idx['word'][constants.PAD])
-        _, y_pred = model_utils.mask_labels(X, y_pred, dataset.type_to_idx['word'][constants.WORDPIECE])
 
-        pred_tag_seq = [dataset.idx_to_tag[idx] for idx in y_pred]
+        pred_tag_seq = [dataset.idx_to_tag[idx] for idx in y_pred
+                        if dataset.idx_to_tag[idx] != constants.WORDPIECE]
         pred_chunk_seq = self.preprocessor.chunk_entities(pred_tag_seq)
 
         # accumulate predicted entities
@@ -155,9 +154,7 @@ class Saber():
                             'idx_to_tag': self.datasets[model_idx].idx_to_tag,
                             }
 
-
         # saving Keras models requires a seperate file for weights
-
         if self.model.framework == constants.KERAS:
             model_filepath = os.path.join(directory, constants.KERAS_MODEL_FILENAME)
             weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
@@ -373,20 +370,19 @@ class Saber():
 
         # setup the chosen model
         if self.config.model_name == 'bilstm-crf-ner':
-            print('Building the multi-task BiLSTM-CRF model...', end=' ', flush=True)
+            print('Building the BiLSTM-CRF model for NER...', end=' ', flush=True)
             from .models.multi_task_lstm_crf import MultiTaskLSTMCRF
             model = MultiTaskLSTMCRF(config=self.config,
                                      datasets=self.datasets,
                                      embeddings=self.embeddings)
-            model.specify()
-            model.compile()
-
         elif self.config.model_name == 'bert-ner':
+            print('Building the BERT model for NER...', end=' ', flush=True)
             from .models.bert_token_classifier import BertTokenClassifier
             model = BertTokenClassifier(config=self.config,
                                         datasets=self.datasets,
                                         pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
-            model.specify()
+        model.specify()
+        model.compile()  # does nothing if not a Keras model
 
         self.model = model
 
