@@ -9,7 +9,6 @@ import numpy as np
 import torch
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras.preprocessing.sequence import pad_sequences
-from pytorch_pretrained_bert import BertAdam
 from torch.optim import Adam
 from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
                               TensorDataset)
@@ -227,18 +226,21 @@ def mask_labels(y_true, y_pred, label):
     """Masks pads from `y_true` and `y_pred`.
 
     Masks (removes) all indices in `y_true` and `y_pred` where `y_true` is equal to
-    `tag_to_idx[constants.PAD]`. This step is necessary for discarding the sequence pad labels
-    (and predictions made on these sequence pad labels) from the gold labels and model predictions
-    before performance metrics are computed.
+    `label`. This step is necessary for discarding the sequence pad labels (and predictions made on
+    these sequence pad labels) from the gold labels and model predictions before performance metrics
+    are computed.
 
-    y_true (np.array): 1D numpy array containing gold labels.
-    y_pred (np.array): 1D numpy array containing predicted labels.
-    label (int): The label, or index to mask from the sequences `y_true` and `y_pred`.
+    Args:
+        y_true (np.array): 1D numpy array containing gold labels.
+        y_pred (np.array): 1D numpy array containing predicted labels.
+        label (int): The label, or index to mask from the sequences `y_true` and `y_pred`.
 
     Returns:
         `y_true` and `y_pred`, where all indices where `y_true` was equal to
         `tag_to_idx[constants.PAD]` have been removed.
     """
+    print(y_true)
+    print(y_pred)
     mask = y_true != label
     y_true, y_pred = y_true[mask], y_pred[mask]
 
@@ -389,7 +391,22 @@ def tokenize_for_bert(tokenizer, word_seq, tag_seq=None):
     return bert_tokenized_text, bert_tokenized_labels
 
 def type_to_idx_for_bert(tokenizer, word_seq, tag_seq=None, tag_to_idx=None):
-    """
+    """Returns the corresponding index sequence for `word_seq` (and `tag_seq` if provided).
+
+    Given `tokenizer, `word_seq` is mapped to the corresponding indices and post-padded. If
+    `tag_seq` and `tag_to_idx` is provided, the `tag_seq` is mapped to the corresponding indices
+    using `tag_to_idx`. Additionally, the attention masks for a BERT based model are also returned.
+
+    Args:
+        tokenizer (BertTokenizer): An object with methods for tokenizing text for input to BERT.
+        word_seq (list): A list of lists containing tokenized sentences.
+        tag_seq (list): A list of lists containing tags corresponding to `word_seq`.
+        tag_to_idx (dictionary): A dictionary mapping tags to unique integers.
+
+    Returns:
+        A three-tuple of the corresponding index sequence for `word_seq` and `tag_seq` along with
+        the attention masks for a BERT based model. If `taq_seq` or `tag_to_idx` are not provided,
+        the second value in the tuple is None.
     """
     # process words
     bert_word_indices = \
@@ -399,6 +416,7 @@ def type_to_idx_for_bert(tokenizer, word_seq, tag_seq=None, tag_to_idx=None):
                       padding='post',
                       truncating='post',
                       value=constants.PAD_VALUE)
+
     # process tags, if provided
     bert_tag_indices = []
     if tag_seq and tag_to_idx:
@@ -411,16 +429,32 @@ def type_to_idx_for_bert(tokenizer, word_seq, tag_seq=None, tag_to_idx=None):
                           value=constants.PAD_VALUE)
 
     # generate attention masks for padded data
-    bert_attention_masks = [[float(idx > 0) for idx in sent] for sent in bert_word_indices]
-
-    bert_word_indices = torch.as_tensor(bert_word_indices)
-    bert_tag_indices = torch.as_tensor(bert_tag_indices)
-    bert_attention_masks = torch.as_tensor(bert_attention_masks)
+    bert_attention_masks = np.asarray([[float(idx > 0) for idx in sent]
+                                       for sent in bert_word_indices])
 
     return bert_word_indices, bert_tag_indices, bert_attention_masks
 
 def get_dataloader_for_ber(x, y, attention_mask, config, data_partition='train'):
-    """
+    """Returns a `DataLoader` for inputs, labels, attention masks: `x`, `y`, `attention_mask`.
+
+    For the given inputs, labels and attention masks: `x`, `y`, `attention_mask`, returns the
+    appropriate `DataLoader` object based on `data_partition`.
+
+    Args:
+        x (numpy.ndarray): Numpy array or list containing the inputs for a BERT based model.
+        y (numpy.ndarray): Numpy array or list containing the corresponding labels for `x`.
+        attention_mask (numpy.ndarray): Numpy array or list containing the corresponding
+            attention masks labels for `x`.
+        config (Config): A Config object which contains a set of harmonized arguments provided in
+            a *.ini file and, optionally, from the command line.
+        data_partition (str): One of 'train' or 'eval'. If train, a `RandomSampler` is used for the
+            returned DataLoader, if eval, a `SequentialSampler` is used. Defaults to 'train'.
+
+    Raises:
+        ValueError if `data_partition` is not `train` or `eval`.
+
+    Returns:
+        A Torch DataLoader object for `x`, `y`, and `attention_masks`.
     """
     if data_partition not in {'train', 'eval'}:
         err_msg = ("Expected one of 'train', 'eval' for argument `data_partition` to "
@@ -436,7 +470,6 @@ def get_dataloader_for_ber(x, y, attention_mask, config, data_partition='train')
 
     if data_partition == 'train':
         sampler = RandomSampler(data)
-        dataloader = DataLoader(data, sampler=sampler, batch_size=config.batch_size)
     elif data_partition == 'eval':
         sampler = SequentialSampler(data)
 

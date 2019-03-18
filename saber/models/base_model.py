@@ -91,15 +91,15 @@ class BaseKerasModel(BaseModel):
             json.dump(json.loads(model_json), f, sort_keys=True, indent=4)
             self.models[model_idx].save_weights(weights_filepath)
 
-    def load(self, weights_filepath, model_filepath):
+    def load(self, model_filepath, weights_filepath):
         """Load a Keras model from disk.
 
         Loads a Keras model from disk by loading its architecture from a `.json` file at
         `model_filepath` and its weights from a `.hdf5` file at `model_filepath`.
 
         Args:
-            weights_filepath (str): Filepath to the models weights (`.hdf5` file).
             model_filepath (str): Filepath to the models architecture (`.json` file).
+            weights_filepath (str): Filepath to the models weights (`.hdf5` file).
         """
         with open(model_filepath) as f:
             model = model_from_json(f.read())
