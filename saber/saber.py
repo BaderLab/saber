@@ -7,6 +7,7 @@ import time
 from itertools import chain
 from pprint import pprint
 
+import numpy as np
 from google_drive_downloader import GoogleDriveDownloader as gdd
 from spacy import displacy
 
@@ -90,7 +91,7 @@ class Saber():
         X, y_pred = self.model.predict(sents, model_idx)
 
         # flatten inputs, predictions and character offsets
-        X, y_pred = X.ravel(), y_pred.argmax(axis=-1).ravel()
+        X, y_pred = X.ravel(), np.argmax(y_pred, axis=-1).ravel()
         char_offsets = list(chain.from_iterable(char_offsets))
 
         # we need to mask predictions where the input to the model was a pad
@@ -427,5 +428,5 @@ class Saber():
 
 # https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
 class MissingStepException(Exception):
-    """Execption subclass for signalling to user that some required previous step was missed."""
+    """Exception subclass for signalling to user that some required previous step was missed."""
     pass
