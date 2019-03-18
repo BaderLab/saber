@@ -5,8 +5,7 @@ import shutil
 
 import numpy as np
 import torch
-from pytorch_pretrained_bert import (BertConfig, BertForTokenClassification,
-                                     BertTokenizer)
+from pytorch_pretrained_bert import BertForTokenClassification, BertTokenizer
 from tqdm import tqdm
 
 from .. import constants
@@ -149,18 +148,21 @@ class BertTokenClassifier(BasePyTorchModel):
         # get the train / valid partitioned data for all datasets and all folds
         training_data = self.prepare_data_for_training()
 
+        # use 10% of train data as validation data if no validation data provided
+        if training_data[0]['x_valid'] is None:
+            training_data = data_utils.collect_valid_data(training_data)
+
+        training_data = training_data[0]
+
         output_dir = model_utils.prepare_output_directory(self.config)[0]
 
         model = self.models[0]
         dataset = self.datasets[0]
         optimizer = model_utils.get_optimizers(self.models, self.config)[0]
 
-        # use 10% of train data as validation data if no validation data provided
-        if training_data['x_valid'] is None:
-            training_data = data_utils.collect_valid_data(training_data)[0]
-
         # metrics object
         metrics = Metrics(config=self.config,
+                          model_=self,
                           training_data=training_data,
                           idx_to_tag=dataset.idx_to_tag,
                           output_dir=output_dir,
@@ -273,6 +275,7 @@ class BertTokenClassifier(BasePyTorchModel):
 
             # metrics object
             metrics = Metrics(config=self.config,
+                              model_=self,
                               training_data=training_data[fold],
                               idx_to_tag=dataset.idx_to_tag,
                               output_dir=output_dir,
@@ -352,7 +355,9 @@ class BertTokenClassifier(BasePyTorchModel):
             A two-tuple containing the gold label integer sequences and the predicted integer label
             sequences.
         """
-        model = self.models[model_idx], dataset = self.datasets[model_idx]
+        model = self.models[model_idx]
+        dataset = self.datasets[model_idx]
+
         model.eval()  # puts the model in evaluation mode
 
         y_pred, y_true = [], []
@@ -424,19 +429,13 @@ class BertTokenClassifier(BasePyTorchModel):
 
         # process the sentences into lists of lists of ids and corresponding attention masks
         X, _, attention_masks = model_utils.process_data_for_bert(self.tokenizer, sents)
-        X, attention_masks = X.to(self.device), attention_masks.to(self.device)
+
+        X = torch.tensor(X).to(device=self.device)
+        attention_masks = torch.tensor(attention_masks).to(device=self.device)
 
         # actual prediction happens here
         with torch.no_grad():
             logits = model(X, token_type_ids=None, attention_mask=attention_masks)
-        logits = logits.detach().cpu().numpy()
-        X, y_pred = X.numpy(), np.asarray([list(pred) for pred in np.argmax(logits, axis=2)])
-
-        # sanity check
-        if not X.shape == y_pred.shape:
-            err_msg = ("'X' and 'y_pred' in 'BertForTokenClassification.predict() have different"
-                       " shapes ({} and {} respectively)".format(X.shape, y_pred.shape))
-            LOGGER.error('AssertionError: %s', err_msg)
-            raise AssertionError(err_msg)
+        X, y_pred = X.numpy(), logits.detach().cpu().numpy()
 
         return X, y_pred
