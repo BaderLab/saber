@@ -2,7 +2,6 @@
 """
 import logging
 
-import numpy as np
 import tensorflow as tf
 from keras.layers import (LSTM, Bidirectional, Concatenate, Dense, Dropout,
                           Embedding, SpatialDropout1D, TimeDistributed)
@@ -47,8 +46,8 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         and its weights from a hdf5 file at `model_filepath`.
 
         Args:
-            weights_filepath (str): Filepath to the models wieghts (.hdf5 file).
             model_filepath (str): Filepath to the models architecture (.json file).
+            weights_filepath (str): Filepath to the models wieghts (.hdf5 file).
         """
         with open(model_filepath) as f:
             model = model_from_json(f.read(), custom_objects={'CRF': CRF})
@@ -236,7 +235,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                                                           type_to_idx=dataset.type_to_idx['char'],
                                                           type_='char')
 
-        # perform prediction, convert from one-hot to predicted indices, flatten results
+        # perform prediction and convert from one-hot to predicted indices
         model_input = [word_idx_seq, char_idx_seq]
         X, y_pred = word_idx_seq, model.predict(model_input)
 
