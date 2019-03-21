@@ -239,8 +239,6 @@ def mask_labels(y_true, y_pred, label):
         `y_true` and `y_pred`, where all indices where `y_true` was equal to
         `tag_to_idx[constants.PAD]` have been removed.
     """
-    print(y_true)
-    print(y_pred)
     mask = y_true != label
     y_true, y_pred = y_true[mask], y_pred[mask]
 
@@ -266,18 +264,18 @@ def load_pretrained_model(config, datasets, model_filepath, weights_filepath=Non
             required for PyTorch models. Defaults to None.
 
     Returns:
-        A pre-trained Keras model.
+        A pre-trained model.
     """
     # import statements are here to prevent circular imports
     if config.model_name == 'bilstm-crf-ner':
         from ..models.multi_task_lstm_crf import MultiTaskLSTMCRF
         model = MultiTaskLSTMCRF(config, datasets)
         model.load(model_filepath, weights_filepath)
-        model.compile()
     elif config.model_name == 'bert-ner':
         from ..models.bert_token_classifier import BertTokenClassifier
         model = BertTokenClassifier(config, datasets, kwargs['pretrained_model_name_or_path'])
-        model.load(model_filepath)
+    
+    model.compile()
 
     return model
 
