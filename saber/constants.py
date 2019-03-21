@@ -20,16 +20,17 @@ UNK = '[UNK]'  # out-of-vocabulary token
 PAD = '[PAD]'  # sequence pad token
 START = '<START>'  # start-of-sentence token
 END = '<END>'  # end-of-sentence token
-OUTSIDE_TAG = 'O'  # 'outside' tag of the IOB, BIO, and IOBES tag formats
-WORDPIECE_TAG = 'X'  # special tag used by BERTs wordpiece tokenizer
-CLASSIFICATION_TAG = '[CLS]'  # special tag used by BERTs classifiers
+OUTSIDE = 'O'  # 'outside' tag of the IOB, BIO, and IOBES tag formats
+WORDPIECE = 'X'  # special tag used by BERTs wordpiece tokenizer
+CLASSIFICATION = '[CLS]'  # special tag used by BERTs classifiers
 
 # DATA
 RANDOM_STATE = 42  # random seed
 PAD_VALUE = 0  # value of sequence pad
+UNK_VALUE = 1  # value of unknown pad
 NUM_RARE = 1  # tokens that occur less than NUM_RARE times are replaced UNK
 # mapping of special tokens to contants
-INITIAL_MAPPING = {'word': {PAD: 0, UNK: 1}, 'tag':  {PAD: 0}}
+INITIAL_MAPPING = {'word': {PAD: PAD_VALUE, UNK: UNK_VALUE}, 'tag':  {PAD: PAD_VALUE}}
 # keys into dictionaries containing information for different partitions of a dataset
 PARTITIONS = ['train', 'valid', 'test']
 
@@ -53,7 +54,8 @@ PRETRAINED_MODELS = {
 }
 # relative path to pre-trained model directory
 PRETRAINED_MODEL_DIR = resource_filename(__name__, 'pretrained_models')
-MODEL_FILENAME = 'model_params.json'
+KERAS_MODEL_FILENAME = 'model_params.json'
+PYTORCH_MODEL_FILENAME = 'model.bin'
 WEIGHTS_FILENAME = 'model_weights.hdf5'
 ATTRIBUTES_FILENAME = 'attributes.pickle'
 CONFIG_FILENAME = 'config.ini'

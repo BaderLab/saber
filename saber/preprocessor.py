@@ -15,7 +15,7 @@ from .utils import generic_utils, text_utils
 
 LOGGER = logging.getLogger(__name__)
 
-class Preprocessor(object):
+class Preprocessor():
     """A class for processing text data."""
     def __init__(self):
         # load the NeuralCoref model, which is built on top of the Spacy english model
@@ -23,7 +23,7 @@ class Preprocessor(object):
         # Load our modified tokenizer, better tokenization of biomedical text
         self.nlp.tokenizer = text_utils.biomedical_tokenizer(self.nlp)
 
-    def transform(self, text, word2idx, char2idx, coref=False, sterilize=True):
+    def transform(self, text, coref=False, sterilize=True):
         """Returns a dictionary collected from processing `text`, including sentences, offsets,
         coreferent mentions, and integer sequences.
 
@@ -32,18 +32,12 @@ class Preprocessor(object):
             - 'sentences': a list of lists, contains the tokens in each sentence
             - 'offsets': A list of list of tuples containing the start and end indices of every
                 token in 'text'
-            - 'word_idx_seq': 2-D numpy array which maps every token in 'text' to a unique integer
-                ID, given by the mapping `word2idx`.
-            - 'char_idx_seq': 3-D numpy array which maps every character in 'text' to a unique
-                integer ID, given by the mapping `char2idx`.
 
         Args:
             text (str): Raw text.
-            word2idx (dict): Mapping from words (keys) to unique integers (values).
-            char2idx (dict): Mapping from chars (keys) to unique integers (values).
             coref (bool): True if coreference resolution should be applied to `text`, defaults to
                 False.
-            sterilize (bool): True if text should be sterilized, defaults to True.
+            sterilize (bool): True if `text` should be sterilized, defaults to True.
 
         Returns:
             A dictionary containing the processed raw text, sentences, token offsets, etc.
@@ -57,23 +51,11 @@ class Preprocessor(object):
             doc = self.nlp(text)
 
         # get sentences and token offsets
-        sentences, offsets = self._process_text(doc)
+        sents, offsets = self.tokenize(doc)
 
-        # map sequences to integer IDs
-        word_idx_sequence = self.get_type_idx_sequence(sentences, word2idx, type_='word')
-        char_idx_sequence = self.get_type_idx_sequence(sentences, char2idx, type_='char')
+        return text, sents, offsets
 
-        transformed_text = {
-            'text': text,
-            'sents': sentences,
-            'offsets': offsets,
-            'word_idx_seq': word_idx_sequence,
-            'char_idx_seq': char_idx_sequence,
-        }
-
-        return transformed_text
-
-    def _process_text(self, doc):
+    def tokenize(self, doc):
         """Returns tuple of sentences and character offsets of tokens in SpaCy `doc` object.
 
         Example:
