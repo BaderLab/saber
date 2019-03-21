@@ -7,7 +7,7 @@ from . import constants
 from .preprocessor import Preprocessor
 
 
-class Embeddings(object):
+class Embeddings():
     """A class for loading and working with pre-trained word embeddings.
 
     Args:

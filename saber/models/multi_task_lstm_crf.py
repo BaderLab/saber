@@ -2,7 +2,6 @@
 """
 import logging
 
-import numpy as np
 import tensorflow as tf
 from keras.layers import (LSTM, Bidirectional, Concatenate, Dense, Dropout,
                           Embedding, SpatialDropout1D, TimeDistributed)
@@ -12,6 +11,7 @@ from keras_contrib.layers.crf import CRF
 from keras_contrib.losses.crf_losses import crf_loss
 
 from .. import constants
+from ..preprocessor import Preprocessor
 from ..utils import model_utils
 from .base_model import BaseKerasModel
 
@@ -39,15 +39,15 @@ class MultiTaskLSTMCRF(BaseKerasModel):
     def __init__(self, config, datasets, embeddings=None, **kwargs):
         super().__init__(config, datasets, embeddings, **kwargs)
 
-    def load(self, weights_filepath, model_filepath):
+    def load(self, model_filepath, weights_filepath):
         """Load a model from disk.
 
         Loads a model from disk by loading its architecture from a json file at `model_filepath`
         and its weights from a hdf5 file at `model_filepath`.
 
         Args:
-            weights_filepath (str): Filepath to the models wieghts (.hdf5 file).
             model_filepath (str): Filepath to the models architecture (.json file).
+            weights_filepath (str): Filepath to the models wieghts (.hdf5 file).
         """
         with open(model_filepath) as f:
             model = model_from_json(f.read(), custom_objects={'CRF': CRF})
@@ -168,13 +168,13 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                           decay=self.config.decay,
                           clipnorm=self.config.grad_norm)
 
-    def prediction_step(self, training_data, model_idx, partition='train'):
+    def eval(self, training_data, model_idx=0, partition='train'):
         """Get `y_true` and `y_pred` for given inputs and targets in `training_data`.
 
-        Performs prediction for the current model (`self.model`), and returns a 2-tuple containing
-        the true (gold) labels and the predicted labels, where labels are integers corresponding to
-        mapping at `self.idx_to_tag`. Inputs are given at `training_data[x_partition]` and gold
-        labels at `training_data[y_partition]`.
+        Performs prediction for the model at `self.models[model_idx]` and returns a 2-tuple
+        containing the true (gold) labels and the predicted labels, where labels are integers
+        corresponding to mapping at `self.idx_to_tag`. Inputs are given at
+        `training_data[x_partition]` and gold labels at `training_data[y_partition]`.
 
         Args:
             training_data (dict): Contains the data (at key `x_partition`) and targets
@@ -186,24 +186,60 @@ class MultiTaskLSTMCRF(BaseKerasModel):
             A two-tuple containing the gold label integer sequences and the predicted integer label
             sequences.
         """
+        model, dataset = self.models[model_idx], self.datasets[model_idx]
+
         X, y = training_data['x_{}'.format(partition)], training_data['y_{}'.format(partition)]
+
         # gold labels
-        y_true = y.argmax(axis=-1) # get class label
-        y_true = np.asarray(y_true).ravel() # flatten to 1D array
-        # predicted labels
-        y_pred = self.model.predict(X, batch_size=constants.PRED_BATCH_SIZE)
-        y_pred = np.asarray(y_pred.argmax(axis=-1)).ravel()
+        y_true = y.argmax(axis=-1).ravel()
+        y_pred = model.predict(X).argmax(axis=-1).ravel()
+
         # mask out pads
-        y_true, y_pred = model_utils.mask_pads(y_true, y_pred, dataset.type_to_idx['tag'])
+        y_true, y_pred = \
+            model_utils.mask_labels(y_true, y_pred, dataset.type_to_idx['tag'][constants.PAD])
 
         # sanity check
         if not y_true.shape == y_pred.shape:
-            err_msg = ("'y_true' and 'y_pred' in 'MultiTaskLSTMCRF.prediction_step() have different"
+            err_msg = ("'y_true' and 'y_pred' in 'MultiTaskLSTMCRF.eval() have different"
                        " shapes ({} and {} respectively)".format(y_true.shape, y_pred.shape))
             LOGGER.error('AssertionError: %s', err_msg)
             raise AssertionError(err_msg)
 
         return y_true, y_pred
+
+    def predict(self, sents, model_idx=0):
+        """Perform inference on tokenized and sentence segmented text.
+
+        Using the model at `self.models[model_idx]`, performs inference on `sents`, a list of lists
+        containing tokenized sentences. The result of this inference is a list of lists, where the
+        outer lists correspond to sentences in `sents` and inner lists contains predicted indices
+        for the corresponding tokens in `sents`.
+
+        Args:
+            sents (list): List of lists containing tokenized sentences to annotate.
+            model_idx (int): Index to model in `self.models` that will be used for inference.
+                Defaults to 0.
+
+        Returns:
+            Two-tuple containing the corresponding index sequence for `sents` (mapped according to
+            `self.datasets[model_idx].type_to_idx['word']` and corresponding one-hot encoded
+            predictions for each token in `sents`.
+        """
+        model, dataset = self.models[model_idx], self.datasets[model_idx]
+
+        # map sequences to integer IDs
+        word_idx_seq = Preprocessor.get_type_idx_sequence(seq=sents,
+                                                          type_to_idx=dataset.type_to_idx['word'],
+                                                          type_='word')
+        char_idx_seq = Preprocessor.get_type_idx_sequence(seq=sents,
+                                                          type_to_idx=dataset.type_to_idx['char'],
+                                                          type_='char')
+
+        # perform prediction and convert from one-hot to predicted indices
+        model_input = [word_idx_seq, char_idx_seq]
+        X, y_pred = word_idx_seq, model.predict(model_input)
+
+        return X, y_pred
 
     def prepare_data_for_training(self):
         """Returns a list containing the training data for each dataset at `self.datasets`.
