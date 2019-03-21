@@ -30,8 +30,9 @@ class Metrics(Callback):
         idx_to_tag (dict): A dictionary mapping unique integers to labels.
         output_dir (str): Base directory to save all output to.
     """
-    def __init__(self, config, training_data, idx_to_tag, output_dir, **kwargs):
+    def __init__(self, config, model_, training_data, idx_to_tag, output_dir, **kwargs):
         self.config = config # hyperparameters and model details
+        self.model_ = model_  # _ prevents naming collision
         self.training_data = training_data # inputs and targets for each partition
         self.idx_to_tag = idx_to_tag # maps unique IDs to targets
 
@@ -79,19 +80,15 @@ class Metrics(Callback):
             containing precision, recall, f1 and support for that class.
         """
         # get predictions and gold labels
-        y_true, y_pred = self.model.prediction_step(training_data,
-                                                    model_idx=self.model_idx,
-                                                    partition=partition)
+        y_true, y_pred = self.model_.eval(training_data, self.model_idx, partition)
+
         # convert index sequence to tag sequence
         y_true_tag = [self.idx_to_tag[idx] for idx in y_true]
         y_pred_tag = [self.idx_to_tag[idx] for idx in y_pred]
+
         # chunk the entities
         y_true_chunks = Preprocessor.chunk_entities(y_true_tag)
         y_pred_chunks = Preprocessor.chunk_entities(y_pred_tag)
-
-        # remove predictions for wordpiece tags
-        # y_true_chunks = [chunk for chunk in y_true_chunks if chunk[0] != constants.WORDPIECE_TAG]
-        # y_pred_chunks = [chunk for chunk in y_pred_chunks if chunk[0] != constants.WORDPIECE_TAG]
 
         # get performance scores per label
         return self.get_precision_recall_f1_support(y_true=y_true_chunks,
@@ -117,7 +114,7 @@ class Metrics(Callback):
         y_true = y.argmax(axis=-1) # get class label
         y_true = np.asarray(y_true).ravel() # flatten to 1D array
         # predicted labels
-        y_pred = self.model.predict(X, batch_size=constants.PRED_BATCH_SIZE)
+        y_pred = self.model_.predict(X, batch_size=constants.PRED_BATCH_SIZE)
         y_pred = np.asarray(y_pred.argmax(axis=-1)).ravel()
 
         # sanity check

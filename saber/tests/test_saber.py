@@ -2,129 +2,22 @@
 """
 import pytest
 
-from ..config import Config
 from ..dataset import Dataset
 from ..embeddings import Embeddings
 from ..models.base_model import BaseKerasModel
 from ..preprocessor import Preprocessor
-from ..saber import MissingStepException, Saber
+from ..saber import MissingStepException
 from .resources import helpers
 from .resources.dummy_constants import *
 
 # TODO (johngiorgi): Write tests for compound dataset
 
-######################################### PYTEST FIXTURES #########################################
-
-# SINGLE DATASET
-
-@pytest.fixture
-def dummy_config_single_dataset():
-    """Returns instance of `Config` after parsing the dummy config file. Ensures that
-    `replace_rare_tokens` argument is False.
-    """
-    return Config(PATH_TO_DUMMY_CONFIG)
-
-@pytest.fixture
-def dummy_dataset_1():
-    """Returns a single dummy Dataset instance after calling Dataset.load().
-    """
-    # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
-    dataset.load()
-
-    return dataset
-
-@pytest.fixture
-def dummy_dataset_2():
-    """Returns a single dummy Dataset instance after calling `Dataset.load()`.
-    """
-    # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_2, replace_rare_tokens=False)
-    dataset.load()
-
-    return dataset
-
-@pytest.fixture
-def saber_blank(dummy_config_single_dataset):
-    """Returns instance of `Saber` initialized with the dummy config file and no dataset.
-    """
-    return Saber(config=dummy_config_single_dataset,
-                 # to test passing of arbitrary keyword args to constructor
-                 totally_arbitrary='arbitrary')
-
-@pytest.fixture
-def saber_single_dataset(dummy_config_single_dataset):
-    """Returns instance of `Saber` initialized with the dummy config file and a single dataset.
-    """
-    saber = Saber(config=dummy_config_single_dataset)
-    saber.load_dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1)
-
-    return saber
-
-@pytest.fixture
-def saber_single_dataset_embeddings(dummy_config_single_dataset):
-    """Returns instance of `Saber` initialized with the dummy config file, a single dataset and
-    embeddings.
-    """
-    saber = Saber(config=dummy_config_single_dataset)
-    saber.load_dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1)
-    saber.load_embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, binary=False)
-
-    return saber
-
-@pytest.fixture
-def saber_single_dataset_model(dummy_config_single_dataset):
-    """Returns an instance of `Saber` initialized with the dummy config file, a single dataset
-    a Keras model."""
-    saber = Saber(config=dummy_config_single_dataset)
-    saber.load_dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1)
-    saber.build()
-
-    return saber
-
-# COMPOUND DATASET
-
-@pytest.fixture
-def dummy_config_compound_dataset():
-    """Returns an instance of a `Config` after parsing the dummy config file. Ensures that
-    `replace_rare_tokens` argument is False.
-    """
-    compound_dataset = [PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2]
-    cli_arguments = {'dataset_folder': compound_dataset}
-    dummy_config = Config(PATH_TO_DUMMY_CONFIG)
-    dummy_config.harmonize_args(cli_arguments)
-
-    return dummy_config
-
-@pytest.fixture
-def saber_compound_dataset(dummy_config_compound_dataset):
-    """Returns an instance of `Saber` initialized with the dummy config file and a compound dataset.
-    The compound dataset is just two copies of the dataset, this makes writing tests much
-    simpler.
-    """
-    compound_dataset = [PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_1]
-    saber = Saber(config=dummy_config_compound_dataset)
-    saber.load_dataset(dataset_folder=compound_dataset)
-
-    return saber
-
-@pytest.fixture
-def saber_compound_dataset_model(dummy_config_compound_dataset):
-    """Returns an instance of `Saber` initialized with the dummy config file, a single dataset
-    a Keras model."""
-    saber = Saber(config=dummy_config_compound_dataset)
-    saber.load_dataset(dataset_folder=[PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2])
-    saber.build()
-
-    return saber
-
-############################################ UNIT TESTS ############################################
 
 def test_attributes_after_initilization_of_model(saber_blank,
-                                                 dummy_config_single_dataset):
+                                                 dummy_config):
     """Asserts instance attributes are initialized correctly when `Saber` object is created.
     """
-    assert saber_blank.config is dummy_config_single_dataset
+    assert saber_blank.config is dummy_config
 
     assert saber_blank.preprocessor is None
 
