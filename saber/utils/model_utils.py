@@ -274,7 +274,7 @@ def load_pretrained_model(config, datasets, model_filepath, weights_filepath=Non
     elif config.model_name == 'bert-ner':
         from ..models.bert_token_classifier import BertTokenClassifier
         model = BertTokenClassifier(config, datasets, kwargs['pretrained_model_name_or_path'])
-    
+
     model.compile()
 
     return model
