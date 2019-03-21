@@ -8,59 +8,6 @@ from .. import constants
 from ..utils import grounding_utils
 
 
-@pytest.fixture
-def blank_annotation():
-    """Returns an annotation with no identified entities.
-    """
-    annotation = {"ents": [],
-                  "text": "This is a test with no entities.",
-                  "title": ""}
-    return annotation
-
-@pytest.fixture
-def ched_annotation():
-    """Returns an annotation with chemical entities (CHED) identified.
-    """
-    annotation = {"ents": [{"text": "glucose", "label": "CHED", "start": 0, "end": 0},
-                           {"text": "fructose", "label": "CHED", "start": 0, "end": 0}],
-                  "text": "glucose and fructose",
-                  "title": ""}
-
-    return annotation
-
-@pytest.fixture
-def diso_annotation():
-    """Returns an annotation with disease entities (DISO) identified.
-    """
-    annotation = {"ents": [{"text": "cancer", "label": "DISO", "start": 0, "end": 0},
-                           {"text": "cystic fibrosis", "label": "DISO", "start": 0, "end": 0}],
-                  "text": "cancer and cystic fibrosis",
-                  "title": ""}
-
-    return annotation
-
-@pytest.fixture
-def livb_annotation():
-    """Returns an annotation with species entities (LIVB) identified.
-    """
-    annotation = {"ents": [{"text": "mouse", "label": "LIVB", "start": 0, "end": 0},
-                           {"text": "human", "label": "LIVB", "start": 0, "end": 0}],
-                  "text": "mouse and human",
-                  "title": ""}
-
-    return annotation
-
-@pytest.fixture
-def prge_annotation():
-    """Returns an annotation with protein/gene entities (PRGE) identified.
-    """
-    annotation = {"ents": [{"text": "p53", "label": "PRGE", "start": 0, "end": 0},
-                           {"text": "MK2", "label": "PRGE", "start": 0, "end": 0}],
-                  "text": "p53 and MK2",
-                  "title": ""}
-
-    return annotation
-
 def test_ground_no_entites(blank_annotation):
     """Asserts that `grounding_utils.ground()` returns the expected value for a simple example with
     no identified entities.

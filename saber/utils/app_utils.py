@@ -1,7 +1,6 @@
 """A collection of web-service-related helper/utility functions.
 """
 import logging
-import os.path
 import traceback
 import xml.etree.ElementTree as ET
 from urllib.error import HTTPError
@@ -11,7 +10,6 @@ import tensorflow as tf
 
 from .. import constants
 from ..saber import Saber
-from ..utils import generic_utils
 
 # TODO: Need better error handeling here
 LOGGER = logging.getLogger(__name__)
