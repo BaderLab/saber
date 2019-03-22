@@ -39,6 +39,8 @@ class MultiTaskLSTMCRF(BaseKerasModel):
     def __init__(self, config, datasets, embeddings=None, **kwargs):
         super().__init__(config, datasets, embeddings, **kwargs)
 
+        self.model_name = 'bilstm-crf-ner'
+
     def load(self, model_filepath, weights_filepath):
         """Load a model from disk.
 
