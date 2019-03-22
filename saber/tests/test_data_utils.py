@@ -3,80 +3,10 @@
 import numpy as np
 import pytest
 
-from ..config import Config
 from ..dataset import Dataset
 from ..utils import data_utils
 from .resources.dummy_constants import *
 
-######################################### PYTEST FIXTURES #########################################
-
-@pytest.fixture
-def dummy_config():
-    """Returns an instance of a Config object."""
-    dummy_config = Config(PATH_TO_DUMMY_CONFIG)
-    return dummy_config
-
-@pytest.fixture
-def dummy_dataset_1():
-    """Returns a single dummy Dataset instance after calling Dataset.load().
-    """
-    # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
-    dataset.load()
-
-    return dataset
-
-@pytest.fixture
-def dummy_dataset_2():
-    """Returns a single dummy Dataset instance after calling `Dataset.load()`.
-    """
-    # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_2, replace_rare_tokens=False)
-    dataset.load()
-
-    return dataset
-
-@pytest.fixture
-def dummy_compound_dataset(dummy_config):
-    """
-    """
-    dummy_config.dataset_folder = [PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2]
-    dummy_config.replace_rare_tokens = False
-    dataset = data_utils.load_compound_dataset(dummy_config)
-
-    return dataset
-
-@pytest.fixture(scope='session')
-def dummy_dataset_paths_all(tmpdir_factory):
-    """Creates and returns the path to a temporary dataset folder, and train, valid, test files.
-    """
-    # create a dummy dataset folder
-    dummy_dir = tmpdir_factory.mktemp('dummy_dataset')
-    # create train, valid and train partitions in this folder
-    train_file = dummy_dir.join('train.tsv')
-    train_file.write('arbitrary') # need to write content or else the file wont exist
-    valid_file = dummy_dir.join('valid.tsv')
-    valid_file.write('arbitrary')
-    test_file = dummy_dir.join('test.tsv')
-    test_file.write('arbitrary')
-
-    return dummy_dir.strpath, train_file.strpath, valid_file.strpath, test_file.strpath
-
-@pytest.fixture(scope='session')
-def dummy_dataset_paths_no_valid(tmpdir_factory):
-    """Creates and returns the path to a temporary dataset folder, and train, and test files.
-    """
-    # create a dummy dataset folder
-    dummy_dir = tmpdir_factory.mktemp('dummy_dataset')
-    # create train, valid and train partitions in this folder
-    train_file = dummy_dir.join('train.tsv')
-    train_file.write('arbitrary') # need to write content or else the file wont exist
-    test_file = dummy_dir.join('test.tsv')
-    test_file.write('arbitrary')
-
-    return dummy_dir.strpath, train_file.strpath, test_file.strpath
-
-############################################ UNIT TESTS ############################################
 
 def test_get_filepaths_value_error(tmpdir):
     """Asserts that a ValueError is raised when `data_utils.get_filepaths(tmpdir)` is called and
@@ -126,8 +56,7 @@ def test_load_single_dataset(dummy_config, dummy_dataset_1):
     # are identical
     assert dir(actual[0].__dict__) == dir(expected[0].__dict__)
 
-def test_load_compound_dataset_unchanged_attributes(dummy_dataset_1,
-                                                    dummy_dataset_2,
+def test_load_compound_dataset_unchanged_attributes(dummy_dataset_1, dummy_dataset_2,
                                                     dummy_compound_dataset):
     """Asserts that attributes of `Dataset` objects which are expected to remain unchanged
     are unchanged after call to `data_utils.load_compound_dataset()`.
@@ -154,8 +83,7 @@ def test_load_compound_dataset_unchanged_attributes(dummy_dataset_1,
     assert actual[-1].type_to_idx['tag'] == expected[-1].type_to_idx['tag']
     assert actual[-1].idx_to_tag == expected[-1].idx_to_tag
 
-def test_load_compound_dataset_changed_attributes(dummy_dataset_1,
-                                                  dummy_dataset_2,
+def test_load_compound_dataset_changed_attributes(dummy_dataset_1, dummy_dataset_2,
                                                   dummy_compound_dataset):
     """Asserts that attributes of `Dataset` objects which are expected to be changed are changed
     after call to `data_utils.load_compound_dataset()`.
@@ -183,4 +111,5 @@ def test_setup_dataset_for_transfer(dummy_dataset_1, dummy_dataset_2):
     source_type_to_idx = dummy_dataset_1.type_to_idx
     data_utils.setup_dataset_for_transfer(dummy_dataset_2, source_type_to_idx)
 
-    assert all(dummy_dataset_2.type_to_idx[type_] == source_type_to_idx[type_] for type_ in ['word', 'char'])
+    assert all(dummy_dataset_2.type_to_idx[type_] == source_type_to_idx[type_]
+               for type_ in ['word', 'char'])
