@@ -58,6 +58,8 @@ class BertTokenClassifier(BasePyTorchModel):
         self.tokenizer = BertTokenizer.from_pretrained(self.pretrained_model_name_or_path,
                                                        do_lower_case=False)
 
+        self.model_name = 'bert-ner'
+
     def load(self, model_filepath):
         """Load a model from disk.
 
