@@ -6,21 +6,8 @@ import pytest
 from .. import constants
 from ..preprocessor import Preprocessor
 
-######################################### PYTEST FIXTURES #########################################
 
-@pytest.fixture
-def preprocessor():
-    """Returns an instance of a Preprocessor object."""
-    return Preprocessor()
-
-@pytest.fixture
-def nlp():
-    """Returns Sacy NLP model."""
-    return en_coref_md.load()
-
-############################################ UNIT TESTS ############################################
-
-def test_process_text(preprocessor, nlp):
+def test_tokenize(preprocessor, nlp):
     """Asserts that call to Preprocessor._process_text() returns the expected
     results."""
     # simple test and its expected value
@@ -32,8 +19,8 @@ def test_process_text(preprocessor, nlp):
     blank_test = nlp("")
     blank_expected = ([], [])
 
-    assert preprocessor._process_text(simple_text) == simple_expected
-    assert preprocessor._process_text(blank_test) == blank_expected
+    assert preprocessor.tokenize(simple_text) == simple_expected
+    assert preprocessor.tokenize(blank_test) == blank_expected
 
 def test_type_to_idx_value_error():
     """
