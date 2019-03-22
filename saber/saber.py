@@ -1,10 +1,12 @@
 """Contains the Saber class, which exposes most of Sabers functionality.
 """
+import glob
 import logging
 import os
 import pickle
 import time
 from itertools import chain
+from operator import itemgetter
 from pprint import pprint
 
 import numpy as np
@@ -39,7 +41,7 @@ class Saber():
         self.preprocessor = None # object for text processing
         self.datasets = None # dataset(s) tied to this instance
         self.embeddings = None # pre-trained token embeddings tied to this instance
-        self.model = None # model object tied to this instance
+        self.models = None # model(s) object tied to this instance
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -48,20 +50,20 @@ class Saber():
             print('Hyperparameters and model details:')
             pprint({arg: getattr(self.config, arg) for arg in constants.CONFIG_ARGS})
 
-    def annotate(self, text, title='', jupyter=False, coref=False, ground=False, model_idx=0):
+    def annotate(self, text, title='', jupyter=False, coref=False, ground=False):
         """Uses a trained model (`self.model`) to annotate `text`, returns a dictionary.
 
-        For the model at `self.model.models[model_idx]`, coordinates a prediction step on `text`.
-        Returns a dictionary containing the cleaned text (`text`), and any annotations made by the
-        model (`ents`). If `jupyter` is True, renders a HTMl visualization of the annotations made
+        For the model(s) at `self.models`, coordinates a prediction step on `text`. Returns a
+        dictionary containing the cleaned text (`text`), and any annotations made by the model
+        (`ents`). If `jupyter` is True, renders a HTMl visualization of the annotations made
         by the model, for use in a jupyter notebook.
 
         text (str): Raw text to annotate.
-        title (str): Title of the document, defaults to None.
-        coref (book): True if coreference resolution should be performed before annotation, defaults
+        title (str): Title of the document. Defaults to None.
+        coref (book): True if coreference resolution should be performed before annotation. Defaults
             to False.
         jupyter (bool): True if annotations made by the model should be rendered in HTML, which can
-            be visualized in a jupter notebook, defaults to false.
+            be visualized in a jupter notebook. Defaults to False.
 
         Returns:
             Dictionary containing the processed input text (`text`) and any annotations made by the
@@ -83,40 +85,46 @@ class Saber():
             LOGGER.error("ValueError: %s", err_msg)
             raise ValueError(err_msg)
 
-        # corresponding dataset for model at model_idx
-        dataset = self.datasets[model_idx]
-
+        # process raw text, flatten char offsets
         processed_text, sents, char_offsets = self.preprocessor.transform(text, coref=coref)
-
-        X, y_pred = self.model.predict(sents, model_idx)
-
-        # flatten inputs, predictions and character offsets
-        X, y_pred = X.ravel(), np.argmax(y_pred, axis=-1).ravel()
         char_offsets = list(chain.from_iterable(char_offsets))
 
-        # we need to mask predictions where the input to the model was a pad
-        X, y_pred = model_utils.mask_labels(X, y_pred, dataset.type_to_idx['word'][constants.PAD])
+        annotation = {'title': title, 'text': processed_text, 'ents': []}
 
-        pred_tag_seq = [dataset.idx_to_tag[idx] for idx in y_pred
-                        if dataset.idx_to_tag[idx] != constants.WORDPIECE]
-        pred_chunk_seq = self.preprocessor.chunk_entities(pred_tag_seq)
+        for model in self.models:
+            for model_idx, dataset in enumerate(model.datasets):
+                X, y_pred = model.predict(sents, model_idx)
 
-        # accumulate predicted entities
-        ents = []
-        for chunk in pred_chunk_seq:
-            # chunks are tuples (label, start, end), offsets is a lists of lists of tuples
-            label, start, end = chunk[0], char_offsets[chunk[1]][0], char_offsets[chunk[-1] - 1][-1]
-            text = processed_text[start:end]
-            ents.append({'start': start, 'end': end, 'text': text, 'label': label})
+                # flatten inputs, predictions
+                X = X.ravel()
+                y_pred = np.argmax(y_pred, axis=-1).ravel()
 
-        # create the final annotation and ground it
-        annotation = {'text': processed_text, 'title': title, 'ents': ents}
+                # mask predictions where the input to the model was a pad
+                X, y_pred = model_utils.mask_labels(X, y_pred, dataset.type_to_idx['word'][constants.PAD])
+                # remove wordpiece tags (bert-specific)
+                pred_tag_seq = [dataset.idx_to_tag[idx] for idx in y_pred
+                                if dataset.idx_to_tag[idx] != constants.WORDPIECE]
+
+                # accumulate predicted entities
+                for chunk in self.preprocessor.chunk_entities(pred_tag_seq):
+                    # chunks are tuples (label, start, end), offsets is a lists of lists of tuples
+                    start = char_offsets[chunk[1]][0]
+                    end = char_offsets[chunk[-1] - 1][-1]
+                    annotation['ents'].append({'start': start,
+                                               'end': end,
+                                               'text': processed_text[start:end],
+                                               'label': chunk[0]})
+
+        # need to sort by first apperance or displacy will duplicate text
+        annotation['ents'] = sorted(annotation['ents'], key=itemgetter('start'))
+
         if ground:
             try:
                 annotation = grounding_utils.ground(annotation)
-            except:
-                err_msg = ("Grounding step in `Saber.annotate()` failed (`grounding_utils.ground()`"
-                           " threw an error. Check that you have a stable internet connection.")
+            except Exception as e:
+                err_msg = ('Grounding step in `Saber.annotate()` failed'
+                           ' (`grounding_utils.ground()` threw error: {}. Check that you'
+                           ' have a stable internet connection.').format(e)
                 LOGGER.error(err_msg)
 
         if jupyter:
@@ -140,6 +148,9 @@ class Saber():
         start = time.time()
         print('Saving model...', end=' ', flush=True)
 
+        # TODO: What do we do when there are multiple loaded models? For now, default to first model
+        model = self.models[0]
+
         # allows user to call save without providing a directory, default one is chosen
         if directory is None:
             directory = model_utils.prepare_pretrained_model_dir(self.config)
@@ -149,22 +160,21 @@ class Saber():
 
         # save attributes that we need for inference
         attributes_filepath = os.path.join(directory, constants.ATTRIBUTES_FILENAME)
-        model_attributes = {'model_name': self.config.model_name,
-                            'framework': self.model.framework,
-                            'type_to_idx': self.datasets[model_idx].type_to_idx,
-                            'idx_to_tag': self.datasets[model_idx].idx_to_tag,
+        model_attributes = {'model_name': model.model_name,
+                            'framework': model.framework,
+                            'type_to_idx': model.datasets[model_idx].type_to_idx,
+                            'idx_to_tag': model.datasets[model_idx].idx_to_tag,
                             }
 
         # saving Keras models requires a seperate file for weights
-        if self.model.framework == constants.KERAS:
+        if model.framework == constants.KERAS:
             model_filepath = os.path.join(directory, constants.KERAS_MODEL_FILENAME)
             weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
-            self.model.save(model_filepath, weights_filepath, model_idx)
-        elif self.model.framework == constants.PYTORCH:
-            model_attributes['pretrained_model_name_or_path'] = \
-                self.model.pretrained_model_name_or_path
+            model.save(model_filepath, weights_filepath, model_idx)
+        elif model.framework == constants.PYTORCH:
+            model_attributes['pretrained_model_name_or_path'] = model.pretrained_model_name_or_path
             model_filepath = os.path.join(directory, constants.PYTORCH_MODEL_FILENAME)
-            self.model.save(model_filepath, model_idx)
+            model.save(model_filepath, model_idx)
 
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
 
@@ -186,7 +196,7 @@ class Saber():
         architecture and weights.
         """
         start = time.time()
-        print('Loading model...', end=' ', flush=True)
+        print("Loading model: '{}'...".format(directory), end=' ', flush=True)
 
         # get what might be a pretrained model name
         pretrained_model = os.path.splitext(directory)[0].strip().upper()
@@ -207,30 +217,37 @@ class Saber():
         # load only the objects we need for model prediction
         attributes_filepath = os.path.join(directory, constants.ATTRIBUTES_FILENAME)
         model_attributes = pickle.load(open(attributes_filepath, "rb"))
+
         # its easiest to use a Dataset object to hold these data objects
-        self.datasets = [Dataset()]
-        self.datasets[0].idx_to_tag = model_attributes['idx_to_tag']
-        self.datasets[0].type_to_idx = model_attributes['type_to_idx']
-        # prevents user from having to specify pre-trained models name / framework
+        dataset = Dataset()
+        dataset.idx_to_tag = model_attributes['idx_to_tag']
+        dataset.type_to_idx = model_attributes['type_to_idx']
+
+        # prevents user from having to specify pre-trained models name
         self.config.model_name = model_attributes['model_name']
 
-        # Accounts for slight differences in saved Keras vs. PyTorch models
+        weights_filepath, pretrained_model_name_or_path = None, None
+
+        # keras models are saved as two files (model.* and weights.*)
         if model_attributes['framework'] == constants.KERAS:
-            model_filepath = os.path.join(directory, constants.KERAS_MODEL_FILENAME)
             weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
-        elif model_attributes['framework'] == constants.PYTORCH:
-            model_filepath = os.path.join(directory, constants.PYTORCH_MODEL_FILENAME)
-            weights_filepath = None
-
         # we need to know what pre-trained BERT model was used to load the correct weights
-        pretrained_model_name_or_path = model_attributes.get('pretrained_model_name_or_path')
+        if model_attributes['model_name'] == 'bert-ner':
+            pretrained_model_name_or_path = model_attributes.get('pretrained_model_name_or_path')
 
-        self.model = \
+        model_filepath = glob.glob(os.path.join(directory, 'model.*'))[0]
+
+        model = \
             model_utils.load_pretrained_model(config=self.config,
-                                              datasets=self.datasets,
+                                              datasets=[dataset],
                                               model_filepath=model_filepath,
                                               weights_filepath=weights_filepath,
                                               pretrained_model_name_or_path=pretrained_model_name_or_path)
+
+        if self.models:
+            self.models.append(model)
+        else:
+            self.models = [model]
 
         end = time.time() - start
         print('Done ({0:.2f} seconds).'.format(end))
@@ -404,26 +421,30 @@ class Saber():
                     # print(model)
                     pass
 
-    def train(self):
-        """Initiates training of model at `self.model`.
+    def train(self, model_idx=0):
+        """Initiates training of model at `self.model[model_idx]`.
 
         Raises:
             MissingStepException: If `self.datasets` or `self.model` are None.
         """
         if not self.datasets:
-            err_msg = "You need to call `Saber.load_dataset()` before calling `Saber.train()`"
+            err_msg = ('`Saber.datasets` is empty. Did you call `Saber.load_dataset()` before'
+                       ' calling `Saber.train()`')
             LOGGER.error('MissingStepException: %s', err_msg)
             raise MissingStepException(err_msg)
-        if not self.model:
-            err_msg = "You need to call `Saber.build()` before calling `Saber.train()`"
+        if not self.models:
+            err_msg = ('`Saber.models` is empty. Did you call `Saber.build()` before calling'
+                       ' `Saber.train()`')
             LOGGER.error('MissingStepException: %s', err_msg)
             raise MissingStepException(err_msg)
 
+        model = self.models[model_idx]
+
         # TODO (johnmgiorgi): This is only temporary! Need to make a decision on the training API
         if self.config.model_name == 'bert-ner':
-            self.model.train()
+            model.train()
         else:
-            trainer = KerasTrainer(self.config, self.datasets, self.model)
+            trainer = KerasTrainer(self.config, self.datasets, model)
             trainer.train()
 
 # https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
