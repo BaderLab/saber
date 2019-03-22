@@ -14,28 +14,6 @@ from .resources.dummy_constants import *
 # TODO (johngiorgi): Need to include tests for valid/test partitions
 # TODO (johngiorgi): Need to include tests for compound datasets
 
-######################################### PYTEST FIXTURES #########################################
-@pytest.fixture
-def empty_dummy_dataset():
-    """Returns an empty single dummy Dataset instance.
-    """
-    # Don't replace rare tokens for the sake of testing
-    return Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False,
-                   # to test passing of arbitrary keyword args to constructor
-                   totally_arbitrary='arbitrary')
-
-@pytest.fixture
-def loaded_dummy_dataset():
-    """Returns a single dummy Dataset instance after calling Dataset.load().
-    """
-    # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
-    dataset.load()
-
-    return dataset
-
-############################################ UNIT TESTS ############################################
-
 # Generic object tests
 
 def test_attributes_after_initilization_of_dataset(empty_dummy_dataset):
@@ -110,9 +88,12 @@ def test_get_idx_maps_single_dataset_before_load_special_tokens(empty_dummy_data
     types = empty_dummy_dataset._get_types()
     empty_dummy_dataset._get_idx_maps(types)
     # assert special tokens are mapped to the correct indices
-    assert all(empty_dummy_dataset.type_to_idx['word'][k] == v for k, v in constants.INITIAL_MAPPING['word'].items())
-    assert all(empty_dummy_dataset.type_to_idx['char'][k] == v for k, v in constants.INITIAL_MAPPING['word'].items())
-    assert all(empty_dummy_dataset.type_to_idx['tag'][k] == v for k, v in constants.INITIAL_MAPPING['tag'].items())
+    assert all(empty_dummy_dataset.type_to_idx['word'][k] == v
+               for k, v in constants.INITIAL_MAPPING['word'].items())
+    assert all(empty_dummy_dataset.type_to_idx['char'][k] == v
+               for k, v in constants.INITIAL_MAPPING['word'].items())
+    assert all(empty_dummy_dataset.type_to_idx['tag'][k] == v
+               for k, v in constants.INITIAL_MAPPING['tag'].items())
 
 def test_get_idx_seq_single_dataset_before_load(empty_dummy_dataset):
     """Asserts that `Dataset.idx_seq` is updated as expected after successive calls to
@@ -137,37 +118,38 @@ def test_get_idx_seq_single_dataset_before_load(empty_dummy_dataset):
 
 # tests on loaded Dataset object (`Dataset.load()` was called)
 
-def test_get_type_seq_single_dataset_after_load(loaded_dummy_dataset):
+def test_get_type_seq_single_dataset_after_load(dummy_dataset_1):
     """Asserts that `Dataset.type_seq` is updated as expected after call to `Dataset.load()`.
     """
-    assert np.array_equal(loaded_dummy_dataset.type_seq['train']['word'], DUMMY_WORD_SEQ)
-    assert np.array_equal(loaded_dummy_dataset.type_seq['train']['char'], DUMMY_CHAR_SEQ)
-    assert np.array_equal(loaded_dummy_dataset.type_seq['train']['tag'], DUMMY_TAG_SEQ)
+    assert np.array_equal(dummy_dataset_1.type_seq['train']['word'], DUMMY_WORD_SEQ)
+    assert np.array_equal(dummy_dataset_1.type_seq['train']['char'], DUMMY_CHAR_SEQ)
+    assert np.array_equal(dummy_dataset_1.type_seq['train']['tag'], DUMMY_TAG_SEQ)
 
-def test_get_idx_maps_single_dataset_after_load(loaded_dummy_dataset):
+def test_get_idx_maps_single_dataset_after_load(dummy_dataset_1):
     """Asserts that `Dataset.type_to_idx` is updated as expected after call to `Dataset.load()`.
     """
     # ensure that index mapping is a contigous sequence of numbers starting at 0
-    assert generic_utils.is_consecutive(loaded_dummy_dataset.type_to_idx['word'].values())
-    assert generic_utils.is_consecutive(loaded_dummy_dataset.type_to_idx['char'].values())
-    assert generic_utils.is_consecutive(loaded_dummy_dataset.type_to_idx['tag'].values())
+    assert generic_utils.is_consecutive(dummy_dataset_1.type_to_idx['word'].values())
+    assert generic_utils.is_consecutive(dummy_dataset_1.type_to_idx['char'].values())
+    assert generic_utils.is_consecutive(dummy_dataset_1.type_to_idx['tag'].values())
     # ensure that type to index mapping contains the expected keys
-    print(DUMMY_CHAR_TYPES)
-    print(loaded_dummy_dataset.type_to_idx['char'])
-    assert all(item in DUMMY_WORD_TYPES for item in loaded_dummy_dataset.type_to_idx['word'])
-    assert all(item in DUMMY_CHAR_TYPES for item in loaded_dummy_dataset.type_to_idx['char'])
-    assert all(item in DUMMY_TAG_TYPES for item in loaded_dummy_dataset.type_to_idx['tag'])
+    assert all(item in DUMMY_WORD_TYPES for item in dummy_dataset_1.type_to_idx['word'])
+    assert all(item in DUMMY_CHAR_TYPES for item in dummy_dataset_1.type_to_idx['char'])
+    assert all(item in DUMMY_TAG_TYPES for item in dummy_dataset_1.type_to_idx['tag'])
 
-def test_get_idx_maps_single_dataset_after_load_special_tokens(loaded_dummy_dataset):
+def test_get_idx_maps_single_dataset_after_load_special_tokens(dummy_dataset_1):
     """Asserts that `Dataset.type_to_idx` contains the special tokens as keys with expected values
      after successive calls to `Dataset._get_types()` and `Dataset.get_idx_maps()`.
     """
     # assert special tokens are mapped to the correct indices
-    assert all(loaded_dummy_dataset.type_to_idx['word'][k] == v for k, v in constants.INITIAL_MAPPING['word'].items())
-    assert all(loaded_dummy_dataset.type_to_idx['char'][k] == v for k, v in constants.INITIAL_MAPPING['word'].items())
-    assert all(loaded_dummy_dataset.type_to_idx['tag'][k] == v for k, v in constants.INITIAL_MAPPING['tag'].items())
+    assert all(dummy_dataset_1.type_to_idx['word'][k] == v
+               for k, v in constants.INITIAL_MAPPING['word'].items())
+    assert all(dummy_dataset_1.type_to_idx['char'][k] == v
+               for k, v in constants.INITIAL_MAPPING['word'].items())
+    assert all(dummy_dataset_1.type_to_idx['tag'][k] == v
+               for k, v in constants.INITIAL_MAPPING['tag'].items())
 
-def test_get_idx_seq_after_load(loaded_dummy_dataset):
+def test_get_idx_seq_after_load(dummy_dataset_1):
     """Asserts that `Dataset.idx_seq` is updated as expected after calls to `Dataset.load()`.
     """
     # as a workaround to testing this directly, just check that shapes are as expected
@@ -175,11 +157,11 @@ def test_get_idx_seq_after_load(loaded_dummy_dataset):
     expected_char_idx_shape = (len(DUMMY_WORD_SEQ), constants.MAX_SENT_LEN, constants.MAX_CHAR_LEN)
     expected_tag_idx_shape = (len(DUMMY_WORD_SEQ), constants.MAX_SENT_LEN, len(DUMMY_TAG_TYPES))
 
-    assert all(loaded_dummy_dataset.idx_seq[partition]['word'].shape == expected_word_idx_shape
+    assert all(dummy_dataset_1.idx_seq[partition]['word'].shape == expected_word_idx_shape
                for partition in ['train', 'test', 'valid'])
-    assert all(loaded_dummy_dataset.idx_seq[partition]['char'].shape == expected_char_idx_shape
+    assert all(dummy_dataset_1.idx_seq[partition]['char'].shape == expected_char_idx_shape
                for partition in ['train', 'test', 'valid'])
-    assert all(loaded_dummy_dataset.idx_seq[partition]['tag'].shape == expected_tag_idx_shape
+    assert all(dummy_dataset_1.idx_seq[partition]['tag'].shape == expected_tag_idx_shape
                for partition in ['train', 'test', 'valid'])
 
 # COMPOUND DATASET

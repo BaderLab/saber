@@ -9,7 +9,6 @@ import numpy as np
 import torch
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras.preprocessing.sequence import pad_sequences
-from pytorch_pretrained_bert import BertAdam
 from torch.optim import Adam
 from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
                               TensorDataset)
@@ -21,7 +20,6 @@ from .generic_utils import make_dir
 LOGGER = logging.getLogger(__name__)
 # TODO (johnmgiorgi): This should be handeled better. Maybe as a config argument.
 FULL_FINETUNING = True
-
 
 # I/O
 
@@ -149,13 +147,14 @@ def setup_tensorboard_callback(output_dir):
 
     return tensorboards
 
-def setup_metrics_callback(config, datasets, training_data, output_dir, fold=None):
+def setup_metrics_callback(model, datasets, config, training_data, output_dir, fold=None):
     """Creates Keras Metrics Callback objects, one for each dataset in `datasets`.
 
     Args:
+        model (BaseModel): Model to evaluate, subclass of BaseModel.
+        datasets (list): A list of Dataset objects.
         config (Config): Contains a set of harmonzied arguments provided in a *.ini file and,
             optionally, from the command line.
-        datasets (list): A list of Dataset objects.
         training_data (list): A list of dictionaries, where the ith element contains the data
             for the ith dataset indices and the dictionaries keys are dataset partitions
             ('x_train', 'y_train', 'x_valid', ...)
@@ -169,9 +168,11 @@ def setup_metrics_callback(config, datasets, training_data, output_dir, fold=Non
     for i, dataset in enumerate(datasets):
         eval_data = training_data[i] if fold is None else training_data[i][fold]
         metric = Metrics(config=config,
+                         model_=model,
                          training_data=eval_data,
                          idx_to_tag=dataset.idx_to_tag,
                          output_dir=output_dir[i],
+                         model_idx=i,
                          fold=fold)
         metrics.append(metric)
 
@@ -221,30 +222,31 @@ def precision_recall_f1_support(true_positives, false_positives, false_negatives
 
     return precision, recall, f1_score, support
 
-def mask_pads(y_true, y_pred, tag_to_idx):
+def mask_labels(y_true, y_pred, label):
     """Masks pads from `y_true` and `y_pred`.
 
     Masks (removes) all indices in `y_true` and `y_pred` where `y_true` is equal to
-    `tag_to_idx[constants.PAD]`. This step is necessary for discarding the sequence pad labels
-    (and predictions made on these sequence pad labels) from the gold labels and model predictions
-    before performance metrics are computed.
+    `label`. This step is necessary for discarding the sequence pad labels (and predictions made on
+    these sequence pad labels) from the gold labels and model predictions before performance metrics
+    are computed.
 
-    y_true (np.array): 1D numpy array containing gold labels.
-    y_pred (np.array): 1D numpy array containing predicted labels.
-    tag_to_idx: A dictionary mapping label types to unique integers.
+    Args:
+        y_true (np.array): 1D numpy array containing gold labels.
+        y_pred (np.array): 1D numpy array containing predicted labels.
+        label (int): The label, or index to mask from the sequences `y_true` and `y_pred`.
 
     Returns:
         `y_true` and `y_pred`, where all indices where `y_true` was equal to
         `tag_to_idx[constants.PAD]` have been removed.
     """
-    pad_mask = y_true != tag_to_idx[constants.PAD]
-    y_true, y_pred = y_true[pad_mask], y_pred[pad_mask]
+    mask = y_true != label
+    y_true, y_pred = y_true[mask], y_pred[mask]
 
     return y_true, y_pred
 
 # Saving/loading
 
-def load_pretrained_model(config, datasets, weights_filepath, model_filepath):
+def load_pretrained_model(config, datasets, model_filepath, weights_filepath=None, **kwargs):
     """Loads a pre-trained Keras model from its pre-trained weights and architecture files.
 
     Loads a pre-trained Keras model given by its pre-trained weights (`weights_filepath`) and
@@ -255,16 +257,24 @@ def load_pretrained_model(config, datasets, weights_filepath, model_filepath):
         config (Config): config (Config): A Config object which contains a set of harmonized
             arguments provided in a *.ini file and, optionally, from the command line.
         datasets (Dataset): A list of Dataset objects.
-        weights_filepath (str): A filepath to the weights of a pre-trained Keras model.
-        model_filepath (str): A filepath to the architecture of a pre-trained Keras model.
+        model_filepath (str): A filepath to the architecture of a pre-trained model. For PyTorch
+            models, this contains everything we need to load the model. For Keras models, you
+            must additionally supply the weights in `weights_filepath`.
+        weights_filepath (str): A filepath to the weights of a pre-trained model. This is not
+            required for PyTorch models. Defaults to None.
 
     Returns:
-        A pre-trained Keras model.
+        A pre-trained model.
     """
+    # import statements are here to prevent circular imports
     if config.model_name == 'bilstm-crf-ner':
         from ..models.multi_task_lstm_crf import MultiTaskLSTMCRF
         model = MultiTaskLSTMCRF(config, datasets)
-    model.load(weights_filepath, model_filepath)
+        model.load(model_filepath, weights_filepath)
+    elif config.model_name == 'bert-ner':
+        from ..models.bert_token_classifier import BertTokenClassifier
+        model = BertTokenClassifier(config, datasets, kwargs['pretrained_model_name_or_path'])
+
     model.compile()
 
     return model
@@ -272,36 +282,45 @@ def load_pretrained_model(config, datasets, weights_filepath, model_filepath):
 # PyTorch helper functions
 
 def get_device(model=None):
-    """Returns the device (CPU or GPU) that PyTorch model will live on.
+    """Returns a tuple of `model`, a PyTorch device (CPU or GPU(s)), and number of available GPUs.
 
-    Returns the device (CPU or GPU) that a PyTorch model will live on. If `model` is provided, and
-    a CUDA device is available, calls `model.cuda()`
+    Returns `model`, along with a torch device (CPU or GPU(s)) and number of available GPUs. If
+    `model` is provided, and a CUDA device is available, the model is placed on the CUDA device.
+    If multiple GPUs are available, the model is parallized with `torch.nn.DataParallel(model)`.
 
     Args:
-        (Torch.nn.Module) PyTorch model, if CUDA device is available this function with call
-            `model.cuda()`).
+        (Torch.nn.Module) PyTorch model, if CUDA device is available this function will place the
+        model on the CUDA device with `model.to(device)`. If multiple CUDA devices are available,
+        the model is parallized with `torch.nn.DataParallel(model)`.
 
     Returns:
-        A CUDA device if available, otherwise returns a CPU device.
+        A tuple of `model`, a PyTorch device, and number of CUDA devices available
     """
+    n_gpu = 0
+
     # use a GPU if available
     if torch.cuda.is_available():
         device = torch.device("cuda")
-        # n_gpu = torch.cuda.device_count()
-        if model: model.cuda()
-        print('Using CUDA(s) device with name: {}.'.format(torch.cuda.get_device_name(0)))
+        n_gpu = torch.cuda.device_count()
+        # if model is provided, we place it on the GPU and parallize it (if possible)
+        if model:
+            model.to(device)
+            if n_gpu > 1:
+                model = torch.nn.DataParallel(model)
+        model_names = ', '.join([torch.cuda.get_device_name(i) for i in range(n_gpu)])
+        print('Using CUDA device(s) with name(s): {}.'.format(model_names))
     else:
         device = torch.device("cpu")
-        print('No GPU available for training. Using CPU.')
+        print('No GPU available. Using CPU.')
 
-    return device
+    return model, device, n_gpu
 
 # BERT helper functions
 
 def setup_type_to_idx_for_bert(dataset):
     """Modifies the `type_to_idx` object of `dataset` to be compatible with BERT.
 
-    BERT models use a special 'X' token (stored in `constants.WORDPIECE_TAG`) to denote
+    BERT models use a special 'X' token (stored in `constants.WORDPIECE`) to denote
     subtokens in a wordpiece token. This method modifys `dataset.type_to_idx['tag']` to be
     compatible with BERT by adding this 'X' token and updating the index to tag mapping
     (i.e., it calls `dataset.get_idx_to_tag()`).
@@ -313,7 +332,7 @@ def setup_type_to_idx_for_bert(dataset):
     dataset.type_to_idx['tag']['X'] = len(dataset.type_to_idx['tag'])
     dataset.get_idx_to_tag()
 
-def process_data_for_bert(tokenizer, word_seq, tag_seq, tag_to_idx):
+def process_data_for_bert(tokenizer, word_seq, tag_seq=None, tag_to_idx=None):
     """Process the input and label sequences `word_seq` and `tag_seq` to be compatible with BERT.
 
     Args:
@@ -334,7 +353,7 @@ def process_data_for_bert(tokenizer, word_seq, tag_seq, tag_to_idx):
     return x_idx, y_idx, attention_masks
 
 # TODO (johnmgiorgi): See the BERT GitHub repo for code to do this more cleanly
-def tokenize_for_bert(tokenizer, word_seq, tag_seq):
+def tokenize_for_bert(tokenizer, word_seq, tag_seq=None):
     """Using `tokenizer`, tokenizes `word_seq` and `tag_seq` such that they are compatible with
     BERT.
 
@@ -354,21 +373,38 @@ def tokenize_for_bert(tokenizer, word_seq, tag_seq):
     # produces a list of list of lists, with the innermost list containing wordpieces
     bert_tokenized_text = [[tokenizer.wordpiece_tokenizer.tokenize(token) for token in sent] for
                            sent in word_seq]
-    # recreate the label sequence by adding special 'X' tag for wordpieces
+
+    # if a tag sequence was provided, modifies it to match the wordpiece tokenization
     bert_tokenized_labels = []
-    for i, _ in enumerate(bert_tokenized_text):
-        tokenized_labels = []
-        for token, label in zip(bert_tokenized_text[i], tag_seq[i]):
-            tokenized_labels.append([label] + [constants.WORDPIECE_TAG] * (len(token) - 1))
-        bert_tokenized_labels.append(list(chain.from_iterable(tokenized_labels)))
+    if tag_seq:
+        for i, _ in enumerate(bert_tokenized_text):
+            tokenized_labels = []
+            for token, label in zip(bert_tokenized_text[i], tag_seq[i]):
+                tokenized_labels.append([label] + [constants.WORDPIECE] * (len(token) - 1))
+            bert_tokenized_labels.append(list(chain.from_iterable(tokenized_labels)))
 
     # flatten the tokenized text back to a list of lists
     bert_tokenized_text = [list(chain.from_iterable(sent)) for sent in bert_tokenized_text]
 
     return bert_tokenized_text, bert_tokenized_labels
 
-def type_to_idx_for_bert(tokenizer, word_seq, tag_seq, tag_to_idx):
-    """
+def type_to_idx_for_bert(tokenizer, word_seq, tag_seq=None, tag_to_idx=None):
+    """Returns the corresponding index sequence for `word_seq` (and `tag_seq` if provided).
+
+    Given `tokenizer, `word_seq` is mapped to the corresponding indices and post-padded. If
+    `tag_seq` and `tag_to_idx` is provided, the `tag_seq` is mapped to the corresponding indices
+    using `tag_to_idx`. Additionally, the attention masks for a BERT based model are also returned.
+
+    Args:
+        tokenizer (BertTokenizer): An object with methods for tokenizing text for input to BERT.
+        word_seq (list): A list of lists containing tokenized sentences.
+        tag_seq (list): A list of lists containing tags corresponding to `word_seq`.
+        tag_to_idx (dictionary): A dictionary mapping tags to unique integers.
+
+    Returns:
+        A three-tuple of the corresponding index sequence for `word_seq` and `tag_seq` along with
+        the attention masks for a BERT based model. If `taq_seq` or `tag_to_idx` are not provided,
+        the second value in the tuple is None.
     """
     # process words
     bert_word_indices = \
@@ -378,25 +414,45 @@ def type_to_idx_for_bert(tokenizer, word_seq, tag_seq, tag_to_idx):
                       padding='post',
                       truncating='post',
                       value=constants.PAD_VALUE)
-    # process tags
-    bert_tag_indices = \
-        pad_sequences(sequences=[[tag_to_idx[tag] for tag in sent] for sent in tag_seq],
-                      maxlen=constants.MAX_SENT_LEN,
-                      dtype='long',
-                      padding="post",
-                      truncating="post",
-                      value=constants.PAD_VALUE)
+
+    # process tags, if provided
+    bert_tag_indices = []
+    if tag_seq and tag_to_idx:
+        bert_tag_indices = \
+            pad_sequences(sequences=[[tag_to_idx[tag] for tag in sent] for sent in tag_seq],
+                          maxlen=constants.MAX_SENT_LEN,
+                          dtype='long',
+                          padding="post",
+                          truncating="post",
+                          value=constants.PAD_VALUE)
 
     # generate attention masks for padded data
-    bert_attention_masks = [[float(idx > 0) for idx in sent] for sent in bert_word_indices]
-
-    bert_word_indices, bert_tag_indices, bert_attention_masks = \
-        np.asarray(bert_word_indices), np.asarray(bert_tag_indices), np.asarray(bert_attention_masks)
+    bert_attention_masks = np.asarray([[float(idx > 0) for idx in sent]
+                                       for sent in bert_word_indices])
 
     return bert_word_indices, bert_tag_indices, bert_attention_masks
 
 def get_dataloader_for_ber(x, y, attention_mask, config, data_partition='train'):
-    """
+    """Returns a `DataLoader` for inputs, labels, attention masks: `x`, `y`, `attention_mask`.
+
+    For the given inputs, labels and attention masks: `x`, `y`, `attention_mask`, returns the
+    appropriate `DataLoader` object based on `data_partition`.
+
+    Args:
+        x (numpy.ndarray): Numpy array or list containing the inputs for a BERT based model.
+        y (numpy.ndarray): Numpy array or list containing the corresponding labels for `x`.
+        attention_mask (numpy.ndarray): Numpy array or list containing the corresponding
+            attention masks labels for `x`.
+        config (Config): A Config object which contains a set of harmonized arguments provided in
+            a *.ini file and, optionally, from the command line.
+        data_partition (str): One of 'train' or 'eval'. If train, a `RandomSampler` is used for the
+            returned DataLoader, if eval, a `SequentialSampler` is used. Defaults to 'train'.
+
+    Raises:
+        ValueError if `data_partition` is not `train` or `eval`.
+
+    Returns:
+        A Torch DataLoader object for `x`, `y`, and `attention_masks`.
     """
     if data_partition not in {'train', 'eval'}:
         err_msg = ("Expected one of 'train', 'eval' for argument `data_partition` to "
@@ -412,7 +468,6 @@ def get_dataloader_for_ber(x, y, attention_mask, config, data_partition='train')
 
     if data_partition == 'train':
         sampler = RandomSampler(data)
-        dataloader = DataLoader(data, sampler=sampler, batch_size=config.batch_size)
     elif data_partition == 'eval':
         sampler = SequentialSampler(data)
 
@@ -430,10 +485,10 @@ def get_optimizers(models, config):
             param_optimizer = list(model.named_parameters())
             no_decay = ['bias', 'gamma', 'beta']
             optimizer_grouped_parameters = [
-            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
-             'weight_decay_rate': 0.01},
-            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
-             'weight_decay_rate': 0.0}
+                {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
+                 'weight_decay_rate': 0.01},
+                {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
+                 'weight_decay_rate': 0.0}
             ]
         else:
             param_optimizer = list(model.classifier.named_parameters())
