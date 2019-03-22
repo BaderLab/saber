@@ -7,7 +7,7 @@ __version__ = '0.1.0-alpha'
 # DISPLACY OPTIONS
 # entity colours
 COLOURS = {'PRGE': 'linear-gradient(90deg, #aa9cfc, #fc9ce7)',
-           'DISO': 'linear-gradient(90deg, #ef9a9a, #f44336)',
+           'DISO': 'linear-gradient(90deg, #FF5252, #FFCDD2)',
            'CHED': 'linear-gradient(90deg, #1DE9B6, #A7FFEB)',
            'LIVB': 'linear-gradient(90deg, #FF4081, #F8BBD0)',
            'CL': 'linear-gradient(90deg, #00E5FF, #84FFFF)',
@@ -54,9 +54,9 @@ PRETRAINED_MODELS = {
 }
 # relative path to pre-trained model directory
 PRETRAINED_MODEL_DIR = resource_filename(__name__, 'pretrained_models')
-KERAS_MODEL_FILENAME = 'model_params.json'
+KERAS_MODEL_FILENAME = 'model.json'
 PYTORCH_MODEL_FILENAME = 'model.bin'
-WEIGHTS_FILENAME = 'model_weights.hdf5'
+WEIGHTS_FILENAME = 'weights.hdf5'
 ATTRIBUTES_FILENAME = 'attributes.pickle'
 CONFIG_FILENAME = 'config.ini'
 
