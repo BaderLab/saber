@@ -8,7 +8,7 @@ include LICENSE.txt
 include saber_logo.png
 
 # Include config file(s)
-global-include *.ini *.yml
+global-include *.ini *.yml .coveragerc
 
 # Include Dockerfile
 include Dockerfile
