@@ -113,7 +113,7 @@ def setup_checkpoint_callback(config, output_dir):
         if config.save_all_weights:
             filepath = os.path.join(dir_, 'weights_epoch_{epoch:03d}_val_loss_{val_loss:.4f}.hdf5')
         else:
-            filepath = os.path.join(dir_, 'weights_best_epoch.hdf5')
+            filepath = os.path.join(dir_, constants.WEIGHTS_FILENAME)
 
         checkpointer = ModelCheckpoint(filepath=filepath,
                                        monitor='val_loss',
