@@ -1,6 +1,7 @@
 """Contains any and all unit tests for the `Preprocessor` class (saber/preprocessor.py).
 """
 import en_coref_md
+
 import pytest
 
 from .. import constants

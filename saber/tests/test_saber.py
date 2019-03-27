@@ -23,7 +23,7 @@ def test_attributes_after_initilization_of_model(saber_blank,
 
     assert saber_blank.datasets is None
     assert saber_blank.embeddings is None
-    assert saber_blank.model is None
+    assert saber_blank.models is None
 
     # test that we can pass arbitrary keyword arguments
     assert saber_blank.totally_arbitrary == 'arbitrary'
@@ -104,7 +104,7 @@ def test_build_single_dataset(saber_single_dataset_model):
     """Assert that the `model` attribute of a `Saber` instance was updated as expected after
     call to `Saber.build()` when single dataset was loaded.
     """
-    assert isinstance(saber_single_dataset_model.model, BaseKerasModel)
+    assert isinstance(saber_single_dataset_model.models, BaseKerasModel)
 
 def test_build_missing_step_exception(saber_blank):
     """Asserts that `Saber` object raises a MissingStepException when we try to build the model
