@@ -3,8 +3,9 @@
 import os
 
 import numpy as np
-import pytest
 from nltk.corpus.reader.conll import ConllCorpusReader
+
+import pytest
 
 from .. import constants
 from ..dataset import Dataset

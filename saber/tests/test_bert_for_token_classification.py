@@ -1,9 +1,10 @@
 """Any and all unit tests for the BertForTokenClassification (saber/models/BertForTokenClassification.py).
 """
 import numpy as np
-import pytest
 from keras.engine.training import Model
 from pytorch_pretrained_bert import BertForTokenClassification, BertTokenizer
+
+import pytest
 
 from .. import constants
 from ..models.base_model import BaseModel, BasePyTorchModel
