@@ -1,8 +1,9 @@
 """A collection of PyTest fixtures used for Sabers unit test (saber/tests/test_*.py)
 """
 import en_coref_md
-import pytest
 from pytorch_pretrained_bert import BertTokenizer
+
+import pytest
 
 from ..config import Config
 from ..dataset import Dataset

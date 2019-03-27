@@ -2,10 +2,11 @@
 """
 import os
 
-import pytest
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras.preprocessing.sequence import pad_sequences
 from pytorch_pretrained_bert import BertTokenizer
+
+import pytest
 
 from .. import constants
 from ..utils import model_utils
