@@ -1,19 +1,33 @@
-import en_coref_md
 import pytest
+import spacy
 
 from ..utils import text_utils
+from ..constants import SPACY_MODEL
 
 ######################################### PYTEST FIXTURES #########################################
+
+
+@pytest.fixture
+def nlp():
+    """Returns a loaded SpaCy model.
+    """
+    nlp = spacy.load(SPACY_MODEL)
+
+    return nlp
+
 
 @pytest.fixture
 def nlp():
     """Returns an instance of a spaCy's nlp object after replacing the default tokenizer with
     our modified one."""
-    custom_nlp = en_coref_md.load()
-    custom_nlp.tokenizer = text_utils.biomedical_tokenizer(custom_nlp)
-    return custom_nlp
+    nlp = spacy.load(SPACY_MODEL)
+
+    nlp.tokenizer = text_utils.biomedical_tokenizer(nlp)
+
+    return nlp
 
 ############################################ UNIT TESTS ############################################
+
 
 def test_biomedical_tokenizer(nlp):
     """Asserts that call to customized spaCy tokenizer returns the expected results.
