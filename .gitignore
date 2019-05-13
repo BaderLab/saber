@@ -112,3 +112,4 @@ ENV/
 # IDE
 .idea
 *.iml
+.vscode
