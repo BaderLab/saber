@@ -4,6 +4,10 @@ from pkg_resources import resource_filename
 
 __version__ = '0.1.0-alpha'
 
+# SPACY OPTIONS
+# The spaCy model to load. Defaults to the large sized English model.
+SPACY_MODEL = 'en_core_web_lg'
+
 # DISPLACY OPTIONS
 # entity colours
 COLOURS = {'PRGE': 'linear-gradient(90deg, #aa9cfc, #fc9ce7)',
@@ -11,20 +15,24 @@ COLOURS = {'PRGE': 'linear-gradient(90deg, #aa9cfc, #fc9ce7)',
            'CHED': 'linear-gradient(90deg, #1DE9B6, #A7FFEB)',
            'LIVB': 'linear-gradient(90deg, #FF4081, #F8BBD0)',
            'CL': 'linear-gradient(90deg, #00E5FF, #84FFFF)',
-          }
+           }
 # entity options
 OPTIONS = {'colors': COLOURS}
 
+# NEURALCOREF OPTIONS
+# Greedyness of NeuralCoref. See here: https://github.com/huggingface/neuralcoref#parameters
+NEURALCOREF_GREEDYNESS = 0.40
+
 # SPECIAL TOKENS
-UNK = '<UNK>' # out-of-vocabulary token
-PAD = '<PAD>' # sequence pad token
-START = '<START>' # start-of-sentence token
-END = '<END>' # end-of-sentence token
-OUTSIDE_TAG = 'O' # 'outside' tag of the IOB, BIO, and IOBES tag formats
+UNK = '<UNK>'  # out-of-vocabulary token
+PAD = '<PAD>'  # sequence pad token
+START = '<START>'  # start-of-sentence token
+END = '<END>'  # end-of-sentence token
+OUTSIDE_TAG = 'O'  # 'outside' tag of the IOB, BIO, and IOBES tag formats
 
 # MISC.
-PAD_VALUE = 0 # value of sequence pad
-NUM_RARE = 1 # tokens that occur less than NUM_RARE times are replaced UNK
+PAD_VALUE = 0  # value of sequence pad
+NUM_RARE = 1  # tokens that occur less than NUM_RARE times are replaced UNK
 # mapping of special tokens to contants
 INITIAL_MAPPING = {'word': {PAD: 0, UNK: 1}, 'tag':  {PAD: 0}}
 # keys into dictionaries containing information for different partitions of a dataset
@@ -67,7 +75,7 @@ UNITS_WORD_LSTM = 200
 UNITS_CHAR_LSTM = 200
 UNITS_DENSE = UNITS_WORD_LSTM // 2
 # possible models
-MODEL_NAMES = ['mt-lstm-crf',]
+MODEL_NAMES = ['mt-lstm-crf', ]
 
 # EXTRACT 2.0 API
 # arguments passed in a get request to the EXTRACT 2.0 API to specify entity type

@@ -6,20 +6,32 @@ import logging
 import re
 from collections import Counter
 
-import en_coref_md
+import spacy
+import neuralcoref
 import numpy as np
 from keras.preprocessing.sequence import pad_sequences
 
-from . import constants
+from .constants import NEURALCOREF_GREEDYNESS
+from .constants import UNK
+from .constants import NUM_RARE
+from .constants import SPACY_MODEL
+from .constants import MAX_CHAR_LEN
+from .constants import PAD_VALUE
+from .constants import MAX_SENT_LEN
+
 from .utils import generic_utils, text_utils
 
 LOGGER = logging.getLogger(__name__)
 
+
 class Preprocessor(object):
     """A class for processing text data."""
     def __init__(self):
-        # load the NeuralCoref model, which is built on top of the Spacy english model
-        self.nlp = en_coref_md.load()
+        # SpaCy object for processing natural language
+        self.nlp = spacy.load(SPACY_MODEL)
+        # Adds coref to spaCy pipeline
+        neuralcoref.add_to_pipe(self.nlp, greedyness=NEURALCOREF_GREEDYNESS)
+
         # Load our modified tokenizer, better tokenization of biomedical text
         self.nlp.tokenizer = text_utils.biomedical_tokenizer(self.nlp)
 
@@ -166,29 +178,28 @@ class Preprocessor(object):
 
         # word type
         if type_ == 'word':
-            type_seq = [[type_to_idx.get(x, type_to_idx[constants.UNK]) for x in s] for s in seq]
+            type_seq = [[type_to_idx.get(x, type_to_idx[UNK]) for x in s] for s in seq]
         # tag type
         elif type_ == 'tag':
             type_seq = [[type_to_idx.get(x) for x in s] for s in seq]
         # char type
         elif type_ == 'char':
             # get index sequence of chars
-            type_seq = [[[type_to_idx.get(c, type_to_idx[constants.UNK]) for c in w] for w in s] for
-                        s in seq]
+            type_seq = [[[type_to_idx.get(c, type_to_idx[UNK]) for c in w] for w in s] for s in seq]
 
             # create a sequence of padded character vectors
             for i, char_seq in enumerate(type_seq):
-                type_seq[i] = pad_sequences(maxlen=constants.MAX_CHAR_LEN,
+                type_seq[i] = pad_sequences(maxlen=MAX_CHAR_LEN,
                                             sequences=char_seq,
                                             padding="post",
                                             truncating='post',
-                                            value=constants.PAD_VALUE)
+                                            value=PAD_VALUE)
         # pad sequences
-        type_seq = pad_sequences(maxlen=constants.MAX_SENT_LEN,
+        type_seq = pad_sequences(maxlen=MAX_SENT_LEN,
                                  sequences=type_seq,
                                  padding='post',
                                  truncating='post',
-                                 value=constants.PAD_VALUE)
+                                 value=PAD_VALUE)
 
         return np.asarray(type_seq)
 
@@ -227,7 +238,7 @@ class Preprocessor(object):
         return chunks
 
     @staticmethod
-    def replace_rare_tokens(sentences, count=constants.NUM_RARE):
+    def replace_rare_tokens(sentences, count=NUM_RARE):
         """
         Replaces rare tokens in `sentences` with a special unknown token.
 
@@ -252,7 +263,7 @@ class Preprocessor(object):
         for i, sent in enumerate(sentences):
             for j, token in enumerate(sent):
                 if token_count[token] <= count:
-                    sentences[i][j] = constants.UNK
+                    sentences[i][j] = UNK
 
         return sentences
 
