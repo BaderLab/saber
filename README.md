@@ -169,4 +169,20 @@ See the [documentation](https://baderlab.github.io/saber/quick_start/#pre-traine
 
 ## Documentation
 
-Documentation for the Saber package can be found [here](https://baderlab.github.io/saber/). The web-service API has its own documentation [here](https://baderlab.github.io/saber-api-docs/#introduction).
+Documentation for the Saber package can be found [here](https://baderlab.github.io/saber/). The web-service API has its own documentation [here](https://baderlab.github.io/saber-api-docs/#introduction). 
+
+You can also call `help()` on any Saber method for more information
+
+```python
+from saber import Saber
+
+saber = Saber()
+
+help(saber.annotate)
+```
+
+or pass the `--help` flag to any of the command-line interfaces
+
+```
+python -m src.cli.train --help
+```
