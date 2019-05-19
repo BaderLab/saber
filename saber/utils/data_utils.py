@@ -12,6 +12,7 @@ from ..preprocessor import Preprocessor
 
 LOGGER = logging.getLogger(__name__)
 
+
 def get_filepaths(filepath):
     """Returns dictionary with filepaths to `train`/`valid`/`test` partitions from `filepath`.
 
@@ -48,6 +49,7 @@ def get_filepaths(filepath):
 
     return partition_filepaths
 
+
 def load_single_dataset(config):
     """Loads a single dataset.
 
@@ -60,13 +62,14 @@ def load_single_dataset(config):
     Returns:
         A list containing a single Dataset object.
     """
-    from ..dataset import Dataset # breaks circular import
+    from ..dataset import Dataset  # breaks circular import
 
     dataset = Dataset(dataset_folder=config.dataset_folder[0],
                       replace_rare_tokens=config.replace_rare_tokens)
     dataset.load()
 
     return [dataset]
+
 
 def load_compound_dataset(config):
     """Loads a compound dataset.
@@ -82,7 +85,7 @@ def load_compound_dataset(config):
     Returns:
         A list containing multiple Dataset objects.
     """
-    from ..dataset import Dataset # breaks circular import
+    from ..dataset import Dataset  # breaks circular import
 
     # accumulate and load each dataset
     compound_dataset = []
@@ -117,6 +120,7 @@ def load_compound_dataset(config):
 
     return compound_dataset
 
+
 def setup_dataset_for_transfer(dataset, type_to_idx):
     """Modifys a `Dataset` object when transfer learning.
 
@@ -135,6 +139,7 @@ def setup_dataset_for_transfer(dataset, type_to_idx):
     dataset.type_to_idx['char'] = type_to_idx['char']
     # re-generate index sequence
     dataset.get_idx_seq()
+
 
 def collect_valid_data(training_data, test_size=0.10):
     """Splits training data (`training_data`) into train and validation partitions.
@@ -177,9 +182,10 @@ def collect_valid_data(training_data, test_size=0.10):
                             # add back in test data
                             'x_test': data['x_test'],
                             'y_test': data['y_test'],
-                           }
+                            }
 
     return training_data
+
 
 def get_train_valid_indices(training_data, k_folds):
     """Get `k_folds` number of sets of train/valid indices for all datasets in `datasets`.
@@ -198,14 +204,15 @@ def get_train_valid_indices(training_data, k_folds):
         A list of lists of two-tuples, where index [i][j] is a tuple containing the train and valid
         indicies (in that order) for the ith dataset and jth k-fold.
     """
-    train_valid_indices = [] # acc
-    kf = KFold(n_splits=k_folds, random_state=42) # Sklearn KFold object
+    train_valid_indices = []  # acc
+    kf = KFold(n_splits=k_folds, random_state=42)  # Sklearn KFold object
 
     for i, _ in enumerate(training_data):
         X, _ = training_data[i]['x_train']
         train_valid_indices.append([(ti, vi) for ti, vi in kf.split(X)])
 
     return train_valid_indices
+
 
 def get_data_partitions(training_data, train_valid_indices):
     """Get train and valid partitions for all k-folds for all datasets.
@@ -227,9 +234,9 @@ def get_data_partitions(training_data, train_valid_indices):
         the ith dataset and jth fold.
     """
     partitioned_data = []
-    for i, _ in enumerate(train_valid_indices): # loop over datasets
+    for i, _ in enumerate(train_valid_indices):  # loop over datasets
         partitioned_data.append([])
-        for j, _ in enumerate(train_valid_indices[i]): # loop over folds
+        for j, _ in enumerate(train_valid_indices[i]):  # loop over folds
             # train_valid_indices[i][j] is a two-tuple which contains the train and valid indices
             train_indices, valid_indices = train_valid_indices[i][j]
             # get inputs and targets for dataset i
@@ -247,9 +254,11 @@ def get_data_partitions(training_data, train_valid_indices):
                                         'y_valid': y_valid,
                                         # add back in test data
                                         'x_test': training_data[i]['x_test'],
-                                        'y_test': training_data[i]['y_test'],})
+                                        'y_test': training_data[i]['y_test'],
+                                        })
 
     return partitioned_data
+
 
 def collect_cv_data(training_data, k_folds):
     """Splits training data (`training_data`) into `k_folds` number of train/valid partitions.
