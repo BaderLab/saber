@@ -13,6 +13,7 @@ from .utils import data_utils, generic_utils
 
 LOGGER = logging.getLogger(__name__)
 
+
 class Dataset(object):
     """A class for handling datasets. Expects datasets to be in tab-seperated CoNLL format, where
     each line contains a token and its tag (seperated by a tab) and each sentence is seperated
@@ -99,7 +100,7 @@ class Dataset(object):
         types = {'word': {constants.PAD, constants.UNK},
                  'char': {constants.PAD, constants.UNK},
                  'tag': {constants.PAD},
-                }
+                 }
 
         for _, filepath in self.dataset_folder.items():
             if filepath is not None:
@@ -132,7 +133,8 @@ class Dataset(object):
                 sents = list(self.conll_parser.sents(conll_file))
                 tagged_sents = list(self.conll_parser.tagged_sents(conll_file))
 
-                word_seq = Preprocessor.replace_rare_tokens(sents) if self.replace_rare_tokens else sents
+                word_seq = (Preprocessor.replace_rare_tokens(sents)
+                            if self.replace_rare_tokens else sents)
                 char_seq = [[[c for c in w] for w in s] for s in sents]
                 tag_seq = [[t[-1] for t in s] for s in tagged_sents]
 
