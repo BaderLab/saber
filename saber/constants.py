@@ -4,6 +4,10 @@ from pkg_resources import resource_filename
 
 __version__ = '0.1.0-alpha'
 
+# SPACY OPTIONS
+# The spaCy model to load. Defaults to the large sized English model.
+SPACY_MODEL = 'en_core_web_lg'
+
 # DISPLACY OPTIONS
 # entity colours
 COLOURS = {'PRGE': 'linear-gradient(90deg, #aa9cfc, #fc9ce7)',
@@ -11,9 +15,13 @@ COLOURS = {'PRGE': 'linear-gradient(90deg, #aa9cfc, #fc9ce7)',
            'CHED': 'linear-gradient(90deg, #1DE9B6, #A7FFEB)',
            'LIVB': 'linear-gradient(90deg, #FF4081, #F8BBD0)',
            'CL': 'linear-gradient(90deg, #00E5FF, #84FFFF)',
-          }
+           }
 # entity options
 OPTIONS = {'colors': COLOURS}
+
+# NEURALCOREF OPTIONS
+# Greedyness of NeuralCoref. See here: https://github.com/huggingface/neuralcoref#parameters
+NEURALCOREF_GREEDYNESS = 0.40
 
 # SPECIAL TOKENS
 UNK = '[UNK]'  # out-of-vocabulary token
@@ -100,3 +108,6 @@ CONFIG_ARGS = ['model_name', 'save_model', 'dataset_folder', 'output_folder',
                'dropout_rate', 'batch_size', 'k_folds', 'epochs', 'criteria', 'verbose',
                'debug', 'save_all_weights', 'tensorboard', 'replace_rare_tokens',
                'load_all_embeddings', 'fine_tune_word_embeddings', 'variational_dropout']
+
+# DEBUG OPTIONS
+WORD_EMBEDDING_LIMIT = 50000
