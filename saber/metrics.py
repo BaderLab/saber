@@ -19,6 +19,7 @@ from .utils.generic_utils import make_dir
 # define this at the class level because some methods are static
 LOGGER = logging.getLogger(__name__)
 
+
 class Metrics(Callback):
     """A class for handling performance metrics, inherits from Callback.
 
@@ -31,10 +32,10 @@ class Metrics(Callback):
         output_dir (str): Base directory to save all output to.
     """
     def __init__(self, config, model_, training_data, idx_to_tag, output_dir, **kwargs):
-        self.config = config # hyperparameters and model details
-        self.model_ = model_  # _ prevents naming collision
-        self.training_data = training_data # inputs and targets for each partition
-        self.idx_to_tag = idx_to_tag # maps unique IDs to targets
+        self.config = config  # hyperparameters and model details
+        self.model_ = model_   # _ prevents naming collision
+        self.training_data = training_data  # inputs and targets for each partition
+        self.idx_to_tag = idx_to_tag  # maps unique IDs to targets
 
         self.output_dir = output_dir
         self.current_epoch = 0
@@ -51,10 +52,12 @@ class Metrics(Callback):
         train_scores = self._evaluate(self.training_data, partition='train')
         self.print_performance_scores(train_scores, title='train')
         self.performance_metrics['train'].append(train_scores)
+
         # valid
         valid_scores = self._evaluate(self.training_data, partition='valid')
         self.print_performance_scores(valid_scores, title='valid')
         self.performance_metrics['valid'].append(valid_scores)
+
         # test (optional)
         if self.training_data['x_test'] is not None:
             test_scores = self._evaluate(self.training_data, partition='test')
@@ -80,7 +83,7 @@ class Metrics(Callback):
             containing precision, recall, f1 and support for that class.
         """
         # get predictions and gold labels
-        y_true, y_pred = self.model_.eval(training_data, self.model_idx, partition)
+        y_true, y_pred = self.model_.evaluate(training_data, self.model_idx, partition)
 
         # convert index sequence to tag sequence
         y_true_tag = [self.idx_to_tag[idx] for idx in y_true]
@@ -111,8 +114,8 @@ class Metrics(Callback):
             sequences.
         """
         # gold labels
-        y_true = y.argmax(axis=-1) # get class label
-        y_true = np.asarray(y_true).ravel() # flatten to 1D array
+        y_true = y.argmax(axis=-1)  # get class label
+        y_true = np.asarray(y_true).ravel()  # flatten to 1D array
         # predicted labels
         y_pred = self.model_.predict(X, batch_size=constants.PRED_BATCH_SIZE)
         y_pred = np.asarray(y_pred.argmax(axis=-1)).ravel()
@@ -147,8 +150,8 @@ class Metrics(Callback):
             ValueError, if `criteria` is not one of 'exact', 'left', or 'right'
         """
         performance_scores = {}
-        FN_total, FP_total, TP_total = 0, 0, 0 # micro performance accumulators
-        labels = list(set([chunk[0] for chunk in y_true])) # unique labels
+        FN_total, FP_total, TP_total = 0, 0, 0  # micro performance accumulators
+        labels = list(set([chunk[0] for chunk in y_true]))  # unique labels
 
         # accumulate performance scores per label
         for lab in labels:
@@ -220,15 +223,19 @@ class Metrics(Callback):
         """
         # create table, give it a title a column names
         table = PrettyTable()
+
         if title is not None:
             table.title = title.upper()
+
         table.field_names = ['Label', 'Precision', 'Recall', 'F1', 'Support']
+
         # column alignment
         table.align['Label'] = 'l'
         table.align['Precision'] = 'r'
         table.align['Recall'] = 'r'
         table.align['F1'] = 'r'
         table.align['Support'] = 'r'
+
         # create and add the rows
         for label, scores in performance_scores.items():
             row = [label]
@@ -241,6 +248,8 @@ class Metrics(Callback):
             table.add_row(row)
 
         print(table)
+
+        return table
 
     def _write_metrics_to_disk(self):
         """Write performance metrics to disk as json-formatted *.txt file.

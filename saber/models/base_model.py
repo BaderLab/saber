@@ -5,12 +5,12 @@ import logging
 import os
 
 import torch
-from keras import optimizers
 from keras.models import model_from_json
 
 from .. import constants
 
 LOGGER = logging.getLogger(__name__)
+
 
 class BaseModel():
     """Parent class of all deep learning models implemented by Saber.
@@ -25,7 +25,7 @@ class BaseModel():
         self.config = config  # hyperparameters and model details
         self.datasets = datasets  # dataset(s) tied to this instance
         self.embeddings = embeddings  # pre-trained word embeddings tied to this instance
-        self.models = []  # Keras / PyTorch model(s) tied to this instance
+        self.model = None  # Keras / PyTorch model tied to this instance
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -50,9 +50,10 @@ class BaseModel():
         Clear and rebuilds the model(s) at `self.models`. This is useful, for example, at the end
         of a cross-validation fold.
         """
-        self.models = []
+        self.model = None
         self.specify()
         self.compile()
+
 
 class BaseKerasModel(BaseModel):
     """Parent class of all Keras model classes implemented by Saber.
@@ -71,11 +72,11 @@ class BaseKerasModel(BaseModel):
 
         # set Tensorflow logging level
         if self.config.verbose:
-            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
         else:
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-    def save(self, model_filepath, weights_filepath, model_idx=0):
+    def save(self, model_filepath, weights_filepath, model=None):
         """Save a Keras model to disk.
 
         Saves a Keras model to disk, by saving its architecture as a `.json` file at
@@ -84,12 +85,14 @@ class BaseKerasModel(BaseModel):
         Args:
             model_filepath (str): Filepath to the models architecture (`.json` file).
             weights_filepath (str): Filepath to the models weights (`.hdf5` file).
-            model_idx (int): Index to model in `self.models` that will be saved. Defaults to 0.
+            model (keras.Model): Optional, model to save to disk. Defaults to `self.model`.
         """
+        model = self.model if model is None else model
+
         with open(model_filepath, 'w') as f:
-            model_json = self.models[model_idx].to_json()
+            model_json = model.to_json()
             json.dump(json.loads(model_json), f, sort_keys=True, indent=4)
-            self.models[model_idx].save_weights(weights_filepath)
+            model.save_weights(weights_filepath)
 
     def load(self, model_filepath, weights_filepath):
         """Load a Keras model from disk.
@@ -104,47 +107,13 @@ class BaseKerasModel(BaseModel):
         with open(model_filepath) as f:
             model = model_from_json(f.read())
             model.load_weights(weights_filepath)
-            self.models.append(model)
+            self.model = model
 
-    def _compile(self, model, loss_function, optimizer, lr=0.01, decay=0.0, clipnorm=0.0):
-        """Compiles a model specified with Keras.
-
-        See https://keras.io/optimizers/ for more info on each optimizer.
-
-        Args:
-            model (keras.Model): Keras model object to compile.
-            loss_function: A loss function to be passed to `keras.Model.compile()`.
-            optimizer (str): The optimizer to use during training.
-            lr (float): Learning rate to use during training
-            decay (float): Per epoch decay rate.
-            clipnorm (float): Gradient normalization threshold.
+    def summary(self):
+        """Prints a summary representation of the Keras model `self.model`.
         """
-        # The parameters of these optimizers can be freely tuned.
-        if optimizer == 'sgd':
-            optimizer_ = optimizers.SGD(lr=lr, decay=decay, clipnorm=clipnorm)
-        elif optimizer == 'adam':
-            optimizer_ = optimizers.Adam(lr=lr, decay=decay, clipnorm=clipnorm)
-        elif optimizer == 'adamax':
-            optimizer_ = optimizers.Adamax(lr=lr, decay=decay, clipnorm=clipnorm)
-        # It is recommended to leave the parameters of this optimizer at their
-        # default values (except the learning rate, which can be freely tuned).
-        # This optimizer is usually a good choice for recurrent neural networks
-        elif optimizer == 'rmsprop':
-            optimizer_ = optimizers.RMSprop(lr=lr, clipnorm=clipnorm)
-        # It is recommended to leave the parameters of these optimizers at their
-        # default values.
-        elif optimizer == 'adagrad':
-            optimizer_ = optimizers.Adagrad(clipnorm=clipnorm)
-        elif optimizer == 'adadelta':
-            optimizer_ = optimizers.Adadelta(clipnorm=clipnorm)
-        elif optimizer == 'nadam':
-            optimizer_ = optimizers.Nadam(clipnorm=clipnorm)
-        else:
-            err_msg = "Argument for `optimizer` is invalid, got: {}".format(optimizer)
-            LOGGER.error('ValueError %s', err_msg)
-            raise ValueError(err_msg)
+        self.model.summary()
 
-        model.compile(optimizer=optimizer_, loss=loss_function)
 
 class BasePyTorchModel(BaseModel):
     """Parent class of all PyTorch model classes implemented by Saber.
@@ -161,7 +130,7 @@ class BasePyTorchModel(BaseModel):
         # attribute we can use to identify which framework / library model is written in
         self.framework = constants.PYTORCH
 
-    def save(self, model_filepath, model_idx=0):
+    def save(self, model_filepath, model_idx=-1):
         """Save a PyTorch model to disk.
 
         Saves a PyTorch model to disk, by saving its architecture and weights as a `.bin` file
@@ -171,7 +140,7 @@ class BasePyTorchModel(BaseModel):
             model_filepath (str): filepath to the models architecture (`.bin` file).
             model_idx (int): Index to model in `self.models` that will be saved. Defaults to 0.
         """
-        torch.save(self.models[model_idx].state_dict(), model_filepath)
+        torch.save(self.model.state_dict(), model_filepath)
 
     def compile(self):
         """Dummy function, does nothing.
@@ -179,5 +148,11 @@ class BasePyTorchModel(BaseModel):
         This is a dummy function which makes code simpler elsewhere in Saber. PyTorch models
         don't need to be compiled, but Keras models do. To avoid writing extra code, both
         Keras and PyTorch models implement a `compile` method.
+        """
+        pass
+
+    # TODO (John).
+    def summary(self):
+        """Prints a summary representation of the PyTorch model `self.model`.
         """
         pass
