@@ -6,13 +6,12 @@ import xml.etree.ElementTree as ET
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-import tensorflow as tf
-
 from .. import constants
 from ..saber import Saber
 
 # TODO: Need better error handeling here
 LOGGER = logging.getLogger(__name__)
+
 
 def get_pubmed_xml(pmid):
     """Uses the Entrez Utilities Web Service API to fetch XML representation of PubMed document.
@@ -58,24 +57,27 @@ def get_pubmed_xml(pmid):
 
     return response
 
+
 def get_pubmed_text(pmid):
     """Returns the abstract title and text for a given PubMed id using the the Entrez Utilities Web
     Service API.
 
     Args:
-        pmid (int): the PubMed ID of the abstract to fetch
+        pmid (int): the PubMed ID of the abstract to fetch.
 
     Returns:
         two-tuple containing the abstract title and text for PubMed ID 'pmid'
     """
     xml = get_pubmed_xml(pmid)
     root = get_root(xml)
+
     # TODO: There has got to be a better way to do this.
     # recurse down the xml tree to abstractText
     abstract_title = root.find('PubmedArticle').find('MedlineCitation').find('Article').find('ArticleTitle').text
     abstract_text = root.find('PubmedArticle').find('MedlineCitation').find('Article').find('Abstract').find('AbstractText').text
 
     return abstract_title, abstract_text
+
 
 def get_root(xml):
     """Return root of given XML string.
@@ -88,6 +90,7 @@ def get_root(xml):
     """
     return ET.fromstring(xml)
 
+
 def load_models(ents):
     """Loads a model for each entity in `ents`.
 
@@ -99,18 +102,13 @@ def load_models(ents):
     Returns:
         A dictionary with keys representing the model and values a Saber object with a loaded model.
     """
-    models = {} # acc for models
-    for ent, value in ents.items():
-        if value:
-            # create and load the pre-trained models
-            saber = Saber()
-            saber.load(ent)
-            models[ent] = saber
-    # TEMP: Weird solution to a weird bug.
-    # https://github.com/tensorflow/tensorflow/issues/14356#issuecomment-385962623
-    graph = tf.get_default_graph()
+    saber = Saber()
 
-    return models, graph
+    models = [ent for ent, avail in ents.items() if avail]
+    saber.load(models)
+
+    return saber
+
 
 def harmonize_entities(default_ents, requested_ents):
     """Harmonizes two dictionaries representing default_ents and requested requested_ents.
@@ -139,6 +137,7 @@ def harmonize_entities(default_ents, requested_ents):
 
     return entities
 
+
 def parse_request_json(request):
     """Returns a dictionary of data parsed from a JSON payload passed in a POST request to Saber.
     """
@@ -159,18 +158,3 @@ def parse_request_json(request):
         parsed_request_json['ents'] = default_ents
 
     return parsed_request_json
-
-def combine_annotations(annotations):
-    """Given a list of annotations made by a Saber model, combines all annotations under one dict.
-
-    Args:
-        annotations (list): a list of annotations returned by a Saber model
-
-    Returns:
-        a dict containing all annotations in `annotations`.
-    """
-    combined_anns = []
-    for ann in annotations:
-        combined_anns.extend(ann['ents'])
-    # create json containing combined annotation
-    return combined_anns
