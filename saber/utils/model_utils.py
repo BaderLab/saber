@@ -7,6 +7,7 @@ from time import strftime
 
 import numpy as np
 import torch
+from keras import optimizers
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras.preprocessing.sequence import pad_sequences
 from torch.optim import Adam
@@ -22,6 +23,7 @@ LOGGER = logging.getLogger(__name__)
 FULL_FINETUNING = True
 
 # I/O
+
 
 def prepare_output_directory(config):
     """Create output directories `config.output_folder/config.dataset_folder` for each dataset.
@@ -72,6 +74,7 @@ def prepare_output_directory(config):
 
     return output_dirs
 
+
 def prepare_pretrained_model_dir(config):
     """Returns path to top-level directory to save a pre-trained model.
 
@@ -94,6 +97,7 @@ def prepare_pretrained_model_dir(config):
     return os.path.join(config.output_folder, constants.PRETRAINED_MODEL_DIR, ds_names)
 
 # Keras callbacks
+
 
 def setup_checkpoint_callback(config, output_dir):
     """Sets up per epoch model checkpointing.
@@ -123,6 +127,7 @@ def setup_checkpoint_callback(config, output_dir):
 
     return checkpointers
 
+
 def setup_tensorboard_callback(output_dir):
     """Setup logs for use with TensorBoard.
 
@@ -146,6 +151,7 @@ def setup_tensorboard_callback(output_dir):
         tensorboards.append(TensorBoard(log_dir=tensorboard_dir))
 
     return tensorboards
+
 
 def setup_metrics_callback(model, datasets, config, training_data, output_dir, fold=None):
     """Creates Keras Metrics Callback objects, one for each dataset in `datasets`.
@@ -178,6 +184,7 @@ def setup_metrics_callback(model, datasets, config, training_data, output_dir, f
 
     return metrics
 
+
 def setup_callbacks(config, output_dir):
     """Returns a list of Keras Callback objects to use during training.
 
@@ -197,6 +204,7 @@ def setup_callbacks(config, output_dir):
         callbacks.append(setup_tensorboard_callback(output_dir))
 
     return callbacks
+
 
 # Evaluation metrics
 
@@ -222,6 +230,7 @@ def precision_recall_f1_support(true_positives, false_positives, false_negatives
 
     return precision, recall, f1_score, support
 
+
 def mask_labels(y_true, y_pred, label):
     """Masks pads from `y_true` and `y_pred`.
 
@@ -243,6 +252,7 @@ def mask_labels(y_true, y_pred, label):
     y_true, y_pred = y_true[mask], y_pred[mask]
 
     return y_true, y_pred
+
 
 # Saving/loading
 
@@ -274,19 +284,119 @@ def load_pretrained_model(config, datasets, model_filepath, weights_filepath=Non
     elif config.model_name == 'bert-ner':
         from ..models.bert_token_classifier import BertTokenClassifier
         model = BertTokenClassifier(config, datasets, kwargs['pretrained_model_name_or_path'])
+        model.load(model_filepath)
 
     model.compile()
 
     return model
 
+
+# Keras helper functions
+
+def get_keras_optimizer(optimizer, lr=0.01, decay=0.0, clipnorm=0.0):
+    """A Keras helper function that initializes and returns the optimizer `optimizer`.
+
+    Args:
+        optimizer (str): Name of a valid Keras optimizer.
+        lr (float): Optional, learning rate of the optimizer. Defaults to 0.01.
+        decay (float): Optional, decay rate of the optimizer. Defaults to 0.0.
+        clipnorm (float): Optional, L2 norm to clip all gradients to. Defaults to 0.0.
+
+    Returns:
+        An initialized Keras optimizer with name `optimizer`.
+    """
+    # The parameters of these optimizers can be freely tuned.
+    if optimizer == 'sgd':
+        optimizer = optimizers.SGD(lr=lr, decay=decay, clipnorm=clipnorm)
+    elif optimizer == 'adam':
+        optimizer = optimizers.Adam(lr=lr, decay=decay, clipnorm=clipnorm)
+    elif optimizer == 'adamax':
+        optimizer = optimizers.Adamax(lr=lr, decay=decay, clipnorm=clipnorm)
+    # It is recommended to leave the parameters of this optimizer at their
+    # default values (except the learning rate, which can be freely tuned).
+    # This optimizer is usually a good choice for recurrent neural networks
+    elif optimizer == 'rmsprop':
+        optimizer = optimizers.RMSprop(lr=lr, clipnorm=clipnorm)
+    # It is recommended to leave the parameters of these optimizers at their
+    # default values.
+    elif optimizer == 'adagrad':
+        optimizer = optimizers.Adagrad(clipnorm=clipnorm)
+    elif optimizer == 'adadelta':
+        optimizer = optimizers.Adadelta(clipnorm=clipnorm)
+    elif optimizer == 'nadam':
+        optimizer = optimizers.Nadam(clipnorm=clipnorm)
+    else:
+        err_msg = (f'Expected `optimizer` to be a string representing a valid optimizer name in'
+                   ' Keras. Got: {optimizer}')
+        LOGGER.error('ValueError %s', err_msg)
+        raise ValueError(err_msg)
+
+    return optimizer
+
+
+def freeze_output_layers(model, model_idx, layer_name='crf_{}'):
+    """Freeze output layers of Keras model `model` besides layer at `model_idx`.
+
+    Freezes all output layers of a Keras model (`model`) with a name matching `layer_name`
+    besides the layer at index `model_idx`. Expects layer names to be of form
+    `'<layer_name>_<idx>'` where `<idx>` corresponds to the order the layers were added to the
+    model.
+
+    Args:
+        model (keras.models.Model): Keras model to modify.
+        model_idx (int): Index into the output layer to remain trainable (unfrozen).
+        layer_name (str): Formatted string containing the layer name.
+    """
+    for i, _ in enumerate(model.output):
+        layer = model.get_layer(layer_name.format(i))
+        if i == model_idx:
+            layer.trainable = True
+        else:
+            layer.trainable = False
+
+
+def get_targets(training_data, model_idx, fold=None):
+    """Returns a tuple of train, valid targets modified for use with a multi-task model.
+
+    Given `training_data`, a list of data for training a multi-task model, zeros out the train and
+    valid targets for all datasets not corresponding to the current output layer being trained
+    (`model_idx`).
+
+    Args:
+        training_data (list): A list of dicts containing the data (at key `x_partition`) and targets
+            (at key `y_partition`) for each partition: 'train', 'valid' and 'test'.
+        model_idx (int): Index to `training_data` which corresponds to the current task
+            being trained (i.e. the current dataset and output layer).
+        fold (int): Optional, integer corresponding to the current fold in k-fold cross validation.
+            Should be None if not training using cross-validation. Defaults to None.
+
+    Returns:
+        Tuple of train, valid targets modified for use with a multi-task model.
+    """
+    if fold is None:
+        current_train_target = training_data[model_idx]['y_train']
+        current_valid_target = training_data[model_idx]['y_valid']
+    else:
+        current_train_target = training_data[model_idx][fold]['y_train']
+        current_valid_target = training_data[model_idx][fold]['y_valid']
+
+    train_targets = [np.zeros_like(current_train_target) for _, _ in enumerate(training_data)]
+    valid_targets = [np.zeros_like(current_valid_target) for _, _ in enumerate(training_data)]
+
+    train_targets[model_idx] = current_train_target
+    valid_targets[model_idx] = current_valid_target
+
+    return train_targets, valid_targets
+
+
 # PyTorch helper functions
 
 def get_device(model=None):
-    """Returns a tuple of `model`, a PyTorch device (CPU or GPU(s)), and number of available GPUs.
+    """Places `model` on CUDA device if available, returns PyTorch device, number of available GPUs.
 
-    Returns `model`, along with a torch device (CPU or GPU(s)) and number of available GPUs. If
-    `model` is provided, and a CUDA device is available, the model is placed on the CUDA device.
-    If multiple GPUs are available, the model is parallized with `torch.nn.DataParallel(model)`.
+    Returns a PyTorch device and number of available GPUs. If `model` is provided, and a CUDA device
+    is available, the model is placed on the CUDA device. If multiple GPUs are available, the model
+    is parallized with `torch.nn.DataParallel(model)`.
 
     Args:
         (Torch.nn.Module) PyTorch model, if CUDA device is available this function will place the
@@ -294,13 +404,14 @@ def get_device(model=None):
         the model is parallized with `torch.nn.DataParallel(model)`.
 
     Returns:
-        A tuple of `model`, a PyTorch device, and number of CUDA devices available
+        A two-tuple containing a PyTorch device ('cpu' or 'cuda'), and number of CUDA devices
+        available.
     """
     n_gpu = 0
 
     # use a GPU if available
     if torch.cuda.is_available():
-        device = torch.device("cuda")
+        device = torch.device('cuda')
         n_gpu = torch.cuda.device_count()
         # if model is provided, we place it on the GPU and parallize it (if possible)
         if model:
@@ -310,10 +421,11 @@ def get_device(model=None):
         model_names = ', '.join([torch.cuda.get_device_name(i) for i in range(n_gpu)])
         print('Using CUDA device(s) with name(s): {}.'.format(model_names))
     else:
-        device = torch.device("cpu")
+        device = torch.device('cpu')
         print('No GPU available. Using CPU.')
 
-    return model, device, n_gpu
+    return device, n_gpu
+
 
 # BERT helper functions
 
@@ -331,6 +443,7 @@ def setup_type_to_idx_for_bert(dataset):
     # necc for dataset to be compatible with BERTs wordpiece tokenization
     dataset.type_to_idx['tag']['X'] = len(dataset.type_to_idx['tag'])
     dataset.get_idx_to_tag()
+
 
 def process_data_for_bert(tokenizer, word_seq, tag_seq=None, tag_to_idx=None):
     """Process the input and label sequences `word_seq` and `tag_seq` to be compatible with BERT.
@@ -351,6 +464,7 @@ def process_data_for_bert(tokenizer, word_seq, tag_seq=None, tag_to_idx=None):
     x_idx, y_idx, attention_masks = type_to_idx_for_bert(tokenizer, x_type, y_type, tag_to_idx)
 
     return x_idx, y_idx, attention_masks
+
 
 # TODO (johnmgiorgi): See the BERT GitHub repo for code to do this more cleanly
 def tokenize_for_bert(tokenizer, word_seq, tag_seq=None):
@@ -387,6 +501,7 @@ def tokenize_for_bert(tokenizer, word_seq, tag_seq=None):
     bert_tokenized_text = [list(chain.from_iterable(sent)) for sent in bert_tokenized_text]
 
     return bert_tokenized_text, bert_tokenized_labels
+
 
 def type_to_idx_for_bert(tokenizer, word_seq, tag_seq=None, tag_to_idx=None):
     """Returns the corresponding index sequence for `word_seq` (and `tag_seq` if provided).
@@ -432,6 +547,7 @@ def type_to_idx_for_bert(tokenizer, word_seq, tag_seq=None, tag_to_idx=None):
 
     return bert_word_indices, bert_tag_indices, bert_attention_masks
 
+
 def get_dataloader_for_ber(x, y, attention_mask, config, data_partition='train'):
     """Returns a `DataLoader` for inputs, labels, attention masks: `x`, `y`, `attention_mask`.
 
@@ -475,25 +591,24 @@ def get_dataloader_for_ber(x, y, attention_mask, config, data_partition='train')
 
     return dataloader
 
-def get_optimizers(models, config):
+
+def get_bert_optimizer(model, config):
     """
     """
-    optimizers = []
-    for model in models:
-        # set parameters of the model
-        if FULL_FINETUNING:
-            param_optimizer = list(model.named_parameters())
-            no_decay = ['bias', 'gamma', 'beta']
-            optimizer_grouped_parameters = [
-                {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
-                 'weight_decay_rate': 0.01},
-                {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
-                 'weight_decay_rate': 0.0}
-            ]
-        else:
-            param_optimizer = list(model.classifier.named_parameters())
-            optimizer_grouped_parameters = [{"params": [p for n, p in param_optimizer]}]
+    # set parameters of the model
+    if FULL_FINETUNING:
+        param_optimizer = list(model.named_parameters())
+        no_decay = ['bias', 'gamma', 'beta']
+        optimizer_grouped_parameters = [
+            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
+                'weight_decay_rate': 0.01},
+            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
+                'weight_decay_rate': 0.0}
+        ]
+    else:
+        param_optimizer = list(model.classifier.named_parameters())
+        optimizer_grouped_parameters = [{"params": [p for n, p in param_optimizer]}]
 
-        optimizers.append(Adam(optimizer_grouped_parameters, lr=config.learning_rate))
+    optimizer = Adam(optimizer_grouped_parameters, lr=config.learning_rate)
 
-    return optimizers
+    return optimizer
