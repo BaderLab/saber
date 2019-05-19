@@ -133,8 +133,8 @@ class Saber():
             try:
                 annotation = grounding_utils.ground(annotation)
             except Exception as e:
-                err_msg = (f'Grounding step in `Saber.annotate()` failed'
-                           ' (`grounding_utils.ground()` threw error: {e}. Check that you'
+                err_msg = ('Grounding step in `Saber.annotate()` failed'
+                           f' (`grounding_utils.ground()` threw error: {e}. Check that you'
                            ' have a stable internet connection.')
                 LOGGER.error(err_msg)
 
