@@ -2,15 +2,15 @@
 """
 import os
 
+import pytest
+import torch
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras.preprocessing.sequence import pad_sequences
-from pytorch_pretrained_bert import BertTokenizer
-
-import pytest
 
 from .. import constants
 from ..utils import model_utils
-from .resources.dummy_constants import *
+from .resources.constants import *
+import numpy as np
 
 
 def test_prepare_output_directory(dummy_config, dummy_output_dir):
@@ -23,12 +23,14 @@ def test_prepare_output_directory(dummy_config, dummy_output_dir):
     # check that they contain config files
     assert all([os.path.isfile(os.path.join(dir_, 'config.ini')) for dir_ in dummy_output_dir])
 
+
 def test_prepare_pretrained_model_dir(dummy_config):
     """Asserts that filepath returned by `generic_utils.get_pretrained_model_dir()` is as expected.
     """
     dataset = os.path.basename(dummy_config.dataset_folder[0])
     expected = os.path.join(dummy_config.output_folder, constants.PRETRAINED_MODEL_DIR, dataset)
     assert model_utils.prepare_pretrained_model_dir(dummy_config) == expected
+
 
 def test_setup_checkpoint_callback(dummy_config, dummy_output_dir):
     """Check that we get the expected results from call to
@@ -45,6 +47,7 @@ def test_setup_checkpoint_callback(dummy_config, dummy_output_dir):
     # blank input should return blank list
     assert blank_actual == []
 
+
 def test_setup_tensorboard_callback(dummy_output_dir):
     """Check that we get the expected results from call to
     `model_utils.setup_tensorboard_callback()`.
@@ -60,10 +63,12 @@ def test_setup_tensorboard_callback(dummy_output_dir):
     # blank input should return blank list
     assert blank_actual == []
 
+
 def test_setup_metrics_callback():
     """
     """
     pass
+
 
 def test_setup_callbacks(dummy_config, dummy_output_dir):
     """Check that we get the expected results from call to
@@ -89,6 +94,7 @@ def test_setup_callbacks(dummy_config, dummy_output_dir):
 
     # blank input should return blank list
     assert blank_actual == []
+
 
 def test_precision_recall_f1_support():
     """Asserts that model_utils.precision_recall_f1_support returns the expected values."""
@@ -116,6 +122,14 @@ def test_precision_recall_f1_support():
     assert test_scores_all_null == (0., 0., 0., 0)
 
 
+def test_get_keras_optimizer_value_error():
+    """Asserts that `model_utils.get_keras_optimizer()` returns a ValueError when an invalid
+    argument for `optimizer` is passed.
+    """
+    with pytest.raises(ValueError):
+        model_utils.get_keras_optimizer('invalid')
+
+
 def test_mask_labels_no_pads():
     """Assert that `model_utils.mask_pads()` returns the expected values for a set of simple inputs.
     """
@@ -126,6 +140,7 @@ def test_mask_labels_no_pads():
 
     assert np.array_equal(expected, actual)
 
+
 def test_mask_labels_with_pads():
     """Assert that `model_utils.mask_pads()` returns the expected values for a set of simple inputs.
     """
@@ -135,6 +150,60 @@ def test_mask_labels_with_pads():
     actual = model_utils.mask_labels(empty_input, empty_input, constants.PAD_VALUE)
 
     assert np.array_equal(expected, actual)
+
+
+def test_freeze_output_layers(saber_compound_dataset_model):
+    """Asserts that model_utils.freeze_output_layers() freezes the expected layers.
+    """
+    # Get model, set first output as the output layer currently being trained
+    model = saber_compound_dataset_model.models[0].model
+    model_idx = 0
+
+    # Check that all layers are trainble before calling freeze_output_layers
+    assert all(model.get_layer(f'crf_{i}').trainable for i, _ in enumerate(model.output))
+
+    # Freeze all output layers but the 0-th
+    model_utils.freeze_output_layers(model, model_idx=0)
+
+    assert model.get_layer(f'crf_{model_idx}').trainable
+    assert not model.get_layer(f'crf_{1}').trainable
+
+
+def test_get_targets(compound_mt_bilstm_model):
+    """Asserts that `model_utils.get_targets()` returns the expected values for a simple example.
+    """
+    # Get training data, set first output as the output layer currently being trained
+    training_data = compound_mt_bilstm_model.prepare_data_for_training()
+    model_idx = 0
+
+    expected = (
+        [training_data[model_idx]['y_train'], np.zeros_like(training_data[model_idx]['y_train'])],
+        [training_data[model_idx]['y_valid'], np.zeros_like(training_data[model_idx]['y_valid'])]
+    )
+
+    actual = model_utils.get_targets(training_data, model_idx=0)
+
+    for i, _ in enumerate(expected):
+        for j, _ in enumerate(expected):
+            assert np.all(np.equal(expected[i][j], actual[i][j]))
+
+
+def test_get_device_no_model():
+    """Asserts that `model_utils.get_device()` reutnrs the expected PyTorch device and number of
+    GPUs.
+    """
+    # The tox.ini specifices env variable CUDA_VISIBLE_DEVICES=''
+    expected = (torch.device('cpu'), 0)
+    actual = model_utils.get_device()
+
+    assert expected == actual
+
+
+def test_get_device_model():
+    """
+    """
+    pass
+
 
 def test_setup_type_to_idx_for_bert(dummy_dataset_1):
     """Assert that `dummy_dataset_1.type_to_idx['tag']` is updated as expected after call to
@@ -149,10 +218,12 @@ def test_setup_type_to_idx_for_bert(dummy_dataset_1):
     assert dummy_dataset_1.type_to_idx['tag'][constants.WORDPIECE] == \
         len(dummy_dataset_1.type_to_idx['tag']) - 1
 
+
 def test_process_data_for_bert(bert_tokenizer):
     """
     """
     pass
+
 
 def test_tokenize_for_bert(bert_tokenizer):
     """Asserts that the tokenized text and labels returned by `model_utils.tokenize_for_bert()` are
@@ -172,8 +243,9 @@ def test_tokenize_for_bert(bert_tokenizer):
 
     assert expected == actual
 
+
 def test_type_to_idx_for_bert(bert_tokenizer):
-    """
+    """Asserts that `model_utils.type_to_idx_for_bert()` returns the expected values.
     """
     x = constants.WORDPIECE
     pad = constants.PAD
@@ -210,16 +282,17 @@ def test_type_to_idx_for_bert(bert_tokenizer):
 
     expected = (expected_word_indices, expected_tag_indices, expected_attention_indices)
 
-    assert np.allclose(expected[0], actual[0])
-    assert np.allclose(expected[1], actual[1])
-    assert np.allclose(expected[2], actual[2])
+    for exp, act in zip(expected, actual):
+        assert np.allclose(exp, act)
 
-def test_get_dataloader_for_ber():
+
+def test_get_dataloader_for_bert():
     """
     """
     pass
 
-def test_process_get_optimizers(bert_tokenizer):
+
+def test_get_bert_optimizer(bert_tokenizer):
     """
     """
     pass
