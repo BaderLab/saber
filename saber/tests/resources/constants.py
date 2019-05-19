@@ -102,7 +102,7 @@ DUMMY_ARGS_NO_PROCESSING = {'model_name': 'BILSTM-CRF-NER',
                             'fine_tune_word_embeddings': 'False',
                             # TEMP
                             'variational_dropout': 'False',
-                           }
+                            }
 # Final arg values when args provided in only config file
 DUMMY_ARGS_NO_CLI_ARGS = {'model_name': 'bilstm-crf-ner',
                           'save_model': False,
@@ -131,7 +131,7 @@ DUMMY_ARGS_NO_CLI_ARGS = {'model_name': 'bilstm-crf-ner',
                           'fine_tune_word_embeddings': False,
                           # TEMP
                           'variational_dropout': False,
-                         }
+                          }
 # Final arg values when args provided in config file and from CLI
 DUMMY_COMMAND_LINE_ARGS = {'optimizer': 'sgd',
                            'grad_norm': 1.0,
@@ -143,7 +143,7 @@ DUMMY_COMMAND_LINE_ARGS = {'optimizer': 'sgd',
                            # paths here
                            'dataset_folder': [PATH_TO_DUMMY_DATASET_1],
                            'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
-                          }
+                           }
 DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'bilstm-crf-ner',
                             'save_model': False,
                             'dataset_folder': [PATH_TO_DUMMY_DATASET_1],
@@ -171,7 +171,7 @@ DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'bilstm-crf-ner',
                             'fine_tune_word_embeddings': False,
                             # TEMP
                             'variational_dropout': False,
-                           }
+                            }
 ########################################### WEB SERVICE ###########################################
 
 DUMMY_ENTITIES = {'ANAT': False,
@@ -180,4 +180,4 @@ DUMMY_ENTITIES = {'ANAT': False,
                   'LIVB': True,
                   'PRGE': True,
                   'TRIG': False,
-                 }
+                  }

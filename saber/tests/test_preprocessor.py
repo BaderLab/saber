@@ -1,7 +1,5 @@
 """Contains any and all unit tests for the `Preprocessor` class (saber/preprocessor.py).
 """
-import en_coref_md
-
 import pytest
 
 from .. import constants
@@ -13,9 +11,8 @@ def test_tokenize(preprocessor, nlp):
     results."""
     # simple test and its expected value
     simple_text = nlp("Simple example. With two sentences!")
-    simple_expected = ([['Simple', 'example', '.'], ['With', 'two', \
-        'sentences', '!']], [[(0, 6), (7, 14), (14, 15)], [(16, 20),\
-         (21, 24), (25, 34), (34, 35)]])
+    simple_expected = ([['Simple', 'example', '.'], ['With', 'two', 'sentences', '!']],
+                       [[(0, 6), (7, 14), (14, 15)], [(16, 20), (21, 24), (25, 34), (34, 35)]])
     # blank value test and its expected value
     blank_test = nlp("")
     blank_expected = ([], [])
@@ -23,12 +20,14 @@ def test_tokenize(preprocessor, nlp):
     assert preprocessor.tokenize(simple_text) == simple_expected
     assert preprocessor.tokenize(blank_test) == blank_expected
 
+
 def test_type_to_idx_value_error():
     """
     """
     with pytest.raises(ValueError):
         invalid_input = {'a': 0, 'b': 2, 'c': 3}
         Preprocessor.type_to_idx([], initial_mapping=invalid_input)
+
 
 def test_type_to_idx_empty_input():
     """Asserts that call to Preprocessor.test_type_to_idx() returns the expected results when
@@ -38,6 +37,7 @@ def test_type_to_idx_empty_input():
 
     assert actual == expected
 
+
 def test_type_to_idx_simple_input():
     """Asserts that call to Preprocessor.test_type_to_idx() returns the expected results when
     a simple list of strings is passed as input."""
@@ -46,6 +46,7 @@ def test_type_to_idx_simple_input():
     actual = Preprocessor.type_to_idx(test)
 
     assert actual == expected
+
 
 def test_type_to_idx_intial_mapping():
     """Asserts that call to Preprocessor.test_type_to_idx() returns the expected results when
@@ -58,6 +59,7 @@ def test_type_to_idx_intial_mapping():
 
     assert actual == expected
 
+
 def test_get_type_to_idx_sequence():
     """"""
     simple_seq = ["This", "is", "a", "test", ".", constants.UNK]
@@ -66,6 +68,7 @@ def test_get_type_to_idx_sequence():
     simple_actual = Preprocessor.get_type_idx_sequence(simple_seq, type_to_idx=simple_type_to_idx)
 
     pass
+
 
 def test_chunk_entities():
     """Asserts that call to Preprocessor.chunk_entities() returns the

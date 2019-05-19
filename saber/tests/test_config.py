@@ -3,7 +3,7 @@
 import pytest
 
 from .. import config
-from .resources.dummy_constants import *
+from .resources.constants import *
 from .resources.helpers import *
 
 
@@ -20,6 +20,7 @@ def test_process_args_no_cli_args(dummy_config):
     # check cli_args attribute
     assert dummy_config.cli_args == {}
 
+
 def test_process_args_with_cli_args(dummy_config_cli_args):
     """Asserts the config.Config.config object contains the expected attributes after initializing a
     config.Config object with CLI args."""
@@ -34,6 +35,7 @@ def test_process_args_with_cli_args(dummy_config_cli_args):
     # check cli_args attribute
     assert dummy_config_cli_args.cli_args == DUMMY_COMMAND_LINE_ARGS
 
+
 def test_config_attributes_no_cli_args(dummy_config):
     """Asserts that the class attributes of a config.Config object are of the expected value/type
     after objects initialization, with NO command line arguments.
@@ -41,6 +43,7 @@ def test_config_attributes_no_cli_args(dummy_config):
     # check that we get the values we expected
     for arg, value in DUMMY_ARGS_NO_CLI_ARGS.items():
         assert value == getattr(dummy_config, arg)
+
 
 def test_config_attributes_with_cli_args(dummy_config_cli_args):
     """Asserts that the class attributes of a config.Config object are of the expected value/type
@@ -51,6 +54,7 @@ def test_config_attributes_with_cli_args(dummy_config_cli_args):
     # have overwritten our config arguments
     for arg, value in DUMMY_ARGS_WITH_CLI_ARGS.items():
         assert value == getattr(dummy_config_cli_args, arg)
+
 
 def test_resolve_filepath(dummy_config):
     """Asserts that `Config._resolve_filepath()` returns the expected values.
@@ -78,12 +82,14 @@ def test_resolve_filepath(dummy_config):
     assert filepath_cli_args_none_expected == filepath_cli_args_none_actual
     assert filepath_cli_args_expected == filepath_cli_args_actual
 
+
 def test_key_error(tmpdir):
     """Assert that a KeyError is raised when Config object is initialized with a value for
     `filepath` that does does contain a valid *.ini file.
     """
     with pytest.raises(KeyError):
         dummy_config = config.Config(tmpdir.strpath)
+
 
 def test_save_no_cli_args(dummy_config, tmpdir):
     """Asserts that a saved config file contains the correct arguments and values."""
@@ -97,6 +103,7 @@ def test_save_no_cli_args(dummy_config, tmpdir):
     for section in CONFIG_SECTIONS:
         for arg, value in saved_config[section].items():
             assert value == unprocessed_args[arg]
+
 
 def test_save_with_cli_args(dummy_config_cli_args, tmpdir):
     """Asserts that a saved config file contains the correct arguments and values, taking into

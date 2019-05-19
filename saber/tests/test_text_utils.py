@@ -1,8 +1,3 @@
-import en_coref_md
-
-import pytest
-
-
 def test_biomedical_tokenizer(nlp_with_biomedical_tokenizer):
     """Asserts that call to customized spaCy tokenizer returns the expected results.
     """
