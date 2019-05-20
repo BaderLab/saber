@@ -1,6 +1,5 @@
 """A collection of PyTest fixtures used for Sabers unit test (saber/tests/test_*.py)
 """
-import en_coref_md
 import pytest
 from pytorch_pretrained_bert import BertTokenizer
 
@@ -14,7 +13,11 @@ from ..models.multi_task_lstm_crf import MultiTaskLSTMCRF
 from ..preprocessor import Preprocessor
 from ..saber import Saber
 from ..utils import data_utils, model_utils, text_utils
-from .resources.dummy_constants import *
+from .resources.constants import *
+from .. import constants
+import spacy
+import os
+
 
 # generic
 
@@ -27,10 +30,12 @@ def dummy_dir(tmpdir_factory):
 
 # config
 
+
 @pytest.fixture
 def dummy_config():
     """Returns an instance of a Config object."""
     return Config(PATH_TO_DUMMY_CONFIG)
+
 
 @pytest.fixture
 def dummy_config_cli_args():
@@ -43,6 +48,7 @@ def dummy_config_cli_args():
     dummy_config.harmonize_args(DUMMY_COMMAND_LINE_ARGS)
 
     return dummy_config
+
 
 @pytest.fixture
 def dummy_config_compound_dataset():
@@ -58,6 +64,7 @@ def dummy_config_compound_dataset():
 
 # dataset
 
+
 @pytest.fixture
 def empty_dummy_dataset():
     """Returns an empty single dummy Dataset instance.
@@ -66,6 +73,7 @@ def empty_dummy_dataset():
     return Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False,
                    # to test passing of arbitrary keyword args to constructor
                    totally_arbitrary='arbitrary')
+
 
 @pytest.fixture
 def dummy_dataset_1():
@@ -77,6 +85,7 @@ def dummy_dataset_1():
 
     return dataset
 
+
 @pytest.fixture
 def dummy_dataset_2():
     """Returns a single dummy Dataset instance after calling `Dataset.load()`.
@@ -87,6 +96,7 @@ def dummy_dataset_2():
 
     return dataset
 
+
 @pytest.fixture
 def dummy_compound_dataset(dummy_config):
     """
@@ -96,6 +106,7 @@ def dummy_compound_dataset(dummy_config):
     dataset = data_utils.load_compound_dataset(dummy_config)
 
     return dataset
+
 
 @pytest.fixture(scope='session')
 def dummy_dataset_paths_all(tmpdir_factory):
@@ -113,6 +124,7 @@ def dummy_dataset_paths_all(tmpdir_factory):
 
     return dummy_dir.strpath, train_file.strpath, valid_file.strpath, test_file.strpath
 
+
 @pytest.fixture(scope='session')
 def dummy_dataset_paths_no_valid(tmpdir_factory):
     """Creates and returns the path to a temporary dataset folder, and train, and test files.
@@ -121,11 +133,12 @@ def dummy_dataset_paths_no_valid(tmpdir_factory):
     dummy_dir = tmpdir_factory.mktemp('dummy_dataset')
     # create train, valid and train partitions in this folder
     train_file = dummy_dir.join('train.tsv')
-    train_file.write('arbitrary') # need to write content or else the file wont exist
+    train_file.write('arbitrary')  # need to write content or else the file wont exist
     test_file = dummy_dir.join('test.tsv')
     test_file.write('arbitrary')
 
     return dummy_dir.strpath, train_file.strpath, test_file.strpath
+
 
 # embeddings
 
@@ -135,8 +148,9 @@ def dummy_embeddings(dummy_dataset_1):
     """
     embeddings = Embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS,
                             token_map=dummy_dataset_1.idx_to_tag)
-    embeddings.load(binary=False) # txt file format is easier to test
+    embeddings.load(binary=False)  # txt file format is easier to test
     return embeddings
+
 
 @pytest.fixture
 def dummy_embedding_idx():
@@ -145,6 +159,7 @@ def dummy_embedding_idx():
     embeddings = Embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, token_map=DUMMY_TOKEN_MAP)
     embedding_idx = embeddings._prepare_embedding_index(binary=False)
     return embedding_idx
+
 
 @pytest.fixture
 def dummy_embedding_matrix_and_type_to_idx():
@@ -156,9 +171,10 @@ def dummy_embedding_matrix_and_type_to_idx():
     embeddings.num_found = len(embedding_idx)
     embeddings.dimension = len(list(embedding_idx.values())[0])
     embedding_matrix, type_to_idx = embeddings._prepare_embedding_matrix(embedding_idx, load_all=False)
-    embeddings.num_embed = embedding_matrix.shape[0] # num of embedded words
+    embeddings.num_embed = embedding_matrix.shape[0]  # num of embedded words
 
     return embedding_matrix, type_to_idx
+
 
 @pytest.fixture
 def dummy_embedding_matrix_and_type_to_idx_load_all():
@@ -173,9 +189,10 @@ def dummy_embedding_matrix_and_type_to_idx_load_all():
     embeddings.num_found = len(embedding_idx)
     embeddings.dimension = len(list(embedding_idx.values())[0])
     embedding_matrix, type_to_idx = embeddings._prepare_embedding_matrix(embedding_idx, load_all=True)
-    embeddings.num_embed = embedding_matrix.shape[0] # num of embedded words
+    embeddings.num_embed = embedding_matrix.shape[0]  # num of embedded words
 
     return embedding_matrix, type_to_idx
+
 
 @pytest.fixture
 def dummy_embeddings_before_load():
@@ -187,14 +204,16 @@ def dummy_embeddings_before_load():
                       # to test passing of arbitrary keyword args to constructor
                       totally_arbitrary='arbitrary')
 
+
 @pytest.fixture
 def dummy_embeddings_after_load():
     """Returns an instance of an Embeddings() object AFTER `Embeddings.load(load_all=False)` is
     called.
     """
     embeddings = Embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, token_map=DUMMY_TOKEN_MAP)
-    embeddings.load(binary=False, load_all=False) # txt file format is easier to test
+    embeddings.load(binary=False, load_all=False)  # txt file format is easier to test
     return embeddings
+
 
 @pytest.fixture
 def dummy_embeddings_after_load_with_load_all():
@@ -205,10 +224,11 @@ def dummy_embeddings_after_load_with_load_all():
     test = {"This": 0, "is": 1, "a": 2, "test": 3}
 
     embeddings = Embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, token_map=test)
-    embeddings.load(binary=False, load_all=True) # txt file format is easier to test
+    embeddings.load(binary=False, load_all=True)  # txt file format is easier to test
     return embeddings
 
 # saber
+
 
 @pytest.fixture
 def saber_blank(dummy_config):
@@ -218,14 +238,16 @@ def saber_blank(dummy_config):
                  # to test passing of arbitrary keyword args to constructor
                  totally_arbitrary='arbitrary')
 
+
 @pytest.fixture
 def saber_single_dataset(dummy_config):
     """Returns instance of `Saber` initialized with the dummy config file and a single dataset.
     """
     saber = Saber(config=dummy_config)
-    saber.load_dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1)
+    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
 
     return saber
+
 
 @pytest.fixture
 def saber_single_dataset_embeddings(dummy_config):
@@ -233,20 +255,22 @@ def saber_single_dataset_embeddings(dummy_config):
     embeddings.
     """
     saber = Saber(config=dummy_config)
-    saber.load_dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1)
+    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
     saber.load_embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, binary=False)
 
     return saber
+
 
 @pytest.fixture
 def saber_single_dataset_model(dummy_config):
     """Returns an instance of `Saber` initialized with the dummy config file, a single dataset
     a Keras model."""
     saber = Saber(config=dummy_config)
-    saber.load_dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1)
+    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
     saber.build()
 
     return saber
+
 
 @pytest.fixture
 def saber_compound_dataset(dummy_config_compound_dataset):
@@ -256,21 +280,42 @@ def saber_compound_dataset(dummy_config_compound_dataset):
     """
     compound_dataset = [PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_1]
     saber = Saber(config=dummy_config_compound_dataset)
-    saber.load_dataset(dataset_folder=compound_dataset)
+    saber.load_dataset(directory=compound_dataset)
 
     return saber
+
 
 @pytest.fixture
 def saber_compound_dataset_model(dummy_config_compound_dataset):
     """Returns an instance of `Saber` initialized with the dummy config file, a single dataset
     a Keras model."""
     saber = Saber(config=dummy_config_compound_dataset)
-    saber.load_dataset(dataset_folder=[PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2])
+    saber.load_dataset(directory=[PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2])
     saber.build()
 
     return saber
 
+
+@pytest.fixture
+def saber_saved_model(dummy_dir, dummy_config):
+    """Returns a tuple containing an instance of a `Saber` object after `save()` was called and
+    its models wiped (`saber.models = []`), the models and datasets it was saved with, and the 
+    directory where the model was saved.
+    """
+    saber = Saber(config=dummy_config)
+    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
+    saber.build()
+
+    model, dataset = saber.models[-1], saber.datasets[-1]
+
+    directory = saber.save(directory=dummy_dir)
+
+    saber.models = []
+
+    return saber, model, dataset, directory
+
 # model training
+
 
 @pytest.fixture
 def dummy_output_dir(tmpdir, dummy_config):
@@ -280,6 +325,7 @@ def dummy_output_dir(tmpdir, dummy_config):
     output_dirs = model_utils.prepare_output_directory(dummy_config)
 
     return output_dirs
+
 
 @pytest.fixture
 def dummy_training_data(dummy_dataset_1):
@@ -292,31 +338,46 @@ def dummy_training_data(dummy_dataset_1):
                      'y_train': dummy_dataset_1.idx_seq['train']['tag'],
                      'y_valid': None,
                      'y_test': None,
-                    }
+                     }
 
     return training_data
 
 # Keras models
 
+
 @pytest.fixture
-def single_mtbilstm_model(dummy_config, dummy_dataset_1, dummy_embeddings):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration."""
+def single_mt_bilstm_model(dummy_config, dummy_dataset_1):
+    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration and a
+    single dataset."""
     model = MultiTaskLSTMCRF(config=dummy_config,
                              datasets=[dummy_dataset_1],
                              # to test passing of arbitrary keyword args to constructor
                              totally_arbitrary='arbitrary')
     return model
 
+
 @pytest.fixture
-def single_mtbilstm_model_specify(single_mtbilstm_model):
+def compound_mt_bilstm_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration and a
+    compound dataset"""
+    model = MultiTaskLSTMCRF(config=dummy_config,
+                             datasets=[dummy_dataset_1, dummy_dataset_2],
+                             # to test passing of arbitrary keyword args to constructor
+                             totally_arbitrary='arbitrary')
+    return model
+
+
+@pytest.fixture
+def single_mt_bilstm_model_specify(single_mt_bilstm_model):
     """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration file and
     a single specified model."""
-    single_mtbilstm_model.specify()
+    single_mt_bilstm_model.specify()
 
-    return single_mtbilstm_model
+    return single_mt_bilstm_model
+
 
 @pytest.fixture
-def single_mtbilstm_model_embeddings(dummy_config, dummy_dataset_1, dummy_embeddings):
+def single_mt_bilstm_model_embeddings(dummy_config, dummy_dataset_1, dummy_embeddings):
     """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration file and
     loaded embeddings"""
     model = MultiTaskLSTMCRF(config=dummy_config,
@@ -326,13 +387,15 @@ def single_mtbilstm_model_embeddings(dummy_config, dummy_dataset_1, dummy_embedd
                              totally_arbitrary='arbitrary')
     return model
 
+
 @pytest.fixture
-def single_mtbilstm_model_embeddings_specify(single_mtbilstm_model_embeddings):
+def single_mt_bilstm_model_embeddings_specify(single_mt_bilstm_model_embeddings):
     """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration file,
     loaded embeddings and single specified model."""
-    single_mtbilstm_model_embeddings.specify()
+    single_mt_bilstm_model_embeddings.specify()
 
-    return single_mtbilstm_model_embeddings
+    return single_mt_bilstm_model_embeddings
+
 
 @pytest.fixture
 def single_base_keras_model(dummy_config, dummy_dataset_1, dummy_embeddings):
@@ -342,6 +405,7 @@ def single_base_keras_model(dummy_config, dummy_dataset_1, dummy_embeddings):
                            # to test passing of arbitrary keyword args to constructor
                            totally_arbitrary='arbitrary')
     return model
+
 
 @pytest.fixture
 def single_base_keras_model_embeddings(dummy_config, dummy_dataset_1, dummy_embeddings):
@@ -356,6 +420,7 @@ def single_base_keras_model_embeddings(dummy_config, dummy_dataset_1, dummy_embe
 
 # BERT models
 
+
 @pytest.fixture
 def bert_tokenizer():
     """Tokenizer for pre-trained BERT model.
@@ -364,6 +429,7 @@ def bert_tokenizer():
                                                    do_lower_case=False)
 
     return bert_tokenizer
+
 
 @pytest.fixture
 def single_bert_token_classifier_model(dummy_config, dummy_dataset_1):
@@ -375,6 +441,7 @@ def single_bert_token_classifier_model(dummy_config, dummy_dataset_1):
                                 totally_arbitrary='arbitrary')
     return model
 
+
 @pytest.fixture
 def single_bert_token_classifier_model_specify(single_bert_token_classifier_model):
     """Returns an instance of BertForTokenClassification initialized with the default configuration
@@ -382,6 +449,7 @@ def single_bert_token_classifier_model_specify(single_bert_token_classifier_mode
     single_bert_token_classifier_model.specify()
 
     return single_bert_token_classifier_model
+
 
 @pytest.fixture
 def single_bert_token_classifier_model_save(dummy_dir, single_bert_token_classifier_model_specify):
@@ -393,6 +461,7 @@ def single_bert_token_classifier_model_save(dummy_dir, single_bert_token_classif
     return model_filepath
 
 # metrics
+
 
 @pytest.fixture
 def dummy_metrics(dummy_config, dummy_dataset_1, dummy_training_data, dummy_output_dir,
@@ -410,6 +479,7 @@ def dummy_metrics(dummy_config, dummy_dataset_1, dummy_training_data, dummy_outp
 
 # annotations
 
+
 @pytest.fixture
 def blank_annotation():
     """Returns an annotation with no identified entities.
@@ -418,6 +488,7 @@ def blank_annotation():
                   "text": "This is a test with no entities.",
                   "title": ""}
     return annotation
+
 
 @pytest.fixture
 def ched_annotation():
@@ -430,6 +501,7 @@ def ched_annotation():
 
     return annotation
 
+
 @pytest.fixture
 def diso_annotation():
     """Returns an annotation with disease entities (DISO) identified.
@@ -441,6 +513,7 @@ def diso_annotation():
 
     return annotation
 
+
 @pytest.fixture
 def livb_annotation():
     """Returns an annotation with species entities (LIVB) identified.
@@ -451,6 +524,7 @@ def livb_annotation():
                   "title": ""}
 
     return annotation
+
 
 @pytest.fixture
 def prge_annotation():
@@ -465,20 +539,25 @@ def prge_annotation():
 
 # preprocessing
 
+
 @pytest.fixture
 def preprocessor():
     """Returns an instance of a Preprocessor object."""
     return Preprocessor()
 
+
 @pytest.fixture
 def nlp():
     """Returns Sacy NLP model."""
-    return en_coref_md.load()
+    nlp = spacy.load(constants.SPACY_MODEL)
+
+    return nlp
+
 
 @pytest.fixture
-def nlp_with_biomedical_tokenizer():
+def nlp_with_biomedical_tokenizer(nlp):
     """Returns an instance of a spaCy's nlp object after replacing the default tokenizer with
     our modified one."""
-    custom_nlp = en_coref_md.load()
-    custom_nlp.tokenizer = text_utils.biomedical_tokenizer(custom_nlp)
-    return custom_nlp
+    nlp.tokenizer = text_utils.biomedical_tokenizer(nlp)
+
+    return nlp

@@ -6,7 +6,8 @@ import logging
 import re
 from collections import Counter
 
-import en_coref_md
+import spacy
+import neuralcoref
 import numpy as np
 from keras.preprocessing.sequence import pad_sequences
 
@@ -15,11 +16,15 @@ from .utils import generic_utils, text_utils
 
 LOGGER = logging.getLogger(__name__)
 
+
 class Preprocessor():
     """A class for processing text data."""
     def __init__(self):
-        # load the NeuralCoref model, which is built on top of the Spacy english model
-        self.nlp = en_coref_md.load()
+        # SpaCy object for processing natural language
+        self.nlp = spacy.load(constants.SPACY_MODEL)
+        # Adds coref to spaCy pipeline
+        neuralcoref.add_to_pipe(self.nlp, greedyness=constants.NEURALCOREF_GREEDYNESS)
+
         # Load our modified tokenizer, better tokenization of biomedical text
         self.nlp.tokenizer = text_utils.biomedical_tokenizer(self.nlp)
 

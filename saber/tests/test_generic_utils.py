@@ -5,9 +5,8 @@ import shutil
 
 import pytest
 
-from ..config import Config
 from ..utils import generic_utils
-from .resources.dummy_constants import *
+from .resources.constants import *
 
 
 def test_is_consecutive_empty():
@@ -20,6 +19,7 @@ def test_is_consecutive_empty():
     actual = generic_utils.is_consecutive(test)
 
     assert actual == expected
+
 
 def test_is_consecutive_simple_sorted_list_no_duplicates():
     """Asserts that `generic_utils.is_consecutive()` returns the expected value when passed a
@@ -37,6 +37,7 @@ def test_is_consecutive_simple_sorted_list_no_duplicates():
     assert actual_true == expected_true
     assert actual_false == expected_false
 
+
 def test_is_consecutive_simple_unsorted_list_no_duplicates():
     """Asserts that `generic_utils.is_consecutive()` returns the expected value when passed a
     simple unsorted list with no duplicates.
@@ -53,6 +54,7 @@ def test_is_consecutive_simple_unsorted_list_no_duplicates():
     assert actual_true == expected_true
     assert actual_false == expected_false
 
+
 def test_is_consecutive_simple_sorted_list_duplicates():
     """Asserts that `generic_utils.is_consecutive()` returns the expected value when passed a
     simple sorted list with duplicates.
@@ -64,6 +66,7 @@ def test_is_consecutive_simple_sorted_list_duplicates():
 
     assert actual == expected
 
+
 def test_is_consecutive_simple_unsorted_list_duplicates():
     """Asserts that `generic_utils.is_consecutive()` returns the expected value when passed a
     simple unsorted list with duplicates.
@@ -74,6 +77,7 @@ def test_is_consecutive_simple_unsorted_list_duplicates():
     actual = generic_utils.is_consecutive(test)
 
     assert actual == expected
+
 
 def test_is_consecutive_simple_dict_no_duplicates():
     """Asserts that `generic_utils.is_consecutive()` returns the expected value when passed a
@@ -91,6 +95,7 @@ def test_is_consecutive_simple_dict_no_duplicates():
     assert actual_true == expected_true
     assert actual_false == expected_false
 
+
 def test_is_consecutive_simple_dict_duplicates():
     """Asserts that `generic_utils.is_consecutive()` returns the expected value when passed a
     dictionaries values with duplicates.
@@ -102,6 +107,7 @@ def test_is_consecutive_simple_dict_duplicates():
 
     assert actual == expected
 
+
 def test_reverse_dict_empty():
     """Asserts that `generic_utils.reverse_dictionary()` returns the expected value when given an
     empty dictionary.
@@ -111,6 +117,7 @@ def test_reverse_dict_empty():
     actual = generic_utils.reverse_dict(test)
 
     assert actual == expected
+
 
 def test_reverse_mapping_simple():
     """Asserts that `generic_utils.reverse_dictionary()` returns the expected value when given a
@@ -123,6 +130,7 @@ def test_reverse_mapping_simple():
 
     assert actual == expected
 
+
 def test_make_dir_new(tmpdir):
     """Assert that `generic_utils.make_dir()` creates a directory as expected when it does not
     already exist.
@@ -131,12 +139,14 @@ def test_make_dir_new(tmpdir):
     generic_utils.make_dir(dummy_dirpath)
     assert os.path.isdir(dummy_dirpath)
 
+
 def test_make_dir_exists(dummy_dir):
     """Assert that `generic_utils.make_dir()` fails silently when trying to create a directory that
     already exists.
     """
     generic_utils.make_dir(dummy_dir)
     assert os.path.isdir(dummy_dir)
+
 
 def test_clean_path_empty():
     """Asserts that filepath returned by `generic_utils.clean_path()` is as expected when an
@@ -160,6 +170,7 @@ def test_clean_path_simple():
 
     assert expected == actual
 
+
 def test_extract_directory(tmp_path):
     """Asserts that `generic_utils.extract_directory()` decompresses a given compressed file.
     """
@@ -179,6 +190,15 @@ def test_extract_directory(tmp_path):
 
     assert os.path.isdir(directory)
     assert os.path.isfile(compressed_filename)
+
+
+def test_compress_directory_value_error():
+    """Tests that `generic_utils.compress_directory()` throws a ValueError when an argument
+    no file or directory exists at `directory`.
+    """
+    with pytest.raises(ValueError):
+        generic_utils.compress_directory(directory='this is not valid')
+
 
 def test_compress_directory(tmp_path):
     """Asserts that `generic_utils.compress_directory()` compresses a given directory, and removes
