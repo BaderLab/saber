@@ -3,9 +3,8 @@
 import pytest
 
 from ..utils import app_utils
-from .resources.dummy_constants import *
+from .resources.constants import *
 
-############################################ UNIT TESTS ############################################
 
 def test_get_pubmed_xml_errors():
     """Asserts that call to `app_utils.get_pubmed_xml()` raises a ValueError error when an invalid
@@ -15,6 +14,7 @@ def test_get_pubmed_xml_errors():
     for pmid in invalid_pmids:
         with pytest.raises(ValueError):
             app_utils.get_pubmed_xml(pmid)
+
 
 def test_harmonize_entities():
     """Asserts that app_utils.harmonize_entities() returns the expected results."""

@@ -9,7 +9,7 @@ from nltk.corpus.reader.conll import ConllCorpusReader
 from .. import constants
 from ..dataset import Dataset
 from ..utils import generic_utils
-from .resources.dummy_constants import *
+from .resources.constants import *
 
 # TODO (johngiorgi): Need to include tests for valid/test partitions
 # TODO (johngiorgi): Need to include tests for compound datasets

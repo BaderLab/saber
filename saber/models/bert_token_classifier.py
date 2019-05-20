@@ -1,7 +1,6 @@
 """Contains the BertForTokenClassification PyTorch model for squence labelling.
 """
 import logging
-import shutil
 
 import numpy as np
 import torch
@@ -9,13 +8,13 @@ from pytorch_pretrained_bert import BertForTokenClassification, BertTokenizer
 from tqdm import tqdm
 
 from .. import constants
-from ..metrics import Metrics
 from ..utils import data_utils, model_utils
 from .base_model import BasePyTorchModel
 
 LOGGER = logging.getLogger(__name__)
 
 # TODO (johngiorgi): Write train_valid_test and cross-validation as local functions of `train()`
+
 
 class BertTokenClassifier(BasePyTorchModel):
     """A PyTorch implementation of a BERT model for sequence labeling.
@@ -46,7 +45,7 @@ class BertTokenClassifier(BasePyTorchModel):
         - BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding: https://arxiv.org/abs/1810.04805
         - PyTorch Implementation of BERT by Huggingface: https://github.com/huggingface/pytorch-pretrained-BERT
     """
-    def __init__(self, config, datasets, pretrained_model_name_or_path='bert-base-uncased', **kwargs):
+    def __init__(self, config, datasets, pretrained_model_name_or_path='bert-base-cased', **kwargs):
         super().__init__(config, datasets, **kwargs)
         # by default, place the model on the CPU
         self.device = torch.device("cpu")
@@ -57,6 +56,8 @@ class BertTokenClassifier(BasePyTorchModel):
         # a tokenizer which corresponds to the pre-trained model to load
         self.tokenizer = BertTokenizer.from_pretrained(self.pretrained_model_name_or_path,
                                                        do_lower_case=False)
+
+        self.model_name = 'bert-ner'
 
     def load(self, model_filepath):
         """Load a model from disk.
@@ -76,9 +77,11 @@ class BertTokenClassifier(BasePyTorchModel):
                                                            num_labels=num_labels,
                                                            state_dict=model_state_dict)
         # get the device the model will live on, along with number of GPUs available
-        model, self.device, self.n_gpus = model_utils.get_device(model)
+        self.device, self.n_gpus = model_utils.get_device(model)
 
-        self.models.append(model)
+        self.model = model
+
+        return model
 
     def specify(self):
         """Specifies an op-for-op PyTorch implementation of Google's BERT for sequence tagging.
@@ -86,18 +89,17 @@ class BertTokenClassifier(BasePyTorchModel):
         Specifies and initilizaties an op-for-op PyTorch implementation of Google's BERT. Model
         is appended to `self.models`.
         """
-        # (TODO): In future, it would be nice to support MTL. For now, initializing
-        # BertTokenClassifier with multiple datasets will simply create an independent model for
-        # for each dataset.
-        for dataset in self.datasets:
-            # plus 1 is necessary to account for 'X' tag introduced by workpiece tokenization
-            num_labels = len(dataset.type_to_idx['tag']) + 1
-            model = BertForTokenClassification.from_pretrained(self.pretrained_model_name_or_path,
-                                                               num_labels=num_labels)
-            # get the device the model will live on, along with number of GPUs available
-            model, self.device, self.n_gpus = model_utils.get_device(model)
+        # (TODO): Update to support MT learning.
+        # plus 1 is necessary to account for 'X' tag introduced by wordpiece tokenization
+        num_labels = len(self.datasets[0].type_to_idx['tag']) + 1
+        model = BertForTokenClassification.from_pretrained(self.pretrained_model_name_or_path,
+                                                           num_labels=num_labels)
+        # get the device the model will live on, along with number of GPUs available
+        self.device, self.n_gpus = model_utils.get_device(model)
 
-            self.models.append(model)
+        self.model = model
+
+        return model
 
     def prepare_data_for_training(self):
         """Returns a list containing the training data for each dataset at `self.datasets`.
@@ -132,200 +134,104 @@ class BertTokenClassifier(BasePyTorchModel):
 
         return training_data
 
-    def train_valid_test(self):
-        """Trains a PyTorch model with a cross-validation strategy.
+    def train(self):
+        """Co-ordinates the training of the PyTorch model `self.model`.
 
-        Trains a PyTorch model (`self.model.models`) or models in the case of multi-task learning
-        (`self.model.models` is a list of PyTorch models) using a cross-validation strategy. Expects
-        only a train partition to have been supplied.
+        Co-ordinates the training of the PyTorch model `self.model`. Minimally expects a train
+        partition and one or both of valid and test partitions to be supplied in the Dataset objects
+        at `self.datasets`.
         """
-        width, _ = shutil.get_terminal_size()
-        print('Using train/test/valid strategy...')
-        print('\n{}\n'.format('-' * width))
-        LOGGER.info('Using a train/test/valid strategy for training')
+        # Need to explicitly get on optimizer per output layer (if more than one)
+        optimizers = model_utils.get_bert_optimizer(self.model, self.config)
 
-        # TODO (johngiorgi): In future, we will support MTL, hence why these are lists
-        # get the train / valid partitioned data for all datasets and all folds
+        # TODO (John): Use same logic from MultiTaskLSTMCRF here to get multiple optmiziers in the
+        # case of a MTM
+
+        # TODO (John): In the furture, we will support MTM, so these are lists
+        # Gather everything we need to run a training session
         training_data = self.prepare_data_for_training()
+        output_dir = model_utils.prepare_output_directory(self.config)
 
-        # use 10% of train data as validation data if no validation data provided
-        if training_data[0]['x_valid'] is None:
-            training_data = data_utils.collect_valid_data(training_data)
+        def train_valid_test(training_data, output_dir, optimizers):
+            # use 10% of train data as validation data if no validation data provided
+            if training_data[0]['x_valid'] is None:
+                training_data = data_utils.collect_valid_data(training_data)
 
-        training_data = training_data[0]
+            # TODO (John): In the future, this will be a list.
+            optimizer = optimizers
 
-        output_dir = model_utils.prepare_output_directory(self.config)[0]
+            # get list of Keras Callback objects for computing/storing metrics
+            metrics = model_utils.setup_metrics_callback(model=self,
+                                                         config=self.config,
+                                                         datasets=self.datasets,
+                                                         training_data=training_data,
+                                                         # TODO (John): Drop index when MTM is implemented
+                                                         output_dir=output_dir,)[0]
 
-        model = self.models[0]
-        dataset = self.datasets[0]
-        optimizer = model_utils.get_optimizers(self.models, self.config)[0]
+            # TODO (John): Drop when MTM is implemented
+            training_data = training_data[0]
 
-        # metrics object
-        metrics = Metrics(config=self.config,
-                          model_=self,
-                          training_data=training_data,
-                          idx_to_tag=dataset.idx_to_tag,
-                          output_dir=output_dir,
-                          model=self,
-                          model_idx=0)
-
-        # append dataloaders to training_data
-        training_data['train_dataloader'] = \
-            model_utils.get_dataloader_for_ber(x=training_data['x_train'][0],
-                                               y=training_data['y_train'],
-                                               attention_mask=training_data['x_train'][-1],
-                                               config=self.config,
-                                               data_partition='train')
-        training_data['valid_dataloader'] = \
-            model_utils.get_dataloader_for_ber(x=training_data['x_valid'][0],
-                                               y=training_data['y_valid'],
-                                               attention_mask=training_data['x_valid'][-1],
-                                               config=self.config,
-                                               data_partition='eval')
-
-        training_data['test_dataloader'] = \
-            model_utils.get_dataloader_for_ber(x=training_data['x_test'][0],
-                                               y=training_data['y_test'],
-                                               attention_mask=training_data['x_test'][-1],
-                                               config=self.config,
-                                               data_partition='eval')
-
-        for epoch in range(self.config.epochs):
-            model.train()
-            tr_loss = 0
-            nb_tr_steps = 0
-
-            # setup a progress bar
-            pbar_descr = 'Epoch: {}/{}'.format(epoch + 1, self.config.epochs)
-            pbar = tqdm(training_data['train_dataloader'], unit='batch', desc=pbar_descr)
-
-            for _, batch in enumerate(pbar):
-
-                model.zero_grad()
-
-                # update train loss in progress bar
-                train_loss = tr_loss / nb_tr_steps if nb_tr_steps > 0 else 0.
-                pbar.set_postfix(train_loss=train_loss)
-
-                # add batch to device
-                batch = tuple(t.to(self.device) for t in batch)
-                b_input_ids, b_input_mask, b_labels = batch
-
-                # forward pass
-                loss = model(b_input_ids,
-                             token_type_ids=None,
-                             attention_mask=b_input_mask,
-                             labels=b_labels)
-                # backward pass
-                loss.backward()
-
-                # track train loss
-                tr_loss += loss.item()
-                nb_tr_steps += 1
-
-                # gradient clipping
-                torch.nn.utils.clip_grad_norm_(parameters=model.parameters(),
-                                               max_norm=self.config.grad_norm)
-                # update parameters
-                optimizer.step()
-
-            # need to feed epoch argument manually, as this is a keras callback object
-            metrics.on_epoch_end(epoch=metrics.current_epoch)
-
-            pbar.close()
-
-    def cross_validation(self):
-        """Trains a PyTorch model with a cross-validation strategy.
-
-        Trains a PyTorch model (`self.model.models`) or models in the case of multi-task learning
-        (`self.model.models` is a list of PyTorch models) using a cross-validation strategy. Expects
-        only a train partition to have been supplied.
-        """
-        width, _ = shutil.get_terminal_size()
-        print('Using {}-fold cross-validation strategy.'.format(self.config.k_folds))
-        print('\n{}\n'.format('-' * width))
-        LOGGER.info('Using a %s-fold cross-validation strategy for training', self.config.k_folds)
-
-        # get the train / valid partitioned data for all datasets and all folds
-        training_data = self.prepare_data_for_training()
-        training_data = data_utils.collect_cv_data(training_data, self.config.k_folds)[0]
-
-        output_dir = model_utils.prepare_output_directory(self.config)[0]
-
-        # TRAIN loop
-        for fold in range(self.config.k_folds):
-            # TODO (johngiorgi): In future, we will support MTL, hence why these are lists
-            model = self.models[0]
-            dataset = self.datasets[0]
-            optimizer = model_utils.get_optimizers(self.models, self.config)[0]
-
+            # TODO (John): Dataloaders should be handled outside of the train loop
             # append dataloaders to training_data
-            training_data[fold]['train_dataloader'] = \
-                model_utils.get_dataloader_for_ber(x=training_data[fold]['x_train'][0],
-                                                   y=training_data[fold]['y_train'],
-                                                   attention_mask=training_data[fold]['x_train'][-1],
+            training_data['train_dataloader'] = \
+                model_utils.get_dataloader_for_ber(x=training_data['x_train'][0],
+                                                   y=training_data['y_train'],
+                                                   attention_mask=training_data['x_train'][-1],
                                                    config=self.config,
                                                    data_partition='train')
-            training_data[fold]['valid_dataloader'] = \
-                model_utils.get_dataloader_for_ber(x=training_data[fold]['x_valid'][0],
-                                                   y=training_data[fold]['y_valid'],
-                                                   attention_mask=training_data[fold]['x_valid'][-1],
+            training_data['valid_dataloader'] = \
+                model_utils.get_dataloader_for_ber(x=training_data['x_valid'][0],
+                                                   y=training_data['y_valid'],
+                                                   attention_mask=training_data['x_valid'][-1],
                                                    config=self.config,
                                                    data_partition='eval')
 
-            # metrics object
-            metrics = Metrics(config=self.config,
-                              model_=self,
-                              training_data=training_data[fold],
-                              idx_to_tag=dataset.idx_to_tag,
-                              output_dir=output_dir,
-                              model=self,
-                              model_idx=0,
-                              fold=fold)
+            training_data['test_dataloader'] = \
+                model_utils.get_dataloader_for_ber(x=training_data['x_test'][0],
+                                                   y=training_data['y_test'],
+                                                   attention_mask=training_data['x_test'][-1],
+                                                   config=self.config,
+                                                   data_partition='eval')
 
-            # get optimizers for each model
             for epoch in range(self.config.epochs):
-                model.train()
-                tr_loss = 0
-                nb_tr_steps = 0
+
+                self.model.train()
+
+                train_loss = 0
+                train_steps = 0
 
                 # setup a progress bar
-                fold_and_epoch = (fold + 1, self.config.k_folds, epoch + 1, self.config.epochs)
-                pbar_descr = 'Fold: {}/{}, Epoch: {}/{}'.format(*fold_and_epoch)
-                pbar = tqdm(training_data[fold]['train_dataloader'], unit='batch', desc=pbar_descr)
+                pbar_descr = f'Epoch: {epoch + 1}/{self.config.epochs}'
+                pbar = tqdm(training_data['train_dataloader'], unit='batch', desc=pbar_descr)
 
                 for _, batch in enumerate(pbar):
 
-                    model.zero_grad()
+                    optimizer.zero_grad()
 
                     # update train loss in progress bar
-                    train_loss = tr_loss / nb_tr_steps if nb_tr_steps > 0 else 0.
+                    train_loss = train_loss / train_steps if train_steps > 0 else 0.
                     pbar.set_postfix(train_loss=train_loss)
 
-                    # add batch to gpu
+                    # add batch to device
                     batch = tuple(t.to(self.device) for t in batch)
                     b_input_ids, b_input_mask, b_labels = batch
 
                     # forward pass
-                    loss = model(b_input_ids,
-                                 token_type_ids=None,
-                                 attention_mask=b_input_mask,
-                                 labels=b_labels)
-
+                    loss = self.model(b_input_ids,
+                                      token_type_ids=None,
+                                      attention_mask=b_input_mask,
+                                      labels=b_labels)
                     # backward pass
                     loss.backward()
 
-                    # loss object is a vector of size n_gpus, need to average if more than 1
-                    if self.n_gpus > 1:
-                        loss = loss.mean()
-
                     # track train loss
-                    tr_loss += loss.item()
-                    nb_tr_steps += 1
+                    train_loss += loss.item()
+                    train_steps += 1
 
                     # gradient clipping
-                    torch.nn.utils.clip_grad_norm_(parameters=model.parameters(),
-                                                   max_norm=self.config.grad_norm)
+                    if self.config.grad_norm:
+                        torch.nn.utils.clip_grad_norm_(parameters=self.model.parameters(),
+                                                       max_norm=self.config.grad_norm)
                     # update parameters
                     optimizer.step()
 
@@ -334,11 +240,113 @@ class BertTokenClassifier(BasePyTorchModel):
 
                 pbar.close()
 
-            # clear and rebuild the model at end of each fold (except for the last fold)
-            if fold < self.config.k_folds - 1:
-                self.reset_model()
+        def cross_validation(training_data, output_dir, optimizers):
+            # get the train / valid partitioned data for all datasets and all folds
+            training_data = data_utils.collect_cv_data(training_data, self.config.k_folds)
 
-    def eval(self, training_data, model_idx=0, partition='train'):
+            # TODO (John): In the future, this will be a list.
+            optimizer = optimizers
+
+            # training loop
+            for fold in range(self.config.k_folds):
+
+                # get list of Keras Callback objects for computing/storing metrics
+                metrics = model_utils.setup_metrics_callback(model=self,
+                                                             config=self.config,
+                                                             datasets=self.datasets,
+                                                             training_data=training_data,
+                                                             # TODO (John): Drop index when MTM is implemented
+                                                             output_dir=output_dir,)[0]
+
+                # TODO (John): Drop when MTM is implemented
+                training_data = training_data[0]
+
+                # TODO (John): Dataloaders should be handled outside of the train loop
+                # append dataloaders to training_data
+                training_data[fold]['train_dataloader'] = \
+                    model_utils.get_dataloader_for_ber(x=training_data[fold]['x_train'][0],
+                                                       y=training_data[fold]['y_train'],
+                                                       attention_mask=training_data[fold]['x_train'][-1],
+                                                       config=self.config,
+                                                       data_partition='train')
+                training_data[fold]['valid_dataloader'] = \
+                    model_utils.get_dataloader_for_ber(x=training_data[fold]['x_valid'][0],
+                                                       y=training_data[fold]['y_valid'],
+                                                       attention_mask=training_data[fold]['x_valid'][-1],
+                                                       config=self.config,
+                                                       data_partition='eval')
+
+                # get optimizers for each model
+                for epoch in range(self.config.epochs):
+
+                    self.model.train()
+
+                    train_loss = 0
+                    train_steps = 0
+
+                    # setup a progress bar
+                    fold_and_epoch = (fold + 1, self.config.k_folds, epoch + 1, self.config.epochs)
+                    pbar_descr = 'Fold: {}/{}, Epoch: {}/{}'.format(*fold_and_epoch)
+                    pbar = \
+                        tqdm(training_data[fold]['train_dataloader'], unit='batch', desc=pbar_descr)
+
+                    for _, batch in enumerate(pbar):
+
+                        optimizer.zero_grad()
+
+                        # update train loss in progress bar
+                        train_loss = train_loss / train_steps if train_steps > 0 else 0.
+                        pbar.set_postfix(train_loss=train_loss)
+
+                        # add batch to gpu
+                        batch = tuple(t.to(self.device) for t in batch)
+                        b_input_ids, b_input_mask, b_labels = batch
+
+                        # forward pass
+                        loss = self.model(b_input_ids,
+                                          token_type_ids=None,
+                                          attention_mask=b_input_mask,
+                                          labels=b_labels)
+
+                        # backward pass
+                        loss.backward()
+
+                        # loss object is a vector of size n_gpus, need to average if more than 1
+                        if self.n_gpus > 1:
+                            loss = loss.mean()
+
+                        # track train loss
+                        train_loss += loss.item()
+                        train_steps += 1
+
+                        # gradient clipping
+                        if self.config.grad_norm:
+                            torch.nn.utils.clip_grad_norm_(parameters=self.model.parameters(),
+                                                           max_norm=self.config.grad_norm)
+
+                        # update parameters
+                        optimizer.step()
+
+                    # need to feed epoch argument manually, as this is a keras callback object
+                    metrics.on_epoch_end(epoch=metrics.current_epoch)
+
+                    pbar.close()
+
+                # clear and rebuild the model at end of each fold (except for the last fold)
+                if fold < self.config.k_folds - 1:
+                    self.reset_model()
+
+        # TODO: User should be allowed to overwrite this
+        if training_data[0]['x_valid'] is not None or training_data[0]['x_test'] is not None:
+            print('Using train/test/valid strategy...')
+            LOGGER.info('Used a train/test/valid strategy for training')
+            train_valid_test(training_data, output_dir, optimizers)
+        else:
+            print(f'Using {self.config.k_folds}-fold cross-validation strategy...')
+            LOGGER.info('Used %s-fold cross-validation strategy for training', self.config.k_folds)
+            cross_validation(training_data, output_dir, optimizers)
+
+    def evaluate(self, training_data, model_idx=-1, partition='train'):
         """Get `y_true` and `y_pred` for given inputs and targets in `training_data`.
 
         Performs prediction for the model at `self.models[model_idx]`), and returns a 2-tuple
@@ -355,29 +363,28 @@ class BertTokenClassifier(BasePyTorchModel):
             A two-tuple containing the gold label integer sequences and the predicted integer label
             sequences.
         """
-        model = self.models[model_idx]
-        dataset = self.datasets[model_idx]
-
-        model.eval()  # puts the model in evaluation mode
+        self.model.eval()
 
         y_pred, y_true = [], []
-        eval_loss, nb_eval_steps = 0, 0
+        eval_loss, eval_steps = 0, 0
 
-        # get the dataloader for the given partition
-        dataloader = training_data['{}_dataloader'.format(partition)]
+        # get the dataset / dataloader for the given partition
+        dataset = self.datasets[model_idx]
+        print(training_data)
+        dataloader = training_data[f'{partition}_dataloader']
 
         for batch in dataloader:
             batch = tuple(t.to(self.device) for t in batch)
             b_input_ids, b_input_mask, b_labels = batch
 
             with torch.no_grad():
-                tmp_eval_loss = model(b_input_ids,
-                                      token_type_ids=None,
-                                      attention_mask=b_input_mask,
-                                      labels=b_labels)
-                logits = model(b_input_ids,
-                               token_type_ids=None,
-                               attention_mask=b_input_mask)
+                tmp_eval_loss = self.model(b_input_ids,
+                                           token_type_ids=None,
+                                           attention_mask=b_input_mask,
+                                           labels=b_labels)
+                logits = self.model(b_input_ids,
+                                    token_type_ids=None,
+                                    attention_mask=b_input_mask)
 
                 # loss object is a vector of size n_gpus, need to average if more than 1
                 if self.n_gpus > 1:
@@ -391,7 +398,7 @@ class BertTokenClassifier(BasePyTorchModel):
             y_pred.extend([list(p) for p in np.argmax(logits, axis=2)])
 
             eval_loss += tmp_eval_loss.mean().item()
-            nb_eval_steps += 1
+            eval_steps += 1
 
         # flatten arrays
         y_true = [[l_ii for l_ii in l_i] for l in y_true for l_i in l]
@@ -399,19 +406,21 @@ class BertTokenClassifier(BasePyTorchModel):
         y_pred = np.asarray(y_pred).ravel()
 
         # mask out pads and wordpiece tokens
-        y_true, y_pred = model_utils.mask_labels(y_true, y_pred, dataset.type_to_idx['tag'][constants.PAD])
-        y_true, y_pred = model_utils.mask_labels(y_true, y_pred, dataset.type_to_idx['tag'][constants.WORDPIECE])
+        y_true, y_pred = model_utils.mask_labels(y_true, y_pred,
+                                                 dataset.type_to_idx['tag'][constants.PAD])
+        y_true, y_pred = model_utils.mask_labels(y_true, y_pred,
+                                                 dataset.type_to_idx['tag'][constants.WORDPIECE])
 
         # sanity check
         if not y_true.shape == y_pred.shape:
-            err_msg = ("'y_true' and 'y_pred' in 'BertForTokenClassification.eval() have different"
-                       " shapes ({} and {} respectively)".format(y_true.shape, y_pred.shape))
+            err_msg = (f"'y_true' and 'y_pred' in 'BertForTokenClassification.evaluate() have"
+                       " different shapes ({y_true.shape} and {y_pred.shape} respectively)")
             LOGGER.error('AssertionError: %s', err_msg)
             raise AssertionError(err_msg)
 
         return y_true, y_pred
 
-    def predict(self, sents, model_idx=0):
+    def predict(self, sents, model_idx=None):
         """Perform inference on tokenized and sentence segmented text.
 
         Using the model at `self.models[model_idx]`, performs inference on `sents`, a list of lists
@@ -424,8 +433,7 @@ class BertTokenClassifier(BasePyTorchModel):
             model_idx (int): Index to model in `self.models` that will be used for inference.
                 Defaults to 0.
         """
-        model = self.models[model_idx]
-        model.eval()  # puts the model in evaluation mode
+        self.model.eval()
 
         # process the sentences into lists of lists of ids and corresponding attention masks
         X, _, attention_masks = model_utils.process_data_for_bert(self.tokenizer, sents)
@@ -435,7 +443,10 @@ class BertTokenClassifier(BasePyTorchModel):
 
         # actual prediction happens here
         with torch.no_grad():
-            logits = model(X, token_type_ids=None, attention_mask=attention_masks)
+            logits = self.model(X, token_type_ids=None, attention_mask=attention_masks)
         X, y_pred = X.numpy(), logits.detach().cpu().numpy()
+
+        if model_idx is not None:
+            y_pred = y_pred[model_idx]
 
         return X, y_pred

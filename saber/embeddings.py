@@ -3,8 +3,9 @@
 import numpy as np
 from gensim.models import KeyedVectors
 
-from . import constants
 from .preprocessor import Preprocessor
+from .constants import WORD_EMBEDDING_LIMIT
+from .constants import INITIAL_MAPPING
 
 
 class Embeddings():
@@ -18,10 +19,10 @@ class Embeddings():
         self.filepath = filepath
         self.token_map = token_map
 
-        self.matrix = None # matrix containing row vectors for all embedded tokens
-        self.num_found = None # number of loaded embeddings
-        self.num_embed = None # final count of embedded words
-        self.dimension = None # dimension of these embeddings
+        self.matrix = None  # matrix containing row vectors for all embedded tokens
+        self.num_found = None  # number of loaded embeddings
+        self.num_embed = None  # final count of embedded words
+        self.dimension = None  # dimension of these embeddings
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -47,7 +48,7 @@ class Embeddings():
         embedding_idx = self._prepare_embedding_index(binary)
         self.num_found, self.dimension = len(embedding_idx), len(list(embedding_idx.values())[0])
         self.matrix, type_to_idx = self._prepare_embedding_matrix(embedding_idx, load_all)
-        self.num_embed = self.matrix.shape[0] # num of embedded words
+        self.num_embed = self.matrix.shape[0]  # num of embedded words
 
         return type_to_idx
 
@@ -65,7 +66,8 @@ class Embeddings():
         Returns:
             Dictionary mapping words to pre-trained word embeddings, known as an 'embedding index'.
         """
-        limit = 10000 if self.__dict__.get("debug", False) else None
+        limit = WORD_EMBEDDING_LIMIT if self.__dict__.get("debug", False) else None
+
         vectors = KeyedVectors.load_word2vec_format(self.filepath, binary=binary, limit=limit)
         embedding_idx = {word: vectors[word] for word in vectors.vocab}
 
@@ -105,9 +107,8 @@ class Embeddings():
 
         return embedding_matrix, type_to_idx
 
-    @classmethod
     def _generate_type_to_idx(self, embedding_idx):
-        """Returns a dictionary mapping tokens in  `embedding_idx` to unique integer IDs.
+        """Returns a dictionary mapping tokens in `embedding_idx` to unique integer IDs.
         """
         word_types, char_types = list(embedding_idx.keys()), []
         for word in word_types:
@@ -115,8 +116,8 @@ class Embeddings():
         char_types = list(set(char_types))
 
         type_to_idx = {
-            'word': Preprocessor.type_to_idx(word_types, constants.INITIAL_MAPPING['word']),
-            'char': Preprocessor.type_to_idx(char_types, constants.INITIAL_MAPPING['word'])
+            'word': Preprocessor.type_to_idx(word_types, INITIAL_MAPPING['word']),
+            'char': Preprocessor.type_to_idx(char_types, INITIAL_MAPPING['word'])
         }
 
         return type_to_idx
