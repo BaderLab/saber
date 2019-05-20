@@ -9,15 +9,18 @@ from setuptools.archive_util import unpack_archive
 
 LOGGER = logging.getLogger(__name__)
 
+
 def is_consecutive(lst):
     """Returns True if `lst` contains all numbers from 0 to `len(lst)` with no duplicates.
     """
     return sorted(lst) == list(range(len(lst)))
 
+
 def reverse_dict(mapping):
     """Returns a dictionary composed of the reverse v, k pairs of a dictionary `mapping`.
     """
     return {v: k for k, v in mapping.items()}
+
 
 # https://stackoverflow.com/questions/273192/how-can-i-create-a-directory-if-it-does-not-exist#273227
 def make_dir(directory):
@@ -29,11 +32,13 @@ def make_dir(directory):
         if err.errno != errno.EEXIST:
             raise
 
+
 def clean_path(filepath):
     """Returns normalized and absolutized `filepath`.
     """
     filepath = filepath.strip() if isinstance(filepath, str) else filepath
     return os.path.abspath(os.path.normpath(filepath))
+
 
 def extract_directory(directory):
     """Extracts bz2 compressed directory at `directory` if directory is compressed.
@@ -44,6 +49,7 @@ def extract_directory(directory):
         print('Unzipping...', end=' ', flush=True)
         unpack_archive('{}.tar.bz2'.format(directory), extract_dir=head)
 
+
 def compress_directory(directory):
     """Compresses a given directory using bz2 compression.
 
@@ -53,14 +59,9 @@ def compress_directory(directory):
     # clean/normalize directory
     directory = os.path.abspath(os.path.normcase(os.path.normpath(directory)))
 
-    # raise ValueError if directory.tar.bz2 already exists or if directory not valid
-    output_filepath = '{}.tar.bz2'.format(directory)
-    if os.path.exists(output_filepath):
-        err_msg = "{} already exists.".format(output_filepath)
-        LOGGER.error('ValueError %s', err_msg)
-        raise ValueError(err_msg)
+    # raise ValueError if directory not valid
     if not os.path.exists(directory):
-        err_msg = "File or directory at 'directory' does not exist."
+        err_msg = f'File or directory at "{directory}" does not exist.'
         LOGGER.error('ValueError %s', err_msg)
         raise ValueError(err_msg)
 
