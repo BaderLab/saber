@@ -1,24 +1,27 @@
-"""Contains the Multi-task BiLSTM-CRF (MT-BILSTM-CRF) Keras model for squence labelling.
+"""Contains the Multi-task BiLSTM-CRF (bilstm-crf-ner) Keras model for sequence labelling.
 """
 import logging
 
 import tensorflow as tf
+import random
 from keras.layers import (LSTM, Bidirectional, Concatenate, Dense, Dropout,
                           Embedding, SpatialDropout1D, TimeDistributed)
 from keras.models import Input, Model, model_from_json
-from keras.utils import multi_gpu_model
 from keras_contrib.layers.crf import CRF
+from keras.utils import multi_gpu_model
 from keras_contrib.losses.crf_losses import crf_loss
 
 from .. import constants
 from ..preprocessor import Preprocessor
 from ..utils import model_utils
+from ..utils import data_utils
 from .base_model import BaseKerasModel
 
 LOGGER = logging.getLogger(__name__)
 
+
 class MultiTaskLSTMCRF(BaseKerasModel):
-    """A Keras implementation of a BiLSTM-CRF for sequence labeling.
+    """A Keras implementation of a Multi-task BiLSTM-CRF for sequence labeling.
 
     A BiLSTM-CRF for NER implementation in Keras. Supports multi-task learning by default, just pass
     multiple Dataset objects via `datasets` to the constructor and the model will share the
@@ -29,40 +32,53 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         config (Config): Contains a set of harmonzied arguments provided in a *.ini file and,
             optionally, from the command line.
         datasets (list): A list of Dataset objects.
-        embeddings (Embeddings): An object containing loaded word embeddings.
+        embeddings (Embeddings): Optional, an object containing loaded word embeddings. If None,
+            embeddings are randomly initialized and updated during training. Defaults to None.
 
     References:
-        - Guillaume Lample, Miguel Ballesteros, Sandeep Subramanian, Kazuya Kawakami, Chris Dyer.
-          "Neural Architectures for Named Entity Recognition". Proceedings of NAACL 2016.
-          https://arxiv.org/abs/1603.01360
+        - https://www.biorxiv.org/content/10.1101/526244v1
+        - https://arxiv.org/pdf/1512.05287.pdf
     """
     def __init__(self, config, datasets, embeddings=None, **kwargs):
         super().__init__(config, datasets, embeddings, **kwargs)
+
+        self.model_name = 'bilstm-crf-ner'
 
     def load(self, model_filepath, weights_filepath):
         """Load a model from disk.
 
         Loads a model from disk by loading its architecture from a json file at `model_filepath`
-        and its weights from a hdf5 file at `model_filepath`.
+        and its weights from a hdf5 file at `weights_filepath`.
 
         Args:
-            model_filepath (str): Filepath to the models architecture (.json file).
-            weights_filepath (str): Filepath to the models wieghts (.hdf5 file).
+            model_filepath (str): Filepath to the models architecture (`.json` file).
+            weights_filepath (str): Filepath to the models wieghts (`.hdf5` file).
+
+        Returns:
+            The Keras `Model` object that was saved to disk.
         """
         with open(model_filepath) as f:
+            # CRF is not part of official Keras library, has to be passed as custom object
             model = model_from_json(f.read(), custom_objects={'CRF': CRF})
             model.load_weights(weights_filepath)
-            self.models.append(model)
+            self.model = model
+
+        return model
 
     def specify(self):
-        """Specifies a multi-task BiLSTM-CRF for sequence tagging using Keras.
+        """Specifies a BiLSTM-CRF for sequence tagging using Keras.
 
-        Implements a hybrid bidirectional long short-term memory network-condition random
-        field (BiLSTM-CRF) multi-task model for sequence tagging.
+        Implements a hybrid bidirectional long short-term memory network-conditional random
+        field (BiLSTM-CRF) multi-task model for sequence tagging. If `len(self.datasets) > 1`, a
+        single input, multi-output model is created, with one CRF output layer per dataset in
+        `self.datasets`.
+
+        Returns:
+            The Keras `Model` object that was initialized.
         """
-        # specify any shared layers outside the for loop
-        # word-level embedding layer
+        # Word-level embedding layer
         if self.embeddings is None:
+            # +1 to account for pad
             word_embeddings = Embedding(input_dim=len(self.datasets[0].type_to_idx['word']) + 1,
                                         output_dim=self.config.word_embed_dim,
                                         mask_zero=True,
@@ -74,15 +90,25 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                                         weights=[self.embeddings.matrix],
                                         trainable=self.config.fine_tune_word_embeddings,
                                         name="word_embedding_layer")
-        # character-level embedding layer
+
+        # Character-level embedding layer
         char_embeddings = Embedding(input_dim=len(self.datasets[0].type_to_idx['char']) + 1,
                                     output_dim=self.config.char_embed_dim,
                                     mask_zero=True,
                                     name="char_embedding_layer")
-        # char-level BiLSTM
+
+        # Word-level input embeddings
+        word_ids = Input(shape=(None, ), dtype='int32', name='word_id_inputs')
+        word_embeddings = word_embeddings(word_ids)
+
+        # Character-level input embeddings
+        char_ids = Input(shape=(None, None), dtype='int32', name='char_id_inputs')
+        char_embeddings = char_embeddings(char_ids)
+
+        # Char-level BiLSTM
         char_BiLSTM = TimeDistributed(Bidirectional(LSTM(constants.UNITS_CHAR_LSTM // 2)),
                                       name='character_BiLSTM')
-        # word-level BiLSTM
+        # Word-level BiLSTM
         word_BiLSTM_1 = Bidirectional(LSTM(units=constants.UNITS_WORD_LSTM // 2,
                                            return_sequences=True,
                                            dropout=self.config.dropout_rate['input'],
@@ -94,81 +120,259 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                                            recurrent_dropout=self.config.dropout_rate['recurrent']),
                                       name="word_BiLSTM_2")
 
-        # get all unique tag types across all datasets
+        # Character-level BiLSTM + dropout. Spatial dropout applies the same dropout mask to all
+        # timesteps which is necessary to implement variational dropout
+        # (https://arxiv.org/pdf/1512.05287.pdf)
+        char_BiLSTM = char_BiLSTM(char_embeddings)
+        if self.config.variational_dropout:
+            LOGGER.info('Used variational dropout')
+            char_BiLSTM = SpatialDropout1D(self.config.dropout_rate['output'])(char_BiLSTM)
+
+        # Concatenate word- and char-level embeddings + dropout
+        char_enhanced_word_embeddings = Concatenate()([word_embeddings, char_BiLSTM])
+        char_enhanced_word_embeddings = \
+            Dropout(self.config.dropout_rate['output'])(char_enhanced_word_embeddings)
+
+        # Char-enhanced-level BiLSTM + dropout
+        char_enhanced_word_embeddings = word_BiLSTM_1(char_enhanced_word_embeddings)
+        if self.config.variational_dropout:
+            char_enhanced_word_embeddings = \
+                SpatialDropout1D(self.config.dropout_rate['output'])(char_enhanced_word_embeddings)
+        char_enhanced_word_embeddings = word_BiLSTM_2(char_enhanced_word_embeddings)
+        if self.config.variational_dropout:
+            char_enhanced_word_embeddings = \
+                SpatialDropout1D(self.config.dropout_rate['output'])(char_enhanced_word_embeddings)
+
+        # Get all unique tag types across all datasets
         all_tags = [ds.type_to_idx['tag'] for ds in self.datasets]
         all_tags = set(x for l in all_tags for x in l)
 
-        # feedforward before CRF, maps each time step to a vector
+        # Feedforward before CRF, maps each time step to a vector
         dense_layer = TimeDistributed(Dense(len(all_tags), activation=self.config.activation),
                                       name='dense_layer')
+        label_predictions = dense_layer(char_enhanced_word_embeddings)
 
-        # specify model, taking into account the shared layers
-        for dataset in self.datasets:
-            # word-level embedding
-            word_ids = Input(shape=(None, ), dtype='int32', name='word_id_inputs')
-            word_embed = word_embeddings(word_ids)
+        # CRF output layer(s)
+        output_layers = []
+        for i, dataset in enumerate(self.datasets):
+            crf = CRF(len(dataset.type_to_idx['tag']), name=f'crf_{i}')
+            output_layers.append(crf(label_predictions))
 
-            # character-level embedding
-            char_ids = Input(shape=(None, None), dtype='int32', name='char_id_inputs')
-            char_embed = char_embeddings(char_ids)
+        # Fully specified model
+        # https://github.com/keras-team/keras/blob/bf1378f39d02b7d0b53ece5458f9275ac8208046/keras/utils/multi_gpu_utils.py
+        with tf.device('/cpu:0'):
+            model = Model(inputs=[word_ids, char_ids], outputs=output_layers)
 
-            # character-level BiLSTM + dropout. Spatial dropout applies the same dropout mask to all
-            # timesteps which is necessary to implement variational dropout
-            # (https://arxiv.org/pdf/1512.05287.pdf)
-            char_embed = char_BiLSTM(char_embed)
-            if self.config.variational_dropout:
-                LOGGER.info('Used variational dropout')
-                char_embed = SpatialDropout1D(self.config.dropout_rate['output'])(char_embed)
+        self.model = model
 
-            # concatenate word- and char-level embeddings + dropout
-            model = Concatenate()([word_embed, char_embed])
-            model = Dropout(self.config.dropout_rate['output'])(model)
+        return model
 
-            # word-level BiLSTM + dropout
-            model = word_BiLSTM_1(model)
-            if self.config.variational_dropout:
-                model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
-            model = word_BiLSTM_2(model)
-            if self.config.variational_dropout:
-                model = SpatialDropout1D(self.config.dropout_rate['output'])(model)
+    # TODO (John): This should relly be in the BaseKerasModel class
+    def compile(self, loss=crf_loss, optimizer=None, loss_weights=None):
+        """Compiles the Keras model `self.model`.
 
-            # feedforward before CRF
-            model = dense_layer(model)
+        Compiles the Keras model `self.model`. If multiple GPUs are detected, a model capable of
+        training on all of them is compiled.
 
-            # CRF output layer
-            crf = CRF(len(dataset.type_to_idx['tag']), name='crf_classifier')
-            output_layer = crf(model)
+        Args:
+            loss: String (name of objective function) or objective function. See Keras losses. If
+                the model has multiple outputs, you can use a different loss on each output by
+                passing a dictionary or a list of losses. The loss value that will be minimized by
+                the model will then be the sum of all individual losses. If a single loss is passed
+                for a multi-output model, this loss function will be duplicated, one per output
+                layer.
+            optimizer (keras.Optimizer) Optional, Keras optimizer instance. If None, the optimizer
+                with name `self.config.optimizer` is instantiated.
+            loss_weights (list or dict): Optional, list or dictionary specifying scalar coefficients
+                (Python floats) to weight the loss contributions of different model outputs. The
+                loss value that will be minimized by the model will then be the weighted sum of all
+                individual losses, weighted by the `loss_weights` coefficients. If a list, it is
+                expected to have a 1:1 mapping to the model's outputs. If a tensor, it is expected
+                to map output names (strings) to scalar coefficients.
 
-            # fully specified model
-            # https://github.com/keras-team/keras/blob/bf1378f39d02b7d0b53ece5458f9275ac8208046/keras/utils/multi_gpu_utils.py
-            with tf.device('/cpu:0'):
-                model = Model(inputs=[word_ids, char_ids], outputs=[output_layer])
-            self.models.append(model)
-
-    def compile(self):
-        """Compiles the BiLSTM-CRF.
-
-        Compiles the Keras model(s) at `self.models`. If multiple GPUs are detected, a model
-        capable of training on all of them is compiled.
+        Returns:
+            `self.model` after calling `self.model.compile()`.
         """
-        for i in range(len(self.models)):
-            # parallize the model if multiple GPUs are available
-            # https://github.com/keras-team/keras/pull/9226
-            # awfully bad practice but this was the example given by Keras documentation
-            try:
-                self.models[i] = multi_gpu_model(self.models[i])
-                LOGGER.info('Compiling the model on multiple GPUs')
-            except:
-                LOGGER.info('Compiling the model on a single CPU or GPU')
+        # parallize the model if multiple GPUs are available
+        # https://github.com/keras-team/keras/pull/9226#issuecomment-361692460
+        # awfully bad practice but this was the example given by Keras documentation
+        try:
+            self.model = multi_gpu_model(self.model)
+            LOGGER.info('Compiling the model on multiple GPUs.')
+        except:
+            LOGGER.info('Compiling the model on a single CPU or GPU.')
 
-            self._compile(model=self.models[i],
-                          loss_function=crf_loss,
-                          optimizer=self.config.optimizer,
-                          lr=self.config.learning_rate,
-                          decay=self.config.decay,
-                          clipnorm=self.config.grad_norm)
+        if optimizer is None:
+            optimizer = model_utils.get_keras_optimizer(optimizer=self.config.optimizer,
+                                                        lr=self.config.learning_rate,
+                                                        decay=self.config.decay,
+                                                        clipnorm=self.config.grad_norm)
 
-    def eval(self, training_data, model_idx=0, partition='train'):
+        # Create one loss function per output layer if only a single loss function was provided
+        if isinstance(self.model.output, list) and not isinstance(loss, list):
+            loss = [loss for _, _ in enumerate(self.model.output)]
+
+        self.model.compile(optimizer=optimizer, loss=loss, loss_weights=loss_weights)
+
+        return self.model
+
+    def train(self):
+        """Co-ordinates the training of the Keras model `self.model`.
+
+        Co-ordinates the training of the Keras model `self.model`. Minimally expects a train
+        partition and one or both of valid and test partitions to be supplied in the Dataset objects
+        at `self.datasets`.
+        """
+        # Need to explicitly get one optimizer per output layer (if more than one)
+        optimizers = None
+        if isinstance(self.model.output, list):
+            optimizer_args = (self.config.optimizer,
+                              self.config.learning_rate,
+                              self.config.decay,
+                              self.config.grad_norm)
+
+            optimizers = [model_utils.get_keras_optimizer(*optimizer_args)
+                          for _, _ in enumerate(self.model.output)]
+
+        # Gather everything we need to run a training session
+        training_data = self.prepare_data_for_training()
+        output_dir = model_utils.prepare_output_directory(self.config)
+        callbacks = model_utils.setup_callbacks(self.config, output_dir)
+
+        def train_valid_test(training_data, output_dir, callbacks, optimizers=None):
+            # Use 10% of train data as validation data if no validation data provided
+            if training_data[0]['x_valid'] is None:
+                training_data = data_utils.collect_valid_data(training_data)
+
+            # Get list of Keras Callback objects for computing/storing metrics
+            metrics = model_utils.setup_metrics_callback(model=self,
+                                                         config=self.config,
+                                                         datasets=self.datasets,
+                                                         training_data=training_data,
+                                                         output_dir=output_dir,)
+
+            # Train a multi-task model (MTM)
+            if optimizers is not None and len(optimizers) > 1:
+                for epoch in range(self.config.epochs):
+                    print(f'Global epoch: {epoch + 1}/{self.config.epochs}')
+
+                    for model_idx in random.sample(range(0, len(optimizers)), len(optimizers)):
+
+                        # Freeze all CRFs besides the one we are currently training
+                        model_utils.freeze_output_layers(self.model, model_idx)
+
+                        # Zero the contribution to the loss from layers we aren't currently training
+                        loss_weights = [1.0 if model_idx == i else 0.0
+                                        for i, _ in enumerate(optimizers)]
+                        self.compile(loss=crf_loss, optimizer=optimizers[model_idx],
+                                     loss_weights=loss_weights)
+
+                        # Get zeroed out targets for layers we aren't currently training
+                        train_targets, valid_targets = self.model_utils.get_targets(training_data,
+                                                                                    model_idx)
+
+                        callbacks_ = [cb[model_idx] for cb in callbacks] + [metrics[model_idx]]
+                        validation_data = (training_data[model_idx]['x_valid'], valid_targets)
+
+                        self.model.fit(x=training_data[model_idx]['x_train'],
+                                       y=train_targets,
+                                       batch_size=self.config.batch_size,
+                                       callbacks=callbacks_,
+                                       validation_data=validation_data,
+                                       verbose=1,
+                                       # required for Keras to properly display current epoch
+                                       initial_epoch=epoch,
+                                       epochs=epoch + 1)
+            # Train a single-task model (STM)
+            else:
+                callbacks_ = [cb[0] for cb in callbacks] + [metrics[0]]
+
+                self.model.fit(x=training_data[0]['x_train'],
+                               y=training_data[0]['y_train'],
+                               batch_size=self.config.batch_size,
+                               callbacks=callbacks_,
+                               validation_data=(training_data[0]['x_valid'],
+                                                training_data[0]['y_valid']),
+                               verbose=1,
+                               epochs=self.config.epochs)
+
+        def cross_validation(training_data, output_dir, callbacks, optimizers=None):
+            # Get the train/valid partitioned data for all datasets and all folds
+            training_data = data_utils.collect_cv_data(training_data, self.config.k_folds)
+
+            # Training loop
+            for fold in range(self.config.k_folds):
+                # get list of Keras Callback objects for computing/storing metrics
+                metrics = model_utils.setup_metrics_callback(model=self,
+                                                             datasets=self.datasets,
+                                                             config=self.config,
+                                                             training_data=training_data,
+                                                             output_dir=output_dir,
+                                                             fold=fold)
+
+                # Train a multi-task model (MTM)
+                if optimizers is not None and len(optimizers) > 1:
+                    for epoch in range(self.config.epochs):
+                        train_info = (fold + 1, self.config.k_folds, epoch + 1, self.config.epochs)
+                        print('Fold: {}/{}; Global epoch: {}/{}'.format(*train_info))
+
+                        for model_idx in random.sample(range(0, len(optimizers)), len(optimizers)):
+                            # Freeze all CRFs besides the one we are currently training
+                            model_utils.freeze_output_layers(self.model, model_idx)
+
+                            # Zero contribution to the loss from layers we aren't currently training
+                            loss_weights = [1.0 if model_idx == i else 0.0
+                                            for i, _ in enumerate(optimizers)]
+                            self.compile(loss=crf_loss, optimizer=optimizers[model_idx],
+                                         loss_weights=loss_weights)
+
+                            # Get zeroed out targets for layers we aren't currently training
+                            train_targets, valid_targets = \
+                                model_utils.get_targets(training_data, model_idx, fold)
+
+                            callbacks_ = [cb[model_idx] for cb in callbacks] + [metrics[model_idx]]
+                            validation_data = (training_data[model_idx][fold]['x_valid'],
+                                               valid_targets)
+
+                            self.model.fit(x=training_data[model_idx][fold]['x_train'],
+                                           y=train_targets,
+                                           batch_size=self.config.batch_size,
+                                           callbacks=callbacks_,
+                                           validation_data=validation_data,
+                                           verbose=1,
+                                           # required to properly display current epoch
+                                           initial_epoch=epoch,
+                                           epochs=epoch + 1)
+                # Train a single-task model (STM)
+                else:
+                    print(f'Fold: {fold + 1}/{self.config.k_folds}')
+
+                    callbacks_ = [cb[0] for cb in callbacks] + [metrics[0]]
+
+                    self.model.fit(x=training_data[0][fold]['x_train'],
+                                   y=training_data[0][fold]['y_train'],
+                                   batch_size=self.config.batch_size,
+                                   callbacks=callbacks_,
+                                   validation_data=(training_data[0][fold]['x_valid'],
+                                                    training_data[0][fold]['y_valid']),
+                                   verbose=1,
+                                   epochs=self.config.epochs)
+
+                # Clear and rebuild the model at end of each fold (except for the last fold)
+                if fold < self.config.k_folds - 1:
+                    self.reset_model()
+
+        # TODO: User should be allowed to overwrite this
+        if training_data[0]['x_valid'] is not None or training_data[0]['x_test'] is not None:
+            print('Using train/test/valid strategy...')
+            LOGGER.info('Used a train/test/valid strategy for training')
+            train_valid_test(training_data, output_dir, callbacks, optimizers)
+        else:
+            print(f'Using {self.config.k_folds}-fold cross-validation strategy...')
+            LOGGER.info('Used %s-fold cross-validation strategy for training', self.config.k_folds)
+            cross_validation(training_data, output_dir, callbacks, optimizers)
+
+    def evaluate(self, training_data, model_idx=-1, partition='train'):
         """Get `y_true` and `y_pred` for given inputs and targets in `training_data`.
 
         Performs prediction for the model at `self.models[model_idx]` and returns a 2-tuple
@@ -186,13 +390,19 @@ class MultiTaskLSTMCRF(BaseKerasModel):
             A two-tuple containing the gold label integer sequences and the predicted integer label
             sequences.
         """
-        model, dataset = self.models[model_idx], self.datasets[model_idx]
+        dataset = self.datasets[model_idx]
 
-        X, y = training_data['x_{}'.format(partition)], training_data['y_{}'.format(partition)]
+        X, y = training_data[f'x_{partition}'], training_data[f'y_{partition}']
 
         # gold labels
         y_true = y.argmax(axis=-1).ravel()
-        y_pred = model.predict(X).argmax(axis=-1).ravel()
+        y_pred = self.model.predict(X)
+
+        # if multi-task model, take only predictions for output layer at model_idx
+        if isinstance(y_pred, list):
+            y_pred = y_pred[model_idx]
+
+        y_pred = y_pred.argmax(axis=-1).ravel()
 
         # mask out pads
         y_true, y_pred = \
@@ -207,7 +417,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
 
         return y_true, y_pred
 
-    def predict(self, sents, model_idx=0):
+    def predict(self, sents, model_idx=None):
         """Perform inference on tokenized and sentence segmented text.
 
         Using the model at `self.models[model_idx]`, performs inference on `sents`, a list of lists
@@ -225,19 +435,23 @@ class MultiTaskLSTMCRF(BaseKerasModel):
             `self.datasets[model_idx].type_to_idx['word']` and corresponding one-hot encoded
             predictions for each token in `sents`.
         """
-        model, dataset = self.models[model_idx], self.datasets[model_idx]
+        # type_to_idx is the same for all datasets
+        word_to_idx = self.datasets[0].type_to_idx['word']
+        char_to_idx = self.datasets[0].type_to_idx['char']
 
         # map sequences to integer IDs
-        word_idx_seq = Preprocessor.get_type_idx_sequence(seq=sents,
-                                                          type_to_idx=dataset.type_to_idx['word'],
-                                                          type_='word')
-        char_idx_seq = Preprocessor.get_type_idx_sequence(seq=sents,
-                                                          type_to_idx=dataset.type_to_idx['char'],
-                                                          type_='char')
+        word_idx_seq = \
+            Preprocessor.get_type_idx_sequence(seq=sents, type_to_idx=word_to_idx, type_='word')
+        char_idx_seq = \
+            Preprocessor.get_type_idx_sequence(seq=sents, type_to_idx=char_to_idx, type_='char')
+
+        model_input = [word_idx_seq, char_idx_seq]
 
         # perform prediction and convert from one-hot to predicted indices
-        model_input = [word_idx_seq, char_idx_seq]
-        X, y_pred = word_idx_seq, model.predict(model_input)
+        X, y_pred = word_idx_seq, self.model.predict(model_input)
+
+        if model_idx is not None:
+            y_pred = y_pred[model_idx]
 
         return X, y_pred
 
@@ -248,6 +462,9 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         Each dataset is represented by a dictionary, where the keys 'x_<partition>' and
         'y_<partition>' contain the inputs and targets for each partition 'train', 'valid', and
         'test'.
+
+        Returns:
+            A list of dictionaries containing the training data for each dataset at `self.datasets`.
         """
         training_data = []
         for ds in self.datasets:
@@ -269,25 +486,37 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         return training_data
 
     def prepare_for_transfer(self, datasets):
-        """Prepares the BiLSTM-CRF for transfer learning by recreating its last layer.
+        """Prepares the BiLSTM-CRF for transfer learning by recreating its last layer(s).
 
-        Prepares the BiLSTM-CRF model(s) at `self.models` for transfer learning by removing their
-        CRF classifiers and replacing them with un-trained CRF classifiers of the appropriate size
-        (i.e. number of units equal to number of output tags) for the target datasets.
+        Prepares the BiLSTM-CRF model at `self.model` for transfer learning by removing the
+        CRF classifier(s) and replacing them with un-trained CRF classifiers of the appropriate size
+        (i.e. number of units equal to number of output tags) for the target datasets `datasets`.
 
-        References:
-        - https://stackoverflow.com/questions/41378461/how-to-use-models-from-keras-applications-for-transfer-learnig/41386444#41386444
+        Args:
+            datasets (list): A list of `Dataset` objects.
+
+        Returns:
+            `self.model` after replacing its output layers with freshly initialized output layers,
+            one per dataset in `datasets`.
         """
-        self.datasets = datasets # replace with target datasets
-        models, self.models = self.models, [] # wipe models
+        # remove all existing output layers
+        n_output_layers = 1 if not isinstance(self.model.output, list) else len(self.model.output)
+        _ = [self.model.layers.pop() for _ in range(n_output_layers)]
 
-        for dataset, model in zip(self.datasets, models):
-            # remove the old CRF classifier and define a new one
-            model.layers.pop()
-            new_crf = CRF(len(dataset.type_to_idx['tag']), name='target_crf_classifier')
-            # create the new model
-            new_input = model.input
-            new_output = new_crf(model.layers[-1].output)
-            self.models.append(Model(new_input, new_output))
+        # get new output layers, one per target dataset
+        new_outputs = []
+        for i, dataset in enumerate(datasets):
+            output = CRF(len(dataset.type_to_idx['tag']), name=f'crf_{i}')
+            output = output(self.model.layers[-1].output)
+
+            new_outputs.append(output)
+
+        # create a new model, with new output layers, one per target dataset
+        self.model = Model(inputs=self.model.input, outputs=new_outputs)
+
+        # replace datasets linked to this model with target datasets
+        self.datasets = datasets
 
         self.compile()
+
+        return self.model

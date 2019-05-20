@@ -67,7 +67,7 @@ When training new models, you can (and should) provide your own pre-trained word
 # Replace this with a location you want to save the embeddings to
 $ mkdir path/to/word_embeddings
 # Note: this file is over 4GB
-$ wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin -O path/to/word_embeddings
+$ wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin -O path/to/word_embeddings/wikipedia-pubmed-and-PMC-w2v.bin
 ```
 
 To use these word embeddings with Saber, provide their path in the `pretrained_embeddings` argument (either in the `config` file or at the command line). Alternatively, pass their path to `Saber.load_embeddings()`. For example:

@@ -3,11 +3,8 @@
 import pytest
 
 from .. import constants
-from ..dataset import Dataset
 from ..metrics import Metrics
-from ..models.multi_task_lstm_crf import MultiTaskLSTMCRF
-from ..utils import model_utils
-from .resources.dummy_constants import *
+from .resources.constants import *
 
 
 def test_attributes_after_initilization(dummy_config,

@@ -5,7 +5,7 @@ import pytest
 
 from ..dataset import Dataset
 from ..utils import data_utils
-from .resources.dummy_constants import *
+from .resources.constants import *
 
 
 def test_get_filepaths_value_error(tmpdir):
@@ -15,6 +15,7 @@ def test_get_filepaths_value_error(tmpdir):
     with pytest.raises(ValueError):
         data_utils.get_filepaths(tmpdir.strpath)
 
+
 def test_get_filepaths_all(dummy_dataset_paths_all):
     """Asserts that `data_utils.get_filepaths()` returns the expected filepaths when all partitions
     (train/test/valid) are provided.
@@ -23,10 +24,11 @@ def test_get_filepaths_all(dummy_dataset_paths_all):
     expected = {'train': train_filepath,
                 'valid': valid_filepath,
                 'test': test_filepath
-               }
+                }
     actual = data_utils.get_filepaths(dummy_dataset_folder)
 
     assert actual == expected
+
 
 def test_get_filepaths_no_valid(dummy_dataset_paths_no_valid):
     """Asserts that `data_utils.get_filepaths()` returns the expected filepaths when train and
@@ -36,10 +38,11 @@ def test_get_filepaths_no_valid(dummy_dataset_paths_no_valid):
     expected = {'train': train_filepath,
                 'valid': None,
                 'test': test_filepath
-               }
+                }
     actual = data_utils.get_filepaths(dummy_dataset_folder)
 
     assert actual == expected
+
 
 def test_load_single_dataset(dummy_config, dummy_dataset_1):
     """Asserts that `data_utils.load_single_dataset()` returns the expected value.
@@ -55,6 +58,7 @@ def test_load_single_dataset(dummy_config, dummy_dataset_1):
     # the test we actually care about, least roundabout way of asking if the two Dataset objects
     # are identical
     assert dir(actual[0].__dict__) == dir(expected[0].__dict__)
+
 
 def test_load_compound_dataset_unchanged_attributes(dummy_dataset_1, dummy_dataset_2,
                                                     dummy_compound_dataset):
@@ -83,6 +87,7 @@ def test_load_compound_dataset_unchanged_attributes(dummy_dataset_1, dummy_datas
     assert actual[-1].type_to_idx['tag'] == expected[-1].type_to_idx['tag']
     assert actual[-1].idx_to_tag == expected[-1].idx_to_tag
 
+
 def test_load_compound_dataset_changed_attributes(dummy_dataset_1, dummy_dataset_2,
                                                   dummy_compound_dataset):
     """Asserts that attributes of `Dataset` objects which are expected to be changed are changed
@@ -103,6 +108,7 @@ def test_load_compound_dataset_changed_attributes(dummy_dataset_1, dummy_dataset
 
     # TODO: Need to assert that all types in idx_seq map to the same integers
     # across the compound datasets
+
 
 def test_setup_dataset_for_transfer(dummy_dataset_1, dummy_dataset_2):
     """Asserts that the `type_to_idx` attribute of a "source" dataset and a "target" dataset are

@@ -8,7 +8,9 @@ import os
 
 from pkg_resources import resource_filename
 
-from . import constants
+from .constants import MODEL_NAMES
+from .constants import CONFIG_FILENAME
+from .constants import PRETRAINED_MODELS
 from .preprocessor import Preprocessor
 from .utils import generic_utils
 
@@ -46,7 +48,7 @@ class Config(object):
         # creat filepath to save the config.ini file
         directory = generic_utils.clean_path(directory)
         generic_utils.make_dir(directory)
-        filepath = os.path.join(directory, constants.CONFIG_FILENAME)
+        filepath = os.path.join(directory, CONFIG_FILENAME)
 
         with open(filepath, 'w') as config_file:
             for section in self.config.sections():
@@ -122,7 +124,7 @@ class Config(object):
         if cli_args:
             filepath = cli_args['config_filepath']
         elif filepath is None:
-            filepath = resource_filename(__name__, constants.CONFIG_FILENAME)
+            filepath = resource_filename(__name__, CONFIG_FILENAME)
 
         return filepath
 
@@ -202,7 +204,7 @@ class Config(object):
         # create normalized absolutized versions of paths
         args['dataset_folder'] = [generic_utils.clean_path(ds) for ds in args['dataset_folder']]
         args['output_folder'] = generic_utils.clean_path(args['output_folder'])
-        if args['pretrained_model'] and args['pretrained_model'] not in constants.PRETRAINED_MODELS:
+        if args['pretrained_model'] and args['pretrained_model'] not in PRETRAINED_MODELS:
             args['pretrained_model'] = generic_utils.clean_path(args['pretrained_model'])
         if args['pretrained_embeddings']:
             args['pretrained_embeddings'] = generic_utils.clean_path(args['pretrained_embeddings'])
@@ -225,7 +227,7 @@ class Config(object):
         parser = argparse.ArgumentParser(description='Saber CLI.')
 
         parser.add_argument('--config_filepath', required=False, type=str,
-                            default=resource_filename(__name__, constants.CONFIG_FILENAME),
+                            default=resource_filename(__name__, CONFIG_FILENAME),
                             help='Path to the *.ini file containing any arguments')
         parser.add_argument('--activation', required=False, type=str,
                             help=("Activation function to use in the dense layers. Defaults to "
@@ -273,7 +275,7 @@ class Config(object):
                             help=('Integer. Number of epochs to train the model. An epoch is an '
                                   'iteration over all data provided.'))
         parser.add_argument('--model_name', required=False, type=str,
-                            help="Which model architecture to use. Must be one of ['BILSTM-CRF-NER,']")
+                            help=f'Which model architecture to use. Must be one of {MODEL_NAMES}')
         parser.add_argument('--optimizer', required=False, type=str,
                             help=("Name of the optimization function to use during training. All "
                                   "optimizers implemented in Keras are supported. Defaults to "
