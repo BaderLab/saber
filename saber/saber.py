@@ -105,7 +105,7 @@ class Saber():
                 y_pred = np.argmax(y_pred, axis=-1).ravel()
 
                 # mask predictions where the input to the model was a pad
-                X, y_pred = \
+                _, y_pred = \
                     model_utils.mask_labels(X, y_pred, dataset.type_to_idx['word'][constants.PAD])
 
                 # TODO (John): This should be handeled in `model.predict`. See my QA model for help.
