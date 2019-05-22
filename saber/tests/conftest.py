@@ -425,8 +425,7 @@ def single_base_keras_model_embeddings(dummy_config, dummy_dataset_1, dummy_embe
 def bert_tokenizer():
     """Tokenizer for pre-trained BERT model.
     """
-    bert_tokenizer = BertTokenizer.from_pretrained(constants.PYTORCH_BERT_MODEL,
-                                                   do_lower_case=False)
+    bert_tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
 
     return bert_tokenizer
 
