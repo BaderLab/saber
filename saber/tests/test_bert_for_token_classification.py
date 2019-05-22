@@ -29,7 +29,6 @@ def test_attributes_init_of_single_model(dummy_config, dummy_dataset_1,
     assert single_bert_token_classifier_model.device.type == 'cpu'
     assert single_bert_token_classifier_model.n_gpus == 0
     assert single_bert_token_classifier_model.pretrained_model_name_or_path == 'bert-base-cased'
-    assert isinstance(single_bert_token_classifier_model.tokenizer, BertTokenizer)
     # test that we can pass arbitrary keyword arguments
     assert single_bert_token_classifier_model.totally_arbitrary == 'arbitrary'
 
@@ -50,8 +49,7 @@ def test_attributes_init_of_single_model_specify(dummy_config, dummy_dataset_1,
     assert single_bert_token_classifier_model_specify.embeddings is None
     assert single_bert_token_classifier_model_specify.device.type == 'cpu'
     assert single_bert_token_classifier_model_specify.n_gpus == 0
-    assert single_bert_token_classifier_model_specify.pretrained_model_name_or_path == \
-        'bert-base-cased'
+    assert single_bert_token_classifier_model_specify.pretrained_model_name_or_path == 'bert-base-cased'
     assert isinstance(single_bert_token_classifier_model_specify.tokenizer, BertTokenizer)
     # test that we can pass arbitrary keyword arguments
     assert single_bert_token_classifier_model_specify.totally_arbitrary == 'arbitrary'
