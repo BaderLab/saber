@@ -10,7 +10,6 @@ from operator import itemgetter
 from pprint import pprint
 
 import numpy as np
-from google_drive_downloader import GoogleDriveDownloader as gdd
 from keras.models import Model
 from spacy import displacy
 
@@ -260,18 +259,9 @@ class Saber():
             directory = [directory]
 
         for dir_ in directory:
-            # get what might be a pretrained model name
-            pretrained_model = os.path.splitext(dir_)[0].strip().upper()
-
-            # allows user to provide names of pre-trained models (e.g. 'PRGE-base')
-            if pretrained_model in constants.PRETRAINED_MODELS:
-                dir_ = os.path.join(constants.PRETRAINED_MODEL_DIR, pretrained_model)
-                # download model from Google Drive, will skip if already exists
-                file_id = constants.PRETRAINED_MODELS[pretrained_model]
-                dest_path = '{}.tar.bz2'.format(dir_)
-                gdd.download_file_from_google_drive(file_id=file_id, dest_path=dest_path)
-
-                LOGGER.info('Loaded pre-trained model %s from Google Drive', pretrained_model)
+            # If directory is an available pretained model, download it from Google Drive
+            if dir_ in constants.PRETRAINED_MODELS:
+                dir_ = model_utils.download_model_from_gdrive(pretrained_model=dir_)
 
             dir_ = generic_utils.clean_path(dir_)
             generic_utils.extract_directory(dir_)
