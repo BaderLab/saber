@@ -30,7 +30,9 @@ START = '<START>'  # start-of-sentence token
 END = '<END>'  # end-of-sentence token
 OUTSIDE = 'O'  # 'outside' tag of the IOB, BIO, and IOBES tag formats
 WORDPIECE = 'X'  # special tag used by BERTs wordpiece tokenizer
-CLASSIFICATION = '[CLS]'  # special tag used by BERTs classifiers
+
+CLS = '[CLS]'  # special BERT classification token
+SEP = '[SEP]'  # special BERT sequence seperator token
 
 # DATA
 RANDOM_STATE = 42  # random seed
@@ -59,6 +61,7 @@ PRETRAINED_MODELS = {
     'PRGE': '1xOmxpgNjQJK8OJSvih9wW5AITGQX6ODT',
     'DISO': '1qmrBuqz75KM57Ug5MiDBfp0d5H3S_5ih',
     'CHED': '13s9wvu3Mc8fG73w51KD8RArA31vsuL1c',
+    'biobert_v1.1_pubmed': '1jI1HyzMzSShjHfeO1pSmw5su8R6p5Vsv'
 }
 # relative path to pre-trained model directory
 PRETRAINED_MODEL_DIR = resource_filename(__name__, 'pretrained_models')
@@ -85,7 +88,7 @@ MODEL_NAMES = ['bilstm-crf-ner', 'bert-ner']
 KERAS = 'keras'
 PYTORCH = 'pytorch'
 # which pre-trained BERT model to use
-PYTORCH_BERT_MODEL = 'bert-base-cased'
+PYTORCH_BERT_MODEL = 'biobert_v1.1_pubmed'
 
 # EXTRACT 2.0 API
 # arguments passed in a get request to the EXTRACT 2.0 API to specify entity type

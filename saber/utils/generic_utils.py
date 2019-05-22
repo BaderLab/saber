@@ -47,7 +47,7 @@ def extract_directory(directory):
         head, _ = os.path.split(os.path.abspath(directory))
 
         print('Unzipping...', end=' ', flush=True)
-        unpack_archive('{}.tar.bz2'.format(directory), extract_dir=head)
+        unpack_archive(f'{directory}.tar.bz2', extract_dir=head)
 
 
 def compress_directory(directory):
