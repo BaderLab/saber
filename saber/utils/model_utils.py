@@ -7,6 +7,7 @@ from time import strftime
 
 import numpy as np
 import torch
+from google_drive_downloader import GoogleDriveDownloader as gdd
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras.preprocessing.sequence import pad_sequences
@@ -17,6 +18,7 @@ from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
 from .. import constants
 from ..metrics import Metrics
 from .generic_utils import make_dir
+from .generic_utils import extract_directory
 
 LOGGER = logging.getLogger(__name__)
 # TODO (johnmgiorgi): This should be handeled better. Maybe as a config argument.
@@ -289,6 +291,36 @@ def load_pretrained_model(config, datasets, model_filepath, weights_filepath=Non
     model.compile()
 
     return model
+
+
+def download_model_from_gdrive(pretrained_model, extract=True):
+    """Downloads a pre-trained model from Google Drive.
+
+    Args:
+        pretrained_model (str): The name of a pre-trained model. Must be in
+            `constants.PRETRAINED_MODELS`.
+        extract (bool): Optional, True if downloaded tar.bz2 file should be extracted. Defaults to
+            True.
+
+    Returns:
+        The filepath of the pre-trained model. This will be an uncompressed directory if `extract`
+        or a compressed directory otherwise.
+    """
+    file_id = constants.PRETRAINED_MODELS[pretrained_model]
+    dest_path = os.path.join(constants.PRETRAINED_MODEL_DIR, pretrained_model)
+
+    # download model from Google Drive, will skip if already exists
+    gdd.download_file_from_google_drive(file_id=file_id,
+                                        dest_path=f'{dest_path}.tar.bz2',
+                                        showsize=True)
+
+    LOGGER.info('Loaded pre-trained model %s from Google Drive', pretrained_model)
+
+    if extract:
+        extract_directory(dest_path)
+        return dest_path
+
+    return f'{dest_path}.tar.bz2'
 
 
 # Keras helper functions

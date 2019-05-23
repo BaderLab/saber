@@ -22,10 +22,10 @@ class BaseModel():
     models (list): A list of Keras or PyTorch models.
     """
     def __init__(self, config, datasets, embeddings=None, **kwargs):
-        self.config = config  # hyperparameters and model details
-        self.datasets = datasets  # dataset(s) tied to this instance
-        self.embeddings = embeddings  # pre-trained word embeddings tied to this instance
-        self.model = None  # Keras / PyTorch model tied to this instance
+        self.config = config  # Hyperparameters and model details
+        self.datasets = datasets  # Dataset(s) tied to this instance
+        self.embeddings = embeddings  # Pre-trained word embeddings tied to this instance
+        self.model = None  # Saber model tied to this instance
 
         for key, value in kwargs.items():
             setattr(self, key, value)
