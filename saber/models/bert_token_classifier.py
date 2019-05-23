@@ -51,11 +51,12 @@ class BertTokenClassifier(BasePyTorchModel):
         self.device = torch.device("cpu")
         # number of GPUs available
         self.n_gpus = 0
+
         # the name or path of a pre-trained BERT model
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
-        # a tokenizer which corresponds to the pre-trained model to load
-        self.tokenizer = BertTokenizer.from_pretrained(self.pretrained_model_name_or_path,
-                                                       do_lower_case=False)
+
+        # +1 necessary to account for 'X' tag introduced by wordpiece tokenization
+        self.num_labels = [len(dataset.idx_to_tag) + 1 for dataset in self.datasets]
 
         self.model_name = 'bert-ner'
 
@@ -70,18 +71,24 @@ class BertTokenClassifier(BasePyTorchModel):
         """
         # TODO (johngiorgi): Test that saving loading from CPU/GPU works as expected
         model_state_dict = torch.load(model_filepath, map_location=lambda storage, loc: storage)
-        # this is a trick to get the number of labels
+
+        # This is a trick to get the number of labels
         num_labels = len(model_state_dict['classifier.bias'])
+
         # TODO (johngiorgi): Can we get the model name from the model_state_dict?
         model = BertForTokenClassification.from_pretrained(self.pretrained_model_name_or_path,
                                                            num_labels=num_labels,
                                                            state_dict=model_state_dict)
-        # get the device the model will live on, along with number of GPUs available
+        tokenizer = BertTokenizer.from_pretrained(self.pretrained_model_name_or_path,
+                                                  do_lower_case=False)
+
+        # Get the device the model will live on, along with number of GPUs available
         self.device, self.n_gpus = model_utils.get_device(model)
 
         self.model = model
+        self.tokenizer = tokenizer
 
-        return model
+        return model, tokenizer
 
     def specify(self):
         """Specifies an op-for-op PyTorch implementation of Google's BERT for sequence tagging.
@@ -90,16 +97,22 @@ class BertTokenClassifier(BasePyTorchModel):
         is appended to `self.models`.
         """
         # (TODO): Update to support MT learning.
-        # plus 1 is necessary to account for 'X' tag introduced by wordpiece tokenization
-        num_labels = len(self.datasets[0].type_to_idx['tag']) + 1
+        if self.pretrained_model_name_or_path in constants.PRETRAINED_MODELS:
+            self.pretrained_model_name_or_path = \
+                model_utils.download_model_from_gdrive(self.pretrained_model_name_or_path)
+
         model = BertForTokenClassification.from_pretrained(self.pretrained_model_name_or_path,
-                                                           num_labels=num_labels)
-        # get the device the model will live on, along with number of GPUs available
+                                                           num_labels=self.num_labels[0])
+        tokenizer = BertTokenizer.from_pretrained(self.pretrained_model_name_or_path,
+                                                  do_lower_case=False)
+
+        # Get the device the model will live on, along with number of GPUs available
         self.device, self.n_gpus = model_utils.get_device(model)
 
         self.model = model
+        self.tokenizer = tokenizer
 
-        return model
+        return model, tokenizer
 
     def prepare_data_for_training(self):
         """Returns a list containing the training data for each dataset at `self.datasets`.
@@ -202,15 +215,14 @@ class BertTokenClassifier(BasePyTorchModel):
 
                 # setup a progress bar
                 pbar_descr = f'Epoch: {epoch + 1}/{self.config.epochs}'
-                pbar = tqdm(training_data['train_dataloader'], unit='batch', desc=pbar_descr)
+                pbar = tqdm(training_data['train_dataloader'],
+                            unit='batch',
+                            desc=pbar_descr,
+                            dynamic_ncols=True)
 
                 for _, batch in enumerate(pbar):
 
                     optimizer.zero_grad()
-
-                    # update train loss in progress bar
-                    train_loss = train_loss / train_steps if train_steps > 0 else 0.
-                    pbar.set_postfix(train_loss=train_loss)
 
                     # add batch to device
                     batch = tuple(t.to(self.device) for t in batch)
@@ -218,7 +230,7 @@ class BertTokenClassifier(BasePyTorchModel):
 
                     # forward pass
                     loss = self.model(b_input_ids,
-                                      token_type_ids=None,
+                                      token_type_ids=torch.zeros_like(b_input_ids),
                                       attention_mask=b_input_mask,
                                       labels=b_labels)
                     # backward pass
@@ -235,6 +247,9 @@ class BertTokenClassifier(BasePyTorchModel):
                     # update parameters
                     optimizer.step()
 
+                    # update train loss in progress bar
+                    pbar.set_postfix(loss=f'{train_loss / train_steps:.4f}')
+
                 # need to feed epoch argument manually, as this is a keras callback object
                 metrics.on_epoch_end(epoch=metrics.current_epoch)
 
@@ -244,7 +259,7 @@ class BertTokenClassifier(BasePyTorchModel):
             # get the train / valid partitioned data for all datasets and all folds
             training_data = data_utils.collect_cv_data(training_data, self.config.k_folds)
 
-            # TODO (John): In the future, this will be a list.
+            # TODO (John): In the future, this will be a list
             optimizer = optimizers
 
             # training loop
@@ -256,23 +271,21 @@ class BertTokenClassifier(BasePyTorchModel):
                                                              datasets=self.datasets,
                                                              training_data=training_data,
                                                              # TODO (John): Drop index when MTM is implemented
-                                                             output_dir=output_dir,)[0]
-
-                # TODO (John): Drop when MTM is implemented
-                training_data = training_data[0]
+                                                             output_dir=output_dir,
+                                                             fold=fold)[0]
 
                 # TODO (John): Dataloaders should be handled outside of the train loop
                 # append dataloaders to training_data
-                training_data[fold]['train_dataloader'] = \
-                    model_utils.get_dataloader_for_ber(x=training_data[fold]['x_train'][0],
-                                                       y=training_data[fold]['y_train'],
-                                                       attention_mask=training_data[fold]['x_train'][-1],
+                training_data[0][fold]['train_dataloader'] = \
+                    model_utils.get_dataloader_for_ber(x=training_data[0][fold]['x_train'][0],
+                                                       y=training_data[0][fold]['y_train'],
+                                                       attention_mask=training_data[0][fold]['x_train'][-1],
                                                        config=self.config,
                                                        data_partition='train')
-                training_data[fold]['valid_dataloader'] = \
-                    model_utils.get_dataloader_for_ber(x=training_data[fold]['x_valid'][0],
-                                                       y=training_data[fold]['y_valid'],
-                                                       attention_mask=training_data[fold]['x_valid'][-1],
+                training_data[0][fold]['valid_dataloader'] = \
+                    model_utils.get_dataloader_for_ber(x=training_data[0][fold]['x_valid'][0],
+                                                       y=training_data[0][fold]['y_valid'],
+                                                       attention_mask=training_data[0][fold]['x_valid'][-1],
                                                        config=self.config,
                                                        data_partition='eval')
 
@@ -287,16 +300,14 @@ class BertTokenClassifier(BasePyTorchModel):
                     # setup a progress bar
                     fold_and_epoch = (fold + 1, self.config.k_folds, epoch + 1, self.config.epochs)
                     pbar_descr = 'Fold: {}/{}, Epoch: {}/{}'.format(*fold_and_epoch)
-                    pbar = \
-                        tqdm(training_data[fold]['train_dataloader'], unit='batch', desc=pbar_descr)
+                    pbar = tqdm(training_data[0][fold]['train_dataloader'],
+                                unit='batch',
+                                desc=pbar_descr,
+                                dynamic_ncols=True)
 
                     for _, batch in enumerate(pbar):
 
                         optimizer.zero_grad()
-
-                        # update train loss in progress bar
-                        train_loss = train_loss / train_steps if train_steps > 0 else 0.
-                        pbar.set_postfix(train_loss=train_loss)
 
                         # add batch to gpu
                         batch = tuple(t.to(self.device) for t in batch)
@@ -304,7 +315,7 @@ class BertTokenClassifier(BasePyTorchModel):
 
                         # forward pass
                         loss = self.model(b_input_ids,
-                                          token_type_ids=None,
+                                          token_type_ids=torch.zeros_like(b_input_ids),
                                           attention_mask=b_input_mask,
                                           labels=b_labels)
 
@@ -327,6 +338,9 @@ class BertTokenClassifier(BasePyTorchModel):
                         # update parameters
                         optimizer.step()
 
+                        # update train loss in progress bar
+                        pbar.set_postfix(loss=f'{train_loss / train_steps:.4f}')
+
                     # need to feed epoch argument manually, as this is a keras callback object
                     metrics.on_epoch_end(epoch=metrics.current_epoch)
 
@@ -335,6 +349,7 @@ class BertTokenClassifier(BasePyTorchModel):
                 # clear and rebuild the model at end of each fold (except for the last fold)
                 if fold < self.config.k_folds - 1:
                     self.reset_model()
+                    optimizer = model_utils.get_bert_optimizer(self.model, self.config)
 
         # TODO: User should be allowed to overwrite this
         if training_data[0]['x_valid'] is not None or training_data[0]['x_test'] is not None:
@@ -370,7 +385,6 @@ class BertTokenClassifier(BasePyTorchModel):
 
         # get the dataset / dataloader for the given partition
         dataset = self.datasets[model_idx]
-        print(training_data)
         dataloader = training_data[f'{partition}_dataloader']
 
         for batch in dataloader:
