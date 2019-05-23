@@ -7,7 +7,9 @@ from ..config import Config
 from ..dataset import Dataset
 from ..embeddings import Embeddings
 from ..metrics import Metrics
+from ..models.base_model import BaseModel
 from ..models.base_model import BaseKerasModel
+from ..models.base_model import BasePyTorchModel
 from ..models.bert_token_classifier import BertTokenClassifier
 from ..models.multi_task_lstm_crf import MultiTaskLSTMCRF
 from ..preprocessor import Preprocessor
@@ -377,6 +379,15 @@ def single_mt_bilstm_model_specify(single_mt_bilstm_model):
 
 
 @pytest.fixture
+def compound_mt_bilstm_model_specify(compound_mt_bilstm_model):
+    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration file and
+    a single specified model."""
+    compound_mt_bilstm_model.specify()
+
+    return compound_mt_bilstm_model
+
+
+@pytest.fixture
 def single_mt_bilstm_model_embeddings(dummy_config, dummy_dataset_1, dummy_embeddings):
     """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration file and
     loaded embeddings"""
@@ -398,10 +409,40 @@ def single_mt_bilstm_model_embeddings_specify(single_mt_bilstm_model_embeddings)
 
 
 @pytest.fixture
-def single_base_keras_model(dummy_config, dummy_dataset_1, dummy_embeddings):
+def single_base_model(dummy_config, dummy_dataset_1):
+    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration."""
+    model = BaseModel(config=dummy_config,
+                      datasets=[dummy_dataset_1],
+                      # to test passing of arbitrary keyword args to constructor
+                      totally_arbitrary='arbitrary')
+    return model
+
+
+@pytest.fixture
+def compound_base_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration."""
+    model = BaseModel(config=dummy_config,
+                      datasets=[dummy_dataset_1, dummy_dataset_2],
+                      # to test passing of arbitrary keyword args to constructor
+                      totally_arbitrary='arbitrary')
+    return model
+
+
+@pytest.fixture
+def single_base_keras_model(dummy_config, dummy_dataset_1):
     """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration."""
     model = BaseKerasModel(config=dummy_config,
                            datasets=[dummy_dataset_1],
+                           # to test passing of arbitrary keyword args to constructor
+                           totally_arbitrary='arbitrary')
+    return model
+
+
+@pytest.fixture
+def compound_base_keras_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration."""
+    model = BaseKerasModel(config=dummy_config,
+                           datasets=[dummy_dataset_1, dummy_dataset_2],
                            # to test passing of arbitrary keyword args to constructor
                            totally_arbitrary='arbitrary')
     return model
@@ -416,6 +457,26 @@ def single_base_keras_model_embeddings(dummy_config, dummy_dataset_1, dummy_embe
                            embeddings=dummy_embeddings,
                            # to test passing of arbitrary keyword args to constructor
                            totally_arbitrary='arbitrary')
+    return model
+
+
+@pytest.fixture
+def single_base_pytorch_model(dummy_config, dummy_dataset_1):
+    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration."""
+    model = BasePyTorchModel(config=dummy_config,
+                             datasets=[dummy_dataset_1],
+                             # to test passing of arbitrary keyword args to constructor
+                             totally_arbitrary='arbitrary')
+    return model
+
+
+@pytest.fixture
+def compound_base_pytorch_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration."""
+    model = BasePyTorchModel(config=dummy_config,
+                             datasets=[dummy_dataset_1, dummy_dataset_2],
+                             # to test passing of arbitrary keyword args to constructor
+                             totally_arbitrary='arbitrary')
     return model
 
 # BERT models
