@@ -121,12 +121,12 @@ class BaseKerasModel(BaseModel):
         """
         self.model.summary()
 
-    def prune_output_layers(self, output_layer_indices):
+    def prune_output_layers(self, indices):
         """Removes output layers with indicies not in `output_layer_indices` in `self.model`.
 
         Args:
-            output_layer_indices (list): A list of indicies into the output layers of `self.model`
-                to retain.
+            output_layer_indices (int or list): An integer index or list of inter indicies into the
+                output layers of `self.model` to retain.
 
         Returns:
             `self.model`, where any output layers with indicies not in `output_layer_indices` have
@@ -141,11 +141,14 @@ class BaseKerasModel(BaseModel):
         n_outputs = len(self.model.output)
         n_layers = len(self.model.layers)
 
+        # Allow user to supply int or list of ints
+        indices = [indices] if not isinstance(indices, list) else indices
+
         last_hidden_layer = self.model.get_layer(index=-(n_outputs + 1))
         output_layers = [self.model.get_layer(index=n_layers - n_outputs + i)
                          for i in range(n_outputs)]
 
-        outputs = [output_layers[i](last_hidden_layer.output) for i in output_layer_indices]
+        outputs = [output_layers[i](last_hidden_layer.output) for i in indices]
 
         self.model = Model(self.model.input, outputs)
 
@@ -193,12 +196,12 @@ class BasePyTorchModel(BaseModel):
         """
         pass
 
-    def prune_output_layers(self, output_layer_indices):
+    def prune_output_layers(self, indices):
         """Removes output layers with indicies not in `output_layer_indices` in `self.model`.
 
         Args:
-            output_layer_indices (list): A list of indicies into the output layers of `self.model`
-                to retain.
+            output_layer_indices (int or list): An integer index or list of inter indicies into the
+                output layers of `self.model` to retain.
 
         Returns:
             `self.model`, where any output layers with indicies not in `output_layer_indices` have
@@ -210,8 +213,11 @@ class BasePyTorchModel(BaseModel):
             LOGGER.error('ValueError %s', err_msg)
             raise ValueError(err_msg)
 
+        # Allow user to supply int or list of ints
+        indices = [indices] if not isinstance(indices, list) else indices
+
         self.model.classifier = nn.ModuleList(
-            [self.model.classifier[i] for i in output_layer_indices]
+            [self.model.classifier[i] for i in indices]
         )
 
         return self.model
