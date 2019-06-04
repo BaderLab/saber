@@ -10,7 +10,6 @@ from operator import itemgetter
 from pprint import pprint
 
 import numpy as np
-from keras.models import Model
 from spacy import displacy
 
 from . import constants
@@ -103,7 +102,7 @@ class Saber():
             for y_pred, dataset in zip(y_preds, model.datasets):
                 y_pred = np.argmax(y_pred, axis=-1).ravel()
 
-                # mask predictions where the input to the model was a pad
+                # Mask predictions where the input to the model was a pad
                 _, y_pred = \
                     model_utils.mask_labels(X, y_pred, dataset.type_to_idx['word'][constants.PAD])
 
@@ -143,7 +142,7 @@ class Saber():
 
         return annotation
 
-    def save(self, directory=None, compress=True, model_idx=-1, output_indices=None):
+    def save(self, directory=None, compress=True, model_idx=-1, output_layer_indices=None):
         """Saves the Saber model at `self.models[model_idx]` to disk.
 
         Saves the necessary files for model persistence to `directory`. If not provided, `directory`
@@ -161,9 +160,13 @@ class Saber():
             model_idx (int): Optional, an index into `self.models` corresponding to which model to
                 save in the case of multiple loaded models. Defaults to -1, which will save the last
                 loaded model (`self.models[-1]`) to disk.
-            output_indices (list): Optional, a list of indexes representing which output layers from
-                `self.models[-1]` to save in the case of a multi-task model. Defaults to None, which
-                will include all classifiers under the saved model.
+            output_layer_indices (list): Optional, a list of indexes representing which output
+                layers from `self.models[-1]` to save in the case of a multi-task model. Defaults
+                to None, which will include all classifiers under the saved model. Note that this
+                will modify the model in place.
+
+        Returns:
+            The directory path to the saved Saber model.
         """
         start = time.time()
 
@@ -173,10 +176,8 @@ class Saber():
             LOGGER.error('MissingStepException: %s', err_msg)
             raise MissingStepException(err_msg)
 
-        saber_model = self.models[model_idx]
-        print(f'Saving model {saber_model}...', end=' ', flush=True)
-
-        type_to_idx, idx_to_tag = [], []
+        model = self.models[model_idx]
+        print(f'Saving model {model}...', end=' ', flush=True)
 
         # Allows user to call save without providing a directory, default one is chosen
         if directory is None:
@@ -184,54 +185,40 @@ class Saber():
         directory = generic_utils.clean_path(directory)
         generic_utils.make_dir(directory)
 
-        # retain only output layers specified in output_indices
-        if output_indices:
-            # Ignore if this is not a MTM
-            if saber_model.framework == constants.KERAS and isinstance(saber_model.model.output, list):
-                last_hidden_layer = saber_model.model.layers[-(len(saber_model.model.output) + 1)]
-                outputs = [saber_model.model.ouput[i](last_hidden_layer) for i in output_indices]
+        # Retain only output layers specified in output_layer_indices
+        if output_layer_indices:
+            self.model.prune_output_layers(output_layer_indices)
 
-                model_to_save = Model(saber_model.model.input, outputs)
-            elif saber_model.framework == constants.PYTORCH:
-                # TODO (John): Will write this when MultiTaskBert is finished
-                # classifier_indices = ... if classifier_indices is None else classifier_indices
-                pass
-
-            for i, dataset in enumerate(saber_model.datasets):
-                if i in output_indices:
-                    type_to_idx.append(dataset.type_to_idx)
-                    idx_to_tag.append(dataset.idx_to_tag)
-        else:
-            model_to_save = saber_model.model
-
-            for _, dataset in enumerate(saber_model.datasets):
-                type_to_idx.append(dataset.type_to_idx)
-                idx_to_tag.append(dataset.idx_to_tag)
-
-        # save attributes that we need for inference
+        # Save attributes that we need for inference
         attributes_filepath = os.path.join(directory, constants.ATTRIBUTES_FILENAME)
 
-        model_attributes = {'model_name': saber_model.model_name,
-                            'framework': saber_model.framework,
+        type_to_idx = [ds.type_to_idx for i, ds in enumerate(model.datasets) if output_layer_indices
+                       is None or output_layer_indices is not None and i in output_layer_indices]
+        idx_to_tag = [ds.idx_to_tag for i, ds in enumerate(model.datasets) if output_layer_indices
+                      is None or output_layer_indices is not None and i in output_layer_indices]
+
+        model_attributes = {'model_name': model.model_name,
+                            'framework': model.framework,
                             'type_to_idx': type_to_idx,
                             'idx_to_tag': idx_to_tag,
                             }
 
-        # saving Keras models requires a seperate file for weights
-        if saber_model.framework == constants.KERAS:
+        # TODO (John): Can some of this logic be moved to the models themselves?
+        # Saving Keras models requires a seperate file for weights
+        if model.framework == constants.KERAS:
             model_filepath = os.path.join(directory, constants.KERAS_MODEL_FILENAME)
             weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
-            saber_model.save(model_filepath, weights_filepath, model=model_to_save)
-        elif saber_model.framework == constants.PYTORCH:
-            if saber_model.model_name == 'bert-ner':
+            model.save(model_filepath, weights_filepath)
+        elif model.framework == constants.PYTORCH:
+            if model.model_name == 'bert-ner':
                 model_attributes['pretrained_model_name_or_path'] = \
-                    saber_model.pretrained_model_name_or_path
+                    model.pretrained_model_name_or_path
             model_filepath = os.path.join(directory, constants.PYTORCH_MODEL_FILENAME)
-            saber_model.save(model_filepath, model=model_to_save)
+            model.save(model_filepath)
 
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
 
-        # save config for reproducibility
+        # Save config for reproducibility
         self.config.save(directory)
 
         if compress:
@@ -266,11 +253,11 @@ class Saber():
             dir_ = generic_utils.clean_path(dir_)
             generic_utils.extract_directory(dir_)
 
-            # load only the objects we need for model prediction
+            # Load only the objects we need for model prediction
             attributes_filepath = os.path.join(dir_, constants.ATTRIBUTES_FILENAME)
             model_attributes = pickle.load(open(attributes_filepath, "rb"))
 
-            # its easiest to use a Dataset object to hold these data objects
+            # Easiest to use a Dataset object to hold these data objects
             datasets = []
             attributes_for_inference = zip(model_attributes['type_to_idx'],
                                            model_attributes['idx_to_tag'])
@@ -281,14 +268,14 @@ class Saber():
 
                 datasets.append(dataset)
 
-            # prevents user from having to specify pre-trained models name
+            # Prevents user from having to specify pre-trained models name
             self.config.model_name = model_attributes['model_name']
 
-            # keras models are saved as two files (model.* and weights.*)
+            # Keras models are saved as two files (model.* and weights.*)
             if model_attributes['framework'] == constants.KERAS:
                 weights_filepath = os.path.join(dir_, constants.WEIGHTS_FILENAME)
                 pretrained_model_name_or_path = None
-            # we need to know what pre-trained BERT model was used to load the correct weights
+            # Need to know what pre-trained BERT model was used to load the correct weights
             elif model_attributes['model_name'] == 'bert-ner':
                 weights_filepath = None
                 pretrained_model_name_or_path = \
@@ -296,7 +283,7 @@ class Saber():
 
             model_filepath = glob.glob(os.path.join(dir_, 'model.*'))[0]
 
-            saber_model = model_utils.load_pretrained_model(
+            model = model_utils.load_pretrained_model(
                 config=self.config,
                 datasets=datasets,
                 model_filepath=model_filepath,
@@ -304,7 +291,7 @@ class Saber():
                 pretrained_model_name_or_path=pretrained_model_name_or_path
             )
 
-            self.models.append(saber_model)
+            self.models.append(model)
 
         print(f'Done ({time.time() - start:.2f} seconds).')
 
@@ -322,7 +309,7 @@ class Saber():
         """
         start = time.time()
 
-        # allows a user to provide the dataset directory when function is called
+        # Allows user to provide dataset directory when function called
         if directory is not None:
             dataset_folder = directory if isinstance(directory, list) else [directory]
             dataset_folder = [generic_utils.clean_path(dir_) for dir_ in dataset_folder]
@@ -334,7 +321,7 @@ class Saber():
             LOGGER.error('ValueError %s', err_msg)
             raise ValueError(err_msg)
 
-        # datasets may be 'single' or 'compound' (more than one)
+        # Datasets may be 'single' or 'compound' (more than one)
         if len(self.config.dataset_folder) == 1:
             print('Loading (single) dataset...', end=' ', flush=True)
             self.datasets = data_utils.load_single_dataset(self.config)
@@ -344,19 +331,18 @@ class Saber():
             self.datasets = data_utils.load_compound_dataset(self.config)
             LOGGER.info('Loaded multiple datasets at: %s', self.config.dataset_folder)
 
-        # TODO: This whole block assumes we are transfering from last model loaded.
-        # Might need a better scheme.
-        # if a model has already been loaded, assume we are transfer learning
+        # TODO: This block assumes transfering from last model loaded. May need better scheme.
+        # If a model has already been loaded, assume we are transfer learning
         if self.models:
             print('\nTransferring from pre-trained model...', end=' ', flush=True)
             LOGGER.info('Transferred from a pre-trained model')
 
             type_to_idx = self.models[-1].datasets[0].type_to_idx
 
-            # make required changes to target datasets
+            # Make required changes to target datasets
             for dataset in self.datasets:
                 data_utils.setup_dataset_for_transfer(dataset, type_to_idx)
-            # prepare model for transfer learning
+            # Prepare model for transfer learning
             self.models[-1].prepare_for_transfer(self.datasets)
 
         print(f'Done ({time.time() - start:.2f} seconds).')
@@ -380,7 +366,7 @@ class Saber():
         start = time.time()
         print('Loading embeddings...', end=' ', flush=True)
 
-        # allow user to provide select args in function call
+        # Allow user to provide select args in function call
         if load_all is not None:
             self.config.load_all_embeddings = load_all
         if filepath is not None:
@@ -399,13 +385,13 @@ class Saber():
             LOGGER.error('ValueError %s', err_msg)
             raise ValueError(err_msg)
 
-        # load the embeddings
+        # Load the embeddings
         self.embeddings = Embeddings(filepath=self.config.pretrained_embeddings,
                                      token_map=self.datasets[0].type_to_idx['word'],
                                      debug=self.config.debug)
 
-        # when all embeddings loaded a new type_to_index mapping is generated, so update datasets
-        # current type to index mappings
+        # When all embeddings loaded, new type_to_idx mapping is generated, so update datasets
+        # current type_to_idx mappings
         if self.config.load_all_embeddings:
             type_to_idx = self.embeddings.load(binary, load_all=self.config.load_all_embeddings)
             for dataset in self.datasets:
@@ -433,7 +419,7 @@ class Saber():
         """Specifies and compiles the chosen sequence model, given by 'self.config.model_name'.
 
         For a chosen sequence model class (provided at the command line or in the configuration file
-        and saved as 'self.config.model_name'), "specify"s and "compile"s the Keras model(s) it
+        and saved as 'self.config.model_name'), specifys and compiles the Keras model(s) it
         contains.
 
         Args:
@@ -454,18 +440,19 @@ class Saber():
         if model_name is not None:
             self.config.model_name = model_name.lower().strip()
 
-        # setup the chosen model
+        # Setup the chosen model
         if self.config.model_name == 'bilstm-crf-ner':
             print('Building the BiLSTM-CRF model for NER...', end=' ', flush=True)
-            from .models.multi_task_lstm_crf import MultiTaskLSTMCRF
-            saber_model = MultiTaskLSTMCRF(config=self.config, datasets=self.datasets,
-                                           embeddings=self.embeddings)
+            from .models.bilstm_crf import BiLSTMCRF
+            model = BiLSTMCRF(config=self.config,
+                              datasets=self.datasets,
+                              embeddings=self.embeddings)
         elif self.config.model_name == 'bert-ner':
             print('Building the BERT model for NER...', end=' ', flush=True)
-            from .models.bert_token_classifier import BertTokenClassifier
-            saber_model = \
-                BertTokenClassifier(config=self.config, datasets=self.datasets,
-                                    pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
+            from .models.bert_for_ner import BertForNER
+            model = BertForNER(config=self.config,
+                               datasets=self.datasets,
+                               pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
         # TODO: This should be handled in config, by supplying a list of options.
         else:
             err_msg = (f'`model_name` must be one of: {constants.MODEL_NAMES},'
@@ -473,18 +460,17 @@ class Saber():
             LOGGER.error('ValueError: %s ', err_msg)
             raise ValueError(err_msg)
 
-        saber_model.specify()
-        saber_model.compile()  # does nothing if not a Keras model
+        model.specify()
+        model.compile()  # Does nothing if not a Keras model
 
-        self.models.append(saber_model)
+        self.models.append(model)
 
         print(f'Done ({time.time() - start:.2f} seconds).')
         LOGGER.info('%s model was built successfully', self.config.model_name.upper())
 
         if self.config.verbose:
             print('Model architecture:')
-            # TODO (John) Not implemented for PyTorch models, will print nothing.
-            saber_model.summary()
+            model.summary()
 
     def train(self, model_idx=-1):
         """Initiates training of model at `self.model[model_idx]`.

@@ -10,8 +10,8 @@ from ..metrics import Metrics
 from ..models.base_model import BaseModel
 from ..models.base_model import BaseKerasModel
 from ..models.base_model import BasePyTorchModel
-from ..models.bert_token_classifier import BertTokenClassifier
-from ..models.multi_task_lstm_crf import MultiTaskLSTMCRF
+from ..models.bert_for_ner import BertForNER
+from ..models.bilstm_crf import BiLSTMCRF
 from ..preprocessor import Preprocessor
 from ..saber import Saber
 from ..utils import data_utils, model_utils, text_utils
@@ -301,7 +301,7 @@ def saber_compound_dataset_model(dummy_config_compound_dataset):
 @pytest.fixture
 def saber_saved_model(dummy_dir, dummy_config):
     """Returns a tuple containing an instance of a `Saber` object after `save()` was called and
-    its models wiped (`saber.models = []`), the models and datasets it was saved with, and the 
+    its models wiped (`saber.models = []`), the models and datasets it was saved with, and the
     directory where the model was saved.
     """
     saber = Saber(config=dummy_config)
@@ -348,69 +348,69 @@ def dummy_training_data(dummy_dataset_1):
 
 
 @pytest.fixture
-def single_mt_bilstm_model(dummy_config, dummy_dataset_1):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration and a
+def bilstm_crf_model(dummy_config, dummy_dataset_1):
+    """Returns an instance of BiLSTMCRF initialized with the default configuration and a
     single dataset."""
-    model = MultiTaskLSTMCRF(config=dummy_config,
-                             datasets=[dummy_dataset_1],
-                             # to test passing of arbitrary keyword args to constructor
-                             totally_arbitrary='arbitrary')
+    model = BiLSTMCRF(config=dummy_config,
+                      datasets=[dummy_dataset_1],
+                      # to test passing of arbitrary keyword args to constructor
+                      totally_arbitrary='arbitrary')
     return model
 
 
 @pytest.fixture
-def compound_mt_bilstm_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration and a
+def mt_bilstm_crf_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+    """Returns an instance of BiLSTMCRF initialized with the default configuration and a
     compound dataset"""
-    model = MultiTaskLSTMCRF(config=dummy_config,
-                             datasets=[dummy_dataset_1, dummy_dataset_2],
-                             # to test passing of arbitrary keyword args to constructor
-                             totally_arbitrary='arbitrary')
+    model = BiLSTMCRF(config=dummy_config,
+                      datasets=[dummy_dataset_1, dummy_dataset_2],
+                      # to test passing of arbitrary keyword args to constructor
+                      totally_arbitrary='arbitrary')
     return model
 
 
 @pytest.fixture
-def single_mt_bilstm_model_specify(single_mt_bilstm_model):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration file and
+def bilstm_crf_model_specify(bilstm_crf_model):
+    """Returns an instance of BiLSTMCRF initialized with the default configuration file and
     a single specified model."""
-    single_mt_bilstm_model.specify()
+    bilstm_crf_model.specify()
 
-    return single_mt_bilstm_model
+    return bilstm_crf_model
 
 
 @pytest.fixture
-def compound_mt_bilstm_model_specify(compound_mt_bilstm_model):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration file and
+def mt_bilstm_crf_model_specify(mt_bilstm_crf_model):
+    """Returns an instance of BiLSTMCRF initialized with the default configuration file and
     a single specified model."""
-    compound_mt_bilstm_model.specify()
+    mt_bilstm_crf_model.specify()
 
-    return compound_mt_bilstm_model
+    return mt_bilstm_crf_model
 
 
 @pytest.fixture
-def single_mt_bilstm_model_embeddings(dummy_config, dummy_dataset_1, dummy_embeddings):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration file and
+def bilstm_crf_model_embeddings(dummy_config, dummy_dataset_1, dummy_embeddings):
+    """Returns an instance of BiLSTMCRF initialized with the default configuration file and
     loaded embeddings"""
-    model = MultiTaskLSTMCRF(config=dummy_config,
-                             datasets=[dummy_dataset_1],
-                             embeddings=dummy_embeddings,
-                             # to test passing of arbitrary keyword args to constructor
-                             totally_arbitrary='arbitrary')
+    model = BiLSTMCRF(config=dummy_config,
+                      datasets=[dummy_dataset_1],
+                      embeddings=dummy_embeddings,
+                      # to test passing of arbitrary keyword args to constructor
+                      totally_arbitrary='arbitrary')
     return model
 
 
 @pytest.fixture
-def single_mt_bilstm_model_embeddings_specify(single_mt_bilstm_model_embeddings):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration file,
+def bilstm_crf_model_embeddings_specify(bilstm_crf_model_embeddings):
+    """Returns an instance of BiLSTMCRF initialized with the default configuration file,
     loaded embeddings and single specified model."""
-    single_mt_bilstm_model_embeddings.specify()
+    bilstm_crf_model_embeddings.specify()
 
-    return single_mt_bilstm_model_embeddings
+    return bilstm_crf_model_embeddings
 
 
 @pytest.fixture
-def single_base_model(dummy_config, dummy_dataset_1):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration."""
+def base_model(dummy_config, dummy_dataset_1):
+    """Returns an instance of BiLSTMCRF initialized with the default configuration."""
     model = BaseModel(config=dummy_config,
                       datasets=[dummy_dataset_1],
                       # to test passing of arbitrary keyword args to constructor
@@ -419,8 +419,8 @@ def single_base_model(dummy_config, dummy_dataset_1):
 
 
 @pytest.fixture
-def compound_base_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration."""
+def mt_base_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+    """Returns an instance of BiLSTMCRF initialized with the default configuration."""
     model = BaseModel(config=dummy_config,
                       datasets=[dummy_dataset_1, dummy_dataset_2],
                       # to test passing of arbitrary keyword args to constructor
@@ -429,8 +429,8 @@ def compound_base_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
 
 
 @pytest.fixture
-def single_base_keras_model(dummy_config, dummy_dataset_1):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration."""
+def base_keras_model(dummy_config, dummy_dataset_1):
+    """Returns an instance of BiLSTMCRF initialized with the default configuration."""
     model = BaseKerasModel(config=dummy_config,
                            datasets=[dummy_dataset_1],
                            # to test passing of arbitrary keyword args to constructor
@@ -439,8 +439,8 @@ def single_base_keras_model(dummy_config, dummy_dataset_1):
 
 
 @pytest.fixture
-def compound_base_keras_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration."""
+def mt_base_keras_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+    """Returns an instance of BiLSTMCRF initialized with the default configuration."""
     model = BaseKerasModel(config=dummy_config,
                            datasets=[dummy_dataset_1, dummy_dataset_2],
                            # to test passing of arbitrary keyword args to constructor
@@ -449,8 +449,8 @@ def compound_base_keras_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
 
 
 @pytest.fixture
-def single_base_keras_model_embeddings(dummy_config, dummy_dataset_1, dummy_embeddings):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration file and
+def base_keras_model_embeddings(dummy_config, dummy_dataset_1, dummy_embeddings):
+    """Returns an instance of BiLSTMCRF initialized with the default configuration file and
     loaded embeddings"""
     model = BaseKerasModel(config=dummy_config,
                            datasets=[dummy_dataset_1],
@@ -461,8 +461,8 @@ def single_base_keras_model_embeddings(dummy_config, dummy_dataset_1, dummy_embe
 
 
 @pytest.fixture
-def single_base_pytorch_model(dummy_config, dummy_dataset_1):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration."""
+def base_pytorch_model(dummy_config, dummy_dataset_1):
+    """Returns an instance of BiLSTMCRF initialized with the default configuration."""
     model = BasePyTorchModel(config=dummy_config,
                              datasets=[dummy_dataset_1],
                              # to test passing of arbitrary keyword args to constructor
@@ -471,8 +471,8 @@ def single_base_pytorch_model(dummy_config, dummy_dataset_1):
 
 
 @pytest.fixture
-def compound_base_pytorch_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
-    """Returns an instance of MultiTaskLSTMCRF initialized with the default configuration."""
+def mt_base_pytorch_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+    """Returns an instance of BiLSTMCRF initialized with the default configuration."""
     model = BasePyTorchModel(config=dummy_config,
                              datasets=[dummy_dataset_1, dummy_dataset_2],
                              # to test passing of arbitrary keyword args to constructor
@@ -492,44 +492,78 @@ def bert_tokenizer():
 
 
 @pytest.fixture
-def single_bert_token_classifier_model(dummy_config, dummy_dataset_1):
+def bert_for_ner_model(dummy_config, dummy_dataset_1):
     """Returns an instance of BertForTokenClassification initialized with the default
     configuration."""
-    model = BertTokenClassifier(config=dummy_config,
-                                datasets=[dummy_dataset_1],
-                                # to test passing of arbitrary keyword args to constructor
-                                totally_arbitrary='arbitrary')
+    model = BertForNER(config=dummy_config,
+                       datasets=[dummy_dataset_1],
+                       # to test passing of arbitrary keyword args to constructor
+                       totally_arbitrary='arbitrary')
     return model
 
 
 @pytest.fixture
-def single_bert_token_classifier_model_specify(single_bert_token_classifier_model):
-    """Returns an instance of BertForTokenClassification initialized with the default configuration
-    file and a single specified model."""
-    single_bert_token_classifier_model.specify()
-
-    return single_bert_token_classifier_model
+def mt_bert_for_ner_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+    """Returns an instance of BertForTokenClassification initialized with the default
+    configuration."""
+    model = BertForNER(config=dummy_config,
+                       datasets=[dummy_dataset_1, dummy_dataset_2],
+                       # to test passing of arbitrary keyword args to constructor
+                       totally_arbitrary='arbitrary')
+    return model
 
 
 @pytest.fixture
-def single_bert_token_classifier_model_save(dummy_dir, single_bert_token_classifier_model_specify):
-    """Saves a model by calling `single_bert_token_classifier_model_specify.save()` and returns the
-    filepath to the saved model."""
-    model_filepath = os.path.join(dummy_dir, constants.PYTORCH_MODEL_FILENAME)
-    single_bert_token_classifier_model_specify.save(model_filepath=model_filepath)
+def bert_for_ner_model_specify(bert_for_ner_model):
+    """Returns an instance of BertForTokenClassification initialized with the default configuration
+    file and a single specified model."""
+    bert_for_ner_model.specify()
 
-    return model_filepath
+    return bert_for_ner_model
+
+
+@pytest.fixture
+def mt_bert_for_ner_model_specify(mt_bert_for_ner_model):
+    """Returns an instance of BertForTokenClassification initialized with the default configuration
+    file and a single specified model."""
+    mt_bert_for_ner_model.specify()
+
+    return mt_bert_for_ner_model
+
+
+@pytest.fixture
+def bert_for_ner_model_save(dummy_dir, bert_for_ner_model_specify):
+    """Saves a model by calling `single_bert_for_ner_model_specify.save()` and returns the
+    filepath to the saved model."""
+    model = bert_for_ner_model_specify
+    model_filepath = os.path.join(dummy_dir, constants.PYTORCH_MODEL_FILENAME)
+
+    bert_for_ner_model_specify.save(model_filepath=model_filepath)
+
+    return model, model_filepath
+
+
+@pytest.fixture
+def mt_bert_for_ner_model_save(dummy_dir, mt_bert_for_ner_model_specify):
+    """Saves a model by calling `single_bert_for_ner_model_specify.save()` and returns the
+    filepath to the saved model."""
+    model = mt_bert_for_ner_model_specify
+    model_filepath = os.path.join(dummy_dir, constants.PYTORCH_MODEL_FILENAME)
+
+    mt_bert_for_ner_model_specify.save(model_filepath=model_filepath)
+
+    return model, model_filepath
 
 # metrics
 
 
 @pytest.fixture
 def dummy_metrics(dummy_config, dummy_dataset_1, dummy_training_data, dummy_output_dir,
-                  single_base_keras_model):
+                  base_keras_model):
     """Returns an instance of Metrics.
     """
     metrics = Metrics(config=dummy_config,
-                      model_=single_base_keras_model,
+                      model_=base_keras_model,
                       training_data=dummy_training_data,
                       idx_to_tag=dummy_dataset_1.idx_to_tag,
                       output_dir=dummy_output_dir,
