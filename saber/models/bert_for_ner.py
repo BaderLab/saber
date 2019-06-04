@@ -489,7 +489,7 @@ class BertForNER(BasePyTorchModel):
         # Actual prediction happens here
         with torch.no_grad():
             logits = self.model(X, token_type_ids=None, attention_mask=attention_masks)
-        X, y_pred = X.numpy(), logits.detach().cpu().numpy()
+        X, y_pred = X.detach().cpu().numpy(), logits.detach().cpu().numpy()
 
         if model_idx is not None:
             y_pred = y_pred[model_idx]
