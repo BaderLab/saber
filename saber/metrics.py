@@ -16,7 +16,6 @@ from .preprocessor import Preprocessor
 from .utils import model_utils
 from .utils.generic_utils import make_dir
 
-# define this at the class level because some methods are static
 LOGGER = logging.getLogger(__name__)
 
 
