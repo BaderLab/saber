@@ -6,7 +6,7 @@ import tensorflow as tf
 import random
 from keras.layers import (LSTM, Bidirectional, Concatenate, Dense, Dropout,
                           Embedding, SpatialDropout1D, TimeDistributed)
-from keras.models import Input, Model, model_from_json
+from keras.models import Input, Model
 from keras_contrib.layers.crf import CRF
 from keras.utils import multi_gpu_model
 from keras_contrib.losses.crf_losses import crf_loss
@@ -20,7 +20,7 @@ from .base_model import BaseKerasModel
 LOGGER = logging.getLogger(__name__)
 
 
-class MultiTaskLSTMCRF(BaseKerasModel):
+class BiLSTMCRF(BaseKerasModel):
     """A Keras implementation of a Multi-task BiLSTM-CRF for sequence labeling.
 
     A BiLSTM-CRF for NER implementation in Keras. Supports multi-task learning by default, just pass
@@ -45,23 +45,19 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         self.model_name = 'bilstm-crf-ner'
 
     def load(self, model_filepath, weights_filepath):
-        """Load a model from disk.
+        """Load a BiLSTM-CRF model from disk.
 
-        Loads a model from disk by loading its architecture from a json file at `model_filepath`
-        and its weights from a hdf5 file at `weights_filepath`.
+        Loads a BiLSTM-CRF Keras model from disk by loading its architecture from a `.json` file at
+        `model_filepath` and its weights from a `.hdf5` file at `model_filepath`.
 
         Args:
             model_filepath (str): Filepath to the models architecture (`.json` file).
-            weights_filepath (str): Filepath to the models wieghts (`.hdf5` file).
+            weights_filepath (str): Filepath to the models weights (`.hdf5` file).
 
         Returns:
-            The Keras `Model` object that was saved to disk.
+            The BiLSTM-CRF Keras `Model` object that was saved to disk.
         """
-        with open(model_filepath) as f:
-            # CRF is not part of official Keras library, has to be passed as custom object
-            model = model_from_json(f.read(), custom_objects={'CRF': CRF})
-            model.load_weights(weights_filepath)
-            self.model = model
+        model = super().load(model_filepath, weights_filepath, custom_objects={'CRF': CRF})
 
         return model
 
@@ -224,15 +220,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         at `self.datasets`.
         """
         # Need to explicitly get one optimizer per output layer (if more than one)
-        optimizers = None
-        if isinstance(self.model.output, list):
-            optimizer_args = (self.config.optimizer,
-                              self.config.learning_rate,
-                              self.config.decay,
-                              self.config.grad_norm)
-
-            optimizers = [model_utils.get_keras_optimizer(*optimizer_args)
-                          for _, _ in enumerate(self.model.output)]
+        optimizers = self.prepare_optimizers()
 
         # Gather everything we need to run a training session
         training_data = self.prepare_data_for_training()
@@ -252,7 +240,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                                                          output_dir=output_dir,)
 
             # Train a multi-task model (MTM)
-            if optimizers is not None and len(optimizers) > 1:
+            if len(optimizers) > 1:
                 for epoch in range(self.config.epochs):
                     print(f'Global epoch: {epoch + 1}/{self.config.epochs}')
 
@@ -361,6 +349,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
                 # Clear and rebuild the model at end of each fold (except for the last fold)
                 if fold < self.config.k_folds - 1:
                     self.reset_model()
+                    optimizers = self.prepare_optimizers()
 
         # TODO: User should be allowed to overwrite this
         if training_data[0]['x_valid'] is not None or training_data[0]['x_test'] is not None:
@@ -410,7 +399,7 @@ class MultiTaskLSTMCRF(BaseKerasModel):
 
         # sanity check
         if not y_true.shape == y_pred.shape:
-            err_msg = ("'y_true' and 'y_pred' in 'MultiTaskLSTMCRF.eval() have different"
+            err_msg = ("'y_true' and 'y_pred' in 'BiLSTMCRF.eval() have different"
                        " shapes ({} and {} respectively)".format(y_true.shape, y_pred.shape))
             LOGGER.error('AssertionError: %s', err_msg)
             raise AssertionError(err_msg)
@@ -520,3 +509,24 @@ class MultiTaskLSTMCRF(BaseKerasModel):
         self.compile()
 
         return self.model
+
+    def prepare_optimizers(self):
+        """Returns a list of Keras optimizers, one per output layer in `self.model`.
+
+        For each output layer in `self.model`, creates an optmizer based on the given config at
+        `self.config`. For a single-task model, the returned list will be of length 1. For
+        a multi-task model, the returned list will be of length `len(self.model.ouput)`.
+
+        Returns:
+            A list of Keras optimizers initiated from the given config at `self.config`.
+        """
+        optimizer_args = (self.config.optimizer,
+                          self.config.learning_rate,
+                          self.config.decay,
+                          self.config.grad_norm)
+
+        outputs = self.model.output if isinstance(self.model.output, list) else [self.model.output]
+        optimizers = [model_utils.get_keras_optimizer(*optimizer_args)
+                      for _, _ in enumerate(outputs)]
+
+        return optimizers
