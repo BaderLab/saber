@@ -4,7 +4,7 @@ import pytest
 
 from ..dataset import Dataset
 from ..embeddings import Embeddings
-from ..models.multi_task_lstm_crf import MultiTaskLSTMCRF
+from ..models.bilstm_crf import BiLSTMCRF
 from ..models.base_model import BaseKerasModel
 from ..models.base_model import BaseModel
 from ..preprocessor import Preprocessor
@@ -223,7 +223,7 @@ def test_build_single_dataset(saber_single_dataset_model):
     """Assert that the `model` attribute of a `Saber` instance was updated as expected after
     call to `Saber.build()` when single dataset was loaded.
     """
-    assert all(isinstance(model, (BaseModel, BaseKerasModel, MultiTaskLSTMCRF))
+    assert all(isinstance(model, (BaseModel, BaseKerasModel, BiLSTMCRF))
                for model in saber_single_dataset_model.models)
 
 
@@ -231,7 +231,7 @@ def test_build_compound_dataset(saber_compound_dataset_model):
     """Assert that the `model` attribute of a `Saber` instance was updated as expected after
     call to `Saber.build()` when compound dataset was loaded.
     """
-    assert all(isinstance(model, (BaseModel, BaseKerasModel, MultiTaskLSTMCRF))
+    assert all(isinstance(model, (BaseModel, BaseKerasModel, BiLSTMCRF))
                for model in saber_compound_dataset_model.models)
 
 
