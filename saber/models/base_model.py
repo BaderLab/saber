@@ -5,6 +5,8 @@ import logging
 import os
 
 import torch
+from keras.models import Model
+from torch import nn
 from keras.models import model_from_json
 
 from .. import constants
@@ -76,7 +78,7 @@ class BaseKerasModel(BaseModel):
         else:
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-    def save(self, model_filepath, weights_filepath, model=None):
+    def save(self, model_filepath, weights_filepath):
         """Save a Keras model to disk.
 
         Saves a Keras model to disk, by saving its architecture as a `.json` file at
@@ -87,14 +89,12 @@ class BaseKerasModel(BaseModel):
             weights_filepath (str): Filepath to the models weights (`.hdf5` file).
             model (keras.Model): Optional, model to save to disk. Defaults to `self.model`.
         """
-        model = self.model if model is None else model
-
         with open(model_filepath, 'w') as f:
-            model_json = model.to_json()
+            model_json = self.model.to_json()
             json.dump(json.loads(model_json), f, sort_keys=True, indent=4)
-            model.save_weights(weights_filepath)
+            self.model.save_weights(weights_filepath)
 
-    def load(self, model_filepath, weights_filepath):
+    def load(self, model_filepath, weights_filepath, custom_objects=None):
         """Load a Keras model from disk.
 
         Loads a Keras model from disk by loading its architecture from a `.json` file at
@@ -103,16 +103,53 @@ class BaseKerasModel(BaseModel):
         Args:
             model_filepath (str): Filepath to the models architecture (`.json` file).
             weights_filepath (str): Filepath to the models weights (`.hdf5` file).
+            custom_objects: Optional, dictionary mapping names (strings) to custom classes or
+                functions to be considered during deserialization.
+
+        Returns:
+            The Keras `Model` object that was saved to disk.
         """
         with open(model_filepath) as f:
-            model = model_from_json(f.read())
+            model = model_from_json(f.read(), custom_objects=custom_objects)
             model.load_weights(weights_filepath)
             self.model = model
+
+        return model
 
     def summary(self):
         """Prints a summary representation of the Keras model `self.model`.
         """
         self.model.summary()
+
+    def prune_output_layers(self, output_layer_indices):
+        """Removes output layers with indicies not in `output_layer_indices` in `self.model`.
+
+        Args:
+            output_layer_indices (list): A list of indicies into the output layers of `self.model`
+                to retain.
+
+        Returns:
+            `self.model`, where any output layers with indicies not in `output_layer_indices` have
+            been removed.
+        """
+        if not isinstance(self.model.output, list):
+            err_msg = (f'Tried to call `prune_output_layers()` for a Model object ({self.model})'
+                       ' with a single output layer.')
+            LOGGER.error('ValueError %s', err_msg)
+            raise ValueError(err_msg)
+
+        n_outputs = len(self.model.output)
+        n_layers = len(self.model.layers)
+
+        last_hidden_layer = self.model.get_layer(index=-(n_outputs + 1))
+        output_layers = [self.model.get_layer(index=n_layers - n_outputs + i)
+                         for i in range(n_outputs)]
+
+        outputs = [output_layers[i](last_hidden_layer.output) for i in output_layer_indices]
+
+        self.model = Model(self.model.input, outputs)
+
+        return self.model
 
 
 class BasePyTorchModel(BaseModel):
@@ -151,8 +188,30 @@ class BasePyTorchModel(BaseModel):
         """
         pass
 
-    # TODO (John).
     def summary(self):
         """Prints a summary representation of the PyTorch model `self.model`.
         """
         pass
+
+    def prune_output_layers(self, output_layer_indices):
+        """Removes output layers with indicies not in `output_layer_indices` in `self.model`.
+
+        Args:
+            output_layer_indices (list): A list of indicies into the output layers of `self.model`
+                to retain.
+
+        Returns:
+            `self.model`, where any output layers with indicies not in `output_layer_indices` have
+            been removed.
+        """
+        if len(self.model.classifier) < 2:
+            err_msg = ('Tried to call `prune_output_layers()` for a nn.Module object'
+                       f' ({self.model}) with a single output layer.')
+            LOGGER.error('ValueError %s', err_msg)
+            raise ValueError(err_msg)
+
+        self.model.classifier = nn.ModuleList(
+            [self.model.classifier[i] for i in output_layer_indices]
+        )
+
+        return self.model
