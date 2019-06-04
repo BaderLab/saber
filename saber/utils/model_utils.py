@@ -11,7 +11,8 @@ from google_drive_downloader import GoogleDriveDownloader as gdd
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras.preprocessing.sequence import pad_sequences
-from torch.optim import Adam
+
+from pytorch_pretrained_bert.optimization import BertAdam
 from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
                               TensorDataset)
 
@@ -21,6 +22,7 @@ from .generic_utils import make_dir
 from .generic_utils import extract_directory
 
 LOGGER = logging.getLogger(__name__)
+
 # TODO (johnmgiorgi): This should be handeled better. Maybe as a config argument.
 FULL_FINETUNING = True
 
@@ -280,12 +282,12 @@ def load_pretrained_model(config, datasets, model_filepath, weights_filepath=Non
     """
     # import statements are here to prevent circular imports
     if config.model_name == 'bilstm-crf-ner':
-        from ..models.multi_task_lstm_crf import MultiTaskLSTMCRF
-        model = MultiTaskLSTMCRF(config, datasets)
+        from ..models.bilstm_crf import BiLSTMCRF
+        model = BiLSTMCRF(config, datasets)
         model.load(model_filepath, weights_filepath)
     elif config.model_name == 'bert-ner':
-        from ..models.bert_token_classifier import BertTokenClassifier
-        model = BertTokenClassifier(config, datasets, kwargs['pretrained_model_name_or_path'])
+        from ..models.bert_for_ner import BertForNER
+        model = BertForNER(config, datasets, kwargs['pretrained_model_name_or_path'])
         model.load(model_filepath)
 
     model.compile()
@@ -366,21 +368,21 @@ def get_keras_optimizer(optimizer, lr=0.01, decay=0.0, clipnorm=0.0):
     return optimizer
 
 
-def freeze_output_layers(model, model_idx, layer_name='crf_{}'):
+def freeze_output_layers(model, model_idx):
     """Freeze output layers of Keras model `model` besides layer at `model_idx`.
 
-    Freezes all output layers of a Keras model (`model`) with a name matching `layer_name`
-    besides the layer at index `model_idx`. Expects layer names to be of form
-    `'<layer_name>_<idx>'` where `<idx>` corresponds to the order the layers were added to the
-    model.
+    Freezes all output layers of a Keras model (`model`) besides the `model_idx` numbered output
+    layer.
 
     Args:
         model (keras.models.Model): Keras model to modify.
         model_idx (int): Index into the output layer to remain trainable (unfrozen).
-        layer_name (str): Formatted string containing the layer name.
     """
+    n_outputs = len(model.output)
+    n_layers = len(model.layers)
+
     for i, _ in enumerate(model.output):
-        layer = model.get_layer(layer_name.format(i))
+        layer = model.get_layer(index=n_layers - n_outputs + i)
         if i == model_idx:
             layer.trainable = True
         else:
@@ -580,7 +582,7 @@ def type_to_idx_for_bert(tokenizer, word_seq, tag_seq=None, tag_to_idx=None):
     return bert_word_indices, bert_tag_indices, bert_attention_masks
 
 
-def get_dataloader_for_ber(x, y, attention_mask, config, data_partition='train'):
+def get_dataloader_for_bert(x, y, attention_mask, batch_size, model_idx=0, data_partition='train'):
     """Returns a `DataLoader` for inputs, labels, attention masks: `x`, `y`, `attention_mask`.
 
     For the given inputs, labels and attention masks: `x`, `y`, `attention_mask`, returns the
@@ -611,36 +613,45 @@ def get_dataloader_for_ber(x, y, attention_mask, config, data_partition='train')
     x = torch.as_tensor(x)
     y = torch.as_tensor(y)
     attention_mask = torch.as_tensor(attention_mask)
+    model_idx = torch.as_tensor(model_idx)
 
-    data = TensorDataset(x, attention_mask, y)
+    data = TensorDataset(x, attention_mask, y, model_idx)
 
     if data_partition == 'train':
         sampler = RandomSampler(data)
     elif data_partition == 'eval':
         sampler = SequentialSampler(data)
 
-    dataloader = DataLoader(data, sampler=sampler, batch_size=config.batch_size)
+    dataloader = DataLoader(data, sampler=sampler, batch_size=batch_size)
 
     return dataloader
 
 
 def get_bert_optimizer(model, config):
+    """Returns an Adam optimizer configured for optimization of a BERT model (`model`).
+
+    Args:
+        config (Config): Contains a set of harmonized arguments provided in a *.ini file and,
+            optionally, from the command line.
+
+    Returns:
+        An initialized `BertAdam` optimizer for the training of a BERT model (`model`).
     """
-    """
-    # set parameters of the model
     if FULL_FINETUNING:
         param_optimizer = list(model.named_parameters())
-        no_decay = ['bias', 'gamma', 'beta']
+        no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
         optimizer_grouped_parameters = [
             {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
-                'weight_decay_rate': 0.01},
+             'weight_decay': 0.01,
+             },
             {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
-                'weight_decay_rate': 0.0}
+             'weight_decay': 0.0,
+             }
         ]
     else:
         param_optimizer = list(model.classifier.named_parameters())
-        optimizer_grouped_parameters = [{"params": [p for n, p in param_optimizer]}]
+        optimizer_grouped_parameters = [{'params': [p for n, p in param_optimizer]}]
 
-    optimizer = Adam(optimizer_grouped_parameters, lr=config.learning_rate)
+    optimizer = BertAdam(optimizer_grouped_parameters, lr=config.learning_rate)
 
     return optimizer

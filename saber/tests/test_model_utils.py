@@ -169,11 +169,11 @@ def test_freeze_output_layers(saber_compound_dataset_model):
     assert not model.get_layer(f'crf_{1}').trainable
 
 
-def test_get_targets(compound_mt_bilstm_model):
+def test_get_targets(mt_bilstm_crf_model):
     """Asserts that `model_utils.get_targets()` returns the expected values for a simple example.
     """
     # Get training data, set first output as the output layer currently being trained
-    training_data = compound_mt_bilstm_model.prepare_data_for_training()
+    training_data = mt_bilstm_crf_model.prepare_data_for_training()
     model_idx = 0
 
     expected = (
