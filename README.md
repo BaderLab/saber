@@ -42,6 +42,8 @@
 
 ## Installation
 
+_Note! This is a work in progress. Many things are broken, and the codebase is not stable._
+
 To install Saber, you will need `python3.6`.
 
 ### Latest PyPI stable release
