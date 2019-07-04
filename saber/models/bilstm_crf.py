@@ -1,20 +1,29 @@
 """Contains the Multi-task BiLSTM-CRF (bilstm-crf-ner) Keras model for sequence labelling.
 """
 import logging
-
-import tensorflow as tf
 import random
-from keras.layers import (LSTM, Bidirectional, Concatenate, Dense, Dropout,
-                          Embedding, SpatialDropout1D, TimeDistributed)
-from keras.models import Input, Model
-from keras_contrib.layers.crf import CRF
+
+import numpy as np
+import tensorflow as tf
+from keras.layers import LSTM
+from keras.layers import Bidirectional
+from keras.layers import Concatenate
+from keras.layers import Dense
+from keras.layers import Dropout
+from keras.layers import Embedding
+from keras.layers import SpatialDropout1D
+from keras.layers import TimeDistributed
+from keras.models import Input
+from keras.models import Model
 from keras.utils import multi_gpu_model
+from keras.utils import to_categorical
+from keras_contrib.layers.crf import CRF
 from keras_contrib.losses.crf_losses import crf_loss
 
 from .. import constants
 from ..preprocessor import Preprocessor
-from ..utils import model_utils
 from ..utils import data_utils
+from ..utils import model_utils
 from .base_model import BaseKerasModel
 
 LOGGER = logging.getLogger(__name__)
@@ -140,7 +149,7 @@ class BiLSTMCRF(BaseKerasModel):
                 SpatialDropout1D(self.config.dropout_rate['output'])(char_enhanced_word_embeddings)
 
         # Get all unique tag types across all datasets
-        all_tags = [ds.type_to_idx['tag'] for ds in self.datasets]
+        all_tags = [ds.type_to_idx['ent'] for ds in self.datasets]
         all_tags = set(x for l in all_tags for x in l)
 
         # Feedforward before CRF, maps each time step to a vector
@@ -151,7 +160,7 @@ class BiLSTMCRF(BaseKerasModel):
         # CRF output layer(s)
         output_layers = []
         for i, dataset in enumerate(self.datasets):
-            crf = CRF(len(dataset.type_to_idx['tag']), name=f'crf_{i}')
+            crf = CRF(len(dataset.type_to_idx['ent']), name=f'crf_{i}')
             output_layers.append(crf(label_predictions))
 
         # Fully specified model
@@ -383,66 +392,75 @@ class BiLSTMCRF(BaseKerasModel):
 
         X, y = training_data[f'x_{partition}'], training_data[f'y_{partition}']
 
-        # gold labels
+        # Gold labels
         y_true = y.argmax(axis=-1).ravel()
         y_pred = self.model.predict(X)
 
-        # if multi-task model, take only predictions for output layer at model_idx
+        # If multi-task model, take only predictions for output layer at model_idx
         if isinstance(y_pred, list):
             y_pred = y_pred[model_idx]
 
         y_pred = y_pred.argmax(axis=-1).ravel()
 
-        # mask out pads
+        # Mask [PAD] tokens
         y_true, y_pred = \
-            model_utils.mask_labels(y_true, y_pred, dataset.type_to_idx['tag'][constants.PAD])
-
-        # sanity check
-        if not y_true.shape == y_pred.shape:
-            err_msg = ("'y_true' and 'y_pred' in 'BiLSTMCRF.eval() have different"
-                       " shapes ({} and {} respectively)".format(y_true.shape, y_pred.shape))
-            LOGGER.error('AssertionError: %s', err_msg)
-            raise AssertionError(err_msg)
+            model_utils.mask_labels(y_true, y_pred, dataset.type_to_idx['ent'][constants.PAD])
 
         return y_true, y_pred
 
-    def predict(self, sents, model_idx=None):
-        """Perform inference on tokenized and sentence segmented text.
+    def predict(self, tokens):
+        """Performs inference on tokenized text and returns the predicted labels.
 
-        Using the model at `self.models[model_idx]`, performs inference on `sents`, a list of lists
+        Using the model at `self.model`, performs inference on `tokens`, a list of lists
         containing tokenized sentences. The result of this inference is a list of lists, where the
-        outer lists correspond to sentences in `sents` and inner lists contains predicted indices
+        outer lists correspond to sentences in `tokens` and inner lists contains predicted labels
         for the corresponding tokens in `sents`.
 
         Args:
-            sents (list): List of lists containing tokenized sentences to annotate.
-            model_idx (int): Index to model in `self.models` that will be used for inference.
-                Defaults to 0.
+            tokens (list): List of lists containing tokenized sentences to annotate.
 
         Returns:
-            Two-tuple containing the corresponding index sequence for `sents` (mapped according to
-            `self.datasets[model_idx].type_to_idx['word']` and corresponding one-hot encoded
-            predictions for each token in `sents`.
+            If `self.models` has a single output layer (`not isinstance(self.model.output, list)`):
+                A list of lists, containing the predicted labels for `tokens`.
+            If `self.models` has multiple output layers (`isinstance(self.model.output, list)`):
+                A list of lists of lists, containing the predicted labels for `tokens` from each
+                output layer in `self.models`.
         """
-        # type_to_idx is the same for all datasets
+        # Prepare data for input to model
         word_to_idx = self.datasets[0].type_to_idx['word']
-        char_to_idx = self.datasets[0].type_to_idx['char']
+        char_to_idx = self.datasets[0].type_to_idx['char']  # These are the same for all datasets
 
-        # map sequences to integer IDs
-        word_idx_seq = \
-            Preprocessor.get_type_idx_sequence(seq=sents, type_to_idx=word_to_idx, type_='word')
-        char_idx_seq = \
-            Preprocessor.get_type_idx_sequence(seq=sents, type_to_idx=char_to_idx, type_='char')
-
+        word_idx_seq = Preprocessor.get_type_idx_sequence(seq=tokens,
+                                                          type_to_idx=word_to_idx,
+                                                          type_='word')
+        char_idx_seq = Preprocessor.get_type_idx_sequence(seq=tokens,
+                                                          type_to_idx=char_to_idx,
+                                                          type_='char')
         model_input = [word_idx_seq, char_idx_seq]
 
-        # perform prediction and convert from one-hot to predicted indices
-        X, y_pred = word_idx_seq, self.model.predict(model_input)
+        # Actual prediction happens here
+        y_preds = self.model.predict(model_input)
+        y_preds = np.argmax(y_preds, axis=-1)
 
-        if model_idx is not None:
-            y_pred = y_pred[model_idx]
+        # If y_preds is not a list, this is a STM. Add dummy first dimension
+        if not isinstance(y_preds, list):
+            y_preds = [y_preds]
 
-        return X, y_pred
+        # Mask [PAD] tokens
+        y_preds_masked = []
+        for y_pred, dataset in zip(y_preds, self.datasets):
+            _, y_pred = model_utils.mask_labels(y_true=word_idx_seq,
+                                                y_pred=y_pred,
+                                                label=constants.PAD_VALUE)
+
+            y_preds_masked.append([[dataset.idx_to_tag['ent'][idx] for idx in sent]
+                                   for sent in y_pred])
+
+        # If STM, return only a list of lists
+        if len(y_preds_masked) == 1:
+            y_preds_masked = y_preds_masked[0]
+
+        return y_preds_masked
 
     def prepare_data_for_training(self):
         """Returns a list containing the training data for each dataset at `self.datasets`.
@@ -459,15 +477,15 @@ class BiLSTMCRF(BaseKerasModel):
         for ds in self.datasets:
             # collect train data, must be provided
             x_train = [ds.idx_seq['train']['word'], ds.idx_seq['train']['char']]
-            y_train = ds.idx_seq['train']['tag']
+            y_train = to_categorical(ds.idx_seq['train']['ent'])
             # collect valid and test data, may not be provided
             x_valid, y_valid, x_test, y_test = None, None, None, None
             if ds.idx_seq['valid'] is not None:
                 x_valid = [ds.idx_seq['valid']['word'], ds.idx_seq['valid']['char']]
-                y_valid = ds.idx_seq['valid']['tag']
+                y_valid = to_categorical(ds.idx_seq['valid']['ent'])
             if ds.idx_seq['test'] is not None:
                 x_test = [ds.idx_seq['test']['word'], ds.idx_seq['test']['char']]
-                y_test = ds.idx_seq['test']['tag']
+                y_test = to_categorical(ds.idx_seq['test']['ent'])
 
             training_data.append({'x_train': x_train, 'y_train': y_train, 'x_valid': x_valid,
                                   'y_valid': y_valid, 'x_test': x_test, 'y_test': y_test})
@@ -495,7 +513,7 @@ class BiLSTMCRF(BaseKerasModel):
         # get new output layers, one per target dataset
         new_outputs = []
         for i, dataset in enumerate(datasets):
-            output = CRF(len(dataset.type_to_idx['tag']), name=f'crf_{i}')
+            output = CRF(len(dataset.type_to_idx['ent']), name=f'crf_{i}')
             output = output(self.model.layers[-1].output)
 
             new_outputs.append(output)

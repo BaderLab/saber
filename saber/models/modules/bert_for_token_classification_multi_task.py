@@ -52,7 +52,9 @@ class BertForTokenClassificationMultiTask(BertForTokenClassification):
     ```
     """
     def __init__(self, config, num_labels):
-        super(BertForTokenClassification, self).__init__(config)
+        # TODO (John): Once the latest release of pytorch-pretrained-bert is released you can
+        # remove `num_labels[0]`
+        super(BertForTokenClassificationMultiTask, self).__init__(config, num_labels[0])
 
         self.num_labels = num_labels
         self.bert = BertModel(config)
@@ -64,8 +66,10 @@ class BertForTokenClassificationMultiTask(BertForTokenClassification):
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None,
                 model_idx=0):
-        sequence_output, _ = \
-            self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
+        sequence_output, _ = self.bert(input_ids=input_ids,
+                                       token_type_ids=token_type_ids,
+                                       attention_mask=attention_mask,
+                                       output_all_encoded_layers=False)
         sequence_output = self.dropout(sequence_output)
         # Access classifier corresponding to the model for this dataset
         logits = self.classifier[model_idx](sequence_output)
