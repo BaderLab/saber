@@ -91,9 +91,9 @@ class BertForJointEntityAndRelationClassification(BertForTokenClassification):
         self.embed = nn.Embedding(self.num_ent_labels, entity_embed_size)
 
         # Self-attention block
-        encoder_layer = nn.TransformerEncoderLayer(config.hidden_size + entity_embed_size, 2)
-        encoder_norm = nn.LayerNorm(config.hidden_size + entity_embed_size)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, 2, encoder_norm)
+        # encoder_layer = nn.TransformerEncoderLayer(config.hidden_size + entity_embed_size, 2)
+        # encoder_norm = nn.LayerNorm(config.hidden_size + entity_embed_size)
+        # self.transformer_encoder = nn.TransformerEncoder(encoder_layer, 2, encoder_norm)
 
         # MLPs for head and tail projections
         self.ffnn_head = nn.Sequential(
