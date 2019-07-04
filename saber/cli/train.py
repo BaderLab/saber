@@ -27,9 +27,9 @@ def main():
 
     saber.load_dataset()
 
-    # don't build a new model if pre-trained one was provided
+    # Don't build a new model if pre-trained one was provided
     if not config.pretrained_model:
-        # don't load embeddings if a pre-trained model was provided
+        # Don't load embeddings if a pre-trained model was provided
         if config.pretrained_embeddings:
             saber.load_embeddings()
         saber.build()
@@ -42,6 +42,7 @@ def main():
     finally:
         if config.save_model:
             saber.save()
+
 
 if __name__ == '__main__':
     main()
