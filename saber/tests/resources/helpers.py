@@ -21,6 +21,7 @@ def assert_type_to_idx_as_expected(actual, expected):
     assert all(word in actual['word'] for word in constants.INITIAL_MAPPING['word'])
     assert all(word in actual['char'] for word in constants.INITIAL_MAPPING['word'])
 
+
 def load_saved_config(filepath):
     """Load a saved config.ConfigParser object at 'filepath/config.ini'.
 
@@ -35,6 +36,7 @@ def load_saved_config(filepath):
     saved_config.read(saved_config_filepath)
 
     return saved_config
+
 
 def unprocess_args(args):
     """Unprocesses processed config args.
