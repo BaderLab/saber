@@ -1,23 +1,27 @@
-"""All unit tests for BertForNER (saber/models/BertForNER.py).
-"""
-import numpy as np
 import os
-from pytorch_pretrained_bert import BertTokenizer, BertForTokenClassification
+
+from pytorch_pretrained_bert import BertForTokenClassification
+from pytorch_pretrained_bert import BertTokenizer
+from pytorch_pretrained_bert.optimization import BertAdam
 
 from .. import constants
-from pytorch_pretrained_bert.optimization import BertAdam
-from ..models.base_model import BaseModel, BasePyTorchModel
+from ..models.base_model import BaseModel
+from ..models.base_model import BasePyTorchModel
 from ..models.bert_for_ner import BertForNER
-from ..models.bert_for_token_classification_multi_task import BertForTokenClassificationMultiTask
-from .resources.constants import *
+from ..models.modules.bert_for_token_classification_multi_task import \
+    BertForTokenClassificationMultiTask
 
 # TODO: test_prepare_data_for_training_simple and test_predict_simple need to be more rigorous
+# TODO (johngiorgi): Test that saving loading from CPU/GPU works as expected
 
 
 class TestBertForNER(object):
     """Collects all unit tests for `saber.models.bert_for_ner.BertForNER`.
     """
-    def test_attributes_after_init(self, dummy_config, dummy_dataset_1, bert_for_ner_model):
+    def test_attributes_after_init(self,
+                                   dummy_config,
+                                   conll2003datasetreader_load,
+                                   bert_for_ner_model):
         """Asserts instance attributes are as expected after initialization of a `BertForNER` model.
         """
         assert isinstance(
@@ -27,7 +31,9 @@ class TestBertForNER(object):
 
         # Attributes that are passed to __init__
         assert bert_for_ner_model.config is dummy_config
-        assert bert_for_ner_model.datasets == [dummy_dataset_1]
+        # Check that intialization has added the wordpiece tag ('X') with correct index
+        assert conll2003datasetreader_load.type_to_idx['ent'][constants.WORDPIECE] == \
+            len(conll2003datasetreader_load.type_to_idx['ent']) - 1
 
         # Other instance attributes
         assert bert_for_ner_model.model is None
@@ -37,7 +43,7 @@ class TestBertForNER(object):
         assert bert_for_ner_model.pretrained_model_name_or_path == 'bert-base-cased'
 
         # +1 necessary to account for 'X' tag introduced by wordpiece tokenization
-        assert bert_for_ner_model.num_labels == [len(dummy_dataset_1.idx_to_tag) + 1]
+        assert bert_for_ner_model.num_labels == [len(conll2003datasetreader_load.idx_to_tag['ent'])]
         assert bert_for_ner_model.model_name == 'bert-ner'
 
         # Test that we can pass arbitrary keyword arguments
@@ -45,7 +51,7 @@ class TestBertForNER(object):
 
     def test_attributes_after_init_mt(self,
                                       dummy_config,
-                                      dummy_dataset_1,
+                                      conll2003datasetreader_load,
                                       dummy_dataset_2,
                                       mt_bert_for_ner_model):
         """Asserts instance attributes are as expected after initialization of a multi-task
@@ -58,8 +64,11 @@ class TestBertForNER(object):
 
         # Attributes that are passed to __init__
         assert mt_bert_for_ner_model.config is dummy_config
-        assert mt_bert_for_ner_model.datasets == [dummy_dataset_1, dummy_dataset_2]
-        assert mt_bert_for_ner_model.datasets[1] is dummy_dataset_2
+        # Check that intialization has added the wordpiece tag ('X') with correct index
+        assert conll2003datasetreader_load.type_to_idx['ent'][constants.WORDPIECE] == \
+            len(conll2003datasetreader_load.type_to_idx['ent']) - 1
+        assert dummy_dataset_2.type_to_idx['ent'][constants.WORDPIECE] == \
+            len(dummy_dataset_2.type_to_idx['ent']) - 1
         # Other instance attributes
         assert mt_bert_for_ner_model.model is None
         assert mt_bert_for_ner_model.embeddings is None
@@ -69,8 +78,8 @@ class TestBertForNER(object):
 
         # +1 necessary to account for 'X' tag introduced by wordpiece tokenization
         assert mt_bert_for_ner_model.num_labels == [
-            len(dummy_dataset_1.idx_to_tag) + 1,
-            len(dummy_dataset_2.idx_to_tag) + 1,
+            len(conll2003datasetreader_load.idx_to_tag['ent']),
+            len(dummy_dataset_2.idx_to_tag['ent']),
         ]
         assert mt_bert_for_ner_model.model_name == 'bert-ner'
 
@@ -79,7 +88,7 @@ class TestBertForNER(object):
 
     def test_attributes_after_specify(self,
                                       dummy_config,
-                                      dummy_dataset_1,
+                                      conll2003datasetreader_load,
                                       bert_for_ner_model_specify):
         """Asserts attributes are as expected after call to `BertForNER.specify()`.
         """
@@ -90,7 +99,9 @@ class TestBertForNER(object):
 
         # Attributes that are passed to __init__
         assert bert_for_ner_model_specify.config is dummy_config
-        assert bert_for_ner_model_specify.datasets == [dummy_dataset_1]
+        # Check that intialization has added the wordpiece tag ('X') with correct index
+        assert conll2003datasetreader_load.type_to_idx['ent'][constants.WORDPIECE] == \
+            len(conll2003datasetreader_load.type_to_idx['ent']) - 1
 
         # Other instance attributes
         assert bert_for_ner_model_specify.embeddings is None
@@ -99,7 +110,8 @@ class TestBertForNER(object):
         assert bert_for_ner_model_specify.pretrained_model_name_or_path == 'bert-base-cased'
 
         # +1 necessary to account for 'X' tag introduced by wordpiece tokenization
-        assert bert_for_ner_model_specify.num_labels == [len(dummy_dataset_1.idx_to_tag) + 1]
+        assert bert_for_ner_model_specify.num_labels == \
+            [len(conll2003datasetreader_load.idx_to_tag['ent'])]
         assert bert_for_ner_model_specify.model_name == 'bert-ner'
 
         # Model and tokenizer
@@ -107,8 +119,6 @@ class TestBertForNER(object):
             bert_for_ner_model_specify.model, (BertForTokenClassificationMultiTask,
                                                BertForTokenClassification)
         )
-        assert bert_for_ner_model_specify.model.num_labels == \
-            bert_for_ner_model_specify.num_labels
         assert isinstance(bert_for_ner_model_specify.tokenizer, BertTokenizer)
 
         # Test that we can pass arbitrary keyword arguments
@@ -116,7 +126,7 @@ class TestBertForNER(object):
 
     def test_attributes_after_specify_mt(self,
                                          dummy_config,
-                                         dummy_dataset_1,
+                                         conll2003datasetreader_load,
                                          dummy_dataset_2,
                                          mt_bert_for_ner_model_specify):
         """Asserts attributes are as expected after call to `BertForNER.specify()` for a multi-task
@@ -129,7 +139,11 @@ class TestBertForNER(object):
 
         # Attributes that are passed to __init__
         assert mt_bert_for_ner_model_specify.config is dummy_config
-        assert mt_bert_for_ner_model_specify.datasets == [dummy_dataset_1, dummy_dataset_2]
+        # Check that intialization has added the wordpiece tag ('X') with correct index
+        assert conll2003datasetreader_load.type_to_idx['ent'][constants.WORDPIECE] == \
+            len(conll2003datasetreader_load.type_to_idx['ent']) - 1
+        assert dummy_dataset_2.type_to_idx['ent'][constants.WORDPIECE] == \
+            len(dummy_dataset_2.type_to_idx['ent']) - 1
 
         # Other instance attributes
         assert mt_bert_for_ner_model_specify.embeddings is None
@@ -140,8 +154,8 @@ class TestBertForNER(object):
 
         # +1 necessary to account for 'X' tag introduced by wordpiece tokenization
         assert mt_bert_for_ner_model_specify.num_labels == [
-            len(dummy_dataset_1.idx_to_tag) + 1,
-            len(dummy_dataset_2.idx_to_tag) + 1,
+            len(conll2003datasetreader_load.idx_to_tag['ent']),
+            len(dummy_dataset_2.idx_to_tag['ent']),
         ]
         assert mt_bert_for_ner_model_specify.model_name == 'bert-ner'
 
@@ -210,8 +224,8 @@ class TestBertForNER(object):
         """
         training_data = bert_for_ner_model_specify.prepare_data_for_training()
 
-        assert all('x_{}'.format(part) in data and 'y_{}'.format(part) in data
-                   for data in training_data for part in constants.PARTITIONS)
+        assert all(f'x_{p}' in data and f'y_{p}' in data for data in training_data
+                   for p in constants.PARTITIONS)
 
     def test_train(self, bert_for_ner_model_specify):
         """This test does not actually assert anything (which is surely bad practice) but at the
@@ -242,18 +256,39 @@ class TestBertForNER(object):
     '''
 
     def test_predict(self, bert_for_ner_model_specify):
-        """Asserts that the shape of the predictions returned by `BertForNER.predict()` are as
-        expected.
+        """Asserts that the shape and labels of the predictions returned by `BertForNER.predict()`
+        are as expected.
         """
-        input_ = np.asarray([['This', 'is', 'a', 'test', '.']])
+        tokens = [
+            ['This', 'is', 'a', 'test', '.'],
+            ['With', 'two', 'sentences', '.']
+        ]
+        valid_types = bert_for_ner_model_specify.datasets[0].type_to_idx['ent']
 
-        X_actual, y_pred_actual = bert_for_ner_model_specify.predict(input_)
+        actual = bert_for_ner_model_specify.predict(tokens)
 
-        assert isinstance(X_actual, np.ndarray)
-        assert isinstance(y_pred_actual, np.ndarray)
-        # The expected shape of the processed input and predictions is (1, constants.MAX_SENT_LEN)
-        # as there is 1 sentence in input_
-        assert X_actual.shape == y_pred_actual.argmax(axis=-1).shape == (1, constants.MAX_SENT_LEN)
+        for sent, actual_ in zip(tokens, actual):
+            assert len(sent) == len(actual_)
+            # Can't test exact label seq because it is stochastic, so check all preds are valid
+            assert all(label in valid_types for label in actual_)
+
+    def test_predict_mt(self, mt_bert_for_ner_model_specify):
+        """Asserts that the shape and labels of the predictions returned by `BertForNER.predict()`
+        are as expected for a multi-task model.
+        """
+        tokens = [
+            ['This', 'is', 'a', 'test', '.'],
+            ['With', 'two', 'sentences', '.']
+        ]
+        valid_types = mt_bert_for_ner_model_specify.datasets[0].type_to_idx['ent']
+
+        actual = mt_bert_for_ner_model_specify.predict(tokens)
+
+        for model_output in actual:
+            for sent, actual_ in zip(tokens, actual):
+                assert len(sent) == len(actual_)
+                # Can't test exact label seq because it is stochastic, so check all preds are valid
+                assert all(label in valid_types for label in actual_)
 
     def test_prepare_optimizers(self, bert_for_ner_model_specify):
         """Asserts that the returned optimizer object is as expected after call to

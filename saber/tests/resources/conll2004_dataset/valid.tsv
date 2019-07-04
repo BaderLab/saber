@@ -1,0 +1,24 @@
+0	S-Peop	0	O	NNP/NNP	Bette/Davis	O	O	O
+0	O	1	O	VBD	was	O	O	O
+0	O	2	O	VBN	born	O	O	O
+0	S-Peop	3	O	NNP/NNP/NNP	Ruth/Elizabeth/Davis	O	O	O
+0	O	4	O	IN	on	O	O	O
+0	S-Other	5	O	NNP	April	O	O	O
+0	O	6	O	CD	5	O	O	O
+0	O	7	O	,	,	O	O	O
+0	O	8	O	CD	1908	O	O	O
+0	O	9	O	,	,	O	O	O
+0	O	10	O	IN	in	O	O	O
+0	S-Loc	11	O	NNP/,/NNP	Lowell/,/Mass	O	O	O
+0	O	12	O	.	.	O	O	O
+
+0	11	Live_In
+3	11	Live_In
+
+
+1	O	0	O	IN	By	O	O	O
+1	S-Peop	1	O	NNP/NNP/NNP	W./DALE/NELSON	O	O	O
+
+
+2	S-Org	0	O	NNP/NNP	Associated/Press	O	O	O
+2	O	1	O	NNP	Writer	O	O	O
