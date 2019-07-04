@@ -1,27 +1,35 @@
 """A collection of PyTest fixtures used for Sabers unit test (saber/tests/test_*.py)
 """
+import os
+
 import pytest
+import spacy
 from pytorch_pretrained_bert import BertTokenizer
 
+from .. import constants
 from ..config import Config
-from ..dataset import Dataset
+from ..dataset import CoNLL2003DatasetReader, CoNLL2004DatasetReader, Dataset
 from ..embeddings import Embeddings
 from ..metrics import Metrics
-from ..models.base_model import BaseModel
-from ..models.base_model import BaseKerasModel
-from ..models.base_model import BasePyTorchModel
+from ..models.base_model import BaseKerasModel, BaseModel, BasePyTorchModel
+from ..models.bert_for_joint_ner_and_rc import BertForJointNERAndRC
 from ..models.bert_for_ner import BertForNER
 from ..models.bilstm_crf import BiLSTMCRF
 from ..preprocessor import Preprocessor
 from ..saber import Saber
 from ..utils import data_utils, model_utils, text_utils
-from .resources.constants import *
-from .. import constants
-import spacy
-import os
+from .resources.constants import PATH_TO_DUMMY_CONFIG
+from .resources.constants import DUMMY_COMMAND_LINE_ARGS
+from .resources.constants import PATH_TO_CONLL2003_DATASET
+from .resources.constants import PATH_TO_DUMMY_DATASET_2
+from .resources.constants import PATH_TO_CONLL2004_DATASET
+from .resources.constants import PATH_TO_DUMMY_EMBEDDINGS
+from .resources.constants import DUMMY_TOKEN_MAP
 
 
-# generic
+####################################################################################################
+# Generic
+####################################################################################################
 
 @pytest.fixture(scope='session')
 def dummy_dir(tmpdir_factory):
@@ -30,8 +38,10 @@ def dummy_dir(tmpdir_factory):
     dummy_dir = tmpdir_factory.mktemp('dummy_dir')
     return dummy_dir.strpath
 
-# config
 
+####################################################################################################
+# Config
+####################################################################################################
 
 @pytest.fixture
 def dummy_config():
@@ -57,32 +67,80 @@ def dummy_config_compound_dataset():
     """Returns an instance of a `Config` after parsing the dummy config file. Ensures that
     `replace_rare_tokens` argument is False.
     """
-    compound_dataset = [PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2]
+    compound_dataset = [PATH_TO_CONLL2003_DATASET, PATH_TO_DUMMY_DATASET_2]
     cli_arguments = {'dataset_folder': compound_dataset}
     dummy_config = Config(PATH_TO_DUMMY_CONFIG)
     dummy_config.harmonize_args(cli_arguments)
 
     return dummy_config
 
-# dataset
+
+####################################################################################################
+# Dataset
+####################################################################################################
+
+@pytest.fixture
+def dataset_no_dataset_folder():
+    return Dataset(totally_arbitrary='arbitrary')
 
 
 @pytest.fixture
-def empty_dummy_dataset():
-    """Returns an empty single dummy Dataset instance.
-    """
-    # Don't replace rare tokens for the sake of testing
-    return Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False,
-                   # to test passing of arbitrary keyword args to constructor
+def dataset():
+    return Dataset(dataset_folder=PATH_TO_CONLL2003_DATASET,
                    totally_arbitrary='arbitrary')
 
 
+####################################################################################################
+# CoNLL2003DatasetReader
+####################################################################################################
+
 @pytest.fixture
-def dummy_dataset_1():
-    """Returns a single dummy Dataset instance after calling `Dataset.load()`.
+def conll2003datasetreader_no_dataset_folder():
+    """Returns an empty single dummy CoNLL2003DatasetReader instance.
+    """
+    return CoNLL2003DatasetReader(totally_arbitrary='arbitrary')
+
+
+@pytest.fixture
+def conll2003datasetreader():
+    """Returns an empty single dummy CoNLL2003DatasetReader instance.
+    """
+    return CoNLL2003DatasetReader(dataset_folder=PATH_TO_CONLL2003_DATASET,
+                                  totally_arbitrary='arbitrary')
+
+
+@pytest.fixture
+def conll2003datasetreader_load():
+    """Returns a single CoNLL2003DatasetReader instance after calling `load()`.
     """
     # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_1, replace_rare_tokens=False)
+    dataset = CoNLL2003DatasetReader(dataset_folder=PATH_TO_CONLL2003_DATASET)
+    dataset.load()
+
+    return dataset
+
+
+@pytest.fixture
+def conll2004datasetreader_no_dataset_folder():
+    """Returns an empty single dummy CoNLL2003DatasetReader instance.
+    """
+    return CoNLL2004DatasetReader(totally_arbitrary='arbitrary')
+
+
+@pytest.fixture
+def conll2004datasetreader():
+    """Returns an empty single dummy CoNLL2003DatasetReader instance.
+    """
+    return CoNLL2004DatasetReader(dataset_folder=PATH_TO_CONLL2004_DATASET,
+                                  totally_arbitrary='arbitrary')
+
+
+@pytest.fixture
+def conll2004datasetreader_load():
+    """Returns a single CoNLL2003DatasetReader instance after calling `load()`.
+    """
+    # Don't replace rare tokens for the sake of testing
+    dataset = CoNLL2004DatasetReader(dataset_folder=PATH_TO_CONLL2004_DATASET)
     dataset.load()
 
     return dataset
@@ -90,10 +148,12 @@ def dummy_dataset_1():
 
 @pytest.fixture
 def dummy_dataset_2():
-    """Returns a single dummy Dataset instance after calling `Dataset.load()`.
+    """Returns a single dummy CoNLL2003DatasetReader instance after calling
+    `CoNLL2003DatasetReader.load()`.
     """
     # Don't replace rare tokens for the sake of testing
-    dataset = Dataset(dataset_folder=PATH_TO_DUMMY_DATASET_2, replace_rare_tokens=False)
+    dataset = CoNLL2003DatasetReader(dataset_folder=PATH_TO_DUMMY_DATASET_2,
+                                     replace_rare_tokens=False)
     dataset.load()
 
     return dataset
@@ -103,7 +163,7 @@ def dummy_dataset_2():
 def dummy_compound_dataset(dummy_config):
     """
     """
-    dummy_config.dataset_folder = [PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2]
+    dummy_config.dataset_folder = [PATH_TO_CONLL2003_DATASET, PATH_TO_DUMMY_DATASET_2]
     dummy_config.replace_rare_tokens = False
     dataset = data_utils.load_compound_dataset(dummy_config)
 
@@ -118,7 +178,7 @@ def dummy_dataset_paths_all(tmpdir_factory):
     dummy_dir = tmpdir_factory.mktemp('dummy_dataset')
     # create train, valid and train partitions in this folder
     train_file = dummy_dir.join('train.tsv')
-    train_file.write('arbitrary') # need to write content or else the file wont exist
+    train_file.write('arbitrary')  # need to write content or else the file wont exist
     valid_file = dummy_dir.join('valid.tsv')
     valid_file.write('arbitrary')
     test_file = dummy_dir.join('test.tsv')
@@ -142,14 +202,16 @@ def dummy_dataset_paths_no_valid(tmpdir_factory):
     return dummy_dir.strpath, train_file.strpath, test_file.strpath
 
 
-# embeddings
+####################################################################################################
+# Embeddings
+####################################################################################################
 
 @pytest.fixture
-def dummy_embeddings(dummy_dataset_1):
+def dummy_embeddings(conll2003datasetreader_load):
     """Returns an instance of an `Embeddings()` object AFTER the `.load()` method is called.
     """
     embeddings = Embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS,
-                            token_map=dummy_dataset_1.idx_to_tag)
+                            token_map=conll2003datasetreader_load.idx_to_tag)
     embeddings.load(binary=False)  # txt file format is easier to test
     return embeddings
 
@@ -172,7 +234,8 @@ def dummy_embedding_matrix_and_type_to_idx():
     embedding_idx = embeddings._prepare_embedding_index(binary=False)
     embeddings.num_found = len(embedding_idx)
     embeddings.dimension = len(list(embedding_idx.values())[0])
-    embedding_matrix, type_to_idx = embeddings._prepare_embedding_matrix(embedding_idx, load_all=False)
+    embedding_matrix, type_to_idx = embeddings._prepare_embedding_matrix(embedding_idx,
+                                                                         load_all=False)
     embeddings.num_embed = embedding_matrix.shape[0]  # num of embedded words
 
     return embedding_matrix, type_to_idx
@@ -190,7 +253,8 @@ def dummy_embedding_matrix_and_type_to_idx_load_all():
     embedding_idx = embeddings._prepare_embedding_index(binary=False)
     embeddings.num_found = len(embedding_idx)
     embeddings.dimension = len(list(embedding_idx.values())[0])
-    embedding_matrix, type_to_idx = embeddings._prepare_embedding_matrix(embedding_idx, load_all=True)
+    embedding_matrix, type_to_idx = embeddings._prepare_embedding_matrix(embedding_idx,
+                                                                         load_all=True)
     embeddings.num_embed = embedding_matrix.shape[0]  # num of embedded words
 
     return embedding_matrix, type_to_idx
@@ -229,8 +293,10 @@ def dummy_embeddings_after_load_with_load_all():
     embeddings.load(binary=False, load_all=True)  # txt file format is easier to test
     return embeddings
 
-# saber
 
+####################################################################################################
+# Saber
+####################################################################################################
 
 @pytest.fixture
 def saber_blank(dummy_config):
@@ -246,7 +312,7 @@ def saber_single_dataset(dummy_config):
     """Returns instance of `Saber` initialized with the dummy config file and a single dataset.
     """
     saber = Saber(config=dummy_config)
-    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
+    saber.load_dataset(directory=PATH_TO_CONLL2003_DATASET)
 
     return saber
 
@@ -257,7 +323,7 @@ def saber_single_dataset_embeddings(dummy_config):
     embeddings.
     """
     saber = Saber(config=dummy_config)
-    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
+    saber.load_dataset(directory=PATH_TO_CONLL2003_DATASET)
     saber.load_embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, binary=False)
 
     return saber
@@ -268,7 +334,7 @@ def saber_single_dataset_model(dummy_config):
     """Returns an instance of `Saber` initialized with the dummy config file, a single dataset
     a Keras model."""
     saber = Saber(config=dummy_config)
-    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
+    saber.load_dataset(directory=PATH_TO_CONLL2003_DATASET)
     saber.build()
 
     return saber
@@ -280,7 +346,7 @@ def saber_compound_dataset(dummy_config_compound_dataset):
     The compound dataset is just two copies of the dataset, this makes writing tests much
     simpler.
     """
-    compound_dataset = [PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_1]
+    compound_dataset = [PATH_TO_CONLL2003_DATASET, PATH_TO_CONLL2003_DATASET]
     saber = Saber(config=dummy_config_compound_dataset)
     saber.load_dataset(directory=compound_dataset)
 
@@ -292,7 +358,7 @@ def saber_compound_dataset_model(dummy_config_compound_dataset):
     """Returns an instance of `Saber` initialized with the dummy config file, a single dataset
     a Keras model."""
     saber = Saber(config=dummy_config_compound_dataset)
-    saber.load_dataset(directory=[PATH_TO_DUMMY_DATASET_1, PATH_TO_DUMMY_DATASET_2])
+    saber.load_dataset(directory=[PATH_TO_CONLL2003_DATASET, PATH_TO_DUMMY_DATASET_2])
     saber.build()
 
     return saber
@@ -305,7 +371,7 @@ def saber_saved_model(dummy_dir, dummy_config):
     directory where the model was saved.
     """
     saber = Saber(config=dummy_config)
-    saber.load_dataset(directory=PATH_TO_DUMMY_DATASET_1)
+    saber.load_dataset(directory=PATH_TO_CONLL2003_DATASET)
     saber.build()
 
     model, dataset = saber.models[-1], saber.datasets[-1]
@@ -316,8 +382,10 @@ def saber_saved_model(dummy_dir, dummy_config):
 
     return saber, model, dataset, directory
 
-# model training
 
+####################################################################################################
+# Model training
+####################################################################################################
 
 @pytest.fixture
 def dummy_output_dir(tmpdir, dummy_config):
@@ -330,40 +398,43 @@ def dummy_output_dir(tmpdir, dummy_config):
 
 
 @pytest.fixture
-def dummy_training_data(dummy_dataset_1):
-    """Returns training data from `dummy_dataset_1`.
+def dummy_training_data(conll2003datasetreader_load):
+    """Returns training data from `conll2003datasetreader_load`.
     """
-    training_data = {'x_train': [dummy_dataset_1.idx_seq['train']['word'],
-                                 dummy_dataset_1.idx_seq['train']['char']],
+    training_data = {'x_train': [conll2003datasetreader_load.idx_seq['train']['word'],
+                                 conll2003datasetreader_load.idx_seq['train']['char']],
                      'x_valid': None,
                      'x_test': None,
-                     'y_train': dummy_dataset_1.idx_seq['train']['tag'],
+                     'y_train': conll2003datasetreader_load.idx_seq['train']['ent'],
                      'y_valid': None,
                      'y_test': None,
                      }
 
     return training_data
 
+
+####################################################################################################
 # Keras models
+####################################################################################################
 
 
 @pytest.fixture
-def bilstm_crf_model(dummy_config, dummy_dataset_1):
+def bilstm_crf_model(dummy_config, conll2003datasetreader_load):
     """Returns an instance of BiLSTMCRF initialized with the default configuration and a
     single dataset."""
     model = BiLSTMCRF(config=dummy_config,
-                      datasets=[dummy_dataset_1],
+                      datasets=[conll2003datasetreader_load],
                       # to test passing of arbitrary keyword args to constructor
                       totally_arbitrary='arbitrary')
     return model
 
 
 @pytest.fixture
-def mt_bilstm_crf_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+def mt_bilstm_crf_model(dummy_config, conll2003datasetreader_load, dummy_dataset_2):
     """Returns an instance of BiLSTMCRF initialized with the default configuration and a
     compound dataset"""
     model = BiLSTMCRF(config=dummy_config,
-                      datasets=[dummy_dataset_1, dummy_dataset_2],
+                      datasets=[conll2003datasetreader_load, dummy_dataset_2],
                       # to test passing of arbitrary keyword args to constructor
                       totally_arbitrary='arbitrary')
     return model
@@ -388,11 +459,11 @@ def mt_bilstm_crf_model_specify(mt_bilstm_crf_model):
 
 
 @pytest.fixture
-def bilstm_crf_model_embeddings(dummy_config, dummy_dataset_1, dummy_embeddings):
+def bilstm_crf_model_embeddings(dummy_config, conll2003datasetreader_load, dummy_embeddings):
     """Returns an instance of BiLSTMCRF initialized with the default configuration file and
     loaded embeddings"""
     model = BiLSTMCRF(config=dummy_config,
-                      datasets=[dummy_dataset_1],
+                      datasets=[conll2003datasetreader_load],
                       embeddings=dummy_embeddings,
                       # to test passing of arbitrary keyword args to constructor
                       totally_arbitrary='arbitrary')
@@ -409,51 +480,51 @@ def bilstm_crf_model_embeddings_specify(bilstm_crf_model_embeddings):
 
 
 @pytest.fixture
-def base_model(dummy_config, dummy_dataset_1):
+def base_model(dummy_config, conll2003datasetreader_load):
     """Returns an instance of BiLSTMCRF initialized with the default configuration."""
     model = BaseModel(config=dummy_config,
-                      datasets=[dummy_dataset_1],
+                      datasets=[conll2003datasetreader_load],
                       # to test passing of arbitrary keyword args to constructor
                       totally_arbitrary='arbitrary')
     return model
 
 
 @pytest.fixture
-def mt_base_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+def mt_base_model(dummy_config, conll2003datasetreader_load, dummy_dataset_2):
     """Returns an instance of BiLSTMCRF initialized with the default configuration."""
     model = BaseModel(config=dummy_config,
-                      datasets=[dummy_dataset_1, dummy_dataset_2],
+                      datasets=[conll2003datasetreader_load, dummy_dataset_2],
                       # to test passing of arbitrary keyword args to constructor
                       totally_arbitrary='arbitrary')
     return model
 
 
 @pytest.fixture
-def base_keras_model(dummy_config, dummy_dataset_1):
+def base_keras_model(dummy_config, conll2003datasetreader_load):
     """Returns an instance of BiLSTMCRF initialized with the default configuration."""
     model = BaseKerasModel(config=dummy_config,
-                           datasets=[dummy_dataset_1],
+                           datasets=[conll2003datasetreader_load],
                            # to test passing of arbitrary keyword args to constructor
                            totally_arbitrary='arbitrary')
     return model
 
 
 @pytest.fixture
-def mt_base_keras_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+def mt_base_keras_model(dummy_config, conll2003datasetreader_load, dummy_dataset_2):
     """Returns an instance of BiLSTMCRF initialized with the default configuration."""
     model = BaseKerasModel(config=dummy_config,
-                           datasets=[dummy_dataset_1, dummy_dataset_2],
+                           datasets=[conll2003datasetreader_load, dummy_dataset_2],
                            # to test passing of arbitrary keyword args to constructor
                            totally_arbitrary='arbitrary')
     return model
 
 
 @pytest.fixture
-def base_keras_model_embeddings(dummy_config, dummy_dataset_1, dummy_embeddings):
+def base_keras_model_embeddings(dummy_config, conll2003datasetreader_load, dummy_embeddings):
     """Returns an instance of BiLSTMCRF initialized with the default configuration file and
     loaded embeddings"""
     model = BaseKerasModel(config=dummy_config,
-                           datasets=[dummy_dataset_1],
+                           datasets=[conll2003datasetreader_load],
                            embeddings=dummy_embeddings,
                            # to test passing of arbitrary keyword args to constructor
                            totally_arbitrary='arbitrary')
@@ -461,53 +532,55 @@ def base_keras_model_embeddings(dummy_config, dummy_dataset_1, dummy_embeddings)
 
 
 @pytest.fixture
-def base_pytorch_model(dummy_config, dummy_dataset_1):
+def base_pytorch_model(dummy_config, conll2003datasetreader_load):
     """Returns an instance of BiLSTMCRF initialized with the default configuration."""
     model = BasePyTorchModel(config=dummy_config,
-                             datasets=[dummy_dataset_1],
+                             datasets=[conll2003datasetreader_load],
                              # to test passing of arbitrary keyword args to constructor
                              totally_arbitrary='arbitrary')
     return model
 
 
 @pytest.fixture
-def mt_base_pytorch_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+def mt_base_pytorch_model(dummy_config, conll2003datasetreader_load, dummy_dataset_2):
     """Returns an instance of BiLSTMCRF initialized with the default configuration."""
     model = BasePyTorchModel(config=dummy_config,
-                             datasets=[dummy_dataset_1, dummy_dataset_2],
+                             datasets=[conll2003datasetreader_load, dummy_dataset_2],
                              # to test passing of arbitrary keyword args to constructor
                              totally_arbitrary='arbitrary')
     return model
 
-# BERT models
 
+####################################################################################################
+# BERT models
+####################################################################################################
 
 @pytest.fixture
 def bert_tokenizer():
     """Tokenizer for pre-trained BERT model.
     """
-    bert_tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
+    bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=False)
 
     return bert_tokenizer
 
 
 @pytest.fixture
-def bert_for_ner_model(dummy_config, dummy_dataset_1):
+def bert_for_ner_model(dummy_config, conll2003datasetreader_load):
     """Returns an instance of BertForTokenClassification initialized with the default
     configuration."""
     model = BertForNER(config=dummy_config,
-                       datasets=[dummy_dataset_1],
+                       datasets=[conll2003datasetreader_load],
                        # to test passing of arbitrary keyword args to constructor
                        totally_arbitrary='arbitrary')
     return model
 
 
 @pytest.fixture
-def mt_bert_for_ner_model(dummy_config, dummy_dataset_1, dummy_dataset_2):
+def mt_bert_for_ner_model(dummy_config, conll2003datasetreader_load, dummy_dataset_2):
     """Returns an instance of BertForTokenClassification initialized with the default
     configuration."""
     model = BertForNER(config=dummy_config,
-                       datasets=[dummy_dataset_1, dummy_dataset_2],
+                       datasets=[conll2003datasetreader_load, dummy_dataset_2],
                        # to test passing of arbitrary keyword args to constructor
                        totally_arbitrary='arbitrary')
     return model
@@ -554,25 +627,61 @@ def mt_bert_for_ner_model_save(dummy_dir, mt_bert_for_ner_model_specify):
 
     return model, model_filepath
 
-# metrics
+
+@pytest.fixture
+def bert_for_joint_ner_and_rc_model(dummy_config, conll2004datasetreader_load):
+    """Returns an instance of BertForTokenClassification initialized with the default
+    configuration."""
+    model = BertForJointNERAndRC(config=dummy_config,
+                                 datasets=[conll2004datasetreader_load],
+                                 # to test passing of arbitrary keyword args to constructor
+                                 totally_arbitrary='arbitrary')
+    return model
 
 
 @pytest.fixture
-def dummy_metrics(dummy_config, dummy_dataset_1, dummy_training_data, dummy_output_dir,
+def bert_for_joint_ner_and_rc_specify(bert_for_joint_ner_and_rc_model):
+    """Returns an instance of BertForTokenClassification initialized with the default configuration
+    file and a single specified model."""
+    bert_for_joint_ner_and_rc_model.specify()
+
+    return bert_for_joint_ner_and_rc_model
+
+
+@pytest.fixture
+def bert_for_joint_ner_and_rc_save(dummy_dir, bert_for_joint_ner_and_rc_specify):
+    """Saves a model by calling `single_bert_for_ner_model_specify.save()` and returns the
+    filepath to the saved model."""
+    model = bert_for_joint_ner_and_rc_specify
+    model_filepath = os.path.join(dummy_dir, constants.PYTORCH_MODEL_FILENAME)
+
+    bert_for_joint_ner_and_rc_specify.save(model_filepath=model_filepath)
+
+    return model, model_filepath
+
+
+####################################################################################################
+# Metrics
+####################################################################################################
+
+@pytest.fixture
+def dummy_metrics(dummy_config, conll2003datasetreader_load, dummy_training_data, dummy_output_dir,
                   base_keras_model):
     """Returns an instance of Metrics.
     """
     metrics = Metrics(config=dummy_config,
                       model_=base_keras_model,
                       training_data=dummy_training_data,
-                      idx_to_tag=dummy_dataset_1.idx_to_tag,
+                      idx_to_tag=conll2003datasetreader_load.idx_to_tag,
                       output_dir=dummy_output_dir,
                       # to test passing of arbitrary keyword args to constructor
                       totally_arbitrary='arbitrary')
     return metrics
 
-# annotations
 
+####################################################################################################
+# Annotations
+####################################################################################################
 
 @pytest.fixture
 def blank_annotation():
@@ -631,8 +740,10 @@ def prge_annotation():
 
     return annotation
 
-# preprocessing
 
+####################################################################################################
+# Preprocessing
+####################################################################################################
 
 @pytest.fixture
 def preprocessor():
