@@ -8,8 +8,8 @@ import os
 
 from pkg_resources import resource_filename
 
-from .constants import MODEL_NAMES
 from .constants import CONFIG_FILENAME
+from .constants import MODEL_NAMES
 from .constants import PRETRAINED_MODELS
 from .preprocessor import Preprocessor
 from .utils import generic_utils
@@ -144,6 +144,7 @@ class Config(object):
             args['save_model'] = config['mode'].getboolean('save_model')
             # data
             args['dataset_folder'] = config['data']['dataset_folder'].split(',')
+            args['dataset_reader'] = config['data']['dataset_reader']
             args['output_folder'] = config['data']['output_folder']
             args['pretrained_model'] = config['data']['pretrained_model']
             args['pretrained_embeddings'] = config['data']['pretrained_embeddings']
@@ -198,6 +199,7 @@ class Config(object):
         """
         # normalize strings
         args['model_name'] = Preprocessor.sterilize(args['model_name'], lower=True)
+        args['dataset_reader'] = Preprocessor.sterilize(args['dataset_reader'], lower=True)
         args['optimizer'] = Preprocessor.sterilize(args['optimizer'], lower=True)
         args['activation'] = Preprocessor.sterilize(args['activation'], lower=True)
         args['criteria'] = Preprocessor.sterilize(args['criteria'], lower=True)
@@ -245,6 +247,11 @@ class Config(object):
                             help=("Path to the dataset folder. Expects a file 'train.*' to be "
                                   "present. Optionally, 'valid.*' and 'test.*' may be provided. "
                                   "Multiple datasets can be provided, sperated by a space"))
+        parser.add_argument('--dataset_reader', required=False, type=str,
+                            default='CoNLL2003DatasetReader',
+                            choices=['CoNLL2003DatasetReader', 'CoNLL2004DatasetReader'],
+                            help=("Dataset reader to use, should be 'CoNLL2003DatasetReader' (for"
+                                  " NER datasets or CoNLL2004DatasetReader for RE datasets"))
         parser.add_argument('--debug', required=False, action='store_true',
                             help=('If provided, only a small proportion of the dataset, and any '
                                   'provided embeddings, are loaded. Useful for debugging.'))

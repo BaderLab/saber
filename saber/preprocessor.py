@@ -6,13 +6,14 @@ import logging
 import re
 from collections import Counter
 
-import spacy
 import neuralcoref
-import numpy as np
+import spacy
 from keras.preprocessing.sequence import pad_sequences
 
 from . import constants
-from .utils import generic_utils, text_utils
+from .constants import UNK
+from .utils import generic_utils
+from .utils import text_utils
 
 LOGGER = logging.getLogger(__name__)
 
@@ -110,11 +111,11 @@ class Preprocessor():
 
         else:
             if not generic_utils.is_consecutive(initial_mapping.values()):
-                err_msg = ("`initial_mapping.values()` must be a consecutive list of ints from 0 "
-                           "to `len(initial_mapping)`")
+                err_msg = ("Expected initial_mapping.values() to be a consecutive list of ints"
+                           f"from 0 to len(initial_mapping). Got {initial_mapping.values()}")
                 LOGGER.error('ValueError: %s', err_msg)
                 raise ValueError(err_msg)
-            # start mapping from end of initial_mapping
+            # Start mapping from end of initial_mapping
             mapping = copy.deepcopy(initial_mapping)
             offset = max(initial_mapping.values()) + 1
             for type_ in types:
@@ -124,7 +125,7 @@ class Preprocessor():
             return mapping
 
     @staticmethod
-    def get_type_idx_sequence(seq, type_to_idx, type_='word'):
+    def get_type_idx_sequence(seq, type_to_idx, type_='word', pad=True):
         """Maps `seq` to a corresponding sequence of indices using `type_to_idx` map.
 
         Maps `seq`, which contains a sequence of elements (words, characters, or tags), for each
@@ -134,61 +135,69 @@ class Preprocessor():
         are truncated or right-padded to match a length of `constants.MAX_CHAR_LEN`.
 
         Args:
-            seq (list): list of lists where each list represents a sentence and each inner list
-            contains either words, characters or tags
-            type_to_idx (dict): a mapping from unique elements in `seq` to unique integer ids
-            type_ (str): one of 'word', 'char', 'tag', specifying that `seq` is a sequence of
-                words, characters or tags respectively
+            seq (list): A list of lists where each list represents a sentence and each inner list
+                contains either words, characters or tags.
+            type_to_idx (dict): A mapping from unique elements in `seq` to unique integer ids.
+            type_ (str): One of 'word', 'char', 'ent' or 're', specifying that `seq` is a sequence
+                of words, characters or entity/relation tags respectively.
+            pad (bool): Optional, True if sequences should be right-padded and truncated.
 
         Returns:
             `seq`, where all elements have been mapped to unique integer ids based on `type_to_idx`
 
         Raises:
-            ValueError, if `type_` is not one of 'word', 'char', 'tag'
+            ValueError, if `type_` is not one of 'word', 'char', 'ent' or 'rel'.
         """
-        if type_ not in ['word', 'char', 'tag']:
-            err_msg = ("Argument `type_` to `Preprocessor.get_type_idx_sequence()` must be one "
-                       "'word', 'char' or 'type'")
+        if type_ not in ['word', 'char', 'ent', 'rel']:
+            err_msg = ("Expected argument `type_` to be one of 'word', 'char', 'ent' or 'rel'."
+                       f" Got {type_}")
             LOGGER.error('ValueError: %s', err_msg)
             raise ValueError(err_msg)
 
         # word type
         if type_ == 'word':
-            type_seq = [[type_to_idx.get(x, type_to_idx[constants.UNK]) for x in s] for s in seq]
-        # tag type
-        elif type_ == 'tag':
-            type_seq = [[type_to_idx.get(x) for x in s] for s in seq]
-        # char type
+            type_seq = [[type_to_idx.get(x, type_to_idx[UNK]) for x in s] for s in seq]
+        # Tag types
+        elif type_ == 'ent':
+            type_seq = [[type_to_idx[x] for x in s] for s in seq]
+        elif type_ == 'rel':
+            type_seq = [[x[:2] + [type_to_idx[x[-1]]] for x in s] for s in seq]
+        # Char type
         elif type_ == 'char':
             # get index sequence of chars
-            type_seq = [[[type_to_idx.get(c, type_to_idx[constants.UNK]) for c in w] for w in s] for
+            type_seq = [[[type_to_idx.get(c, type_to_idx[UNK]) for c in w] for w in s] for
                         s in seq]
 
-            # create a sequence of padded character vectors
-            for i, char_seq in enumerate(type_seq):
-                type_seq[i] = pad_sequences(sequences=char_seq,
-                                            maxlen=constants.MAX_CHAR_LEN,
-                                            padding="post",
-                                            truncating='post',
-                                            value=constants.PAD_VALUE)
-        # pad sequences
-        type_seq = pad_sequences(sequences=type_seq,
-                                 maxlen=constants.MAX_SENT_LEN,
-                                 padding='post',
-                                 truncating='post',
-                                 value=constants.PAD_VALUE)
+            # Create a sequence of padded character vectors
+            if pad:
+                for i, char_seq in enumerate(type_seq):
+                    type_seq[i] = pad_sequences(sequences=char_seq,
+                                                maxlen=constants.MAX_CHAR_LEN,
+                                                padding="post",
+                                                truncating='post',
+                                                value=constants.PAD_VALUE)
+        if pad:
+            type_seq = pad_sequences(sequences=type_seq,
+                                     maxlen=constants.MAX_SENT_LEN,
+                                     padding='post',
+                                     truncating='post',
+                                     value=constants.PAD_VALUE)
 
-        return np.asarray(type_seq)
+        return type_seq
 
     @staticmethod
     def chunk_entities(seq):
-        """Chunks entities in the BIO or BIOES format.
-        For a given sequence of entities in the BIO or BIOES format, returns the chunked entities.
-        Note that invalid tag sequences will not be returned as chunks.
+        """Chunks entities in the BIO, BIOES or BIOLU formats.
+
+        For a given sequence of entities in the BIO, BIOES or BIOLU format, returns the chunked
+        entities. Note that invalid tag sequences will not be returned as chunks.
+
         Args:
             seq (list): sequence of labels.
+
         Returns:
             list: list of [chunk_type, chunk_start (inclusive), chunk_end (exclusive)].
+
         Example:
             >>> seq = ['B-PRGE', 'I-PRGE', 'O', 'B-PRGE']
             >>> chunk_entities(seq)
@@ -199,9 +208,9 @@ class Preprocessor():
         seq = seq + ['O']  # add sentinel
         types = [tag.split('-')[-1] for tag in seq]
         while i < len(seq):
-            if seq[i].startswith('B'):
+            if seq[i].startswith(('B', 'S', 'U')):
                 for j in range(i + 1, len(seq)):
-                    if seq[j].startswith('I') and types[j] == types[i]:
+                    if seq[j].startswith(('I', 'E', 'L')) and types[j] == types[i]:
                         continue
                     break
                 chunks.append((types[i], i, j))
@@ -232,11 +241,11 @@ class Preprocessor():
         for sent in sentences:
             token_count.update(sent)
 
-        # replace rare words with constants.UNK token
+        # replace rare words with UNK token
         for i, sent in enumerate(sentences):
             for j, token in enumerate(sent):
                 if token_count[token] <= count:
-                    sentences[i][j] = constants.UNK
+                    sentences[i][j] = UNK
 
         return sentences
 
