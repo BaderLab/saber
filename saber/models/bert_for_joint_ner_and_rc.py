@@ -173,8 +173,6 @@ class BertForJointNERAndRC(BasePyTorchModel):
         training_data = self.prepare_data_for_training()
         output_dir = model_utils.prepare_output_directory(self.config)
 
-        best_loss = [1e9] * self.config.k_folds
-
         def train_valid_test(training_data, output_dir, optimizers):
             # use 10% of train data as validation data if no validation data provided
             # if training_data[0]['x_valid'] is None:
@@ -369,14 +367,6 @@ class BertForJointNERAndRC(BasePyTorchModel):
                             }
                             pbar.set_postfix(postfix)
 
-                    '''
-                    _, _, eval_loss = self.evaluate(training_data[model_idx][fold],
-                                                    model_idx,
-                                                    'valid')
-                    if eval_loss < best_loss[fold]:
-                        best_loss[fold] = eval_loss
-                    '''
-
                     for metric in metrics:
                         # Need to feed epoch argument manually, as this is a keras callback object
                         metric.on_epoch_end(epoch=epoch)
@@ -398,8 +388,6 @@ class BertForJointNERAndRC(BasePyTorchModel):
             print(f'Using {self.config.k_folds}-fold cross-validation strategy...')
             LOGGER.info('Used %s-fold cross-validation strategy for training', self.config.k_folds)
             cross_validation(training_data, output_dir, optimizers)
-
-        return best_loss
 
     def evaluate(self, training_data, model_idx=-1, partition='train'):
         """Get `y_true` and `y_pred` for given inputs and targets in `training_data`.

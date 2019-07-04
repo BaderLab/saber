@@ -124,10 +124,10 @@ def wordpiece_tokenize_sents(tokens, tokenizer, labels=None):
     bert_tokens = []
     orig_to_tok_map = []
 
-    for sent_idx, sent in enumerate(tokens):
+    for sent in tokens:
         bert_tokens.append([CLS])
         orig_to_tok_map.append([])
-        for tok_idx, orig_token in enumerate(sent):
+        for orig_token in sent:
             orig_to_tok_map[-1].append(len(bert_tokens[-1]))
             bert_tokens[-1].extend(tokenizer.wordpiece_tokenizer.tokenize(orig_token))
         bert_tokens[-1].append(SEP)
@@ -135,10 +135,10 @@ def wordpiece_tokenize_sents(tokens, tokenizer, labels=None):
     # If labels are provided, project them onto bert_tokens
     if labels is not None:
         bert_labels = []
-        for toks, labs, tok_map in zip(bert_tokens, labels, orig_to_tok_map):
+        for bert_toks, labs, tok_map in zip(bert_tokens, labels, orig_to_tok_map):
             labs_iter = iter(labs)
             bert_labels.append([])
-            for i, tok in enumerate(toks):
+            for i, _ in enumerate(bert_toks):
                 bert_labels[-1].extend([WORDPIECE if i not in tok_map else next(labs_iter)])
 
         return bert_tokens, orig_to_tok_map, bert_labels

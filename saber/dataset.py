@@ -197,18 +197,6 @@ class Dataset(object):
             class_weights['rel'] = compute_class_weight(class_weight='balanced',
                                                         classes=np.unique(rels),
                                                         y=rels)
-        '''
-        from collections import Counter
-
-        ents = [e for s in self.idx_seq['train']['ent'] for e in s]
-        ents_cnt = Counter(ents)
-
-        ent_weights = [1] * len(set(ents_cnt))
-        for i, _ in enumerate(ent_weights):
-            ent_weights[i] = 1 - (ents_cnt[i] / len(ents))
-
-        class_weights['ent'] = ent_weights
-        '''
 
         return class_weights
 
@@ -331,7 +319,7 @@ class CoNLL2004DatasetReader(Dataset):
                             columns = line.strip().split('\t')
                             # If more than three columns, this is an ent, otherwise it is a rel
                             if len(columns) > 3:
-                                sent_idx, ent, _, _, _, token, _, _, _ = columns
+                                _, ent, _, _, _, token, _, _, _ = columns
 
                                 word_seq[-1].append(token)
                                 char_seq[-1].append(list(token))
