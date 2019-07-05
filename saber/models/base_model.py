@@ -17,11 +17,12 @@ LOGGER = logging.getLogger(__name__)
 class BaseModel():
     """Parent class of all deep learning models implemented by Saber.
 
-    config (Config): A Config object which contains a set of harmonized arguments provided in a
-        *.ini file and, optionally, from the command line.
-    datasets (list): A list containing one or more Dataset objects.
-    embeddings (Embeddings): An object containing loaded word embeddings.
-    models (list): A list of Keras or PyTorch models.
+    Attributes:
+        config (Config): A Config object which contains a set of harmonized arguments provided in a
+            *.ini file and, optionally, from the command line.
+        datasets (list): A list containing one or more Dataset objects.
+        embeddings (Embeddings): An object containing loaded word embeddings.
+        models (list): A list of Keras or PyTorch models.
     """
     def __init__(self, config, datasets, embeddings=None, **kwargs):
         self.config = config  # Hyperparameters and model details
