@@ -1,13 +1,10 @@
-"""Any and all unit tests for the BaseKerasModel (saber/models/base_model.py).
-"""
-from ..models.base_model import BaseModel
-from ..models.base_model import BaseKerasModel
-from ..models.base_model import BasePyTorchModel
-from .resources.constants import *
-from .. import constants
-
-from torch import nn
 import pytest
+from torch import nn
+
+from .. import constants
+from ..models.base_model import BaseKerasModel
+from ..models.base_model import BaseModel
+from ..models.base_model import BasePyTorchModel
 
 
 class TestBaseModel(object):
@@ -15,7 +12,7 @@ class TestBaseModel(object):
     """
     def test_attributes_init_of_base_model(self,
                                            dummy_config,
-                                           dummy_dataset_1,
+                                           conll2003datasetreader_load,
                                            base_model):
         """Asserts instance attributes are initialized correctly when single `BaseModel` model is
         initialized.
@@ -24,7 +21,7 @@ class TestBaseModel(object):
 
         # attributes that are passed to __init__
         assert base_model.config is dummy_config
-        assert base_model.datasets[0] is dummy_dataset_1
+        assert base_model.datasets[0] is conll2003datasetreader_load
         assert base_model.embeddings is None
 
         # other instance attributes
@@ -35,7 +32,7 @@ class TestBaseModel(object):
 
     def test_attributes_init_of_mt_base_model(self,
                                               dummy_config,
-                                              dummy_dataset_1,
+                                              conll2003datasetreader_load,
                                               dummy_dataset_2,
                                               mt_base_model):
         """Asserts instance attributes are initialized correctly when compound `BaseModel` model is
@@ -45,7 +42,7 @@ class TestBaseModel(object):
 
         # attributes that are passed to __init__
         assert mt_base_model.config is dummy_config
-        assert mt_base_model.datasets[0] is dummy_dataset_1
+        assert mt_base_model.datasets[0] is conll2003datasetreader_load
         assert mt_base_model.datasets[1] is dummy_dataset_2
         assert mt_base_model.embeddings is None
 
@@ -55,16 +52,13 @@ class TestBaseModel(object):
         # test that we can pass arbitrary keyword arguments
         assert mt_base_model.totally_arbitrary == 'arbitrary'
 
-    def test_reset_model(base_model):
-        pass
-
 
 class TestBaseKerasModel(object):
     """Collects all unit tests for `saber.models.base_model.BaseKerasModel`.
     """
     def test_attributes_init_of_base_keras_model(self,
                                                  dummy_config,
-                                                 dummy_dataset_1,
+                                                 conll2003datasetreader_load,
                                                  base_keras_model):
         """Asserts instance attributes are initialized correctly when single `BaseKerasModel` model is
         initialized without embeddings (`embeddings` attribute is None.)
@@ -73,7 +67,7 @@ class TestBaseKerasModel(object):
 
         # attributes that are passed to __init__
         assert base_keras_model.config is dummy_config
-        assert base_keras_model.datasets[0] is dummy_dataset_1
+        assert base_keras_model.datasets[0] is conll2003datasetreader_load
         assert base_keras_model.embeddings is None
 
         # other instance attributes
@@ -85,7 +79,7 @@ class TestBaseKerasModel(object):
 
     def test_attributes_init_of_mt_base_keras_model(self,
                                                     dummy_config,
-                                                    dummy_dataset_1,
+                                                    conll2003datasetreader_load,
                                                     dummy_dataset_2,
                                                     mt_base_keras_model):
         """Asserts instance attributes are initialized correctly when compound `BaseKerasModel` model is
@@ -95,7 +89,7 @@ class TestBaseKerasModel(object):
 
         # attributes that are passed to __init__
         assert mt_base_keras_model.config is dummy_config
-        assert mt_base_keras_model.datasets[0] is dummy_dataset_1
+        assert mt_base_keras_model.datasets[0] is conll2003datasetreader_load
         assert mt_base_keras_model.datasets[1] is dummy_dataset_2
         assert mt_base_keras_model.embeddings is None
 
@@ -108,7 +102,7 @@ class TestBaseKerasModel(object):
 
     def test_attributes_init_of_single_model_embeddings(self,
                                                         dummy_config,
-                                                        dummy_dataset_1,
+                                                        conll2003datasetreader_load,
                                                         dummy_embeddings,
                                                         base_keras_model_embeddings):
         """Asserts instance attributes are initialized correctly when single `BaseKerasModel` model is
@@ -118,7 +112,7 @@ class TestBaseKerasModel(object):
 
         # attributes that are passed to __init__
         assert base_keras_model_embeddings.config is dummy_config
-        assert base_keras_model_embeddings.datasets[0] is dummy_dataset_1
+        assert base_keras_model_embeddings.datasets[0] is conll2003datasetreader_load
         assert base_keras_model_embeddings.embeddings is dummy_embeddings
 
         # other instance attributes
@@ -151,7 +145,7 @@ class TestBasePyTorchModel(object):
     """
     def test_attributes_init_of_base_pytorch_model(self,
                                                    dummy_config,
-                                                   dummy_dataset_1,
+                                                   conll2003datasetreader_load,
                                                    base_pytorch_model):
         """Asserts instance attributes are initialized correctly when single `BasePyTorchModel` model is
         initialized.
@@ -160,7 +154,7 @@ class TestBasePyTorchModel(object):
 
         # attributes that are passed to __init__
         assert base_pytorch_model.config is dummy_config
-        assert base_pytorch_model.datasets[0] is dummy_dataset_1
+        assert base_pytorch_model.datasets[0] is conll2003datasetreader_load
         assert base_pytorch_model.embeddings is None
 
         # other instance attributes
@@ -172,7 +166,7 @@ class TestBasePyTorchModel(object):
 
     def test_attributes_init_of_mt_base_pytorch_model(self,
                                                       dummy_config,
-                                                      dummy_dataset_1,
+                                                      conll2003datasetreader_load,
                                                       dummy_dataset_2,
                                                       mt_base_pytorch_model):
         """Asserts instance attributes are initialized correctly when single `BasePyTorchModel` model is
@@ -182,7 +176,7 @@ class TestBasePyTorchModel(object):
 
         # attributes that are passed to __init__
         assert mt_base_pytorch_model.config is dummy_config
-        assert mt_base_pytorch_model.datasets[0] is dummy_dataset_1
+        assert mt_base_pytorch_model.datasets[0] is conll2003datasetreader_load
         assert mt_base_pytorch_model.datasets[1] is dummy_dataset_2
         assert mt_base_pytorch_model.embeddings is None
 
@@ -193,6 +187,12 @@ class TestBasePyTorchModel(object):
         # Test that we can pass arbitrary keyword arguments
         assert mt_base_pytorch_model.totally_arbitrary == 'arbitrary'
 
+    def test_prune_output_layers_value_error(self, bert_for_ner_model_specify):
+        """Asserts that `BaseKerasModel.prune_output_layers()` returns a ValueError when it is
+        called from a model with only one output layer."""
+        with pytest.raises(ValueError):
+            bert_for_ner_model_specify.prune_output_layers([0])
+
     def test_prune_output_layers(self, mt_bert_for_ner_model_specify):
         """Asserts that the expected output layers are retained after a call to
         `BasePyTorchModel.prune_output_layers()`.
@@ -200,7 +200,7 @@ class TestBasePyTorchModel(object):
         expected = nn.ModuleList([mt_bert_for_ner_model_specify.model.classifier[-1]])
         actual = mt_bert_for_ner_model_specify.prune_output_layers([-1]).classifier
 
-        # TODO (John): Comparing ModuleList to ModuleList with == wasn't working, so I wrote these
+        # Comparing ModuleList to ModuleList with == wasn't working, so I wrote these
         # three tests to achieve the same thing.
         assert isinstance(actual, nn.ModuleList)
         assert len(expected) == len(actual)
