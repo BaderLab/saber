@@ -5,7 +5,8 @@ import logging
 import os
 from itertools import chain
 
-from sklearn.model_selection import KFold, train_test_split
+from sklearn.model_selection import KFold
+from sklearn.model_selection import train_test_split
 
 from .. import constants
 from ..preprocessor import Preprocessor
@@ -62,10 +63,15 @@ def load_single_dataset(config):
     Returns:
         A list containing a single Dataset object.
     """
-    from ..dataset import Dataset  # breaks circular import
+    if config.dataset_reader == 'conll2003datasetreader':
+        from ..dataset import CoNLL2003DatasetReader
+        dataset = CoNLL2003DatasetReader(dataset_folder=config.dataset_folder[0],
+                                         replace_rare_tokens=config.replace_rare_tokens)
+    elif config.dataset_reader == 'conll2004datasetreader':
+        from ..dataset import CoNLL2004DatasetReader
+        dataset = CoNLL2004DatasetReader(dataset_folder=config.dataset_folder[0],
+                                         replace_rare_tokens=config.replace_rare_tokens)
 
-    dataset = Dataset(dataset_folder=config.dataset_folder[0],
-                      replace_rare_tokens=config.replace_rare_tokens)
     dataset.load()
 
     return [dataset]
@@ -85,12 +91,17 @@ def load_compound_dataset(config):
     Returns:
         A list containing multiple Dataset objects.
     """
-    from ..dataset import Dataset  # breaks circular import
-
     # accumulate and load each dataset
     compound_dataset = []
     for dir_ in config.dataset_folder:
-        dataset = Dataset(dataset_folder=dir_, replace_rare_tokens=config.replace_rare_tokens)
+        if config.dataset_reader == 'conll2003datasetreader':
+            from ..dataset import CoNLL2003DatasetReader
+            dataset = CoNLL2003DatasetReader(dataset_folder=dir_,
+                                             replace_rare_tokens=config.replace_rare_tokens)
+        elif config.dataset_reader == 'conll2004datasetreader':
+            from ..dataset import CoNLL2003DatasetReader
+            dataset = CoNLL2003DatasetReader(dataset_folder=dir_,
+                                             replace_rare_tokens=config.replace_rare_tokens)
         dataset.load()
         compound_dataset.append(dataset)
 
@@ -112,7 +123,8 @@ def load_compound_dataset(config):
     }
     for dataset in compound_dataset:
         # 3. update each datasets type_to_idx mappings (for word and char types only)
-        word_types, char_types = list(dataset.type_to_idx['word']), list(dataset.type_to_idx['char'])
+        word_types = list(dataset.type_to_idx['word'])
+        char_types = list(dataset.type_to_idx['char'])
         dataset.type_to_idx['word'] = Preprocessor.type_to_idx(word_types, type_to_idx['word'])
         dataset.type_to_idx['char'] = Preprocessor.type_to_idx(char_types, type_to_idx['char'])
         # 4. re-compute the index sequences
@@ -162,7 +174,7 @@ def collect_valid_data(training_data, test_size=0.10):
         ValueError if `training_data` does not contain the keys 'x_train', 'y_train'.
     """
     if any(['x_train' not in data or 'y_train' not in data for data in training_data]):
-        err_msg = "Argument `training_data` must contain the keys 'x_train' and 'y_train'"
+        err_msg = "Argument `training_data` must contain the keys 'x_train' and 'y_train'."
         LOGGER.error("ValueError: %s", err_msg)
         raise ValueError(err_msg)
 
@@ -187,7 +199,7 @@ def collect_valid_data(training_data, test_size=0.10):
     return training_data
 
 
-def get_train_valid_indices(training_data, k_folds):
+def get_train_valid_indices(training_data, k_folds, shuffle=True):
     """Get `k_folds` number of sets of train/valid indices for all datasets in `datasets`.
 
     For all Dataset objects in `datasets`, gets `k_folds` number of train and valid indices. Returns
@@ -204,12 +216,13 @@ def get_train_valid_indices(training_data, k_folds):
         A list of lists of two-tuples, where index [i][j] is a tuple containing the train and valid
         indicies (in that order) for the ith dataset and jth k-fold.
     """
-    train_valid_indices = []  # acc
-    kf = KFold(n_splits=k_folds, random_state=42)  # Sklearn KFold object
+    train_valid_indices = []
+    kf = KFold(n_splits=k_folds, shuffle=True, random_state=constants.RANDOM_STATE)
 
-    for i, _ in enumerate(training_data):
-        X, _ = training_data[i]['x_train']
-        train_valid_indices.append([(ti, vi) for ti, vi in kf.split(X)])
+    for _, data in enumerate(training_data):
+        (X, _), y = data['x_train'], data['y_train']
+
+        train_valid_indices.append([(ti, vi) for ti, vi in kf.split(X, y)])
 
     return train_valid_indices
 
@@ -256,6 +269,18 @@ def get_data_partitions(training_data, train_valid_indices):
                                         'x_test': training_data[i]['x_test'],
                                         'y_test': training_data[i]['y_test'],
                                         })
+
+            if training_data[i]['orig_to_tok_map_train'] is not None:
+                orig_to_tok_map_train = training_data[i]['orig_to_tok_map_train'][train_indices]
+                orig_to_tok_map_valid = training_data[i]['orig_to_tok_map_train'][valid_indices]
+                partitioned_data[i][-1]['orig_to_tok_map_train'] = orig_to_tok_map_train
+                partitioned_data[i][-1]['orig_to_tok_map_valid'] = orig_to_tok_map_valid
+
+            if training_data[i]['rel_labels_train'] is not None:
+                rel_labels_train = [training_data[i]['rel_labels_train'][k] for k in train_indices]
+                rel_labels_valid = [training_data[i]['rel_labels_train'][k] for k in valid_indices]
+                partitioned_data[i][-1]['rel_labels_train'] = rel_labels_train
+                partitioned_data[i][-1]['rel_labels_valid'] = rel_labels_valid
 
     return partitioned_data
 

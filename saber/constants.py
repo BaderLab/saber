@@ -26,21 +26,28 @@ NEURALCOREF_GREEDYNESS = 0.40
 # SPECIAL TOKENS
 UNK = '[UNK]'  # out-of-vocabulary token
 PAD = '[PAD]'  # sequence pad token
-START = '<START>'  # start-of-sentence token
-END = '<END>'  # end-of-sentence token
+START = '[START]'  # start-of-sentence token
+END = '[END]'  # end-of-sentence token
 OUTSIDE = 'O'  # 'outside' tag of the IOB, BIO, and IOBES tag formats
-WORDPIECE = 'X'  # special tag used by BERTs wordpiece tokenizer
+NEG = 'NEG'  # "no relation" class for relation classification
 
+WORDPIECE = 'X'  # special tag used by BERTs wordpiece tokenizer
 CLS = '[CLS]'  # special BERT classification token
 SEP = '[SEP]'  # special BERT sequence seperator token
+
+CHUNK_END_TAGS = ['L-', 'U-', 'E-', 'S-']  # Tags representing the end of a chunk
 
 # DATA
 RANDOM_STATE = 42  # random seed
 PAD_VALUE = 0  # value of sequence pad
 UNK_VALUE = 1  # value of unknown pad
+NEG_VALUE = 0  # value of NEG relation class
+TOK_MAP_PAD = -255  # value of original token map (used for WordPiece tokenized text) pad
 NUM_RARE = 1  # tokens that occur less than NUM_RARE times are replaced UNK
 # mapping of special tokens to contants
-INITIAL_MAPPING = {'word': {PAD: PAD_VALUE, UNK: UNK_VALUE}, 'tag':  {PAD: PAD_VALUE}}
+INITIAL_MAPPING = {'word': {PAD: PAD_VALUE, UNK: UNK_VALUE},
+                   'ent':  {PAD: PAD_VALUE},
+                   'rel': {NEG: NEG_VALUE}}
 # keys into dictionaries containing information for different partitions of a dataset
 PARTITIONS = ['train', 'valid', 'test']
 
@@ -75,7 +82,7 @@ CONFIG_FILENAME = 'config.ini'
 # batch size to use when performing model prediction
 PRED_BATCH_SIZE = 256
 # max length of a sentence
-MAX_SENT_LEN = 100
+MAX_SENT_LEN = 256
 # max length of a character sequence (word)
 MAX_CHAR_LEN = 25
 # number of units in the LSTM layers
@@ -83,7 +90,7 @@ UNITS_WORD_LSTM = 200
 UNITS_CHAR_LSTM = 200
 UNITS_DENSE = UNITS_WORD_LSTM // 2
 # possible models
-MODEL_NAMES = ['bilstm-crf-ner', 'bert-ner']
+MODEL_NAMES = ['bilstm-crf-ner', 'bert-ner', 'bert-ner-rc']
 # identifies a model by the framework it was written in
 KERAS = 'keras'
 PYTORCH = 'pytorch'

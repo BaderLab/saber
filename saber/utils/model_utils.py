@@ -2,32 +2,24 @@
 """
 import logging
 import os
-from itertools import chain
 from time import strftime
 
 import numpy as np
 import torch
 from google_drive_downloader import GoogleDriveDownloader as gdd
 from keras import optimizers
-from keras.callbacks import ModelCheckpoint, TensorBoard
-from keras.preprocessing.sequence import pad_sequences
-
-from pytorch_pretrained_bert.optimization import BertAdam
-from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
-                              TensorDataset)
+from keras.callbacks import ModelCheckpoint
+from keras.callbacks import TensorBoard
 
 from .. import constants
 from ..metrics import Metrics
-from .generic_utils import make_dir
 from .generic_utils import extract_directory
+from .generic_utils import make_dir
 
 LOGGER = logging.getLogger(__name__)
 
-# TODO (johnmgiorgi): This should be handeled better. Maybe as a config argument.
-FULL_FINETUNING = True
 
 # I/O
-
 
 def prepare_output_directory(config):
     """Create output directories `config.output_folder/config.dataset_folder` for each dataset.
@@ -236,24 +228,29 @@ def precision_recall_f1_support(true_positives, false_positives, false_negatives
 
 
 def mask_labels(y_true, y_pred, label):
-    """Masks pads from `y_true` and `y_pred`.
+    """Masks all instances of `label` from `y_true` and `y_pred` where `y_true == label`.
 
     Masks (removes) all indices in `y_true` and `y_pred` where `y_true` is equal to
     `label`. This step is necessary for discarding the sequence pad labels (and predictions made on
     these sequence pad labels) from the gold labels and model predictions before performance metrics
-    are computed.
+    are computed. Note that the returned elements are lists.
 
     Args:
-        y_true (np.array): 1D numpy array containing gold labels.
-        y_pred (np.array): 1D numpy array containing predicted labels.
+        y_true (array_like): 2D array containing gold labels.
+        y_pred (array_like): 2D array containing predicted labels.
         label (int): The label, or index to mask from the sequences `y_true` and `y_pred`.
 
     Returns:
-        `y_true` and `y_pred`, where all indices where `y_true` was equal to
-        `tag_to_idx[constants.PAD]` have been removed.
+        A tuple of lists, containing `y_true` and `y_pred`, where all indices where `y_true` was
+        equal to `label` have been removed.
     """
-    mask = y_true != label
-    y_true, y_pred = y_true[mask], y_pred[mask]
+    mask = y_true == label
+
+    y_true_masked = np.ma.masked_array(y_true, mask).tolist()
+    y_pred_masked = np.ma.masked_array(y_pred, mask).tolist()
+
+    y_true = [[y for y in sent if y is not None] for sent in y_true_masked]
+    y_pred = [[y for y in sent if y is not None] for sent in y_pred_masked]
 
     return y_true, y_pred
 
@@ -459,199 +456,3 @@ def get_device(model=None):
         print('No GPU available. Using CPU.')
 
     return device, n_gpu
-
-
-# BERT helper functions
-
-def setup_type_to_idx_for_bert(dataset):
-    """Modifies the `type_to_idx` object of `dataset` to be compatible with BERT.
-
-    BERT models use a special 'X' token (stored in `constants.WORDPIECE`) to denote
-    subtokens in a wordpiece token. This method modifys `dataset.type_to_idx['tag']` to be
-    compatible with BERT by adding this 'X' token and updating the index to tag mapping
-    (i.e., it calls `dataset.get_idx_to_tag()`).
-
-    Args:
-        dataset (Dataset): Dataset object.
-    """
-    # necc for dataset to be compatible with BERTs wordpiece tokenization
-    dataset.type_to_idx['tag']['X'] = len(dataset.type_to_idx['tag'])
-    dataset.get_idx_to_tag()
-
-
-def process_data_for_bert(tokenizer, word_seq, tag_seq=None, tag_to_idx=None):
-    """Process the input and label sequences `word_seq` and `tag_seq` to be compatible with BERT.
-
-    Args:
-        tokenizer (BertTokenizer): An object with methods for tokenizing text for input to BERT.
-        word_seq (list): A list of lists containing tokenized sentences.
-        tag_seq (list): A list of lists containing tags corresponding to `word_seq`.
-        tag_to_idx (dictionary): A dictionary mapping tags to unique integers.
-
-    Returns
-        Inputs (list of lists), labels (list of lists) and attention masks derived from `word_seq`
-        and `tag_seq` for use as input to a BERT based PyTorch model.
-    """
-    # re-tokenize to be compatible with BERT
-    x_type, y_type = tokenize_for_bert(tokenizer, word_seq, tag_seq)
-    # map these new tokens to indices using pre-trained BERT model
-    x_idx, y_idx, attention_masks = type_to_idx_for_bert(tokenizer, x_type, y_type, tag_to_idx)
-
-    return x_idx, y_idx, attention_masks
-
-
-# TODO (johnmgiorgi): See the BERT GitHub repo for code to do this more cleanly
-def tokenize_for_bert(tokenizer, word_seq, tag_seq=None):
-    """Using `tokenizer`, tokenizes `word_seq` and `tag_seq` such that they are compatible with
-    BERT.
-
-    Using `tokenizer`, an instance of `BertTokenizer`, tokenizes `word_seq`, a object containing
-    tokenized sentences, and `tag_seq`, which contains the tags corresponding to tokens in
-    `word_seq` in a way that is compatible with the PyTorch `BertForTokenClassification` model.
-    This involves subtokenization of tokens and the addition of a dummy 'X'.
-
-    Args:
-        tokenizer (BertTokenizer): An object with methods for tokenizing text for input to BERT.
-        word_seq (list): A list of lists containing tokenized sentences.
-        tag_seq (list): A list of lists containing tags corresponding to `word_seq`.
-
-    Returns:
-        A tuple, containing `word_seq`, `tag_seq` re-tokenized for use with BERT.
-    """
-    # produces a list of list of lists, with the innermost list containing wordpieces
-    bert_tokenized_text = [[tokenizer.wordpiece_tokenizer.tokenize(token) for token in sent] for
-                           sent in word_seq]
-
-    # if a tag sequence was provided, modifies it to match the wordpiece tokenization
-    bert_tokenized_labels = []
-    if tag_seq:
-        for i, _ in enumerate(bert_tokenized_text):
-            tokenized_labels = []
-            for token, label in zip(bert_tokenized_text[i], tag_seq[i]):
-                tokenized_labels.append([label] + [constants.WORDPIECE] * (len(token) - 1))
-            bert_tokenized_labels.append(list(chain.from_iterable(tokenized_labels)))
-
-    # flatten the tokenized text back to a list of lists
-    bert_tokenized_text = [list(chain.from_iterable(sent)) for sent in bert_tokenized_text]
-
-    return bert_tokenized_text, bert_tokenized_labels
-
-
-def type_to_idx_for_bert(tokenizer, word_seq, tag_seq=None, tag_to_idx=None):
-    """Returns the corresponding index sequence for `word_seq` (and `tag_seq` if provided).
-
-    Given `tokenizer, `word_seq` is mapped to the corresponding indices and post-padded. If
-    `tag_seq` and `tag_to_idx` is provided, the `tag_seq` is mapped to the corresponding indices
-    using `tag_to_idx`. Additionally, the attention masks for a BERT based model are also returned.
-
-    Args:
-        tokenizer (BertTokenizer): An object with methods for tokenizing text for input to BERT.
-        word_seq (list): A list of lists containing tokenized sentences.
-        tag_seq (list): A list of lists containing tags corresponding to `word_seq`.
-        tag_to_idx (dictionary): A dictionary mapping tags to unique integers.
-
-    Returns:
-        A three-tuple of the corresponding index sequence for `word_seq` and `tag_seq` along with
-        the attention masks for a BERT based model. If `taq_seq` or `tag_to_idx` are not provided,
-        the second value in the tuple is None.
-    """
-    # process words
-    bert_word_indices = \
-        pad_sequences(sequences=[tokenizer.convert_tokens_to_ids(sent) for sent in word_seq],
-                      maxlen=constants.MAX_SENT_LEN,
-                      dtype='long',
-                      padding='post',
-                      truncating='post',
-                      value=constants.PAD_VALUE)
-
-    # process tags, if provided
-    bert_tag_indices = []
-    if tag_seq and tag_to_idx:
-        bert_tag_indices = \
-            pad_sequences(sequences=[[tag_to_idx[tag] for tag in sent] for sent in tag_seq],
-                          maxlen=constants.MAX_SENT_LEN,
-                          dtype='long',
-                          padding="post",
-                          truncating="post",
-                          value=constants.PAD_VALUE)
-
-    # generate attention masks for padded data
-    bert_attention_masks = np.asarray([[float(idx > 0) for idx in sent]
-                                       for sent in bert_word_indices])
-
-    return bert_word_indices, bert_tag_indices, bert_attention_masks
-
-
-def get_dataloader_for_bert(x, y, attention_mask, batch_size, model_idx=0, data_partition='train'):
-    """Returns a `DataLoader` for inputs, labels, attention masks: `x`, `y`, `attention_mask`.
-
-    For the given inputs, labels and attention masks: `x`, `y`, `attention_mask`, returns the
-    appropriate `DataLoader` object based on `data_partition`.
-
-    Args:
-        x (numpy.ndarray): Numpy array or list containing the inputs for a BERT based model.
-        y (numpy.ndarray): Numpy array or list containing the corresponding labels for `x`.
-        attention_mask (numpy.ndarray): Numpy array or list containing the corresponding
-            attention masks labels for `x`.
-        config (Config): A Config object which contains a set of harmonized arguments provided in
-            a *.ini file and, optionally, from the command line.
-        data_partition (str): One of 'train' or 'eval'. If train, a `RandomSampler` is used for the
-            returned DataLoader, if eval, a `SequentialSampler` is used. Defaults to 'train'.
-
-    Raises:
-        ValueError if `data_partition` is not `train` or `eval`.
-
-    Returns:
-        A Torch DataLoader object for `x`, `y`, and `attention_masks`.
-    """
-    if data_partition not in {'train', 'eval'}:
-        err_msg = ("Expected one of 'train', 'eval' for argument `data_partition` to "
-                   "`get_dataloader_for_ber`. Got: '{}'".format(data_partition))
-        LOGGER.error('ValueError %s', err_msg)
-        raise ValueError(err_msg)
-
-    x = torch.as_tensor(x)
-    y = torch.as_tensor(y)
-    attention_mask = torch.as_tensor(attention_mask)
-    model_idx = torch.as_tensor(model_idx)
-
-    data = TensorDataset(x, attention_mask, y, model_idx)
-
-    if data_partition == 'train':
-        sampler = RandomSampler(data)
-    elif data_partition == 'eval':
-        sampler = SequentialSampler(data)
-
-    dataloader = DataLoader(data, sampler=sampler, batch_size=batch_size)
-
-    return dataloader
-
-
-def get_bert_optimizer(model, config):
-    """Returns an Adam optimizer configured for optimization of a BERT model (`model`).
-
-    Args:
-        config (Config): Contains a set of harmonized arguments provided in a *.ini file and,
-            optionally, from the command line.
-
-    Returns:
-        An initialized `BertAdam` optimizer for the training of a BERT model (`model`).
-    """
-    if FULL_FINETUNING:
-        param_optimizer = list(model.named_parameters())
-        no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
-        optimizer_grouped_parameters = [
-            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
-             'weight_decay': 0.01,
-             },
-            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
-             'weight_decay': 0.0,
-             }
-        ]
-    else:
-        param_optimizer = list(model.classifier.named_parameters())
-        optimizer_grouped_parameters = [{'params': [p for n, p in param_optimizer]}]
-
-    optimizer = BertAdam(optimizer_grouped_parameters, lr=config.learning_rate)
-
-    return optimizer

@@ -9,15 +9,17 @@ from itertools import chain
 from operator import itemgetter
 from pprint import pprint
 
-import numpy as np
 from spacy import displacy
 
 from . import constants
 from .config import Config
-from .dataset import Dataset
+from .dataset import CoNLL2003DatasetReader, CoNLL2004DatasetReader
 from .embeddings import Embeddings
 from .preprocessor import Preprocessor
-from .utils import data_utils, generic_utils, grounding_utils, model_utils
+from .utils import data_utils
+from .utils import generic_utils
+from .utils import grounding_utils
+from .utils import model_utils
 
 print('Saber version: {0}'.format(constants.__version__))
 LOGGER = logging.getLogger(__name__)
@@ -93,26 +95,10 @@ class Saber():
                       'settings': {}}
 
         for model in self.models:
-            X, y_preds = model.predict(sents)
-            X = X.ravel()
-
-            if not isinstance(y_preds, list):
-                y_preds = [y_preds]
-
+            y_preds = model.predict(sents)
             for y_pred, dataset in zip(y_preds, model.datasets):
-                y_pred = np.argmax(y_pred, axis=-1).ravel()
-
-                # Mask predictions where the input to the model was a pad
-                _, y_pred = \
-                    model_utils.mask_labels(X, y_pred, dataset.type_to_idx['word'][constants.PAD])
-
-                # TODO (John): This should be handeled in `model.predict`. See my QA model for help.
-                # remove wordpiece tags (bert-specific)
-                pred_tag_seq = [dataset.idx_to_tag[idx] for idx in y_pred
-                                if dataset.idx_to_tag[idx] != constants.WORDPIECE]
-
                 # Accumulate predicted entities
-                for chunk in self.preprocessor.chunk_entities(pred_tag_seq):
+                for chunk in self.preprocessor.chunk_entities(y_pred):
                     # Chunks are tuples (label, start, end), offsets is a lists of lists of tuples
                     start = char_offsets[chunk[1]][0]
                     end = char_offsets[chunk[-1] - 1][-1]
@@ -262,7 +248,10 @@ class Saber():
             attributes_for_inference = zip(model_attributes['type_to_idx'],
                                            model_attributes['idx_to_tag'])
             for type_to_idx, idx_to_tag in attributes_for_inference:
-                dataset = Dataset()
+                if self.config.dataset_reader == 'conll2003datasetreader':
+                    dataset = CoNLL2003DatasetReader()
+                elif self.config.dataset_reader == 'conll2004datasetreader':
+                    dataset = CoNLL2004DatasetReader()
                 dataset.type_to_idx = type_to_idx
                 dataset.idx_to_tag = idx_to_tag
 
@@ -453,6 +442,12 @@ class Saber():
             model = BertForNER(config=self.config,
                                datasets=self.datasets,
                                pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
+        elif self.config.model_name == 'bert-ner-rc':
+            print('Building the BERT model for joint NER and RC...', end=' ', flush=True)
+            from .models.bert_for_joint_ner_and_rc import BertForJointNERAndRC
+            model = BertForJointNERAndRC(config=self.config,
+                                         datasets=self.datasets,
+                                         pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
         # TODO: This should be handled in config, by supplying a list of options.
         else:
             err_msg = (f'`model_name` must be one of: {constants.MODEL_NAMES},'
@@ -483,13 +478,17 @@ class Saber():
         Raises:
             MissingStepException: If `self.datasets` or `self.model` are None.
         """
+        from statistics import mean
+
         if not self.models:
             err_msg = ('`Saber.models` is empty. Make sure to load at least one model with'
                        ' `Saber.load()` or `Saber.build()` before calling `Saber.train()`.')
             LOGGER.error('MissingStepException: %s', err_msg)
             raise MissingStepException(err_msg)
 
-        self.models[model_idx].train()
+        loss = self.models[model_idx].train()
+
+        return mean(loss)
 
 
 # https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
