@@ -231,7 +231,10 @@ class BertForJointNERAndRC(BasePyTorchModel):
                                 ent_labels=ent_labels,
                                 rel_labels=rel_labels
                             )
-                            loss = loss_ner + loss_re
+                            if epoch > 0:
+                                loss = loss_ner + loss_re
+                            else:
+                                loss = loss_ner
 
                             loss.backward()
 
