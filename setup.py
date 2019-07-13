@@ -39,6 +39,7 @@ setuptools.setup(
         'waitress>=1.1.0',
         'keras>=2.2.4',
         'PTable>=0.9.2',
+        'seqeval>=0.0.12',
         'spacy==2.1.0',
         'gensim>=3.4.0',
         'nltk>=3.3',
