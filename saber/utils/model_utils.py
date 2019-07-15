@@ -22,50 +22,53 @@ LOGGER = logging.getLogger(__name__)
 # I/O
 
 def prepare_output_directory(config):
-    """Create output directories `config.output_folder/config.dataset_folder` for each dataset.
+    """Returns a list of output directories for each `config.output_folder/config.dataset_folder`.
 
-    Creates the following directory structure:
+    For each dataset in `config.output_folder/config.dataset_folder`, creates a directory for saving
+    the results of a training session, which included performance evaluations (`evaluation.json`)
+    and a copy of the config file used (`config.json`).
+
+    The following directory structure is created:
+
     .
     ├── config.output_folder
     |   └── <first_dataset_name_second_dataset_name_nth_dataset_name>
     |       └── <first_dataset_name>
-    |           └── train_session_<month>_<day>_<hr>_<min>_<sec>
+    |           └── mmdd_HHMMSS
     |       └── <second_dataset_name>
-    |           └── train_session_<month>_<day>_<hr>_<min>_<sec>
+    |           └── mmdd_HHMMSS
     |       └── <nth_dataset_name>
-    |           └── train_session_<month>_<day>_<hr>_<min>_<sec>
+    |           └── mmdd_HHMMSS
 
-    In the case of only a single dataset,
-    <first_dataset_name_second_dataset_name_nth_dataset_name> and <first_dataset_name> are
-    collapsed into a single directory. Saves a copy of the config file used to train the model
-    (`config`) to the top level of this directory.
+    If `len(config.output_folder/config.dataset_folder) == 1`, only one directory is created under
+    `config.output_folder`.
 
     Args:
         config (Config): A Config object which contains a set of harmonized arguments provided in
             a *.ini file and, optionally, from the command line.
 
     Returns:
-        a list of directory paths to the subdirectories
-        train_session_<month>_<day>_<hr>_<min>_<sec>, one for each dataset in `dataset_folder`.
+        A list of directory paths to the subdirectories `mmdd_HHMMSS`, one for each dataset in
+        `dataset_folder`.
     """
     output_dirs = []
     output_folder = config.output_folder
-    # if multiple datasets, create additional directory to house all output directories
+    # If multiple datasets, create additional directory to house all output directories
     if len(config.dataset_folder) > 1:
         dataset_names = '_'.join([os.path.basename(ds) for ds in config.dataset_folder])
         output_folder = os.path.join(output_folder, dataset_names)
     make_dir(output_folder)
 
     for dataset in config.dataset_folder:
-        # create a subdirectory for each datasets name
+        # Ceate a subdirectory for each datasets name
         dataset_dir = os.path.join(output_folder, os.path.basename(dataset))
-        # create a subdirectory for each train session
-        train_session_dir = strftime("train_session_%a_%b_%d_%I_%M_%S").lower()
+
+        # Timestamp each datasets training output
+        train_session_dir = strftime(r"%m%d_%H%M%S")
         dataset_train_session_dir = os.path.join(dataset_dir, train_session_dir)
         output_dirs.append(dataset_train_session_dir)
         make_dir(dataset_train_session_dir)
 
-        # copy config file to top level directory
         config.save(dataset_train_session_dir)
 
     return output_dirs
@@ -149,7 +152,7 @@ def setup_tensorboard_callback(output_dir):
     return tensorboards
 
 
-def setup_metrics_callback(model, datasets, config, training_data, output_dir, fold=None):
+def setup_metrics_callback(config, model, datasets, training_data, output_dirs):
     """Creates Keras Metrics Callback objects, one for each dataset in `datasets`.
 
     Args:
@@ -167,15 +170,13 @@ def setup_metrics_callback(model, datasets, config, training_data, output_dir, f
         A list of Metric objects, one for each dataset in `datasets`.
     """
     metrics = []
-    for i, dataset in enumerate(datasets):
-        eval_data = training_data[i] if fold is None else training_data[i][fold]
+    for i, (train_data, dataset, output) in enumerate(zip(training_data, datasets, output_dirs)):
         metric = Metrics(config=config,
                          model_=model,
-                         training_data=eval_data,
+                         training_data=train_data,
                          idx_to_tag=dataset.idx_to_tag,
-                         output_dir=output_dir[i],
-                         model_idx=i,
-                         fold=fold)
+                         output_dir=output,
+                         model_idx=i)
         metrics.append(metric)
 
     return metrics
@@ -202,30 +203,7 @@ def setup_callbacks(config, output_dir):
     return callbacks
 
 
-# Evaluation metrics
-
-def precision_recall_f1_support(true_positives, false_positives, false_negatives):
-    """Returns the precision, recall, F1 and support from TP, FP and FN counts.
-
-    Returns a four-tuple containing the precision, recall, F1-score and support
-    For the given true_positive (TP), false_positive (FP) and
-    false_negative (FN) counts.
-
-    Args:
-        true_positives (int): Number of true-positives predicted by classifier.
-        false_positives (int): Number of false-positives predicted by classifier.
-        false_negatives (int): Number of false-negatives predicted by classifier.
-
-    Returns:
-        Four-tuple containing (precision, recall, f1, support).
-    """
-    precision = true_positives / (true_positives + false_positives) if true_positives > 0 else 0.
-    recall = true_positives / (true_positives + false_negatives) if true_positives > 0 else 0.
-    f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.
-    support = true_positives + false_negatives
-
-    return precision, recall, f1_score, support
-
+# Evaluation
 
 def mask_labels(y_true, y_pred, label):
     """Masks all instances of `label` from `y_true` and `y_pred` where `y_true == label`.
@@ -405,11 +383,11 @@ def get_targets(training_data, model_idx, fold=None):
         Tuple of train, valid targets modified for use with a multi-task model.
     """
     if fold is None:
-        current_train_target = training_data[model_idx]['y_train']
-        current_valid_target = training_data[model_idx]['y_valid']
+        current_train_target = training_data[model_idx]['train']['y']
+        current_valid_target = training_data[model_idx]['valid']['y']
     else:
-        current_train_target = training_data[model_idx][fold]['y_train']
-        current_valid_target = training_data[model_idx][fold]['y_valid']
+        current_train_target = training_data[model_idx][fold]['train']['y']
+        current_valid_target = training_data[model_idx][fold]['valid']['y']
 
     train_targets = [np.zeros_like(current_train_target) for _, _ in enumerate(training_data)]
     valid_targets = [np.zeros_like(current_valid_target) for _, _ in enumerate(training_data)]
