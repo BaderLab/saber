@@ -1,12 +1,9 @@
 """A collection of helper/utility functions for grounding entities.
 """
-import logging
-
 import requests
 
 from .. import constants
 
-LOGGER = logging.getLogger(__name__)
 
 def ground(annotation):
     """Maps entities in `annotation` to unique indentifiers in an external database or ontology.
