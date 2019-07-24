@@ -1,4 +1,3 @@
-import logging
 from itertools import zip_longest
 
 import torch
@@ -15,11 +14,14 @@ from .base_model import BasePyTorchModel
 from .modules.bert_for_token_classification_multi_task import \
     BertForTokenClassificationMultiTask
 
-LOGGER = logging.getLogger(__name__)
-
 
 class BertForNER(BasePyTorchModel):
-    """A PyTorch implementation of a BERT model for named entity recognition.
+    """A PyTorch implementation of a BERT model for named entity recognition (NER).
+
+    A BERT for NER implementation in PyTorch. Supports multi-task learning by default, just pass
+    multiple Dataset objects via `datasets` to the constructor and the model will share the
+    parameters of all layers, except for the final output layer, across all datasets, where each
+    dataset represents a NER task.
 
     Args:
         config (Config): Contains a set of harmonzied arguments provided in a *.ini file and,
@@ -103,7 +105,7 @@ class BertForNER(BasePyTorchModel):
         return model, tokenizer
 
     def specify(self):
-        """Specifies a PyTorch `BertForNER` model recognition and its tokenizer.
+        """Specifies a PyTorch `BertForTokenClassificationMultiTask` model and its tokenizer.
 
         Returns:
             The loaded PyTorch `BertForNER` model and its corresponding Tokenizer.
@@ -127,52 +129,69 @@ class BertForNER(BasePyTorchModel):
         return model, tokenizer
 
     def prepare_data_for_training(self):
-        """Returns a list containing the training data for each dataset at `self.datasets`.
+        """Returns a list containing data which has been processed for training with `self.model`.
 
-        For each dataset at `self.datasets`, collects the data to be used for training.
-        Each dataset is represented by a dictionary, where the keys 'x_<partition>' and
-        'y_<partition>' contain the inputs and targets for each partition 'train', 'valid', and
-        'test'.
+        For each dataset at `self.datasets`, processes the data to be used for training and/or
+        evaluation with `self.model`. Returns a list of dictionaries, of length `len(self.datasets)`
+        containing a PyTorch Dataloader for each of a datasets partitions (e.g.
+        `training_data[partition][0]['train']['dataloader']`) contains the Dataloader for the
+        train partition of `self.datasets[0]`.
+
+        Returns:
+            A list of dictionaries, of length `len(self.datasets)`, containing a PyTorch Dataloader
+            for each of a datasets partitions.
         """
         training_data = []
         for model_idx, dataset in enumerate(self.datasets):
-            processed_dataset = bert_utils.process_dataset_for_bert(dataset, self.tokenizer)
-            dataloaders = bert_utils.get_dataloader_for_bert(processed_dataset=processed_dataset,
-                                                             batch_size=self.config.batch_size,
-                                                             model_idx=model_idx)
+            training_data.append([])  # for each dataset
 
-            processed_dataset.update(dataloaders)
-            training_data.append(processed_dataset)
+            # Re-process the dataset to be compatible with BERT models
+            processed_dataset = bert_utils.process_dataset_for_bert(dataset, self.tokenizer)
+            # If no valid set provide, create one from the train set (or generate k-folds)
+            processed_dataset = data_utils.get_validation_set(self.config, processed_dataset)
+
+            # A hack to ensure that training data is always a list (datasets) of lists (folds)
+            if not isinstance(processed_dataset, list):
+                processed_dataset = [processed_dataset]
+
+            for fold in processed_dataset:
+                dataloaders = bert_utils.get_dataloader_for_bert(
+                    processed_dataset=fold,
+                    batch_size=self.config.batch_size,
+                    model_idx=model_idx
+                )
+
+                # Add dataloader to the processed dataset and update training data
+                for partition, dataloader in dataloaders.items():
+                    if dataloader is not None:
+                        fold[partition]['dataloader'] = dataloader
+
+                training_data[-1].append(fold)
 
         return training_data
 
-    # TODO (John): Way too much duplicated code (DRY). Fix!
     def train(self):
         """Co-ordinates the training of the PyTorch model `self.model`.
 
         Co-ordinates the training of the PyTorch model `self.model`. Minimally expects a train
-        partition and one or both of valid and test partitions to be supplied in the Dataset objects
-        at `self.datasets`.
+        partition to be supplied in the Dataset objects at `self.datasets`.
         """
         # Gather everything we need to run a training session
         optimizers = self.prepare_optimizers()
         training_data = self.prepare_data_for_training()
-        output_dir = model_utils.prepare_output_directory(self.config)
+        output_dirs = model_utils.prepare_output_directory(self.config)
 
-        def train_valid_test(training_data, output_dir, optimizers):
-            # Use 10% of train data as validation data if no validation data provided
-            if training_data[0]['x_valid'] is None:
-                training_data = data_utils.collect_valid_data(training_data)
+        metrics = model_utils.setup_metrics_callback(config=self.config,
+                                                     model=self,
+                                                     datasets=self.datasets,
+                                                     training_data=training_data,
+                                                     output_dirs=output_dirs,)
 
-            # Get list of Keras Callback objects for computing/storing metrics
-            metrics = model_utils.setup_metrics_callback(model=self,
-                                                         config=self.config,
-                                                         datasets=self.datasets,
-                                                         training_data=training_data,
-                                                         output_dir=output_dir,)
-
+        # Training loop
+        k_folds = len(training_data[0])
+        for fold in range(k_folds):
             # Collect dataloaders, we don't need the other data
-            dataloaders = [data['dataloader_train'] for data in training_data]
+            dataloaders = [data[fold]['train']['dataloader'] for data in training_data]
             total = len(max(dataloaders, key=len))
 
             for epoch in range(self.config.epochs):
@@ -183,10 +202,15 @@ class BertForNER(BasePyTorchModel):
                 train_steps = [0] * len(self.num_labels)
 
                 # Setup a progress bar
-                pbar_descr = f'Epoch: {epoch + 1}/{self.config.epochs}'
+                if k_folds > 1:
+                    fold_and_epoch = (fold + 1, k_folds, epoch + 1, self.config.epochs)
+                    desc = 'Fold: {}/{}, Epoch: {}/{}'.format(*fold_and_epoch)
+                else:
+                    desc = f'Epoch: {epoch + 1}/{self.config.epochs}'
+
                 pbar = tqdm(zip_longest(*dataloaders),
                             unit='batch',
-                            desc=pbar_descr,
+                            desc=desc,
                             total=total,
                             dynamic_ncols=True)
 
@@ -221,12 +245,12 @@ class BertForNER(BasePyTorchModel):
 
                             optimizer.step()
 
-                            # Update train loss in progress bar
-                            postfix = {
-                                f'loss_{i}': f'{loss / steps:.4f}' if steps > 0 else 0.
-                                for i, (loss, steps) in enumerate(zip(train_loss, train_steps))
-                            }
-                            pbar.set_postfix(postfix)
+                        # Update train loss in progress bar
+                        postfix = {
+                            f'loss_{i}': f'{loss / steps:.4f}' if steps > 0 else 0.
+                            for i, (loss, steps) in enumerate(zip(train_loss, train_steps))
+                        }
+                        pbar.set_postfix(postfix)
 
                 for metric in metrics:
                     # Need to feed epoch argument manually, as this is a keras callback object
@@ -234,130 +258,46 @@ class BertForNER(BasePyTorchModel):
 
                 pbar.close()
 
-        def cross_validation(training_data, output_dir, optimizers):
-            # Get the train / valid partitioned data for all datasets and all folds
-            training_data = data_utils.collect_cv_data(training_data, self.config.k_folds)
+            # Clear and rebuild the model at end of each fold (except for the last fold)
+            if k_folds > 1 and fold < k_folds - 1:
+                torch.cuda.empty_cache()
+                self.reset_model()
+                optimizers = self.prepare_optimizers()
 
-            # Training loop
-            for fold in range(self.config.k_folds):
+                for metric in metrics:
+                    metric.on_fold_end()  # bumps internal fold counter
 
-                # Get list of Keras Callback objects for computing/storing metrics
-                metrics = model_utils.setup_metrics_callback(model=self,
-                                                             config=self.config,
-                                                             datasets=self.datasets,
-                                                             training_data=training_data,
-                                                             output_dir=output_dir,
-                                                             fold=fold)
+        return metrics
 
-                # Collect dataloaders, we don't need the other data
-                dataloaders = [train_data[fold]['dataloader_train'] for train_data in training_data]
-                total = len(max(dataloaders, key=len))
+    def evaluate(self, training_data, partition='train', model_idx=None):
+        """Perform a prediction step using `self.model` on `training_data[partition]`.
 
-                for epoch in range(self.config.epochs):
-
-                    self.model.train()
-
-                    train_loss = [0] * len(self.num_labels)
-                    train_steps = [0] * len(self.num_labels)
-
-                    # Setup a progress bar
-                    fold_and_epoch = (fold + 1, self.config.k_folds, epoch + 1, self.config.epochs)
-                    pbar_descr = 'Fold: {}/{}, Epoch: {}/{}'.format(*fold_and_epoch)
-                    pbar = tqdm(zip_longest(*dataloaders),
-                                unit='batch',
-                                desc=pbar_descr,
-                                total=total,
-                                dynamic_ncols=True)
-
-                    for _, batches in enumerate(pbar):
-                        for batch in batches:
-                            if batch is not None:
-                                _, input_ids, attention_mask, labels, _, model_idx = batch
-
-                                input_ids = input_ids.to(self.device)
-                                attention_mask = attention_mask.to(self.device)
-                                labels = labels.to(self.device)
-                                model_idx = model_idx[0].item()
-
-                                optimizer = optimizers[model_idx]
-                                optimizer.zero_grad()
-
-                                loss = self.model(input_ids,
-                                                  token_type_ids=torch.zeros_like(input_ids),
-                                                  attention_mask=attention_mask,
-                                                  labels=labels,
-                                                  model_idx=model_idx)
-
-                                loss.backward()
-
-                                # Loss is a vector of size n_gpus, need to average if more than 1
-                                if self.n_gpus > 1:
-                                    loss = loss.mean()
-
-                                # Track train loss
-                                train_loss[model_idx] += loss.item()
-                                train_steps[model_idx] += 1
-
-                                optimizer.step()
-
-                            # Update train loss in progress bar
-                            postfix = {
-                                f'loss_{i}': f'{loss / steps:.4f}' if steps > 0 else 0.
-                                for i, (loss, steps) in enumerate(zip(train_loss, train_steps))
-                            }
-                            pbar.set_postfix(postfix)
-
-                    for metric in metrics:
-                        # Need to feed epoch argument manually, as this is a keras callback object
-                        metric.on_epoch_end(epoch=epoch)
-
-                    pbar.close()
-
-                # Clear and rebuild the model at end of each fold (except for the last fold)
-                if fold < self.config.k_folds - 1:
-                    self.reset_model()
-                    optimizers = self.prepare_optimizers()
-
-        # TODO: User should be allowed to overwrite this
-        if training_data[0]['x_valid'] is not None or training_data[0]['x_test'] is not None:
-            print('Using train/test/valid strategy...')
-            LOGGER.info('Used a train/test/valid strategy for training')
-            train_valid_test(training_data, output_dir, optimizers)
-        else:
-            print(f'Using {self.config.k_folds}-fold cross-validation strategy...')
-            LOGGER.info('Used %s-fold cross-validation strategy for training', self.config.k_folds)
-            cross_validation(training_data, output_dir, optimizers)
-
-    def evaluate(self, training_data, model_idx=-1, partition='train'):
-        """Get `y_true` and `y_pred` for given inputs and targets in `training_data`.
-
-        Performs prediction for the model at `self.models[model_idx]`), and returns a 2-tuple
-        containing the true (gold) labels and the predicted labels, where labels are integers
-        corresponding to mapping at `self.idx_to_tag`. Inputs and labels are stored in a PyTorch
-        Dataloader at `training_data[partition_dataloader]`.
+        Performs prediction for the model at `self.model` and returns a two-tuple containing the
+        true (gold) NER labels and corresponding predicted labels.
 
         Args:
-            training_data (dict): Contains the data (at key `partition_dataloader`).
+            training_data (dict): Contains the data (at key `[partition]['dataloader']`).
             partition (str): Which partition to perform a prediction step on, must be one of
-                'train', 'valid', 'test'.
+                'train', 'valid', or 'test'.
+            model_idx (None): Unused argument. Retained for compatibility.
 
         Returns:
-            A two-tuple containing the gold label integer sequences and the predicted integer label
-            sequences.
+            A two-tuple containing the gold NER label sequences and corresponding predicted labels.
         """
         self.model.eval()
 
         y_true, y_pred = [], []
         eval_loss, eval_steps = 0, 0
 
-        dataloader = training_data[f'dataloader_{partition}']
+        dataloader = training_data[partition]['dataloader']
 
         for batch in dataloader:
-            _, input_ids, attention_mask, labels, orig_to_tok_map, _ = batch
+            _, input_ids, attention_mask, labels, orig_to_tok_map, model_idx = batch
 
             input_ids = input_ids.to(self.device)
             attention_mask = attention_mask.to(self.device)
             labels = labels.to(self.device)
+            model_idx = model_idx[0].item()
 
             with torch.no_grad():
                 loss = self.model(input_ids,
@@ -369,7 +309,7 @@ class BertForNER(BasePyTorchModel):
                                     token_type_ids=torch.zeros_like(input_ids),
                                     attention_mask=attention_mask,
                                     model_idx=model_idx)
-                logits = logits.argmax(dim=-1)
+                ner_preds = logits.argmax(dim=-1)
 
                 # Loss object is a vector of size n_gpus, need to average if more than 1
                 if self.n_gpus > 1:
@@ -377,19 +317,20 @@ class BertForNER(BasePyTorchModel):
 
             # TODO (John): There has got to be a better way to do this?
             # Mask [PAD] and WORDPIECE tokens
-            for logits_, labels_, tok_map in zip(logits, labels, orig_to_tok_map):
+            for preds, labels, tok_map in zip(ner_preds, labels, orig_to_tok_map):
                 orig_token_indices = torch.as_tensor([i for i in tok_map if i != TOK_MAP_PAD])
                 orig_token_indices = orig_token_indices.to(self.device).long()
 
-                masked_logits = torch.index_select(logits_, -1, orig_token_indices)
-                masked_logits = masked_logits.tolist()
+                masked_labels = torch.index_select(labels, -1, orig_token_indices).tolist()
+                masked_preds = torch.index_select(preds, -1, orig_token_indices).tolist()
 
-                masked_labels = torch.index_select(labels_, -1, orig_token_indices)
-                masked_labels = masked_labels.tolist()
+                # Map predictions to tags
+                y_true.append([self.datasets[model_idx].idx_to_tag['ent'][idx]
+                               for idx in masked_labels])
+                y_pred.append([self.datasets[model_idx].idx_to_tag['ent'][idx]
+                               for idx in masked_preds])
 
-                y_true.extend(masked_labels)
-                y_pred.extend(masked_logits)
-
+            # TODO (John): We don't actually do anything with this?
             eval_loss += loss.item()
             eval_steps += 1
 
@@ -436,7 +377,6 @@ class BertForNER(BasePyTorchModel):
         if len(y_preds.size()) < 3:
             y_preds = torch.unsqueeze(y_preds, dim=0)
 
-        # TODO (John): There has got to be a better way to do this?
         # Mask [PAD] and WORDPIECE tokens
         y_preds_masked = []
         for output, dataset in zip(y_preds, self.datasets):
