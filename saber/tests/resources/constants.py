@@ -1,6 +1,5 @@
 """Constants used by the unit tests.
 """
-import logging
 import os
 
 import numpy as np
@@ -8,9 +7,8 @@ from pkg_resources import resource_filename
 
 from ... import constants
 
-LOGGER = logging.getLogger(__name__)
+# TODO (John): Eventually, get around to moving these to the top of their respective test files.
 
-# relative paths for test resources
 PATH_TO_CONLL2003_DATASET = resource_filename(__name__, 'conll2003_dataset')
 PATH_TO_CONLL2004_DATASET = resource_filename(__name__, 'conll2004_dataset')
 PATH_TO_DUMMY_DATASET_2 = resource_filename(__name__, 'dummy_dataset_2')
@@ -22,6 +20,7 @@ PATH_TO_DUMMY_EMBEDDINGS = \
 ####################################################################################################
 # Dummy embeddings
 ####################################################################################################
+
 
 DUMMY_TOKEN_MAP = {constants.PAD: 0, constants.UNK: 1, 'the': 2, 'quick': 3, 'brown': 4, 'fox': 5}
 DUMMY_CHAR_MAP = {constants.PAD: 0, constants.UNK: 1, 'r': 2, 'u': 3, 'c': 4, 'f': 5, 'e': 6,
@@ -45,6 +44,7 @@ DUMMY_EMBEDDINGS_MATRIX = np.array([
 ####################################################################################################
 # CoNLL2003 dataset
 ####################################################################################################
+
 
 CoNLL2003_WORD_SEQ = np.array([
     ['Human', 'APC2', 'maps', 'to', 'chromosome', '19p13', '.'],
@@ -74,9 +74,11 @@ CoNLL2003_CHAR_TYPES = ['2', 's', 'c', 'T', 'd', 'e', 'H', 'h', 'a', 'b', 'v', '
                         constants.PAD, constants.UNK]
 CoNLL2003_ENT_TYPES = ['O', 'B-DISO', 'I-DISO', 'E-DISO', constants.PAD]
 
+
 ####################################################################################################
 # CoNLL2004 dataset
 ####################################################################################################
+
 
 CoNLL2004_WORD_SEQ = np.array([
     ['Bette/Davis', 'was', 'born', 'Ruth/Elizabeth/Davis', 'on', 'April', '5', ',', '1908', ',',
@@ -116,9 +118,11 @@ CoNLL2004_ENT_TYPES = ['O', 'S-Peop', 'S-Other', 'S-Loc', 'S-Org', constants.PAD
 
 CoNLL2004_REL_TYPES = ['Live_In', constants.NEG]
 
+
 ####################################################################################################
 # Dummy config
 ####################################################################################################
+
 
 # Sections of the .ini file
 CONFIG_SECTIONS = ['mode', 'data', 'model', 'training', 'advanced']
@@ -227,9 +231,11 @@ DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'bilstm-crf-ner',
                             'variational_dropout': False,
                             }
 
+
 ####################################################################################################
 # Web-service
 ####################################################################################################
+
 
 DUMMY_ENTITIES = {'ANAT': False,
                   'CHED': True,
