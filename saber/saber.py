@@ -98,7 +98,7 @@ class Saber():
 
         for model in self.models:
             y_preds = model.predict(sents)
-            for y_pred, dataset in zip(y_preds, model.datasets):
+            for y_pred in y_preds:
                 # Accumulate predicted entities
                 for chunk in get_entities(y_pred):
                     # Chunks are tuples (label, start, end), offsets is a lists of lists of tuples
@@ -446,8 +446,8 @@ class Saber():
                                pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
         elif self.config.model_name == 'bert-ner-rc':
             print('Building the BERT model for joint NER and RC...', end=' ', flush=True)
-            from .models.bert_for_joint_ner_and_rc import BertForJointNERAndRC
-            model = BertForJointNERAndRC(config=self.config,
+            from .models.bert_for_joint_ner_and_rc import BertForJointNERAndRE
+            model = BertForJointNERAndRE(config=self.config,
                                          datasets=self.datasets,
                                          pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
         # TODO: This should be handled in config, by supplying a list of options.
