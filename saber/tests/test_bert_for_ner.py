@@ -4,7 +4,8 @@ from pytorch_pretrained_bert import BertForTokenClassification
 from pytorch_pretrained_bert import BertTokenizer
 from pytorch_pretrained_bert.optimization import BertAdam
 
-from .. import constants
+from ..constants import PARTITIONS
+from ..constants import WORDPIECE
 from ..models.base_model import BaseModel
 from ..models.base_model import BasePyTorchModel
 from ..models.bert_for_ner import BertForNER
@@ -31,8 +32,9 @@ class TestBertForNER(object):
 
         # Attributes that are passed to __init__
         assert bert_for_ner_model.config is dummy_config
+        assert bert_for_ner_model.datasets[0] is conll2003datasetreader_load
         # Check that intialization has added the wordpiece tag ('X') with correct index
-        assert conll2003datasetreader_load.type_to_idx['ent'][constants.WORDPIECE] == \
+        assert conll2003datasetreader_load.type_to_idx['ent'][WORDPIECE] == \
             len(conll2003datasetreader_load.type_to_idx['ent']) - 1
 
         # Other instance attributes
@@ -50,7 +52,7 @@ class TestBertForNER(object):
         assert bert_for_ner_model.totally_arbitrary == 'arbitrary'
 
     def test_attributes_after_init_mt(self,
-                                      dummy_config,
+                                      dummy_config_compound_dataset,
                                       conll2003datasetreader_load,
                                       dummy_dataset_2,
                                       mt_bert_for_ner_model):
@@ -63,11 +65,12 @@ class TestBertForNER(object):
         )
 
         # Attributes that are passed to __init__
-        assert mt_bert_for_ner_model.config is dummy_config
+        assert mt_bert_for_ner_model.config is dummy_config_compound_dataset
+        assert mt_bert_for_ner_model.datasets[0] is conll2003datasetreader_load
         # Check that intialization has added the wordpiece tag ('X') with correct index
-        assert conll2003datasetreader_load.type_to_idx['ent'][constants.WORDPIECE] == \
+        assert conll2003datasetreader_load.type_to_idx['ent'][WORDPIECE] == \
             len(conll2003datasetreader_load.type_to_idx['ent']) - 1
-        assert dummy_dataset_2.type_to_idx['ent'][constants.WORDPIECE] == \
+        assert dummy_dataset_2.type_to_idx['ent'][WORDPIECE] == \
             len(dummy_dataset_2.type_to_idx['ent']) - 1
         # Other instance attributes
         assert mt_bert_for_ner_model.model is None
@@ -99,8 +102,9 @@ class TestBertForNER(object):
 
         # Attributes that are passed to __init__
         assert bert_for_ner_model_specify.config is dummy_config
+        assert bert_for_ner_model_specify.datasets[0] is conll2003datasetreader_load
         # Check that intialization has added the wordpiece tag ('X') with correct index
-        assert conll2003datasetreader_load.type_to_idx['ent'][constants.WORDPIECE] == \
+        assert conll2003datasetreader_load.type_to_idx['ent'][WORDPIECE] == \
             len(conll2003datasetreader_load.type_to_idx['ent']) - 1
 
         # Other instance attributes
@@ -125,7 +129,7 @@ class TestBertForNER(object):
         assert bert_for_ner_model_specify.totally_arbitrary == 'arbitrary'
 
     def test_attributes_after_specify_mt(self,
-                                         dummy_config,
+                                         dummy_config_compound_dataset,
                                          conll2003datasetreader_load,
                                          dummy_dataset_2,
                                          mt_bert_for_ner_model_specify):
@@ -138,11 +142,12 @@ class TestBertForNER(object):
         )
 
         # Attributes that are passed to __init__
-        assert mt_bert_for_ner_model_specify.config is dummy_config
+        assert mt_bert_for_ner_model_specify.config is dummy_config_compound_dataset
+        assert mt_bert_for_ner_model_specify.datasets[0] is conll2003datasetreader_load
         # Check that intialization has added the wordpiece tag ('X') with correct index
-        assert conll2003datasetreader_load.type_to_idx['ent'][constants.WORDPIECE] == \
+        assert conll2003datasetreader_load.type_to_idx['ent'][WORDPIECE] == \
             len(conll2003datasetreader_load.type_to_idx['ent']) - 1
-        assert dummy_dataset_2.type_to_idx['ent'][constants.WORDPIECE] == \
+        assert dummy_dataset_2.type_to_idx['ent'][WORDPIECE] == \
             len(dummy_dataset_2.type_to_idx['ent']) - 1
 
         # Other instance attributes
@@ -172,15 +177,15 @@ class TestBertForNER(object):
         assert mt_bert_for_ner_model_specify.totally_arbitrary == 'arbitrary'
 
     def test_save(self, bert_for_ner_model_save):
-        """Asserts that the expected file exists after call to `BertForNER.save()`.
+        """Asserts that the expected file(s) exists after call to `BertForNER.save()`.
         """
         _, model_filepath = bert_for_ner_model_save
 
         assert os.path.isfile(model_filepath)
 
     def test_save_mt(self, bert_for_ner_model_save):
-        """Asserts that the expected file exists after call to `BertForNER.save()` for a multi-task
-        model.
+        """Asserts that the expected file(s) exists after call to `BertForNER.save()` for a
+        multi-task smodel.
         """
         _, model_filepath = bert_for_ner_model_save
 
@@ -218,14 +223,16 @@ class TestBertForNER(object):
         assert mt_bert_for_ner_model.model.num_labels == expected_num_labels
         assert isinstance(mt_bert_for_ner_model.tokenizer, BertTokenizer)
 
+    # TODO (John): This is a poor excuse for a test
     def test_prepare_data_for_training(self, bert_for_ner_model_specify):
         """Asserts that the dictionaries returned by `BertForNER.prepare_data_for_training()`
         contain the expected keys.
         """
         training_data = bert_for_ner_model_specify.prepare_data_for_training()
 
-        assert all(f'x_{p}' in data and f'y_{p}' in data for data in training_data
-                   for p in constants.PARTITIONS)
+        for data in training_data:
+            for fold in data:
+                assert all('x' in fold[p] and 'y' in fold[p] for p in PARTITIONS)
 
     def test_train(self, bert_for_ner_model_specify):
         """This test does not actually assert anything (which is surely bad practice) but at the
@@ -234,26 +241,6 @@ class TestBertForNER(object):
         """
         bert_for_ner_model_specify.config.epochs = 1
         bert_for_ner_model_specify.train()
-
-        # This won't print anything unless the test fails
-        print('The training loop is likely broken.')
-
-        assert True
-
-    '''Need to fix the StatisticsError that is thrown.
-    def test_cross_validation(bert_for_ner_model_specify):
-        """This test does not actually assert anything (which is surely bad practice) but at the
-        very least, it will fail if training was unsuccesful and therefore alert us when a code
-        change has broke the training loop.
-        """
-        bert_for_ner_model_specify.config.epochs = 1
-        bert_for_ner_model_specify.cross_validation()
-
-        # This won't print anything unless the test fails
-        print('The cross validation training loop is likely broken')
-
-        assert True
-    '''
 
     def test_predict(self, bert_for_ner_model_specify):
         """Asserts that the shape and labels of the predictions returned by `BertForNER.predict()`

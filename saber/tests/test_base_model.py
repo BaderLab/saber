@@ -31,7 +31,7 @@ class TestBaseModel(object):
         assert base_model.totally_arbitrary == 'arbitrary'
 
     def test_attributes_init_of_mt_base_model(self,
-                                              dummy_config,
+                                              dummy_config_compound_dataset,
                                               conll2003datasetreader_load,
                                               dummy_dataset_2,
                                               mt_base_model):
@@ -41,7 +41,7 @@ class TestBaseModel(object):
         assert isinstance(mt_base_model, BaseModel)
 
         # attributes that are passed to __init__
-        assert mt_base_model.config is dummy_config
+        assert mt_base_model.config is dummy_config_compound_dataset
         assert mt_base_model.datasets[0] is conll2003datasetreader_load
         assert mt_base_model.datasets[1] is dummy_dataset_2
         assert mt_base_model.embeddings is None
@@ -51,6 +51,16 @@ class TestBaseModel(object):
 
         # test that we can pass arbitrary keyword arguments
         assert mt_base_model.totally_arbitrary == 'arbitrary'
+
+    def test_reset_model(self, bilstm_crf_model_specify):
+        """Asserts that a new model object was created after call to `reset_model()`.
+        """
+        before_reset = bilstm_crf_model_specify.model
+
+        bilstm_crf_model_specify.reset_model()
+        after_reset = bilstm_crf_model_specify.model
+
+        assert before_reset is not after_reset
 
 
 class TestBaseKerasModel(object):
@@ -78,7 +88,7 @@ class TestBaseKerasModel(object):
         assert base_keras_model.totally_arbitrary == 'arbitrary'
 
     def test_attributes_init_of_mt_base_keras_model(self,
-                                                    dummy_config,
+                                                    dummy_config_compound_dataset,
                                                     conll2003datasetreader_load,
                                                     dummy_dataset_2,
                                                     mt_base_keras_model):
@@ -88,7 +98,7 @@ class TestBaseKerasModel(object):
         assert isinstance(mt_base_keras_model, (BaseModel, BaseKerasModel))
 
         # attributes that are passed to __init__
-        assert mt_base_keras_model.config is dummy_config
+        assert mt_base_keras_model.config is dummy_config_compound_dataset
         assert mt_base_keras_model.datasets[0] is conll2003datasetreader_load
         assert mt_base_keras_model.datasets[1] is dummy_dataset_2
         assert mt_base_keras_model.embeddings is None
@@ -165,7 +175,7 @@ class TestBasePyTorchModel(object):
         assert base_pytorch_model.totally_arbitrary == 'arbitrary'
 
     def test_attributes_init_of_mt_base_pytorch_model(self,
-                                                      dummy_config,
+                                                      dummy_config_compound_dataset,
                                                       conll2003datasetreader_load,
                                                       dummy_dataset_2,
                                                       mt_base_pytorch_model):
@@ -175,7 +185,7 @@ class TestBasePyTorchModel(object):
         assert isinstance(mt_base_pytorch_model, (BaseModel, BasePyTorchModel))
 
         # attributes that are passed to __init__
-        assert mt_base_pytorch_model.config is dummy_config
+        assert mt_base_pytorch_model.config is dummy_config_compound_dataset
         assert mt_base_pytorch_model.datasets[0] is conll2003datasetreader_load
         assert mt_base_pytorch_model.datasets[1] is dummy_dataset_2
         assert mt_base_pytorch_model.embeddings is None
