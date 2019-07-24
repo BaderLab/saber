@@ -1,19 +1,25 @@
 """Contains the Metrics class, which computes, stores, prints and saves performance metrics
 for a Keras model.
 """
+import copy
+import itertools
 import json
 import logging
-import os
-from operator import itemgetter
+import pathlib
 from statistics import mean
 
 from keras.callbacks import Callback
 from prettytable import PrettyTable
+from sklearn.metrics import precision_recall_fscore_support
 
-from . import constants
-from .preprocessor import Preprocessor
-from .utils import model_utils
-from .utils.generic_utils import make_dir
+from seqeval.metrics import f1_score
+from seqeval.metrics import precision_score
+from seqeval.metrics import recall_score
+from seqeval.metrics.sequence_labeling import get_entities
+
+from .constants import NEG
+from .constants import OUTSIDE
+from .constants import PARTITIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -24,6 +30,7 @@ class Metrics(Callback):
     Args:
         config (Config): Contains a set of harmonized arguments provided in a *.ini file and,
             optionally, from the command line.
+        model_ (BaseModel): Model to evaluate, subclass of BaseModel.
         training_data (dict): Contains the data (at key `x_partition`) and targets
             (at key `y_partition`) for each partition: 'train', 'valid' and 'test'.
         idx_to_tag (dict): A dictionary mapping unique integers to labels.
@@ -36,181 +43,210 @@ class Metrics(Callback):
         self.idx_to_tag = idx_to_tag  # maps unique IDs to targets
 
         self.output_dir = output_dir
-        self.current_epoch = 0
+
+        # Current epoch and fold counters
+        self.epoch = 0
+        self.fold = 0
 
         # Model performance metrics accumulators
-        self.performance_metrics = {p: [] for p in constants.PARTITIONS}
+        self.evaluations = {
+            p: {'scores': [], 'best_macro_f1': {}, 'best_micro_f1': {}} for p in PARTITIONS
+        }
+
+        # If we are preforming cross-validation, add a "folds" field to the JSON.
+        if len(training_data) > 1:
+            self.evaluations = {
+                'folds': [{'fold': fold + 1, **copy.deepcopy(self.evaluations)}
+                          for fold in range(len(training_data))]
+            }
+
+        self.evaluation_filepath = pathlib.Path().joinpath(output_dir, 'evaluation.json')
 
         for key, value in kwargs.items():
             setattr(self, key, value)
 
     def on_epoch_end(self, epoch, logs={}):
-        """Computes, accumulates and prints train/valid/test scores at the end of each epoch."""
-        # train
-        train_scores = self._evaluate(self.training_data, partition='train')
-        self.print_performance_scores(train_scores, title='train')
-        self.performance_metrics['train'].append(train_scores)
-
-        # valid (optional)
-        if self.training_data['x_valid'] is not None:
-            valid_scores = self._evaluate(self.training_data, partition='valid')
-            self.print_performance_scores(valid_scores, title='valid')
-            self.performance_metrics['valid'].append(valid_scores)
-
-        # test (optional)
-        if self.training_data['x_test'] is not None:
-            test_scores = self._evaluate(self.training_data, partition='test')
-            self.print_performance_scores(test_scores, title='test')
-            self.performance_metrics['test'].append(test_scores)
-
-        self._write_metrics_to_disk()
-        self.current_epoch += 1
-
-    def _evaluate(self, training_data, partition='train'):
-        """Performs all evaluation steps for given set of inputs (`X`) and targets (`y`).
-
-        For a given input (`X`) and targets (`y`) performs all the steps in the evaluation pipeline,
-        namely: performs prediction on `X`, chunks the annotations by type, and computes performance
-        scores by type.
-
-        Args:
-            X (numpy.ndarrary): Input matrix; shape (num examples, sequence length).
-            y (numpy.ndarrary): Target matrix; shape (num examples, sequence length, num classes).
-
-        Returns:
-            A dictionary of label, score pairs; where label is a class tag and scores is a 4-tuple
-            containing precision, recall, f1 and support for that class.
+        """Computes, accumulates and prints train/valid/test scores at the end of each epoch.
         """
-        # Get predictions and gold labels
-        y_true, y_pred = self.model_.evaluate(training_data, self.model_idx, partition)
+        training_data = self.training_data[self.fold]
 
-        # Convert index sequence to tag sequence
-        y_true_tag = [self.idx_to_tag['ent'][idx] for idx in y_true]
-        y_pred_tag = [self.idx_to_tag['ent'][idx] for idx in y_pred]
+        for partition in PARTITIONS:
+            if training_data[partition] is not None:
+                evaluation = self._evaluate(training_data, partition=partition)
+                evaluation_json = {'epoch': self.epoch + 1}
 
-        # Chunk the entities
-        y_true_chunks = Preprocessor.chunk_entities(y_true_tag)
-        y_pred_chunks = Preprocessor.chunk_entities(y_pred_tag)
+                for task, scores in evaluation.items():
+                    # TODO (John): Should be controlled by `self.config.verbose`
+                    _ = self.print_evaluation(scores, title=f'{task.upper()} ({partition.title()})')
 
-        # Get performance scores per label
-        return self.get_precision_recall_f1_support(y_true=y_true_chunks,
-                                                    y_pred=y_pred_chunks,
-                                                    criteria=self.config.criteria)
+                    # Get the evaluation into a json like format
+                    evaluation_json[task] = {
+                        label: {
+                            'precision': float(score[0]),
+                            'recall': float(score[1]),
+                            'f1': float(score[2]),
+                            'support': int(score[3])
+                        } for label, score in scores.items()
+                    }
+
+                self._update_best_epoch(evaluation_json, partition)
+
+                if 'folds' in self.evaluations:
+                    self.evaluations['folds'][self.fold][partition]['scores'].append(evaluation_json)
+                else:
+                    self.evaluations[partition]['scores'].append(evaluation_json)
+
+        self._write_evaluations_to_disk()
+        self.epoch += 1
+
+    def on_fold_end(self):
+        """Bumps k-fold cross-validation counter and resets epoch counter at the end of a fold.
+        """
+        self.epoch = 0
+        self.fold += 1
 
     @staticmethod
-    def get_precision_recall_f1_support(y_true, y_pred, criteria):
-        """Returns precision, recall, f1 and support.
+    def precision_recall_f1_support_sequence_labelling(y_true, y_pred, criteria='exact'):
+        """Compute precision, recall, f1 and support for sequence labelling tasks.
 
-        For given gold (`y_true`) and predicted (`y_pred`) labels, returns the precision, recall,
-        f1 and support per label, and the average of these scores across labels. Expects `y_true`
-        and `y_pred` to be a sequence of entity chunks.
+        For given gold (`y_true`) and predicted (`y_pred`) sequence labels, returns the precision,
+        recall, f1 and support per label, and the macro and micro average of these scores across
+        labels. Expects `y_true` and `y_pred` to be a sequence of IOB1/2, IOE1/2, or IOBES formatted
+        labels.
 
         Args:
-            y_true (list): List of (chunk_type, chunk_start, chunk_end).
-            y_pred (list): List of (chunk_type, chunk_start, chunk_end).
-            criteria (str): Criteria to use for evaluation, 'exact' matches boundaries directly,
-            'left' requires only a left boundary match and 'right' requires only a right boundary
-            match.
+            y_true (list): List of IOB1/2, IOE1/2, or IOBES formatted sequence labels.
+            y_pred (list): List of IOB1/2, IOE1/2, or IOBES formatted sequence labels.
+            criteria (str): Optional, criteria which will be used for evaluation. 'exact' matches
+                boundaries exactly, 'left' requires only a left boundary match and 'right' requires
+                only a right boundary match. Defaults to 'exact'.
+
         Returns:
-            A dictionary of label, score key, value pairs where label is a class tag and scores is
-            a 4-tuple containing precision, recall, f1 and support
+            A dictionary of scores keyed by the labels in `y_true` where each score is a 4-tuple
+            containing precision, recall, f1 and support. Additionally includes the keys
+            'Macro avg' and 'Micro avg' containing the macro and micro averages across scores.
 
         Raises:
-            ValueError, if `criteria` is not one of 'exact', 'left', or 'right'
+            ValueError, if `criteria` is not one of 'exact', 'left', or 'right'.
         """
-        performance_scores = {}
-        FN_total, FP_total, TP_total = 0, 0, 0  # micro performance accumulators
-        labels = list(set([chunk[0] for chunk in y_true]))  # unique labels
+        if criteria not in ['exact', 'left', 'right']:
+            err_msg = ("Expected criteria to be one of 'exact', 'left', or 'right'."
+                       " Got: {}").format(criteria)
+            LOGGER.error("ValueError %s", err_msg)
+            raise ValueError(err_msg)
 
-        # accumulate performance scores per label
-        for lab in labels:
-            y_pred_lab = [], []
-            # either retain or discard left or right boundaries depending on matching criteria
-            if criteria not in ['exact', 'left', 'right']:
-                err_msg = ("Expected criteria to be one of 'exact', 'left', or 'right'. "
-                           "Got: {}").format(criteria)
-                LOGGER.error("ValueError %s", err_msg)
-                raise ValueError(err_msg)
-            # construct these as sets because lookup is O(1), makes computing metrics much faster
-            if criteria == 'exact':
-                y_true_lab = {chunk for chunk in y_true if chunk[0] == lab}
-                y_pred_lab = {chunk for chunk in y_pred if chunk[0] == lab}
-            elif criteria == 'left':
-                y_true_lab = {chunk[:2] for chunk in y_true if chunk[0] == lab}
-                y_pred_lab = {chunk[:2] for chunk in y_pred if chunk[0] == lab}
-            elif criteria == 'right':
-                y_true_lab = {chunk[::2] for chunk in y_true if chunk[0] == lab}
-                y_pred_lab = {chunk[::2] for chunk in y_pred if chunk[0] == lab}
+        scores = {}
+        # Unique labels, not including NEG
+        labels = list({tag.split('-')[-1] for tag in set(y_true) if tag != OUTSIDE})
+        labels.sort()  # ensures labels displayed in same order across runs / partitions
 
-            # per label performance accumulators
-            FN, FP, TP = 0, 0, 0
-            # FN
-            for gold in y_true_lab:
-                if gold not in y_pred_lab:
-                    FN += 1
-            for pred in y_pred_lab:
-                # FP
-                if pred not in y_true_lab:
-                    FP += 1
-                # TP
-                elif pred in y_true_lab:
-                    TP += 1
+        for label in labels:
+            y_true_lab = [tag if tag.endswith(label) else OUTSIDE for tag in y_true]
+            y_pred_lab = [tag if tag.endswith(label) else OUTSIDE for tag in y_pred]
 
-            # get performance metrics
-            performance_scores[lab] = model_utils.precision_recall_f1_support(TP, FP, FN)
+            # TODO (John): Open a pull request to seqeval with a new function that returns all these
+            # scores in one call. There is a lot of repeated computation here.
+            precision = precision_score(y_true_lab, y_pred_lab, criteria=criteria)
+            recall = recall_score(y_true_lab, y_pred_lab, criteria=criteria)
+            f1 = f1_score(y_true_lab, y_pred_lab, criteria=criteria)
+            support = len(set(get_entities(y_true_lab)))
 
-            # accumulate FNs, FPs, TPs
-            FN_total += FN
-            FP_total += FP
-            TP_total += TP
+            scores[label] = precision, recall, f1, support
 
-        # get macro and micro performance metrics averages
-        macro_p = mean([v[0] for v in performance_scores.values()])
-        macro_r = mean([v[1] for v in performance_scores.values()])
-        macro_f1 = mean([v[2] for v in performance_scores.values()])
-        total_support = TP_total + FN_total
+        # Get macro and micro performance metrics averages
+        macro_precision = mean([v[0] for v in scores.values()])
+        macro_recall = mean([v[1] for v in scores.values()])
+        macro_f1 = mean([v[2] for v in scores.values()])
+        total_support = sum([v[3] for v in scores.values()])
 
-        performance_scores['MACRO_AVG'] = (macro_p, macro_r, macro_f1, total_support)
-        performance_scores['MICRO_AVG'] = model_utils.precision_recall_f1_support(TP_total,
-                                                                                  FP_total,
-                                                                                  FN_total)
+        micro_precision = precision_score(y_true, y_pred, criteria=criteria)
+        micro_recall = recall_score(y_true, y_pred, criteria=criteria)
+        micro_f1 = f1_score(y_true, y_pred, criteria=criteria)
 
-        return performance_scores
+        scores['Macro avg'] = macro_precision, macro_recall, macro_f1, total_support
+        scores['Micro avg'] = micro_precision, micro_recall, micro_f1, total_support
+
+        return scores
 
     @staticmethod
-    def print_performance_scores(performance_scores, title=None):
-        """Prints an ASCII table of performance scores.
+    def precision_recall_f1_support_multi_class(y_true, y_pred):
+        """Compute precision, recall, f1 and support for simple multi-class tasks.
+
+        For given gold (`y_true`) and predicted (`y_pred`) labels, returns the precision,
+        recall, f1 and support per label, and the macro and micro average of these scores across
+        labels. Expects `y_true` and `y_pred` to be a sequence multi-class targets and predictions.
 
         Args:
-            performance_scores: A dictionary of label, score pairs where label is a class tag and
-                scores is a 4-tuple containing precision, recall, f1 and support
-            title (str): The title of the table (uppercased).
+            y_true (list): List of multi-class targets.
+            y_pred (list): List of multi-class predictions.
+
+        Returns:
+            A dictionary of scores keyed by the labels in `y_true` where each score is a 4-tuple
+            containing precision, recall, f1 and support. Additionally includes the keys
+            'Macro avg' and 'Micro avg' containing the macro and micro averages across scores.
+
+        Raises:
+            ValueError, if `criteria` is not one of 'exact', 'left', or 'right'.
+        """
+        scores = {}
+        # Unique labels, not including NEG
+        labels = [label for label in set(y_true) if label != NEG]
+        labels.sort()  # ensures labels displayed in same order across runs / partitions
+
+        precision, recall, f1, support = \
+            precision_recall_fscore_support(y_true, y_pred, labels=labels)
+
+        # TODO (John): Do I really need to call this function 3 times?
+        # Get macro and micro performance metrics averages
+        macro_precision, macro_recall, macro_f1, _ = \
+            precision_recall_fscore_support(y_true, y_pred, labels=labels, average='macro')
+        micro_precision, micro_recall, micro_f1, _ = \
+            precision_recall_fscore_support(y_true, y_pred, labels=labels, average='micro')
+
+        total_support = 0
+        for i, label in enumerate(labels):
+            scores[label] = precision[i], recall[i], f1[i], support[i]
+            total_support += support[i]
+
+        scores['Macro avg'] = macro_precision, macro_recall, macro_f1, total_support
+        scores['Micro avg'] = micro_precision, micro_recall, micro_f1, total_support
+
+        return scores
+
+    @staticmethod
+    def print_evaluation(evaluation, title=None):
+        """Prints an ASCII table of evaluation scores.
+
+        Args:
+            evaluation: A dictionary of label, score pairs where label is a class tag and
+                scores is a 4-tuple containing precision, recall, f1 and support.
+            title (str): Optional, the title of the table.
 
         Preconditions:
-            Assumes the values of performance_scores are 4-tuples, where the first three items are
+            Assumes the values of `evaluation` are 4-tuples, where the first three items are
             float representaions of a percentage and the last item is an count integer.
         """
-        # create table, give it a title a column names
+        # Create table, give it a title a column names
         table = PrettyTable()
 
         if title is not None:
-            table.title = title.upper()
+            table.title = title
 
         table.field_names = ['Label', 'Precision', 'Recall', 'F1', 'Support']
 
-        # column alignment
+        # Column alignment
         table.align['Label'] = 'l'
         table.align['Precision'] = 'r'
         table.align['Recall'] = 'r'
         table.align['F1'] = 'r'
         table.align['Support'] = 'r'
 
-        # create and add the rows
-        for label, scores in performance_scores.items():
+        # Create and add the rows
+        for label, scores in evaluation.items():
             row = [label]
             # convert scores to formatted percentage strings
             support = scores[-1]
-            performance_metrics = ['{:.2%}'.format(x) for x in scores[:-1]]
+            performance_metrics = [f'{x:.2%}' for x in scores[:-1]]
             row_scores = performance_metrics + [support]
 
             row.extend(row_scores)
@@ -220,48 +256,95 @@ class Metrics(Callback):
 
         return table
 
-    def _write_metrics_to_disk(self):
-        """Write performance metrics to disk as json-formatted *.txt file.
+    def _evaluate(self, training_data, partition='train'):
+        """Performs a prediction step on `training_data` with `self.model_`.
 
-        At the end of each epoch, writes a json-formatted *.txt file to disk
-        (name 'epoch_<epoch_number>.txt'). File contains performance scores per label as well as the
-        best-achieved macro and micro averages thus far for the current epoch.
+        Performs a prediction step for the given inputs (`self.training_data[partition]['x']`) and
+        targets (`self.training_data[partition]['y']`) using `self.model_`. Returns a dictionary
+        keyed by the task (e.g. 'ner', 'rc').
+
+        Args:
+            partition (str): Which partition to perform a prediction step on, must be one of
+                'train', 'valid', or 'test'.
+
+        Returns:
+            A dictionary of label, score pairs; where label is a class tag and scores is a 4-tuple
+            containing precision, recall, f1 and support for that class.
         """
-        # create evaluation output directory
-        current_fold = self.__dict__.get("fold")
-        eval_dirname = self.output_dir
-        if current_fold is not None:
-            fold = 'fold_{}'.format(current_fold + 1)
-            eval_dirname = os.path.join(self.output_dir, fold)
-        make_dir(eval_dirname)
+        eval_scores = {}
 
-        # create filepath to evaluation file
-        eval_filename = 'epoch_{0:03d}.txt'.format(self.current_epoch + 1)
-        eval_filepath = os.path.join(eval_dirname, eval_filename)
+        # Get predictions and gold labels
+        eval_results = self.model_.evaluate(training_data,
+                                            partition=partition,
+                                            model_idx=self.model_idx)
 
-        # per partition performance metrics accumulator
-        performance_metrics = {p: {} for p in constants.PARTITIONS}
+        # TODO (John): This is brittle.
+        if len(eval_results) > 2:
+            y_true_ner, y_pred_ner, y_true_rc, y_pred_rc = eval_results
+        else:
+            y_true_ner, y_pred_ner, y_true_rc, y_pred_rc = *eval_results, None, None
 
-        for partition in self.performance_metrics:
-            # test partition may be empty
-            if self.performance_metrics[partition]:
-                # get best epoch based on macro / micro averages
-                macro_avg_per_epoch = [x['MACRO_AVG'] for x in self.performance_metrics[partition]]
-                micro_avg_per_epoch = [x['MICRO_AVG'] for x in self.performance_metrics[partition]]
+        # Flatten the lists
+        y_true_ner = list(itertools.chain(*y_true_ner))
+        y_pred_ner = list(itertools.chain(*y_pred_ner))
 
-                best_macro_avg = max(macro_avg_per_epoch, key=itemgetter(2))
-                best_micro_avg = max(micro_avg_per_epoch, key=itemgetter(2))
+        # Get performance scores for NER
+        eval_scores['ner'] = self.precision_recall_f1_support_sequence_labelling(
+            y_true=y_true_ner,
+            y_pred=y_pred_ner,
+            criteria=self.config.criteria
+        )
 
-                best_micro_epoch = micro_avg_per_epoch.index(best_micro_avg) + 1
-                best_macro_epoch = macro_avg_per_epoch.index(best_macro_avg) + 1
+        # Get performance scores for RC
+        if y_true_rc is not None:
+            # Flatten the lists
+            y_true_rc = list(itertools.chain(*y_true_rc))
+            y_pred_rc = list(itertools.chain(*y_pred_rc))
 
-                performance_metrics[partition]['scores'] = \
-                    self.performance_metrics[partition][self.current_epoch]
-                performance_metrics[partition]['best_epoch_macro_avg'] = {'epoch': best_macro_epoch,
-                                                                          'scores': best_macro_avg}
-                performance_metrics[partition]['best_epoch_micro_avg'] = {'epoch': best_micro_epoch,
-                                                                          'scores': best_micro_avg}
+            eval_scores['rc'] = self.precision_recall_f1_support_multi_class(y_true=y_true_rc,
+                                                                             y_pred=y_pred_rc)
 
-        # write performance metrics for current epoch to file
-        with open(eval_filepath, 'a') as eval_file:
-            eval_file.write(json.dumps(performance_metrics, indent=4))
+        return eval_scores
+
+    def _update_best_epoch(self, current_evaluation, partition='train'):
+        """Updates the 'best_macro_f1' and 'best_micro_f1' fields of `self.evaluations`.
+
+        Args:
+            current_evaluation (dict): A JSON formatted dict containing the most recent evaluation.
+            partition (str): Which partition to perform a prediction step on, must be one of
+                'train', 'valid', or 'test'.
+        """
+        if 'folds' in self.evaluations:
+            current_best = self.evaluations['folds'][self.fold][partition]
+        else:
+            current_best = self.evaluations[partition]
+
+        for task, evaluation in current_evaluation.items():
+            if task != 'epoch':
+                # If this is the first epoch, add "best_macro/micro_f1" fields for each task
+                if self.epoch == 0:
+                    current_best['best_macro_f1'][task] = {'epoch': self.epoch + 1,
+                                                           'scores': evaluation['Macro avg']}
+                    current_best['best_micro_f1'][task] = {'epoch': self.epoch + 1,
+                                                           'scores': evaluation['Micro avg']}
+                else:
+                    if (evaluation['Macro avg']['f1'] >
+                            current_best['best_macro_f1'][task]['scores']['f1']):
+                        current_best['best_macro_f1'][task]['epoch'] = self.epoch + 1
+                        current_best['best_macro_f1'][task]['scores'] = evaluation['Macro avg']
+
+                    if (evaluation['Micro avg']['f1'] >
+                            current_best['best_micro_f1'][task]['scores']['f1']):
+                        current_best['best_micro_f1'][task]['epoch'] = self.epoch + 1
+                        current_best['best_micro_f1'][task]['scores'] = evaluation['Micro avg']
+
+    def _write_evaluations_to_disk(self):
+        """Write accumulated, json-formatted `evaluations` to disk.
+
+        Writes a json file to disk with the accumulated evaluations at `self.evaluations`. If
+        `self.config.k_folds is None`, this is a single file at filepath
+        `self.output_dir/evaluations.json`, otherwise one file per `k` fold is saved at filepath
+        `self.output_dir/evaluation_fold_k.json`.
+        """
+        with open(self.evaluation_filepath, 'w') as f:
+            json.dump(self.evaluations, f, indent=2)
