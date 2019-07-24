@@ -1,13 +1,13 @@
 import os
 
+import numpy as np
 import pytest
 import torch
-from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.callbacks import ModelCheckpoint
+from keras.callbacks import TensorBoard
 
 from .. import constants
 from ..utils import model_utils
-from .resources.constants import *
-import numpy as np
 
 
 class TestModelUtils(object):
@@ -90,31 +90,6 @@ class TestModelUtils(object):
         # Blank input should return blank list
         assert blank_actual == []
 
-    def test_precision_recall_f1_support(self):
-        """Asserts that model_utils.precision_recall_f1_support returns the expected values."""
-        TP_dummy = 100
-        FP_dummy = 10
-        FN_dummy = 20
-
-        prec_dummy = TP_dummy / (TP_dummy + FP_dummy)
-        rec_dummy = TP_dummy / (TP_dummy + FN_dummy)
-        f1_dummy = 2 * prec_dummy * rec_dummy / (prec_dummy + rec_dummy)
-        support_dummy = TP_dummy + FN_dummy
-
-        test_scores_no_null = model_utils.precision_recall_f1_support(TP_dummy, FP_dummy, FN_dummy)
-        test_scores_TP_null = model_utils.precision_recall_f1_support(0, FP_dummy, FN_dummy)
-        test_scores_FP_null = model_utils.precision_recall_f1_support(TP_dummy, 0, FN_dummy)
-        f1_FP_null = 2 * 1. * rec_dummy / (1. + rec_dummy)
-        test_scores_FN_null = model_utils.precision_recall_f1_support(TP_dummy, FP_dummy, 0)
-        f1_FN_null = 2 * prec_dummy * 1. / (prec_dummy + 1.)
-        test_scores_all_null = model_utils.precision_recall_f1_support(0, 0, 0)
-
-        assert test_scores_no_null == (prec_dummy, rec_dummy, f1_dummy, support_dummy)
-        assert test_scores_TP_null == (0., 0., 0., FN_dummy)
-        assert test_scores_FP_null == (1., rec_dummy, f1_FP_null, support_dummy)
-        assert test_scores_FN_null == (prec_dummy, 1., f1_FN_null, TP_dummy)
-        assert test_scores_all_null == (0., 0., 0., 0)
-
     def test_get_keras_optimizer_value_error(self):
         """Asserts that `model_utils.get_keras_optimizer()` returns a ValueError when an invalid
         argument for `optimizer` is passed.
@@ -136,11 +111,11 @@ class TestModelUtils(object):
         for exp, act in zip(expected, actual):
             assert exp.tolist() == act
 
-    def test_freeze_output_layers(self, saber_compound_dataset_model):
+    def test_freeze_output_layers(self, mt_bilstm_crf_model_specify):
         """Asserts that model_utils.freeze_output_layers() freezes the expected layers.
         """
         # Get model, set first output as the output layer currently being trained
-        model = saber_compound_dataset_model.models[0].model
+        model = mt_bilstm_crf_model_specify.model
         model_idx = 0
 
         # Check that all layers are trainble before calling freeze_output_layers
@@ -151,24 +126,6 @@ class TestModelUtils(object):
 
         assert model.get_layer(f'crf_{model_idx}').trainable
         assert not model.get_layer(f'crf_{1}').trainable
-
-    def test_get_targets(self, mt_bilstm_crf_model):
-        """Asserts that `model_utils.get_targets()` returns the expected values for a simple example.
-        """
-        # Get training data, set first output as the output layer currently being trained
-        training_data = mt_bilstm_crf_model.prepare_data_for_training()
-        model_idx = 0
-
-        expected = (
-            [training_data[model_idx]['y_train'], np.zeros_like(training_data[model_idx]['y_train'])],
-            [training_data[model_idx]['y_valid'], np.zeros_like(training_data[model_idx]['y_valid'])]
-        )
-
-        actual = model_utils.get_targets(training_data, model_idx=0)
-
-        for i, _ in enumerate(expected):
-            for j, _ in enumerate(expected):
-                assert np.all(np.equal(expected[i][j], actual[i][j]))
 
     def test_get_device_no_model(self):
         """Asserts that `model_utils.get_device()` reutnrs the expected PyTorch device and number of
