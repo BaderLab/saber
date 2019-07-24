@@ -1,35 +1,40 @@
 import os
 
-from pytorch_pretrained_bert import BertForTokenClassification, BertTokenizer
+from pytorch_pretrained_bert import BertForTokenClassification
+from pytorch_pretrained_bert import BertTokenizer
 from pytorch_pretrained_bert.optimization import BertAdam
 
-from ..constants import PARTITIONS, WORDPIECE
-from ..models.base_model import BaseModel, BasePyTorchModel
-from ..models.bert_for_joint_ner_and_rc import BertForJointNERAndRC
+from ..constants import PARTITIONS
+from ..constants import WORDPIECE
+from ..models.base_model import BaseModel
+from ..models.base_model import BasePyTorchModel
+from ..models.bert_for_joint_ner_and_rc import BertForJointNERAndRE
 from ..models.modules.bert_for_joint_entity_and_relation_classification import \
-    BertForJointEntityAndRelationClassification
+    BertForJointEntityAndRelationExtraction
 
 # TODO: test_prepare_data_for_training_simple and test_predict_simple need to be more rigorous
+# TODO (John): Add MT tests when the MT model is implemented
 # TODO (johngiorgi): Test that saving loading from CPU/GPU works as expected
 
 
-class TestBertForJointNERAndRC(object):
-    """Collects all unit tests for `saber.models.bert_for_joint_ner_and_rc.BertForJointNERAndRC`.
+class TestBertForJointNERAndRE(object):
+    """Collects all unit tests for `saber.models.bert_for_joint_ner_and_rc.BertForJointNERAndRE`.
     """
     def test_attributes_after_init(self,
                                    dummy_config,
                                    conll2004datasetreader_load,
                                    bert_for_joint_ner_and_rc_model):
         """Asserts instance attributes are as expected after initialization of a
-        `BertForJointNERAndRC` model.
+        `BertForJointNERAndRE` model.
         """
         assert isinstance(
             bert_for_joint_ner_and_rc_model,
-            (BertForJointNERAndRC, BasePyTorchModel, BaseModel)
+            (BertForJointNERAndRE, BasePyTorchModel, BaseModel)
         )
 
         # Attributes that are passed to __init__
         assert bert_for_joint_ner_and_rc_model.config is dummy_config
+        assert bert_for_joint_ner_and_rc_model.datasets[0] is conll2004datasetreader_load
         # Check that intialization has added the wordpiece tag ('X') with correct index
         assert conll2004datasetreader_load.type_to_idx['ent'][WORDPIECE] == \
             len(conll2004datasetreader_load.type_to_idx['ent']) - 1
@@ -54,15 +59,16 @@ class TestBertForJointNERAndRC(object):
                                       dummy_config,
                                       conll2004datasetreader_load,
                                       bert_for_joint_ner_and_rc_specify):
-        """Asserts attributes are as expected after call to `BertForJointNERAndRC.specify()`.
+        """Asserts attributes are as expected after call to `BertForJointNERAndRE.specify()`.
         """
         assert isinstance(
             bert_for_joint_ner_and_rc_specify,
-            (BertForJointNERAndRC, BasePyTorchModel, BaseModel)
+            (BertForJointNERAndRE, BasePyTorchModel, BaseModel)
         )
 
         # Attributes that are passed to __init__
         assert bert_for_joint_ner_and_rc_specify.config is dummy_config
+        assert bert_for_joint_ner_and_rc_specify.datasets[0] is conll2004datasetreader_load
         # Check that intialization has added the wordpiece tag ('X') with correct index
         assert conll2004datasetreader_load.type_to_idx['ent'][WORDPIECE] == \
             len(conll2004datasetreader_load.type_to_idx['ent']) - 1
@@ -83,7 +89,7 @@ class TestBertForJointNERAndRC(object):
         # Model and tokenizer
         assert isinstance(
             bert_for_joint_ner_and_rc_specify.model,
-            (BertForJointEntityAndRelationClassification, BertForTokenClassification)
+            (BertForJointEntityAndRelationExtraction, BertForTokenClassification)
         )
         assert isinstance(bert_for_joint_ner_and_rc_specify.tokenizer, BertTokenizer)
 
@@ -91,15 +97,15 @@ class TestBertForJointNERAndRC(object):
         assert bert_for_joint_ner_and_rc_specify.totally_arbitrary == 'arbitrary'
 
     def test_save(self, bert_for_joint_ner_and_rc_save):
-        """Asserts that the expected file exists after call to `BertForJointNERAndRC.save()`.
+        """Asserts that the expected file(s) exists after call to `BertForJointNERAndRE.save()`.
         """
         _, model_filepath = bert_for_joint_ner_and_rc_save
 
         assert os.path.isfile(model_filepath)
 
     def test_load(self, bert_for_joint_ner_and_rc_model, bert_for_joint_ner_and_rc_save):
-        """Asserts that the attributes of a `BertForJointNERAndRC` object are expected after call to
-        `BertForJointNERAndRC.load()`.
+        """Asserts that the attributes of a `BertForJointNERAndRE` object are expected after call to
+        `BertForJointNERAndRE.load()`.
         """
         model, model_filepath = bert_for_joint_ner_and_rc_save
 
@@ -119,7 +125,7 @@ class TestBertForJointNERAndRC(object):
 
         assert isinstance(
             bert_for_joint_ner_and_rc_model.model,
-            (BertForJointEntityAndRelationClassification, BertForTokenClassification)
+            (BertForJointEntityAndRelationExtraction, BertForTokenClassification)
         )
         assert isinstance(bert_for_joint_ner_and_rc_model.tokenizer, BertTokenizer)
 
@@ -128,18 +134,21 @@ class TestBertForJointNERAndRC(object):
         assert expected_num_rel_labels == actual_num_rel_labels
 
     def test_load_mt(self):
-        """Asserts that the attributes of a BertForJointNERAndRC object are expected after call to
-        `BertForJointNERAndRC.load()` for a multi-task model.
+        """Asserts that the attributes of a BertForJointNERAndRE object are expected after call to
+        `BertForJointNERAndRE.load()` for a multi-task model.
         """
         pass
 
-    def test_prepare_data_for_training(self, bert_for_joint_ner_and_rc_specify):
-        """Asserts that the dictionaries returned by `BertForJointNERAndRC.prepare_data_for_training()`
+    # TODO (John): This is a poor excuse for a test
+    def test_prepare_data_for_training(self, bert_for_ner_model_specify):
+        """Asserts that the dictionaries returned by `BertForNER.prepare_data_for_training()`
         contain the expected keys.
         """
-        training_data = bert_for_joint_ner_and_rc_specify.prepare_data_for_training()
+        training_data = bert_for_ner_model_specify.prepare_data_for_training()
 
-        assert all(f'x_{p}' in d and f'y_{p}' in d for d in training_data for p in PARTITIONS)
+        for data in training_data:
+            for fold in data:
+                assert all('x' in fold[p] and 'y' in fold[p] for p in PARTITIONS)
 
     def test_train(self, bert_for_joint_ner_and_rc_specify):
         """This test does not actually assert anything (which is surely bad practice) but at the
@@ -149,47 +158,40 @@ class TestBertForJointNERAndRC(object):
         bert_for_joint_ner_and_rc_specify.config.epochs = 1
         bert_for_joint_ner_and_rc_specify.train()
 
-        # This won't print anything unless the test fails
-        print('The training loop is likely broken.')
-
-        assert True
-
     # TODO (John): This doesn't account for relation predictions
     def test_predict(self, bert_for_joint_ner_and_rc_specify):
-        """Asserts that the shape and labels of the predictions returned by `BertForJointNERAndRC.predict()`
+        """Asserts that the shape and labels of the predictions returned by `BertForJointNERAndRE.predict()`
         are as expected.
         """
         tokens = [
             ['This', 'is', 'a', 'test', '.'],
             ['With', 'two', 'sentences', '.']
         ]
-        valid_types = bert_for_joint_ner_and_rc_specify.datasets[0].type_to_idx['ent']
+        valid_ner_labels = bert_for_joint_ner_and_rc_specify.datasets[0].type_to_idx['ent']
 
-        actual, _ = bert_for_joint_ner_and_rc_specify.predict(tokens)
+        actual_ner_preds, _, = bert_for_joint_ner_and_rc_specify.predict(tokens)
 
-        for sent, actual_ in zip(tokens, actual):
-            assert len(sent) == len(actual_)
+        for sent, actual_ner in zip(tokens, actual_ner_preds):
+            assert len(sent) == len(actual_ner)
             # Can't test exact label seq because it is stochastic, so check all preds are valid
-            assert all(label in valid_types for label in actual_)
+            assert all(label in valid_ner_labels for label in actual_ner)
 
-    # TODO (John): Add this test when the MT model is implemented
     def test_predict_mt(self):
         """Asserts that the shape and labels of the predictions returned by
-        `BertForJointNERAndRC.predict()` are as expected for a multi-task model.
+        `BertForJointNERAndRE.predict()` are as expected for a multi-task model.
         """
         pass
 
     def test_prepare_optimizers(self, bert_for_joint_ner_and_rc_specify):
         """Asserts that the returned optimizer object is as expected after call to
-        `BertForJointNERAndRC.prepare_optimizers()`.
+        `BertForJointNERAndRE.prepare_optimizers()`.
         """
         actual = bert_for_joint_ner_and_rc_specify.prepare_optimizers()
 
         assert all(isinstance(opt, BertAdam) for opt in actual)
 
-    # TODO (John): Add this test when the MT model is implemented
     def test_prepare_optimizers_mt(self):
         """Asserts that the returned optimizer object is as expected after call to
-        `BertForJointNERAndRC.prepare_optimizers()` for a multi-task model.
+        `BertForJointNERAndRE.prepare_optimizers()` for a multi-task model.
         """
         pass
