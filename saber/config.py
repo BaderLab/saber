@@ -159,6 +159,7 @@ class Config(object):
             args['grad_norm'] = config['training'].getfloat('grad_norm')
             args['dropout_rate'] = config['training']['dropout_rate'].split(',')
             args['batch_size'] = config['training'].getint('batch_size')
+            args['validation_split'] = config['training'].getfloat('validation_split')
             args['k_folds'] = config['training'].getint('k_folds')
             args['epochs'] = config['training'].getint('epochs')
             args['criteria'] = config['training']['criteria']
@@ -308,6 +309,8 @@ class Config(object):
                             help='Dimension of dense embeddings to be learned for each word.')
         parser.add_argument('--pretrained_embeddings', required=False, type=str,
                             help='Filepath to pre-trained word embeddings.')
+        parser.add_argument('--validation_split', required=False, type=float,
+                            help=('TODO.'))
         parser.add_argument('--variational_dropout', required=False, action='store_true',
                             help=('Pass this flag if variational dropout should be used. NOTE THAT '
                                   'THIS IS TEMPORARY.'))

@@ -1,6 +1,6 @@
 # Installation
 
-To install Saber, you will need `python3.6`. If not already installed, `python3` can be installed via
+To install Saber, you will need `python>=3.6`. If not already installed, `python3` can be installed via
 
 - The [official installer](https://www.python.org/downloads/)
 - [Homebrew](https://brew.sh), on MacOS (`brew install python3`)
@@ -38,28 +38,10 @@ $ conda activate saber
 [![GitHub-Commits](https://img.shields.io/github/commit-activity/y/baderlab/saber.svg?logo=git&logoColor=white&style=flat-square)](https://github.com/baderlab/saber/graphs/commit-activity)
 [![GitHub-Updated](https://img.shields.io/github/last-commit/baderlab/saber.svg?colorB=blue&logo=github&style=flat-square)](https://github.com/baderlab/saber/pulse)
 
-Pull and install straight from GitHub
+Pull and install in the current directory:
 
-```sh
-(saber) $ pip install git+https://github.com/BaderLab/saber.git
 ```
-
-or install by cloning the repository
-
-```sh
-(saber) $ git clone https://github.com/BaderLab/saber.git
-(saber) $ cd saber
-```
-
-and then using either `pip`
-
-```sh
-(saber) $ pip install -e .
-```
-or `setuptools`
-
-```sh
-(saber) $ python setup.py install
+(saber) $ pip install -e git+https://github.com/BaderLab/saber.git@master#egg=saber
 ```
 
 !!! note
