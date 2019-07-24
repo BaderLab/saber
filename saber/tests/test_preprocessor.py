@@ -24,7 +24,8 @@ class TestPreprocessor(object):
         assert preprocessor.tokenize(blank_test) == blank_expected
 
     def test_type_to_idx_value_error(self):
-        """
+        """Asserts that `type_to_idx`()` returns a `ValueError` when the values of the
+        `initial_mapping` argument do not form a contagious seqence.
         """
         with pytest.raises(ValueError):
             invalid_input = {'a': 0, 'b': 2, 'c': 3}
@@ -67,31 +68,6 @@ class TestPreprocessor(object):
             Preprocessor.get_type_idx_sequence(simple_seq, type_to_idx=simple_type_to_idx)
 
         pass
-
-    def test_chunk_entities(self):
-        """Asserts that call to Preprocessor.chunk_entities() returns the
-        expected results."""
-        blank_test = []
-        blank_expected = []
-
-        BIO_test = ['B-LIVB', 'I-LIVB', 'O', 'B-PRGE', 'O', 'I-CHED', 'I-CHED']
-        BIO_expected = [('LIVB', 0, 2), ('PRGE', 3, 4)]
-
-        BIOES_test = ['B-LIVB', 'I-LIVB', 'E-LIVB', 'O', 'S-PRGE', 'O', 'I-CHED', 'I-CHED']
-        BIOES_expected = [('LIVB', 0, 3), ('PRGE', 4, 5)]
-
-        BIOLU_test = ['B-LIVB', 'I-LIVB', 'L-LIVB', 'O', 'U-PRGE', 'O', 'I-CHED', 'I-CHED']
-        BIOLU_expected = [('LIVB', 0, 3), ('PRGE', 4, 5)]
-
-        blank_actual = Preprocessor.chunk_entities(blank_test)
-        BIO_actual = Preprocessor.chunk_entities(BIO_test)
-        BIOES_actual = Preprocessor.chunk_entities(BIOES_test)
-        BIOLU_actual = Preprocessor.chunk_entities(BIOLU_test)
-
-        assert blank_expected == blank_actual
-        assert BIO_expected == BIO_actual
-        assert BIOES_expected == BIOES_actual
-        assert BIOLU_expected == BIOLU_actual
 
     def test_sterilize(self):
         """Asserts that call to Preprocessor.sterilize() returns the

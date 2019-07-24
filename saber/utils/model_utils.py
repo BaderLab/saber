@@ -19,53 +19,60 @@ from .generic_utils import make_dir
 LOGGER = logging.getLogger(__name__)
 
 
+####################################################################################################
 # I/O
+####################################################################################################
+
 
 def prepare_output_directory(config):
-    """Create output directories `config.output_folder/config.dataset_folder` for each dataset.
+    """Returns a list of output directories for each dataset folder in `config.dataset_folder`.
 
-    Creates the following directory structure:
+    For each dataset folder in `config.dataset_folder`, creates a directory (or directories when
+    `len(config.dataset_folder) > 1`) under `config.output_folder` for saving the results of a
+    training session, which includes performance evaluations (`evaluation.json`) and a copy of the
+    config file used (`config.ini`). The directories are time stamped as `mmdd_HHMMSS`.
+
+    The following directory structure is created:
+
     .
     ├── config.output_folder
     |   └── <first_dataset_name_second_dataset_name_nth_dataset_name>
     |       └── <first_dataset_name>
-    |           └── train_session_<month>_<day>_<hr>_<min>_<sec>
+    |           └── mmdd_HHMMSS
     |       └── <second_dataset_name>
-    |           └── train_session_<month>_<day>_<hr>_<min>_<sec>
+    |           └── mmdd_HHMMSS
     |       └── <nth_dataset_name>
-    |           └── train_session_<month>_<day>_<hr>_<min>_<sec>
+    |           └── mmdd_HHMMSS
 
-    In the case of only a single dataset,
-    <first_dataset_name_second_dataset_name_nth_dataset_name> and <first_dataset_name> are
-    collapsed into a single directory. Saves a copy of the config file used to train the model
-    (`config`) to the top level of this directory.
+    If `len(config.dataset_folder) == 1`, only one directory is created under
+    `config.output_folder`.
 
     Args:
         config (Config): A Config object which contains a set of harmonized arguments provided in
             a *.ini file and, optionally, from the command line.
 
     Returns:
-        a list of directory paths to the subdirectories
-        train_session_<month>_<day>_<hr>_<min>_<sec>, one for each dataset in `dataset_folder`.
+        A list of directory paths to the time stamped subdirectories (`mmdd_HHMMSS`) which were
+        created under `config.dataset_folder`, one for each dataset in `config.dataset_folder`.
     """
     output_dirs = []
     output_folder = config.output_folder
-    # if multiple datasets, create additional directory to house all output directories
+    # If multiple datasets, create additional directory to house all output directories
     if len(config.dataset_folder) > 1:
         dataset_names = '_'.join([os.path.basename(ds) for ds in config.dataset_folder])
         output_folder = os.path.join(output_folder, dataset_names)
     make_dir(output_folder)
 
     for dataset in config.dataset_folder:
-        # create a subdirectory for each datasets name
+        # Ceate a subdirectory for each datasets name
         dataset_dir = os.path.join(output_folder, os.path.basename(dataset))
-        # create a subdirectory for each train session
-        train_session_dir = strftime("train_session_%a_%b_%d_%I_%M_%S").lower()
+
+        # Timestamp each datasets training output
+        train_session_dir = strftime(r"%m%d_%H%M%S")
         dataset_train_session_dir = os.path.join(dataset_dir, train_session_dir)
         output_dirs.append(dataset_train_session_dir)
         make_dir(dataset_train_session_dir)
 
-        # copy config file to top level directory
         config.save(dataset_train_session_dir)
 
     return output_dirs
@@ -92,7 +99,10 @@ def prepare_pretrained_model_dir(config):
     ds_names = '_'.join([os.path.basename(ds) for ds in config.dataset_folder])
     return os.path.join(config.output_folder, constants.PRETRAINED_MODEL_DIR, ds_names)
 
-# Keras callbacks
+
+####################################################################################################
+# Keras Callbacks
+####################################################################################################
 
 
 def setup_checkpoint_callback(config, output_dir):
@@ -102,14 +112,15 @@ def setup_checkpoint_callback(config, output_dir):
     `output_dir` (corresponding to individual datasets).
 
     Args:
-        output_dir (lst): A list of output directories, one for each dataset.
+        output_dir (list): A list of output directories, one for each dataset.
 
     Returns:
-        checkpointer: A Keras CallBack object for per epoch model checkpointing.
+        A list of Keras CallBack objects for per epoch model checkpointing, one for each dataset
+        in `output_dir`.
     """
     checkpointers = []
     for dir_ in output_dir:
-        # if only saving best weights, filepath needs to be the same so it gets overwritten
+        # If only saving best weights, filepath needs to be the same so it gets overwritten
         if config.save_all_weights:
             filepath = os.path.join(dir_, 'weights_epoch_{epoch:03d}_val_loss_{val_loss:.4f}.hdf5')
         else:
@@ -149,7 +160,7 @@ def setup_tensorboard_callback(output_dir):
     return tensorboards
 
 
-def setup_metrics_callback(model, datasets, config, training_data, output_dir, fold=None):
+def setup_metrics_callback(config, model, datasets, training_data, output_dirs):
     """Creates Keras Metrics Callback objects, one for each dataset in `datasets`.
 
     Args:
@@ -167,15 +178,13 @@ def setup_metrics_callback(model, datasets, config, training_data, output_dir, f
         A list of Metric objects, one for each dataset in `datasets`.
     """
     metrics = []
-    for i, dataset in enumerate(datasets):
-        eval_data = training_data[i] if fold is None else training_data[i][fold]
+    for i, (train_data, dataset, output) in enumerate(zip(training_data, datasets, output_dirs)):
         metric = Metrics(config=config,
                          model_=model,
-                         training_data=eval_data,
+                         training_data=train_data,
                          idx_to_tag=dataset.idx_to_tag,
-                         output_dir=output_dir[i],
-                         model_idx=i,
-                         fold=fold)
+                         output_dir=output,
+                         model_idx=i)
         metrics.append(metric)
 
     return metrics
@@ -193,38 +202,18 @@ def setup_callbacks(config, output_dir):
         A list of Keras Callback objects to use during training.
     """
     callbacks = []
-    # model checkpointing
+    # Model checkpointing
     callbacks.append(setup_checkpoint_callback(config, output_dir))
-    # tensorboard
+    # Tensorboard
     if config.tensorboard:
         callbacks.append(setup_tensorboard_callback(output_dir))
 
     return callbacks
 
 
-# Evaluation metrics
-
-def precision_recall_f1_support(true_positives, false_positives, false_negatives):
-    """Returns the precision, recall, F1 and support from TP, FP and FN counts.
-
-    Returns a four-tuple containing the precision, recall, F1-score and support
-    For the given true_positive (TP), false_positive (FP) and
-    false_negative (FN) counts.
-
-    Args:
-        true_positives (int): Number of true-positives predicted by classifier.
-        false_positives (int): Number of false-positives predicted by classifier.
-        false_negatives (int): Number of false-negatives predicted by classifier.
-
-    Returns:
-        Four-tuple containing (precision, recall, f1, support).
-    """
-    precision = true_positives / (true_positives + false_positives) if true_positives > 0 else 0.
-    recall = true_positives / (true_positives + false_negatives) if true_positives > 0 else 0.
-    f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.
-    support = true_positives + false_negatives
-
-    return precision, recall, f1_score, support
+####################################################################################################
+# Evaluation
+####################################################################################################
 
 
 def mask_labels(y_true, y_pred, label):
@@ -255,14 +244,17 @@ def mask_labels(y_true, y_pred, label):
     return y_true, y_pred
 
 
+####################################################################################################
 # Saving/loading
+####################################################################################################
+
 
 def load_pretrained_model(config, datasets, model_filepath, weights_filepath=None, **kwargs):
-    """Loads a pre-trained Keras model from its pre-trained weights and architecture files.
+    """Loads a pre-trained Saber model.
 
-    Loads a pre-trained Keras model given by its pre-trained weights (`weights_filepath`) and
-    architecture files (`model_filepath`). The type of model to load is specificed in
-    `config.model_name`.
+    Loads a pre-trained Saber model serialized at `model_filepath`. Keras models also required
+    `weights_filepath` to be specified, as the architecture and trained weights are serialized in
+    seperate files. The type of model to load is specificed in `config.model_name`.
 
     Args:
         config (Config): config (Config): A Config object which contains a set of harmonized
@@ -275,7 +267,7 @@ def load_pretrained_model(config, datasets, model_filepath, weights_filepath=Non
             required for PyTorch models. Defaults to None.
 
     Returns:
-        A pre-trained model.
+        A pre-trained Saber model.
     """
     # import statements are here to prevent circular imports
     if config.model_name == 'bilstm-crf-ner':
@@ -286,6 +278,10 @@ def load_pretrained_model(config, datasets, model_filepath, weights_filepath=Non
         from ..models.bert_for_ner import BertForNER
         model = BertForNER(config, datasets, kwargs['pretrained_model_name_or_path'])
         model.load(model_filepath)
+    elif config.model_name == 'bert-ner-rc':
+        from ..models.bert_for_ner import BertForNERAndRC
+        model = BertForNERAndRC(config, datasets, kwargs['pretrained_model_name_or_path'])
+        model.load(model_filepath)
 
     model.compile()
 
@@ -293,7 +289,7 @@ def load_pretrained_model(config, datasets, model_filepath, weights_filepath=Non
 
 
 def download_model_from_gdrive(pretrained_model, extract=True):
-    """Downloads a pre-trained model from Google Drive.
+    """Downloads a pre-trained Saber model from Google Drive.
 
     Args:
         pretrained_model (str): The name of a pre-trained model. Must be in
@@ -308,10 +304,8 @@ def download_model_from_gdrive(pretrained_model, extract=True):
     file_id = constants.PRETRAINED_MODELS[pretrained_model]
     dest_path = os.path.join(constants.PRETRAINED_MODEL_DIR, pretrained_model)
 
-    # download model from Google Drive, will skip if already exists
-    gdd.download_file_from_google_drive(file_id=file_id,
-                                        dest_path=f'{dest_path}.tar.bz2',
-                                        showsize=True)
+    # Download model from Google Drive, will skip if already exists
+    gdd.download_file_from_google_drive(file_id, dest_path=f'{dest_path}.tar.bz2', showsize=True)
 
     LOGGER.info('Loaded pre-trained model %s from Google Drive', pretrained_model)
 
@@ -322,10 +316,13 @@ def download_model_from_gdrive(pretrained_model, extract=True):
     return f'{dest_path}.tar.bz2'
 
 
-# Keras helper functions
+####################################################################################################
+# Keras Helper Functions
+####################################################################################################
+
 
 def get_keras_optimizer(optimizer, lr=0.01, decay=0.0, clipnorm=0.0):
-    """A Keras helper function that initializes and returns the optimizer `optimizer`.
+    """A Keras helper function that initializes and returns the optimizer specified by `optimizer`.
 
     Args:
         optimizer (str): Name of a valid Keras optimizer.
@@ -386,41 +383,10 @@ def freeze_output_layers(model, model_idx):
             layer.trainable = False
 
 
-def get_targets(training_data, model_idx, fold=None):
-    """Returns a tuple of train, valid targets modified for use with a multi-task model.
+####################################################################################################
+# PyTorch Helper Functions
+####################################################################################################
 
-    Given `training_data`, a list of data for training a multi-task model, zeros out the train and
-    valid targets for all datasets not corresponding to the current output layer being trained
-    (`model_idx`).
-
-    Args:
-        training_data (list): A list of dicts containing the data (at key `x_partition`) and targets
-            (at key `y_partition`) for each partition: 'train', 'valid' and 'test'.
-        model_idx (int): Index to `training_data` which corresponds to the current task
-            being trained (i.e. the current dataset and output layer).
-        fold (int): Optional, integer corresponding to the current fold in k-fold cross validation.
-            Should be None if not training using cross-validation. Defaults to None.
-
-    Returns:
-        Tuple of train, valid targets modified for use with a multi-task model.
-    """
-    if fold is None:
-        current_train_target = training_data[model_idx]['y_train']
-        current_valid_target = training_data[model_idx]['y_valid']
-    else:
-        current_train_target = training_data[model_idx][fold]['y_train']
-        current_valid_target = training_data[model_idx][fold]['y_valid']
-
-    train_targets = [np.zeros_like(current_train_target) for _, _ in enumerate(training_data)]
-    valid_targets = [np.zeros_like(current_valid_target) for _, _ in enumerate(training_data)]
-
-    train_targets[model_idx] = current_train_target
-    valid_targets[model_idx] = current_valid_target
-
-    return train_targets, valid_targets
-
-
-# PyTorch helper functions
 
 def get_device(model=None):
     """Places `model` on CUDA device if available, returns PyTorch device, number of available GPUs.
@@ -430,7 +396,7 @@ def get_device(model=None):
     is parallized with `torch.nn.DataParallel(model)`.
 
     Args:
-        (Torch.nn.Module) PyTorch model, if CUDA device is available this function will place the
+        (Torch.nn.Module): A PyTorch model. If CUDA device is available this function will place the
         model on the CUDA device with `model.to(device)`. If multiple CUDA devices are available,
         the model is parallized with `torch.nn.DataParallel(model)`.
 

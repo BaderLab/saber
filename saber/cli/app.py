@@ -2,7 +2,6 @@
 """Simple web service which exposes Saber's functionality via a RESTful API.
 """
 import argparse
-import logging
 
 from flask import Flask, jsonify, redirect, request
 from waitress import serve
@@ -14,7 +13,7 @@ app = Flask(__name__)
 
 saber = app_utils.load_models(constants.ENTITIES)
 
-LOGGER = logging.getLogger(__name__)
+print('Saber version: {0}'.format(constants.__version__))
 
 
 @app.route('/')

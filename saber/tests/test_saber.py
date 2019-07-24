@@ -19,8 +19,8 @@ from .resources.constants import PATH_TO_CONLL2003_DATASET
 from .resources.constants import PATH_TO_DUMMY_DATASET_2
 from .resources.constants import PATH_TO_DUMMY_EMBEDDINGS
 
-
 # TODO (johngiorgi): Write tests for compound dataset
+
 
 class TestSaber(object):
     """Collects all unit tests for `saber.saber.Saber`
@@ -35,10 +35,10 @@ class TestSaber(object):
         assert saber_blank.embeddings is None
         assert saber_blank.models == []
 
-        # test that we can pass arbitrary keyword arguments
+        # Test that we can pass arbitrary keyword arguments
         assert saber_blank.totally_arbitrary == 'arbitrary'
 
-    def test_annotate_value_error(self, saber_single_dataset_model):
+    def test_annotate_value_error(self, saber_bilstm_crf_model):
         """Asserts that call to `Saber.annotate()` raises a ValueError when an empty/falsey value for
         `text` is passed.
         loaded."""
@@ -46,10 +46,9 @@ class TestSaber(object):
 
         for test in tests:
             with pytest.raises(ValueError):
-                saber_single_dataset_model.annotate(text=test)
+                saber_bilstm_crf_model.annotate(text=test)
 
-    # TODO (John): Duplicate this test for each model saber implements
-    def test_annotate_single(self, saber_single_dataset_model):
+    def test_annotate_with_bilstm_crf(self, saber_bilstm_crf_model):
         """Asserts that call to `Saber.annotate()` returns the expected results with a single dataset
         loaded."""
         test = "This is a simple test. With multiple sentences."
@@ -57,13 +56,12 @@ class TestSaber(object):
                     # TODO (John): This is temp, fixes SpaCy bug.
                     'settings': {}}
 
-        actual = saber_single_dataset_model.annotate(test)
+        actual = saber_bilstm_crf_model.annotate(test)
         actual['ents'] = []  # wipe the predicted ents as they are stochastic.
 
         assert expected == actual
 
-    # TODO (John): Duplicate this test for each model saber implements
-    def test_annotate_compound(self, saber_compound_dataset):
+    def test_annotate_with_mt_bilstm_crf(self, saber_mt_bilstm_crf_model):
         """Asserts that call to `Saber.annotate()` returns the expected results with a single dataset
         loaded."""
         test = "This is a simple test. With multiple sentences."
@@ -71,10 +69,37 @@ class TestSaber(object):
                     # TODO (John): This is temp, fixes SpaCy bug.
                     'settings': {}}
 
-        actual = saber_compound_dataset.annotate(test)
+        actual = saber_mt_bilstm_crf_model.annotate(test)
         actual['ents'] = []  # wipe the predicted ents as they are stochastic.
 
         assert expected == actual
+
+    def test_annotate_with_bert_for_ner(self, saber_bert_for_ner_model):
+        """Asserts that call to `Saber.annotate()` returns the expected results with a single dataset
+        loaded."""
+        test = "This is a simple test. With multiple sentences."
+        expected = {'text': test, 'title': '', 'ents': [],
+                    # TODO (John): This is temp, fixes SpaCy bug.
+                    'settings': {}}
+
+        actual = saber_bert_for_ner_model.annotate(test)
+        actual['ents'] = []  # wipe the predicted ents as they are stochastic.
+
+        assert expected == actual
+
+    def test_annotate_with_mt_bert_for_ner(self, saber_mt_bert_for_ner_model):
+        """Asserts that call to `Saber.annotate()` returns the expected results with a single dataset
+        loaded."""
+        test = "This is a simple test. With multiple sentences."
+        expected = {'text': test, 'title': '', 'ents': [],
+                    # TODO (John): This is temp, fixes SpaCy bug.
+                    'settings': {}}
+
+        actual = saber_mt_bert_for_ner_model.annotate(test)
+        actual['ents'] = []  # wipe the predicted ents as they are stochastic.
+
+        # assert expected == actual
+        assert False
 
     def test_save_missing_step_exception(self, saber_blank):
         """Asserts that `Saber` object raises a MissingStepException when we try to call `Saber.save()`
@@ -83,20 +108,20 @@ class TestSaber(object):
         with pytest.raises(MissingStepException):
             saber_blank.save()
 
-    def test_save_file_exists(self, tmpdir, saber_single_dataset_model):
+    def test_save_file_exists(self, tmpdir, saber_bilstm_crf_model):
         """Asserts that a file is created under the expected directory when `Saber.save()` is called.
         """
         model_save_dir = tmpdir.mkdir("saved_model")
-        saved_directory = saber_single_dataset_model.save(directory=model_save_dir, compress=True)
+        saved_directory = saber_bilstm_crf_model.save(directory=model_save_dir, compress=True)
 
         assert os.path.exists(f'{saved_directory}.tar.bz2')
 
-    def test_save_dir_exists(self, tmpdir, saber_single_dataset_model):
+    def test_save_dir_exists(self, tmpdir, saber_bilstm_crf_model):
         """Asserts that a directory is created under the expected directory when
         `Saber.save(compress=False)` is called.
         """
         model_save_dir = tmpdir.mkdir("saved_model")
-        saved_directory = saber_single_dataset_model.save(directory=model_save_dir, compress=False)
+        saved_directory = saber_bilstm_crf_model.save(directory=model_save_dir, compress=False)
 
         model_attributes_filepath = os.path.join(saved_directory, constants.ATTRIBUTES_FILENAME)
         model_filepath = os.path.join(saved_directory, constants.KERAS_MODEL_FILENAME)
@@ -144,26 +169,26 @@ class TestSaber(object):
 
     def test_tag_to_idx_after_load_single_dataset_with_transfer(self,
                                                                 dummy_dataset_2,
-                                                                saber_single_dataset_model):
+                                                                saber_bilstm_crf_model):
         """Asserts that `saber.datasets[0].type_to_idx['ent']` is unchanged after we load a single
         target dataset for transfer learning.
         """
         expected = dummy_dataset_2.type_to_idx['ent']
-        saber_single_dataset_model.load_dataset(PATH_TO_DUMMY_DATASET_2)
-        actual = saber_single_dataset_model.datasets[0].type_to_idx['ent']
+        saber_bilstm_crf_model.load_dataset(PATH_TO_DUMMY_DATASET_2)
+        actual = saber_bilstm_crf_model.datasets[0].type_to_idx['ent']
 
         assert actual == expected
 
     def test_tag_to_idx_after_load_compound_dataset_with_transfer(self,
                                                                   conll2003datasetreader_load,
                                                                   dummy_dataset_2,
-                                                                  saber_single_dataset_model):
+                                                                  saber_bilstm_crf_model):
         """Asserts that `type_to_idx['ent']` is unchanged after we load a compound target dataset for
         transfer learning.
         """
         expected = [conll2003datasetreader_load.type_to_idx['ent'],
                     dummy_dataset_2.type_to_idx['ent']]
-        saber_compound_dataset_model = saber_single_dataset_model
+        saber_compound_dataset_model = saber_bilstm_crf_model
         saber_compound_dataset_model.load_dataset(
             [PATH_TO_CONLL2003_DATASET, PATH_TO_DUMMY_DATASET_2]
         )
@@ -216,19 +241,19 @@ class TestSaber(object):
         with pytest.raises(ValueError):
             saber_single_dataset.load_embeddings()
 
-    def test_build_single_dataset(self, saber_single_dataset_model):
+    def test_build_single_dataset(self, saber_single_dataset):
         """Assert that the `model` attribute of a `Saber` instance was updated as expected after
         call to `Saber.build()` when single dataset was loaded.
         """
         assert all(isinstance(model, (BaseModel, BaseKerasModel, BiLSTMCRF)) for model in
-                   saber_single_dataset_model.models)
+                   saber_single_dataset.models)
 
-    def test_build_compound_dataset(self, saber_compound_dataset_model):
+    def test_build_compound_dataset(self, saber_compound_dataset):
         """Assert that the `model` attribute of a `Saber` instance was updated as expected after
         call to `Saber.build()` when compound dataset was loaded.
         """
         assert all(isinstance(model, (BaseModel, BaseKerasModel, BiLSTMCRF)) for model in
-                   saber_compound_dataset_model.models)
+                   saber_compound_dataset.models)
 
     def test_build_missing_step_exception(self, saber_blank):
         """Asserts that `Saber` object raises a MissingStepException when we try to build the model
