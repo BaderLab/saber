@@ -40,24 +40,24 @@ Of course, not all corpora are distributed in the CoNLL format:
 
 Saber infers the "training strategy" based on the structure of the dataset folder:
 
-- To use k-fold cross-validation, simply provide a `train.*` file in your dataset folder.
+- If `valid.*` and/or `test.*` files are provided, they will be used for validation/evaluation respectively.
 
 E.g.
-```
+
+```bash
 .
 ├── NCBI_Disease
 │   └── train.tsv
+│   └── valid.tsv
+│   └── test.tsv
 ```
 
-- To use a train/valid/test strategy, provide `train.*` and `test.*` files in your dataset folder. Optionally, you can provide a `valid.*` file. If not provided, a random 10% of examples from `train.*` are used as the validation set.
+- Otherwise, to use k-fold cross-validation, simply provide a `train.*` file in your dataset folder and specify the number of folds with `k_folds`
+- To create a validation split from your `train.*` file instead, specify the size of the split with `validation_split`.
 
-E.g.
-```
-.
-├── NCBI_Disease
-│   ├── test.tsv
-│   └── train.tsv
-```
+!!! note
+      If no `valid.*` file is provided and `k_folds > 0 and validation_split > 0`, `k_folds` will take precedence.
+
 
 ## Word embeddings
 

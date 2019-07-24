@@ -42,7 +42,7 @@
 
 ## Installation
 
-To install Saber, you will need `python3.6`.
+To install Saber, you will need `python>=3.6`.
 
 ### Latest PyPI stable release
 
@@ -50,7 +50,7 @@ To install Saber, you will need `python3.6`.
 [![PyPI-Downloads](https://img.shields.io/pypi/dm/saber.svg?colorB=blue&logo=python&logoColor=white)](https://pypi.org/project/saber)
 [![Libraries-Dependents](https://img.shields.io/librariesio/dependent-repos/pypi/saber.svg?colorB=blue&logo=koding&logoColor=white)](https://github.com/baderlab/saber/network/dependents)
 
-```sh
+```
 (saber) $ pip install saber
 ```
 
@@ -64,28 +64,10 @@ To install Saber, you will need `python3.6`.
 [![GitHub-Commits](https://img.shields.io/github/commit-activity/y/baderlab/saber.svg?logo=git&logoColor=white)](https://github.com/baderlab/saber/graphs/commit-activity)
 [![GitHub-Updated](https://img.shields.io/github/last-commit/baderlab/saber.svg?colorB=blue&logo=github)](https://github.com/baderlab/saber/pulse)
 
-Pull and install straight from GitHub
+Pull and install in the current directory:
 
-```sh
-(saber) $ pip install git+https://github.com/BaderLab/saber.git
 ```
-
-or install by cloning the repository
-
-```sh
-(saber) $ git clone https://github.com/BaderLab/saber.git
-(saber) $ cd saber
-```
-
-and then using either `pip`
-
-```sh
-(saber) $ pip install -e .
-```
-or `setuptools`
-
-```sh
-(saber) $ python setup.py install
+(saber) $ pip install -e git+https://github.com/BaderLab/saber.git@master#egg=saber
 ```
 
 See the [documentation](https://baderlab.github.io/saber/installation/) for more detailed installation instructions.
