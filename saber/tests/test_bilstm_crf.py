@@ -1,9 +1,10 @@
-import numpy as np
+import os
+
 from keras.engine.training import Model
 from keras.optimizers import Optimizer
-from keras.utils import to_categorical
 from keras_contrib.layers.crf import CRF
 
+from ..constants import PARTITIONS
 from ..models.base_model import BaseKerasModel
 from ..models.base_model import BaseModel
 from ..models.bilstm_crf import BiLSTMCRF
@@ -87,44 +88,60 @@ class TestBiLSTMCRF(object):
         # test that we can pass arbitrary keyword arguments
         assert bilstm_crf_model_embeddings_specify.totally_arbitrary == 'arbitrary'
 
+    def test_save(self, bilstm_crf_model_save):
+        """Asserts that the expected file(s) exists after call to `BiLSTMCRF.save()`.
+        """
+        _, model_filepath, weights_filepath = bilstm_crf_model_save
+
+        assert os.path.isfile(model_filepath)
+        assert os.path.isfile(weights_filepath)
+
+    def test_save_mt(self, mt_bilstm_crf_model_save):
+        """Asserts that the expected file(s) exists after call to `BiLSTMCRF.save()` for a
+        multi-task model.
+        """
+        _, model_filepath, weights_filepath = mt_bilstm_crf_model_save
+
+        assert os.path.isfile(model_filepath)
+        assert os.path.isfile(weights_filepath)
+
+    def test_load(self, bilstm_crf_model, bilstm_crf_model_save):
+        """Asserts that the attributes of a BertForNER object are expected after call to
+        `BertForNER.load()`.
+        """
+        model, model_filepath, weights_filepath = bilstm_crf_model_save
+
+        bilstm_crf_model.load(model_filepath=model_filepath, weights_filepath=weights_filepath)
+
+        assert isinstance(bilstm_crf_model.model, Model)
+
+    # TODO (John): This is a poor excuse for a test
     def test_prepare_data_for_training(self, conll2003datasetreader_load, bilstm_crf_model):
-        """Assert that the values returned from call to `BaseKerasModel.prepare_data_for_training()` are
-        as expected.
+        """Assert that the values returned from call to `BaseKerasModel.prepare_data_for_training()`
+        are as expected.
         """
         training_data = bilstm_crf_model.prepare_data_for_training()
-        partitions = ['x_train', 'y_train', 'x_valid', 'y_valid', 'x_test', 'y_test']
 
-        # assert each item in training_data contains the expected keys
-        assert all(partition in data for data in training_data for partition in partitions)
+        # Assert each item in training_data contains the expected keys
+        for data in training_data:
+            for fold in data:
+                assert all('x' in fold[p] and 'y' in fold[p] for p in PARTITIONS)
 
-        # print(training_data['y_train'[0]])
-        # print(to_categorical(conll2003datasetreader_load.idx_seq['train']['ent']))
+    def test_train(self, bilstm_crf_model_specify):
+        """This test does not actually assert anything (which is surely bad practice) but at the
+        very least, it will fail if training was unsuccesful and therefore alert us when a code
+        change has broke the training loop.
+        """
+        bilstm_crf_model_specify.config.epochs = 1
+        bilstm_crf_model_specify.train()
 
-        # assert that the items in training_data contain the expected values
-        assert all(data['x_train'] == [conll2003datasetreader_load.idx_seq['train']['word'],
-                                       conll2003datasetreader_load.idx_seq['train']['char']]
-                   for data in training_data)
-        assert all(data['x_valid'] == [conll2003datasetreader_load.idx_seq['valid']['word'],
-                                       conll2003datasetreader_load.idx_seq['valid']['char']]
-                   for data in training_data)
-        assert all(data['x_test'] == [conll2003datasetreader_load.idx_seq['test']['word'],
-                                      conll2003datasetreader_load.idx_seq['test']['char']]
-                   for data in training_data)
-        assert all(
-            np.array_equal(data['y_train'],
-                           to_categorical(conll2003datasetreader_load.idx_seq['train']['ent']))
-            for data in training_data
-        )
-        assert all(
-            np.array_equal(data['y_valid'],
-                           to_categorical(conll2003datasetreader_load.idx_seq['valid']['ent']))
-            for data in training_data
-        )
-        assert all(
-            np.array_equal(data['y_test'],
-                           to_categorical(conll2003datasetreader_load.idx_seq['test']['ent']))
-            for data in training_data
-        )
+    def test_train_mt(self, mt_bilstm_crf_model_specify):
+        """This test does not actually assert anything (which is surely bad practice) but at the
+        very least, it will fail if training was unsuccesful and therefore alert us when a code
+        change has broke the training loop.
+        """
+        mt_bilstm_crf_model_specify.config.epochs = 1
+        mt_bilstm_crf_model_specify.train()
 
     def test_crf_after_transfer(self,
                                 bilstm_crf_model_specify,

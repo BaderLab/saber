@@ -20,7 +20,10 @@ from keras.utils import to_categorical
 from keras_contrib.layers.crf import CRF
 from keras_contrib.losses.crf_losses import crf_loss
 
-from .. import constants
+from ..constants import PAD
+from ..constants import PAD_VALUE
+from ..constants import UNITS_CHAR_LSTM
+from ..constants import UNITS_WORD_LSTM
 from ..preprocessor import Preprocessor
 from ..utils import data_utils
 from ..utils import model_utils
@@ -30,12 +33,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 class BiLSTMCRF(BaseKerasModel):
-    """A Keras implementation of a Multi-task BiLSTM-CRF for sequence labeling.
+    """A Keras implementation of a multi-task BiLSTM-CRF model for named entity recognition (NER).
 
     A BiLSTM-CRF for NER implementation in Keras. Supports multi-task learning by default, just pass
     multiple Dataset objects via `datasets` to the constructor and the model will share the
     parameters of all layers, except for the final output layer, across all datasets, where each
-    dataset represents a sequence labelling task.
+    dataset represents a NER task.
 
     Args:
         config (Config): Contains a set of harmonzied arguments provided in a *.ini file and,
@@ -71,7 +74,7 @@ class BiLSTMCRF(BaseKerasModel):
         return model
 
     def specify(self):
-        """Specifies a BiLSTM-CRF for sequence tagging using Keras.
+        """Specifies a BiLSTM-CRF for named entity recognition (NER) using Keras.
 
         Implements a hybrid bidirectional long short-term memory network-conditional random
         field (BiLSTM-CRF) multi-task model for sequence tagging. If `len(self.datasets) > 1`, a
@@ -111,15 +114,15 @@ class BiLSTMCRF(BaseKerasModel):
         char_embeddings = char_embeddings(char_ids)
 
         # Char-level BiLSTM
-        char_BiLSTM = TimeDistributed(Bidirectional(LSTM(constants.UNITS_CHAR_LSTM // 2)),
+        char_BiLSTM = TimeDistributed(Bidirectional(LSTM(UNITS_CHAR_LSTM // 2)),
                                       name='character_BiLSTM')
         # Word-level BiLSTM
-        word_BiLSTM_1 = Bidirectional(LSTM(units=constants.UNITS_WORD_LSTM // 2,
+        word_BiLSTM_1 = Bidirectional(LSTM(units=UNITS_WORD_LSTM // 2,
                                            return_sequences=True,
                                            dropout=self.config.dropout_rate['input'],
                                            recurrent_dropout=self.config.dropout_rate['recurrent']),
                                       name="word_BiLSTM_1")
-        word_BiLSTM_2 = Bidirectional(LSTM(units=constants.UNITS_WORD_LSTM // 2,
+        word_BiLSTM_2 = Bidirectional(LSTM(units=UNITS_WORD_LSTM // 2,
                                            return_sequences=True,
                                            dropout=self.config.dropout_rate['input'],
                                            recurrent_dropout=self.config.dropout_rate['recurrent']),
@@ -221,195 +224,178 @@ class BiLSTMCRF(BaseKerasModel):
 
         return self.model
 
+    def prepare_data_for_training(self):
+        """Returns a list containing data which has been processed for training with `self.model`.
+
+        For each dataset at `self.datasets`, processes the data to be used for training and/or
+        evaluation with `self.model`. Returns a list of dictionaries, of length `len(self.datasets)`
+        keyed by partition, where each dictionary contains the inputs at `[partition]['x']` and the
+        targets at `[partition]['y']` for `partition` of the corresponding dataset.
+
+        Returns:
+            A list of dictionaries, of length `len(self.datasets)`, containing the training data for
+            each dataset at `self.datasets`.
+        """
+        training_data = []
+        for dataset in self.datasets:
+            training_data.append({})
+            for partition, filepath in dataset.dataset_folder.items():
+                if filepath is not None:
+                    training_data[-1][partition] = {
+                        'x': [dataset.idx_seq[partition]['word'],
+                              dataset.idx_seq[partition]['char']],
+                        # One-hot encode our targets
+                        'y': to_categorical(dataset.idx_seq[partition]['ent'])
+                    }
+                else:
+                    training_data[-1][partition] = None
+
+            training_data[-1] = data_utils.get_validation_set(self.config, training_data[-1])
+
+            # A hack to ensure that training data is always a list (datasets) of lists (folds)
+            if not isinstance(training_data[-1], list):
+                training_data[-1] = [training_data[-1]]
+
+        return training_data
+
     def train(self):
         """Co-ordinates the training of the Keras model `self.model`.
 
         Co-ordinates the training of the Keras model `self.model`. Minimally expects a train
-        partition and one or both of valid and test partitions to be supplied in the Dataset objects
-        at `self.datasets`.
+        partition to be supplied in the Dataset objects at `self.datasets`.
         """
-        # Need to explicitly get one optimizer per output layer (if more than one)
-        optimizers = self.prepare_optimizers()
-
         # Gather everything we need to run a training session
+        optimizers = self.prepare_optimizers()
         training_data = self.prepare_data_for_training()
-        output_dir = model_utils.prepare_output_directory(self.config)
-        callbacks = model_utils.setup_callbacks(self.config, output_dir)
+        output_dirs = model_utils.prepare_output_directory(self.config)
+        callbacks = model_utils.setup_callbacks(self.config, output_dirs)
 
-        def train_valid_test(training_data, output_dir, callbacks, optimizers=None):
-            # Use 10% of train data as validation data if no validation data provided
-            if training_data[0]['x_valid'] is None:
-                training_data = data_utils.collect_valid_data(training_data)
+        metrics = model_utils.setup_metrics_callback(config=self.config,
+                                                     model=self,
+                                                     datasets=self.datasets,
+                                                     training_data=training_data,
+                                                     output_dirs=output_dirs,)
 
-            # Get list of Keras Callback objects for computing/storing metrics
-            metrics = model_utils.setup_metrics_callback(model=self,
-                                                         config=self.config,
-                                                         datasets=self.datasets,
-                                                         training_data=training_data,
-                                                         output_dir=output_dir,)
-
+        # Training loop
+        k_folds = len(training_data[0])
+        for fold in range(k_folds):
             # Train a multi-task model (MTM)
             if len(optimizers) > 1:
                 for epoch in range(self.config.epochs):
-                    print(f'Global epoch: {epoch + 1}/{self.config.epochs}')
+                    # Setup a progress bar
+                    if k_folds > 1:
+                        fold_and_epoch = (fold + 1, k_folds, epoch + 1, self.config.epochs)
+                        print('Fold: {}/{}; Epoch: {}/{}'.format(*fold_and_epoch))
+                    else:
+                        print(f'Epoch: {epoch + 1}/{self.config.epochs}')
 
                     for model_idx in random.sample(range(0, len(optimizers)), len(optimizers)):
-
                         # Freeze all CRFs besides the one we are currently training
                         model_utils.freeze_output_layers(self.model, model_idx)
 
-                        # Zero the contribution to the loss from layers we aren't currently training
+                        # Zero contribution to the loss from layers we aren't currently training
                         loss_weights = [1.0 if model_idx == i else 0.0
                                         for i, _ in enumerate(optimizers)]
-                        self.compile(loss=crf_loss, optimizer=optimizers[model_idx],
+                        self.compile(loss=crf_loss,
+                                     optimizer=optimizers[model_idx],
                                      loss_weights=loss_weights)
 
                         # Get zeroed out targets for layers we aren't currently training
-                        train_targets, valid_targets = self.model_utils.get_targets(training_data,
-                                                                                    model_idx)
+                        train_targets = \
+                            [np.zeros_like(data[fold]['train']['y']) if i != model_idx else
+                             data[fold]['train']['y'] for i, data in enumerate(training_data)]
+                        valid_targets = \
+                            [np.zeros_like(data[fold]['valid']['y']) if i != model_idx else
+                             data[fold]['valid']['y'] for i, data in enumerate(training_data)]
 
                         callbacks_ = [cb[model_idx] for cb in callbacks] + [metrics[model_idx]]
-                        validation_data = (training_data[model_idx]['x_valid'], valid_targets)
 
-                        self.model.fit(x=training_data[model_idx]['x_train'],
-                                       y=train_targets,
-                                       batch_size=self.config.batch_size,
-                                       callbacks=callbacks_,
-                                       validation_data=validation_data,
-                                       verbose=1,
-                                       # required for Keras to properly display current epoch
-                                       initial_epoch=epoch,
-                                       epochs=epoch + 1)
+                        validation_data = \
+                            (training_data[model_idx][fold]['valid']['x'], valid_targets)
+
+                        self.model.fit(
+                            x=training_data[model_idx][fold]['train']['x'],
+                            y=train_targets,
+                            batch_size=self.config.batch_size,
+                            callbacks=callbacks_,
+                            validation_data=validation_data,
+                            verbose=1,
+                            # required to properly display current epoch
+                            initial_epoch=epoch,
+                            epochs=epoch + 1
+                        )
             # Train a single-task model (STM)
             else:
-                callbacks_ = [cb[0] for cb in callbacks] + [metrics[0]]
-
-                self.model.fit(x=training_data[0]['x_train'],
-                               y=training_data[0]['y_train'],
-                               batch_size=self.config.batch_size,
-                               callbacks=callbacks_,
-                               validation_data=(training_data[0]['x_valid'],
-                                                training_data[0]['y_valid']),
-                               verbose=1,
-                               epochs=self.config.epochs)
-
-        def cross_validation(training_data, output_dir, callbacks, optimizers=None):
-            # Get the train/valid partitioned data for all datasets and all folds
-            training_data = data_utils.collect_cv_data(training_data, self.config.k_folds)
-
-            # Training loop
-            for fold in range(self.config.k_folds):
-                # get list of Keras Callback objects for computing/storing metrics
-                metrics = model_utils.setup_metrics_callback(model=self,
-                                                             datasets=self.datasets,
-                                                             config=self.config,
-                                                             training_data=training_data,
-                                                             output_dir=output_dir,
-                                                             fold=fold)
-
-                # Train a multi-task model (MTM)
-                if optimizers is not None and len(optimizers) > 1:
-                    for epoch in range(self.config.epochs):
-                        train_info = (fold + 1, self.config.k_folds, epoch + 1, self.config.epochs)
-                        print('Fold: {}/{}; Global epoch: {}/{}'.format(*train_info))
-
-                        for model_idx in random.sample(range(0, len(optimizers)), len(optimizers)):
-                            # Freeze all CRFs besides the one we are currently training
-                            model_utils.freeze_output_layers(self.model, model_idx)
-
-                            # Zero contribution to the loss from layers we aren't currently training
-                            loss_weights = [1.0 if model_idx == i else 0.0
-                                            for i, _ in enumerate(optimizers)]
-                            self.compile(loss=crf_loss, optimizer=optimizers[model_idx],
-                                         loss_weights=loss_weights)
-
-                            # Get zeroed out targets for layers we aren't currently training
-                            train_targets, valid_targets = \
-                                model_utils.get_targets(training_data, model_idx, fold)
-
-                            callbacks_ = [cb[model_idx] for cb in callbacks] + [metrics[model_idx]]
-                            validation_data = (training_data[model_idx][fold]['x_valid'],
-                                               valid_targets)
-
-                            self.model.fit(x=training_data[model_idx][fold]['x_train'],
-                                           y=train_targets,
-                                           batch_size=self.config.batch_size,
-                                           callbacks=callbacks_,
-                                           validation_data=validation_data,
-                                           verbose=1,
-                                           # required to properly display current epoch
-                                           initial_epoch=epoch,
-                                           epochs=epoch + 1)
-                # Train a single-task model (STM)
-                else:
+                if k_folds > 1:
                     print(f'Fold: {fold + 1}/{self.config.k_folds}')
 
-                    callbacks_ = [cb[0] for cb in callbacks] + [metrics[0]]
+                callbacks_ = [cb[0] for cb in callbacks] + [metrics[0]]
 
-                    self.model.fit(x=training_data[0][fold]['x_train'],
-                                   y=training_data[0][fold]['y_train'],
-                                   batch_size=self.config.batch_size,
-                                   callbacks=callbacks_,
-                                   validation_data=(training_data[0][fold]['x_valid'],
-                                                    training_data[0][fold]['y_valid']),
-                                   verbose=1,
-                                   epochs=self.config.epochs)
+                self.model.fit(
+                    x=training_data[0][fold]['train']['x'],
+                    y=training_data[0][fold]['train']['y'],
+                    batch_size=self.config.batch_size,
+                    callbacks=callbacks_,
+                    validation_data=(training_data[0][fold]['valid']['x'],
+                                     training_data[0][fold]['valid']['y']),
+                    verbose=1,
+                    epochs=self.config.epochs
+                )
 
-                # Clear and rebuild the model at end of each fold (except for the last fold)
-                if fold < self.config.k_folds - 1:
-                    self.reset_model()
-                    optimizers = self.prepare_optimizers()
+            # Clear and rebuild the model at end of each fold (except for the last fold)
+            if fold < self.config.k_folds - 1:
+                self.reset_model()
+                optimizers = self.prepare_optimizers()
 
-        # TODO: User should be allowed to overwrite this
-        if training_data[0]['x_valid'] is not None or training_data[0]['x_test'] is not None:
-            print('Using train/test/valid strategy...')
-            LOGGER.info('Used a train/test/valid strategy for training')
-            train_valid_test(training_data, output_dir, callbacks, optimizers)
-        else:
-            print(f'Using {self.config.k_folds}-fold cross-validation strategy...')
-            LOGGER.info('Used %s-fold cross-validation strategy for training', self.config.k_folds)
-            cross_validation(training_data, output_dir, callbacks, optimizers)
+                for metric in metrics:
+                    metric.on_fold_end()  # bumps internal fold counter
 
-    def evaluate(self, training_data, model_idx=-1, partition='train'):
-        """Get `y_true` and `y_pred` for given inputs and targets in `training_data`.
+        return metrics
 
-        Performs prediction for the model at `self.models[model_idx]` and returns a 2-tuple
-        containing the true (gold) labels and the predicted labels, where labels are integers
-        corresponding to mapping at `self.idx_to_tag`. Inputs are given at
-        `training_data[x_partition]` and gold labels at `training_data[y_partition]`.
+    def evaluate(self, training_data, partition='train', model_idx=-1):
+        """Perform a prediction step using `self.model` on `training_data[partition]`.
+
+        Performs prediction for the model at `self.model` and returns a two-tuple containing the
+        true (gold) NER labels and corresponding predicted labels.
 
         Args:
-            training_data (dict): Contains the data (at key `x_partition`) and targets
-                (at key `y_partition`) for each partition: 'train', 'valid' and 'test'.
+            training_data (dict): Contains the inputs (at `training_data[partition]['x']`) and
+                targets (at `training_data[partition]['y']`) used for evaluation.
             partition (str): Which partition to perform a prediction step on, must be one of
                 'train', 'valid', 'test'.
+            model_idx (int): Index to dataset in `self.datasets` that will be evaluated on.
+                Defaults to -1.
 
         Returns:
-            A two-tuple containing the gold label integer sequences and the predicted integer label
-            sequences.
+            A two-tuple containing the gold NER label sequences and corresponding predicted labels.
         """
         dataset = self.datasets[model_idx]
 
-        X, y = training_data[f'x_{partition}'], training_data[f'y_{partition}']
+        X, y = training_data[partition]['x'], training_data[partition]['y']
 
         # Gold labels
-        y_true = y.argmax(axis=-1).ravel()
+        y_true = y.argmax(axis=-1)
         y_pred = self.model.predict(X)
 
         # If multi-task model, take only predictions for output layer at model_idx
         if isinstance(y_pred, list):
             y_pred = y_pred[model_idx]
 
-        y_pred = y_pred.argmax(axis=-1).ravel()
+        y_pred = y_pred.argmax(axis=-1)
 
         # Mask [PAD] tokens
-        y_true, y_pred = \
-            model_utils.mask_labels(y_true, y_pred, dataset.type_to_idx['ent'][constants.PAD])
+        y_true, y_pred = model_utils.mask_labels(y_true=y_true,
+                                                 y_pred=y_pred,
+                                                 label=dataset.type_to_idx['ent'][PAD])
+
+        # Map predictions to tags
+        y_true = [[dataset.idx_to_tag['ent'][idx] for idx in sent] for sent in y_true]
+        y_pred = [[dataset.idx_to_tag['ent'][idx] for idx in sent] for sent in y_pred]
 
         return y_true, y_pred
 
     def predict(self, tokens):
-        """Performs inference on tokenized text and returns the predicted labels.
+        """Perform inference on tokenized and sentence segmented text.
 
         Using the model at `self.model`, performs inference on `tokens`, a list of lists
         containing tokenized sentences. The result of this inference is a list of lists, where the
@@ -426,71 +412,33 @@ class BiLSTMCRF(BaseKerasModel):
                 A list of lists of lists, containing the predicted labels for `tokens` from each
                 output layer in `self.models`.
         """
-        # Prepare data for input to model
+        # These values are the same for all datasets
+        idx_to_tag = self.datasets[0].idx_to_tag['ent']
         word_to_idx = self.datasets[0].type_to_idx['word']
-        char_to_idx = self.datasets[0].type_to_idx['char']  # These are the same for all datasets
+        char_to_idx = self.datasets[0].type_to_idx['char']
 
-        word_idx_seq = Preprocessor.get_type_idx_sequence(seq=tokens,
-                                                          type_to_idx=word_to_idx,
-                                                          type_='word')
-        char_idx_seq = Preprocessor.get_type_idx_sequence(seq=tokens,
-                                                          type_to_idx=char_to_idx,
-                                                          type_='char')
+        word_idx_seq = Preprocessor.get_type_idx_sequence(tokens, word_to_idx, type_='word')
+        char_idx_seq = Preprocessor.get_type_idx_sequence(tokens, char_to_idx, type_='char')
         model_input = [word_idx_seq, char_idx_seq]
 
         # Actual prediction happens here
         y_preds = self.model.predict(model_input)
-        y_preds = np.argmax(y_preds, axis=-1)
 
         # If y_preds is not a list, this is a STM. Add dummy first dimension
-        if not isinstance(y_preds, list):
-            y_preds = [y_preds]
+        y_preds = [y_preds] if not isinstance(y_preds, list) else y_preds
 
         # Mask [PAD] tokens
         y_preds_masked = []
-        for y_pred, dataset in zip(y_preds, self.datasets):
-            _, y_pred = model_utils.mask_labels(y_true=word_idx_seq,
-                                                y_pred=y_pred,
-                                                label=constants.PAD_VALUE)
-
-            y_preds_masked.append([[dataset.idx_to_tag['ent'][idx] for idx in sent]
-                                   for sent in y_pred])
+        for y_pred in y_preds:
+            y_pred = np.argmax(y_pred, axis=-1)
+            _, y_pred = model_utils.mask_labels(y_true=word_idx_seq, y_pred=y_pred, label=PAD_VALUE)
+            y_preds_masked.append([[idx_to_tag[idx] for idx in sent] for sent in y_pred])
 
         # If STM, return only a list of lists
         if len(y_preds_masked) == 1:
             y_preds_masked = y_preds_masked[0]
 
         return y_preds_masked
-
-    def prepare_data_for_training(self):
-        """Returns a list containing the training data for each dataset at `self.datasets`.
-
-        For each dataset at `self.datasets`, collects the data to be used for training.
-        Each dataset is represented by a dictionary, where the keys 'x_<partition>' and
-        'y_<partition>' contain the inputs and targets for each partition 'train', 'valid', and
-        'test'.
-
-        Returns:
-            A list of dictionaries containing the training data for each dataset at `self.datasets`.
-        """
-        training_data = []
-        for ds in self.datasets:
-            # collect train data, must be provided
-            x_train = [ds.idx_seq['train']['word'], ds.idx_seq['train']['char']]
-            y_train = to_categorical(ds.idx_seq['train']['ent'])
-            # collect valid and test data, may not be provided
-            x_valid, y_valid, x_test, y_test = None, None, None, None
-            if ds.idx_seq['valid'] is not None:
-                x_valid = [ds.idx_seq['valid']['word'], ds.idx_seq['valid']['char']]
-                y_valid = to_categorical(ds.idx_seq['valid']['ent'])
-            if ds.idx_seq['test'] is not None:
-                x_test = [ds.idx_seq['test']['word'], ds.idx_seq['test']['char']]
-                y_test = to_categorical(ds.idx_seq['test']['ent'])
-
-            training_data.append({'x_train': x_train, 'y_train': y_train, 'x_valid': x_valid,
-                                  'y_valid': y_valid, 'x_test': x_test, 'y_test': y_test})
-
-        return training_data
 
     def prepare_for_transfer(self, datasets):
         """Prepares the BiLSTM-CRF for transfer learning by recreating its last layer(s).

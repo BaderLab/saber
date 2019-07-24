@@ -16,12 +16,11 @@ class TestDataUtils(object):
         with pytest.raises(ValueError):
             data_utils.get_filepaths(tmpdir.strpath)
 
-    def test_get_filepaths_all(self, dummy_dataset_paths_all):
+    def test_get_filepaths_all(self, dummy_dataset_paths):
         """Asserts that `data_utils.get_filepaths()` returns the expected filepaths when all partitions
         (train/test/valid) are provided.
         """
-        dummy_dataset_folder, train_filepath, valid_filepath, test_filepath = \
-            dummy_dataset_paths_all
+        dummy_dataset_folder, train_filepath, valid_filepath, test_filepath = dummy_dataset_paths
         expected = {'train': train_filepath,
                     'valid': valid_filepath,
                     'test': test_filepath
@@ -118,9 +117,3 @@ class TestDataUtils(object):
 
         assert all(dummy_dataset_2.type_to_idx[type_] == source_type_to_idx[type_]
                    for type_ in ['word', 'char'])
-
-    def test_collect_valid_data_value_error(self):
-        """
-        """
-        with pytest.raises(ValueError):
-            data_utils.collect_valid_data([{}])

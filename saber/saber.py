@@ -11,9 +11,12 @@ from pprint import pprint
 
 from spacy import displacy
 
+from seqeval.metrics.sequence_labeling import get_entities
+
 from . import constants
 from .config import Config
-from .dataset import CoNLL2003DatasetReader, CoNLL2004DatasetReader
+from .dataset import CoNLL2003DatasetReader
+from .dataset import CoNLL2004DatasetReader
 from .embeddings import Embeddings
 from .preprocessor import Preprocessor
 from .utils import data_utils
@@ -21,7 +24,6 @@ from .utils import generic_utils
 from .utils import grounding_utils
 from .utils import model_utils
 
-print('Saber version: {0}'.format(constants.__version__))
 LOGGER = logging.getLogger(__name__)
 
 
@@ -69,8 +71,8 @@ class Saber():
             identifiers in external knowledge bases and ontologies.
 
         Returns:
-            Dictionary containing the processed input text (`text`) and any annotations made by the
-            model (`ents`).
+            A dictionary containing the input text (at key `'text'`) and any annotations made by the
+            model (at key `'ents'`).
 
         Raises:
             ValueError: If `text` is invalid (not a string, or empty/falsey).
@@ -96,9 +98,9 @@ class Saber():
 
         for model in self.models:
             y_preds = model.predict(sents)
-            for y_pred, dataset in zip(y_preds, model.datasets):
+            for y_pred in y_preds:
                 # Accumulate predicted entities
-                for chunk in self.preprocessor.chunk_entities(y_pred):
+                for chunk in get_entities(y_pred):
                     # Chunks are tuples (label, start, end), offsets is a lists of lists of tuples
                     start = char_offsets[chunk[1]][0]
                     end = char_offsets[chunk[-1] - 1][-1]
@@ -444,8 +446,8 @@ class Saber():
                                pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
         elif self.config.model_name == 'bert-ner-rc':
             print('Building the BERT model for joint NER and RC...', end=' ', flush=True)
-            from .models.bert_for_joint_ner_and_rc import BertForJointNERAndRC
-            model = BertForJointNERAndRC(config=self.config,
+            from .models.bert_for_joint_ner_and_rc import BertForJointNERAndRE
+            model = BertForJointNERAndRE(config=self.config,
                                          datasets=self.datasets,
                                          pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
         # TODO: This should be handled in config, by supplying a list of options.
@@ -478,17 +480,15 @@ class Saber():
         Raises:
             MissingStepException: If `self.datasets` or `self.model` are None.
         """
-        from statistics import mean
-
         if not self.models:
             err_msg = ('`Saber.models` is empty. Make sure to load at least one model with'
                        ' `Saber.load()` or `Saber.build()` before calling `Saber.train()`.')
             LOGGER.error('MissingStepException: %s', err_msg)
             raise MissingStepException(err_msg)
 
-        loss = self.models[model_idx].train()
+        metrics = self.models[model_idx].train()
 
-        return mean(loss)
+        return metrics
 
 
 # https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python

@@ -1,4 +1,3 @@
-import logging
 from itertools import permutations
 
 import torch
@@ -7,20 +6,14 @@ from pytorch_pretrained_bert import BertModel
 from torch import nn
 from torch.nn import CrossEntropyLoss
 
-from ... import constants
+from ...constants import CHUNK_END_TAGS
 from ...constants import NEG_VALUE
 from ...constants import TOK_MAP_PAD
 from .biaffine_classifier import BiaffineAttention
 
-logger = logging.getLogger(__name__)
 
-
-class BertForJointEntityAndRelationClassification(BertForTokenClassification):
-    """A BERT based model for joint entity and relation extraction.
-
-    This module is composed of a named entity recognition (NER) module and relation extraction (RE)
-    module. The NER module consists of a BERT model with a linear layer, which feeds predicted
-    entities into the RE module, a transformer encoder block with a biaffine classifier.
+class BertForJointEntityAndRelationExtraction(BertForTokenClassification):
+    """A BERT based model for joint named entity recognition (NER) and relation extraction (RE).
 
     Arguments:
         config (BertConfig): `BertConfig` class instance with a configuration to build a new model.
@@ -67,8 +60,8 @@ class BertForJointEntityAndRelationClassification(BertForTokenClassification):
     logits = model(input_ids, token_type_ids, input_mask)
     ```
     """
-    def __init__(self, config, idx_to_ent, num_ent_labels=2, num_rel_labels=2, **kwargs):
-        super(BertForJointEntityAndRelationClassification, self).__init__(config, num_ent_labels[0])
+    def __init__(self, config, idx_to_ent, num_ent_labels, num_rel_labels, **kwargs):
+        super(BertForJointEntityAndRelationExtraction, self).__init__(config, num_ent_labels[0])
 
         # TODO (John): Eventually support MTL. For now, assume training on self.datasets[0]
         self.idx_to_ent = idx_to_ent[0]
@@ -84,13 +77,14 @@ class BertForJointEntityAndRelationClassification(BertForTokenClassification):
 
         # TODO (John): Once I settle on some kind of structure of hyperparams (a dict?) place
         # these there.
-        entity_embed_size = 256
-        head_tail_ffnns_size = 256
+        # entity_embed_size = self.saber_config.entity_embed_size
+        # head_tail_ffnns_size = self.saber_config.head_tail_ffnns_size
+        entity_embed_size = 128
+        head_tail_ffnns_size = 512
 
         # RC module
         self.embed = nn.Embedding(self.num_ent_labels, entity_embed_size)
 
-        # Self-attention block
         # encoder_layer = nn.TransformerEncoderLayer(config.hidden_size + entity_embed_size, 2)
         # encoder_norm = nn.LayerNorm(config.hidden_size + entity_embed_size)
         # self.transformer_encoder = nn.TransformerEncoder(encoder_layer, 2, encoder_norm)
@@ -146,34 +140,41 @@ class BertForJointEntityAndRelationClassification(BertForTokenClassification):
 
         # TODO (John): Need to add back in attention masks here
         # See https://github.com/pytorch/pytorch/issues/22374
-        # sequence_output = self.transformer_encoder(sequence_output)
+        # sequence_output = self.transformer_encoder(sequence_output,
+        #                                            src_key_padding_mask=attention_mask)
 
         with torch.no_grad():
-            ent_indices, processed_rel_labels = self._get_entities_and_labels(sequence_output,
-                                                                              ner_preds,
-                                                                              orig_to_tok_map,
-                                                                              rel_labels)
-        if ent_indices:
-            ent_indices = torch.cat(ent_indices)
+            ent_indices, proj_rel_labels = self._get_entities_and_labels(
+                orig_to_tok_map=orig_to_tok_map,
+                ner_preds=ner_preds,
+                idx_to_ent=self.idx_to_ent,
+                ent_labels=ent_labels,
+                rel_labels=rel_labels
+            )
+
+            ent_indices = ent_indices.to(input_ids.device)
+            proj_rel_labels = proj_rel_labels.to(input_ids.device)
+
+        if ent_indices.nelement() > 0:
             heads = sequence_output[ent_indices[:, 0], ent_indices[:, 1], :]
             tails = sequence_output[ent_indices[:, 0], ent_indices[:, 2], :]
-            candidate_rels = torch.stack((heads, tails), dim=1)
 
-            # Project entity pairs head/tail space
-            head_proj = self.ffnn_head(candidate_rels[:, 0, :].squeeze(1))
-            tail_proj = self.ffnn_tail(candidate_rels[:, -1, :].squeeze(1))
+            # Project entity pairs into head/tail space
+            heads = self.ffnn_head(heads)
+            tails = self.ffnn_tail(tails)
 
             # RE classification
-            rc_logits = self.rel_classifier(head_proj, tail_proj)
+            re_logits = self.rel_classifier(heads, tails)
 
         else:
-            rc_logits = None
+            ent_indices = None
+            re_logits = None
 
         if ent_labels is not None and rel_labels is not None:
             self.rel_class_weight = self.rel_class_weight.to(input_ids.device)
             loss_fct_ner = CrossEntropyLoss(weight=self.__dict__.get("ent_class_weight"))
-            loss_fct_rc = CrossEntropyLoss(weight=self.rel_class_weight)
-            # loss_fct_rc = CrossEntropyLoss(weight=self.__dict__.get("rel_class_weight"))
+            loss_fct_re = CrossEntropyLoss(weight=self.rel_class_weight)
+            # loss_fct_re = CrossEntropyLoss(weight=self.__dict__.get("rel_class_weight"))
 
             # Computing NER loss
             # Only keep active parts of the loss
@@ -181,85 +182,94 @@ class BertForJointEntityAndRelationClassification(BertForTokenClassification):
                 active_loss = attention_mask.view(-1) == 1
                 active_logits = ner_logits.view(-1, self.num_labels)[active_loss]
                 active_labels = ent_labels.view(-1)[active_loss]
-                loss_ner = loss_fct_ner(active_logits, active_labels.long())
+                ner_loss = loss_fct_ner(active_logits, active_labels.long())
             else:
-                loss_ner = loss_fct_ner(ner_logits.view(-1, self.num_labels), ent_labels.view(-1))
+                ner_loss = loss_fct_ner(ner_logits.view(-1, self.num_labels), ent_labels.view(-1))
 
             # Computing RE loss
             # If no relations were predicted, we assign 0 vector for each true relation (this
             # represents a maximially confused classifier.)
-            if rc_logits is None:
-                rc_logits = torch.zeros((processed_rel_labels.size(0), self.num_rel_labels),
+            if re_logits is None:
+                re_logits = torch.zeros((proj_rel_labels.size(0), self.num_rel_labels),
                                         device=input_ids.device)
             # Otherwise, we need to add 0 vector for each missed relation
             else:
-                n_missing_logits = processed_rel_labels.size(0) - rc_logits.size(0)
+                n_missing_logits = proj_rel_labels.size(0) - re_logits.size(0)
                 if n_missing_logits > 0:
                     missing_logits = torch.zeros((n_missing_logits, self.num_rel_labels),
                                                  device=input_ids.device)
-                    rc_logits = torch.cat((rc_logits, missing_logits))
+                    re_logits = torch.cat((re_logits, missing_logits))
 
-            loss_re = loss_fct_rc(rc_logits.view(-1, self.num_rel_labels),
-                                  processed_rel_labels.view(-1))
+            re_loss = loss_fct_re(re_logits.view(-1, self.num_rel_labels),
+                                  proj_rel_labels.view(-1))
 
-            return ner_logits, rc_logits, processed_rel_labels, loss_ner, loss_re
+            return ner_logits, re_logits, ner_loss, re_loss, proj_rel_labels
         else:
-            return ner_logits, rc_logits
+            return ner_logits, re_logits
 
     # TODO (John): This is a disaster. It works, but I should find a way to clean it up and drop
     # as many explict for loops as possible.
     def _get_entities_and_labels(self,
-                                 sequence_output,
-                                 ner_preds,
                                  orig_to_tok_map,
+                                 ner_preds,
+                                 idx_to_ent,
+                                 ent_labels=None,
                                  rel_labels=None):
         """Returns the indices of all predicted relation heads/tails and corresponding gold labels.
         """
-        ent_indices, processed_rel_labels = [], []
-        for i, _ in enumerate(sequence_output):
-            tok_map, ner_pred = orig_to_tok_map[i], ner_preds[i]
-            if rel_labels is not None:
-                rel_labs = rel_labels[i]
+        ent_indices, proj_rel_labels, missed_rel_labels = [], [], []
+
+        for sent_idx, (tok_map, ner_pred) in enumerate(zip(orig_to_tok_map, ner_preds)):
+            tok_map, ner_pred = orig_to_tok_map[sent_idx], ner_preds[sent_idx]
             # Get all indices representing original tokens that were predicted to be a
             # standalone entity or the end of a entity chunk
             ent_idxs = \
-                [idx.item() for idx in tok_map if idx != TOK_MAP_PAD and
-                 # Check that this is the last token of a predicted span
-                 self.idx_to_ent[ner_pred[idx].item()].startswith(tuple(constants.CHUNK_END_TAGS))]
-            # permutate these predicted entities to get all candidate entities
+                [tok_idx.item() for tok_idx in tok_map if tok_idx != TOK_MAP_PAD and
+                 idx_to_ent[ner_pred[tok_idx].item()].startswith(tuple(CHUNK_END_TAGS))]
+
+            # Permutate these predicted entities to get all candidate entities
             ent_idxs = list(permutations(ent_idxs, r=2))
 
-            if rel_labels is not None:
-                # Maps heads to tails to labels
-                rel_lab_map = {
-                    tok_map[lab[0]].item(): {tok_map[lab[1]].item(): lab[2]}
-                    for lab in rel_labs if lab
-                }
+            # Add a sentence index to the predicted relation
+            if ent_idxs:
+                ent_indices.extend([[sent_idx] + list(idx) for idx in ent_idxs])
 
-            if len(ent_idxs) > 1:
-                ent_idxs = torch.as_tensor(ent_idxs, dtype=torch.long)
-                sent_idxs = torch.zeros(ent_idxs.size(0), 1, dtype=torch.long).fill_(i)
-                ent_idxs = torch.cat((sent_idxs, ent_idxs), dim=-1)
-                ent_indices.append(ent_idxs)
+            # Project gold labels onto predicted labels
+            if ent_labels is not None and rel_labels is not None:
+                # Construct a map of heads: tails: relation type
+                rel_lab_map = {}
+                for rel in rel_labels[sent_idx]:
+                    head, tail, label = tok_map[rel[0]].item(), tok_map[rel[1]].item(), rel[2]
+                    if head in rel_lab_map:
+                        rel_lab_map[head][tail] = label
+                    else:
+                        rel_lab_map[head] = {tail: label}
 
-                # Permutate these token positions to get all (unique) entity pairs
-                if rel_labels is not None:
-                    # Get labels for predicted relations
-                    for _, head, tail in ent_idxs:
-                        try:
-                            processed_rel_labels.append(rel_lab_map[head.item()][tail.item()])
-                            del rel_lab_map[head.item()][tail.item()]
-                        except KeyError:
-                            processed_rel_labels.append(NEG_VALUE)
+                # Get gold labels for predicted relations
+                for head, tail in ent_idxs:
+                    try:
+                        correct_entities = (ent_labels[sent_idx][head] == ner_pred[head] and
+                                            ent_labels[sent_idx][tail] == ner_pred[tail])
+                        if correct_entities:
+                            proj_rel_labels.append(rel_lab_map[head][tail])
+                            del rel_lab_map[head][tail]
+                        # If the entities are not correct, label the relation NEG
+                        else:
+                            proj_rel_labels.append(NEG_VALUE)
+                    except KeyError:
+                        proj_rel_labels.append(NEG_VALUE)
 
-                    # Get labels of missed relations
-                    for tail in rel_lab_map.values():
-                        processed_rel_labels.extend(list(tail.values()))
+                # Get labels of missed relations
+                for tail in rel_lab_map.values():
+                    missed_rel_labels.extend(list(tail.values()))
 
-        if processed_rel_labels:
-            processed_rel_labels = torch.as_tensor(processed_rel_labels,
-                                                   device=sequence_output.device)
+        # Convert everything to tensors
+        ent_indices = torch.as_tensor(ent_indices, dtype=torch.long)
+
+        proj_rel_labels += missed_rel_labels
+        if proj_rel_labels or rel_labels is None:
+            proj_rel_labels = torch.as_tensor(proj_rel_labels, dtype=torch.long)
         else:
-            processed_rel_labels = torch.as_tensor([0], device=sequence_output.device)
+            proj_rel_labels = torch.zeros(1, dtype=torch.long)
 
-        return ent_indices, processed_rel_labels
+        return ent_indices, proj_rel_labels

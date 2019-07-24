@@ -31,6 +31,7 @@ class BertForTokenClassificationMultiTask(BertForTokenClassification):
             typically use for attention when a batch has varying length sentences.
         `labels`: labels for the classification output: torch.LongTensor of shape [batch_size,
             sequence_length] with indices selected in [0, ..., num_labels].
+        `model_idx`: # TODO (John).
 
     Outputs:
         if `labels` is not `None`:
@@ -65,7 +66,7 @@ class BertForTokenClassificationMultiTask(BertForTokenClassification):
         self.apply(self.init_bert_weights)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None,
-                model_idx=0):
+                model_idx=-1):
         sequence_output, _ = self.bert(input_ids=input_ids,
                                        token_type_ids=token_type_ids,
                                        attention_mask=attention_mask,
