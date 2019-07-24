@@ -33,20 +33,6 @@ class BaseModel():
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def train(self):
-        """Co-ordinates the training of model(s) at `self.models`.
-
-        Coordinates the training of one or more models (given at `self.model.models`). If a
-        valid or test set is provided (`Dataset.dataset_folder['valid']` or
-        `Dataset.dataset_folder['test']` are not None) a simple train/valid/test strategy is used.
-        Otherwise, cross-validation is used.
-        """
-        # TODO: ugly, is there a better way to check for this? what if dif ds follow dif schemes?
-        if all([dataset.dataset_folder['test'] for dataset in self.datasets]):
-            self.train_valid_test()
-        else:
-            self.cross_validation()
-
     def reset_model(self):
         """Clears and rebuilds the model.
 
@@ -92,7 +78,7 @@ class BaseKerasModel(BaseModel):
         """
         with open(model_filepath, 'w') as f:
             model_json = self.model.to_json()
-            json.dump(json.loads(model_json), f, sort_keys=True, indent=4)
+            json.dump(json.loads(model_json), f)
             self.model.save_weights(weights_filepath)
 
     def load(self, model_filepath, weights_filepath, custom_objects=None):
@@ -132,6 +118,9 @@ class BaseKerasModel(BaseModel):
         Returns:
             `self.model`, where any output layers with indicies not in `output_layer_indices` have
             been removed.
+
+        Raises:
+            ValueError if `not isinstance(self.model.output, list)`.
         """
         if not isinstance(self.model.output, list):
             err_msg = (f'Tried to call `prune_output_layers()` for a Model object ({self.model})'
@@ -168,7 +157,7 @@ class BasePyTorchModel(BaseModel):
     def __init__(self, config, datasets, embeddings=None, **kwargs):
         super().__init__(config, datasets, embeddings, **kwargs)
 
-        # attribute we can use to identify which framework / library model is written in
+        # Attribute we can use to identify which framework / library model is written in
         self.framework = constants.PYTORCH
 
     def save(self, model_filepath, model_idx=-1):
@@ -179,7 +168,7 @@ class BasePyTorchModel(BaseModel):
 
         Args:
             model_filepath (str): filepath to the models architecture (`.bin` file).
-            model_idx (int): Index to model in `self.models` that will be saved. Defaults to 0.
+            model_idx (int): Index to model in `self.models` that will be saved. Defaults to -1.
         """
         torch.save(self.model.state_dict(), model_filepath)
 
@@ -207,6 +196,9 @@ class BasePyTorchModel(BaseModel):
         Returns:
             `self.model`, where any output layers with indicies not in `output_layer_indices` have
             been removed.
+
+        Raises:
+            ValueError if `len(self.model.classifier) < 2`
         """
         if len(self.model.classifier) < 2:
             err_msg = ('Tried to call `prune_output_layers()` for a nn.Module object'
