@@ -13,7 +13,10 @@ python -m saber.cli.train --dataset_folder ./datasets/NCBI_disease_BIO --epochs 
 import logging
 
 from ..config import Config
+from ..constants import __version__
 from ..saber import Saber
+
+print('Saber version: {0}'.format(__version__))
 
 
 def main():
