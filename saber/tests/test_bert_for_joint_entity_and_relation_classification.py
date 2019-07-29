@@ -1,3 +1,6 @@
+"""Test suite for the `BertForJointEntityAndRelationExtraction` class
+(saber.models.modules.bert_for_joint_entity_and_relation_classification.BertForJointEntityAndRelationExtraction).
+"""
 from ..constants import TOK_MAP_PAD
 from ..constants import OUTSIDE
 from ..constants import PAD
@@ -28,10 +31,10 @@ idx_to_ent = {
 
 
 class TestBertForJointEntityAndRelationExtraction(object):
-    """Collects all unit tests for `saber.models.bert_for_joint_ner_and_rc.BertForJointNERAndRE`.
+    """Collects all unit tests for `saber.models.bert_for_joint_ner_and_re.BertForJointNERAndRE`.
     """
     def test_get_entities_and_labels_no_pred_ents_no_rel_labels(self,
-                                                                bert_for_joint_ner_and_rc_specify):
+                                                                bert_for_joint_ner_and_re_specify):
         """Assert that `BertForJointNERAndRE._get_entities_and_labels()` returns the expected
         results when there are no predited entities and no relation labels are provided.
         """
@@ -48,7 +51,7 @@ class TestBertForJointEntityAndRelationExtraction(object):
         expected_proj_rel_labels = torch.as_tensor([], dtype=torch.long)
 
         actual_ent_indicies, actual_proj_rel_labels = \
-            bert_for_joint_ner_and_rc_specify.model._get_entities_and_labels(
+            bert_for_joint_ner_and_re_specify.model._get_entities_and_labels(
                 orig_to_tok_map=orig_to_tok_map,
                 ner_preds=ner_preds,
                 idx_to_ent=idx_to_ent,
@@ -58,7 +61,7 @@ class TestBertForJointEntityAndRelationExtraction(object):
         assert torch.equal(expected_proj_rel_labels, actual_proj_rel_labels)
 
     def test_get_entities_and_labels_pred_ents_no_rel_labels(self,
-                                                             bert_for_joint_ner_and_rc_specify):
+                                                             bert_for_joint_ner_and_re_specify):
         """Assert that `BertForJointNERAndRE._get_entities_and_labels()` returns the expected
         results when there are predited entities and no relation labels are provided.
         """
@@ -86,7 +89,7 @@ class TestBertForJointEntityAndRelationExtraction(object):
         expected_proj_rel_labels = torch.as_tensor([], dtype=torch.long)
 
         actual_ent_indicies, actual_proj_rel_labels = \
-            bert_for_joint_ner_and_rc_specify.model._get_entities_and_labels(
+            bert_for_joint_ner_and_re_specify.model._get_entities_and_labels(
                 orig_to_tok_map=orig_to_tok_map,
                 ner_preds=ner_preds,
                 idx_to_ent=idx_to_ent,
@@ -96,7 +99,7 @@ class TestBertForJointEntityAndRelationExtraction(object):
         assert torch.equal(expected_proj_rel_labels, actual_proj_rel_labels)
 
     def test_get_entities_and_labels_no_pred_ents_with_rel_labels(self,
-                                                                  bert_for_joint_ner_and_rc_specify):
+                                                                  bert_for_joint_ner_and_re_specify):
         """Assert that `BertForJointNERAndRE._get_entities_and_labels()` returns the expected
         results when there are no predited entities and relation labels are provided.
         """
@@ -121,7 +124,7 @@ class TestBertForJointEntityAndRelationExtraction(object):
         expected_proj_rel_labels = torch.as_tensor([2, 3, 2, 2], dtype=torch.long)
 
         actual_ent_indicies, actual_proj_rel_labels = \
-            bert_for_joint_ner_and_rc_specify.model._get_entities_and_labels(
+            bert_for_joint_ner_and_re_specify.model._get_entities_and_labels(
                 orig_to_tok_map=orig_to_tok_map,
                 ner_preds=ner_preds,
                 idx_to_ent=idx_to_ent,
@@ -133,7 +136,7 @@ class TestBertForJointEntityAndRelationExtraction(object):
         assert torch.equal(expected_proj_rel_labels, actual_proj_rel_labels)
 
     def test_get_entities_and_labels_pred_ents_with_rel_labels(self,
-                                                               bert_for_joint_ner_and_rc_specify):
+                                                               bert_for_joint_ner_and_re_specify):
         """Assert that `BertForJointNERAndRE._get_entities_and_labels()` returns the expected
         results when there are predited entities and relation labels are provided.
         """
@@ -170,7 +173,7 @@ class TestBertForJointEntityAndRelationExtraction(object):
                                                    dtype=torch.long)
 
         actual_ent_indicies, actual_proj_rel_labels = \
-            bert_for_joint_ner_and_rc_specify.model._get_entities_and_labels(
+            bert_for_joint_ner_and_re_specify.model._get_entities_and_labels(
                 orig_to_tok_map=orig_to_tok_map,
                 ner_preds=ner_preds,
                 idx_to_ent=idx_to_ent,

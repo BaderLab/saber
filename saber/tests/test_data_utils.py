@@ -1,4 +1,4 @@
-"""Any and all unit tests for the data_utils (saber/utils/data_utils.py).
+"""Test suite for the `data_utils` module (saber.utils.data_utils).
 """
 import pytest
 

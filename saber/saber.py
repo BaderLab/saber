@@ -27,7 +27,7 @@ from .utils import model_utils
 LOGGER = logging.getLogger(__name__)
 
 
-class Saber():
+class Saber(object):
     """The interface for Saber, exposing all of its main functionality.
 
     As the interface to Saber, this class exposes all of Sabers main functionality, including the
@@ -38,16 +38,13 @@ class Saber():
             a *.ini file and, optionally, from the command line. If not provided, a new instance of
             Config with default values is used (this is fine for most use cases).
     """
-    def __init__(self, config=None, **kwargs):
+    def __init__(self, config=None):
         self.config = Config() if config is None else config
 
         self.preprocessor = None  # object for text processing
         self.datasets = []  # dataset(s) tied to this instance
         self.embeddings = None  # pre-trained token embeddings tied to this instance
         self.models = []  # model(s) object tied to this instance
-
-        for key, value in kwargs.items():
-            setattr(self, key, value)
 
         if self.config.verbose:
             print('Hyperparameters and model details:')
@@ -57,11 +54,11 @@ class Saber():
         """Uses trained model(s) (`self.models`) to annotate `text`.
 
         For the model(s) at `self.models`, annotates `text`. Returns a dictionary containing the
-        cleaned text ('text'), and any annotations made by the model ('ents'). If `jupyter` is True,
+        text ('text'), and any annotations made by the model ('ents'). If `jupyter` is True,
         renders a HTML visualization of the annotations made by the model, for use in a jupyter
         notebook.
 
-        text (str): Raw text to annotate.
+        text (str): Text to annotate.
         title (str): Optional, title of the document. Defaults to the empty string ''.
         jupyter (bool): Optional, True if annotations made by the model should be rendered in HTML,
             which can be visualized in a jupter notebook. Defaults to False.
@@ -84,7 +81,7 @@ class Saber():
             print(f'Done ({time.time() - start:.2f} seconds).')
 
         if not isinstance(text, str) or not text:
-            err_msg = f'Expected non-empty string for argument `text`. Got: {text}'
+            err_msg = f'Expected non-empty string for argument `text`. Got: {text}.'
             LOGGER.error("ValueError: %s", err_msg)
             raise ValueError(err_msg)
 
@@ -186,23 +183,15 @@ class Saber():
                       is None or output_layer_indices is not None and i in output_layer_indices]
 
         model_attributes = {'model_name': model.model_name,
-                            'framework': model.framework,
                             'type_to_idx': type_to_idx,
                             'idx_to_tag': idx_to_tag,
                             }
 
-        # TODO (John): Can some of this logic be moved to the models themselves?
-        # Saving Keras models requires a seperate file for weights
-        if model.framework == constants.KERAS:
-            model_filepath = os.path.join(directory, constants.KERAS_MODEL_FILENAME)
-            weights_filepath = os.path.join(directory, constants.WEIGHTS_FILENAME)
-            model.save(model_filepath, weights_filepath)
-        elif model.framework == constants.PYTORCH:
-            if model.model_name == 'bert-ner':
-                model_attributes['pretrained_model_name_or_path'] = \
-                    model.pretrained_model_name_or_path
-            model_filepath = os.path.join(directory, constants.PYTORCH_MODEL_FILENAME)
-            model.save(model_filepath)
+        if model.model_name == 'bert-ner' or model.model_name == 'bert-ner-rc':
+            model_attributes['pretrained_model_name_or_path'] = model.pretrained_model_name_or_path
+
+        model_filepath = os.path.join(directory, constants.PRETRAINED_MODEL_FILENAME)
+        model.save(model_filepath)
 
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
 
@@ -262,13 +251,8 @@ class Saber():
             # Prevents user from having to specify pre-trained models name
             self.config.model_name = model_attributes['model_name']
 
-            # Keras models are saved as two files (model.* and weights.*)
-            if model_attributes['framework'] == constants.KERAS:
-                weights_filepath = os.path.join(dir_, constants.WEIGHTS_FILENAME)
-                pretrained_model_name_or_path = None
             # Need to know what pre-trained BERT model was used to load the correct weights
-            elif model_attributes['model_name'] == 'bert-ner':
-                weights_filepath = None
+            if model_attributes['model_name'].startswith('bert'):
                 pretrained_model_name_or_path = \
                     model_attributes.get('pretrained_model_name_or_path')
 
@@ -278,7 +262,6 @@ class Saber():
                 config=self.config,
                 datasets=datasets,
                 model_filepath=model_filepath,
-                weights_filepath=weights_filepath,
                 pretrained_model_name_or_path=pretrained_model_name_or_path
             )
 
@@ -289,7 +272,7 @@ class Saber():
         return directory
 
     def load_dataset(self, directory=None):
-        """Loads a Saber dataset at `directory`.
+        """Loads a dataset at `directory`.
 
         Args:
             directory (str or list): Optional, path to a dataset folder(s). If not None, overwrites
@@ -407,15 +390,14 @@ class Saber():
         LOGGER.info(info_msg)
 
     def build(self, model_name=None):
-        """Specifies and compiles the chosen sequence model, given by 'self.config.model_name'.
+        """Specifies the chosen sequence model, given by 'self.config.model_name'.
 
-        For a chosen sequence model class (provided at the command line or in the configuration file
-        and saved as 'self.config.model_name'), specifys and compiles the Keras model(s) it
-        contains.
+        For the chosen model (provided at the command line or in the configuration file
+        and saved as 'self.config.model_name'), initializes the Saber model it contains.
 
         Args:
-            model_name (str): Optional, one of `constants.MODEL_NAMES`. If None, equal to
-                `self.config.model_name`.
+            model_name (str): Optional, one of `constants.MODEL_NAMES`. If None,
+                `self.config.model_name` is used.
 
         Raises:
             ValueError: If `self.datasets` is None or `self.config.model_name` is not valid.
@@ -432,13 +414,7 @@ class Saber():
             self.config.model_name = model_name.lower().strip()
 
         # Setup the chosen model
-        if self.config.model_name == 'bilstm-crf-ner':
-            print('Building the BiLSTM-CRF model for NER...', end=' ', flush=True)
-            from .models.bilstm_crf import BiLSTMCRF
-            model = BiLSTMCRF(config=self.config,
-                              datasets=self.datasets,
-                              embeddings=self.embeddings)
-        elif self.config.model_name == 'bert-ner':
+        if self.config.model_name == 'bert-ner':
             print('Building the BERT model for NER...', end=' ', flush=True)
             from .models.bert_for_ner import BertForNER
             model = BertForNER(config=self.config,
@@ -446,7 +422,7 @@ class Saber():
                                pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
         elif self.config.model_name == 'bert-ner-rc':
             print('Building the BERT model for joint NER and RC...', end=' ', flush=True)
-            from .models.bert_for_joint_ner_and_rc import BertForJointNERAndRE
+            from .models.bert_for_joint_ner_and_re import BertForJointNERAndRE
             model = BertForJointNERAndRE(config=self.config,
                                          datasets=self.datasets,
                                          pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
@@ -458,7 +434,6 @@ class Saber():
             raise ValueError(err_msg)
 
         model.specify()
-        model.compile()  # Does nothing if not a Keras model
 
         self.models.append(model)
 
