@@ -1,3 +1,5 @@
+"""Test suite for the `bert_utils` module (saber.utils.bert_utils).
+"""
 import torch
 from pytorch_pretrained_bert.optimization import BertAdam
 from torch.utils.data import RandomSampler
@@ -209,11 +211,11 @@ class TestBertUtils(object):
             else:
                 assert isinstance(dataloader.sampler, SequentialSampler)
 
-    def test_get_bert_optimizer(self, bert_for_ner_model_specify):
+    def test_get_bert_optimizer(self, bert_for_ner_specify):
         """Asserts that the returned optimizer object is as expected after call to
         `BertForNER.prepare_optimizers()` for a single-task model.
         """
-        model, config = bert_for_ner_model_specify.model, bert_for_ner_model_specify.config
+        model, config = bert_for_ner_specify.model, bert_for_ner_specify.config
 
         actual = bert_utils.get_bert_optimizer(model, config)
 

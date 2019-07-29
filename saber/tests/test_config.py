@@ -1,4 +1,4 @@
-"""Contains any and all unit tests for the config.Config class (saber/config.py).
+"""Test suite for the `Config` class (saber.config.Config).
 """
 import os
 

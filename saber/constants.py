@@ -74,9 +74,7 @@ VALID_FILE = 'valid.*'
 TEST_FILE = 'test.*'
 
 PRETRAINED_MODEL_DIR = resource_filename(__name__, 'pretrained_models')
-KERAS_MODEL_FILENAME = 'model.json'
-PYTORCH_MODEL_FILENAME = 'model.bin'
-WEIGHTS_FILENAME = 'weights.hdf5'
+PRETRAINED_MODEL_FILENAME = 'model.bin'
 ATTRIBUTES_FILENAME = 'attributes.pickle'
 CONFIG_FILENAME = 'config.ini'
 
@@ -101,22 +99,18 @@ PRETRAINED_MODELS = {
 ####################################################################################################
 # Model Settings
 ####################################################################################################
-# batch size to use when performing model prediction
+
+# Batch size to use when performing model prediction
 PRED_BATCH_SIZE = 256
-# max length of a sentence
+# Max length of a sentence
 MAX_SENT_LEN = 256
-# max length of a character sequence (word)
+# Max length of a character sequence (word)
 MAX_CHAR_LEN = 25
-# number of units in the LSTM layers
-UNITS_WORD_LSTM = 200
-UNITS_CHAR_LSTM = 200
-UNITS_DENSE = UNITS_WORD_LSTM // 2
-# possible models
-MODEL_NAMES = ['bilstm-crf-ner', 'bert-ner', 'bert-ner-rc']
-# identifies a model by the framework it was written in
-KERAS = 'keras'
-PYTORCH = 'pytorch'
-# which pre-trained BERT model to use
+
+# Possible models
+MODEL_NAMES = ['bert-ner', 'bert-ner-rc']
+
+# Which pre-trained BERT model to use
 PYTORCH_BERT_MODEL = 'biobert_v1.1_pubmed'
 
 ####################################################################################################

@@ -10,12 +10,12 @@ from ..constants import WORDPIECE
 from ..utils import bert_utils
 from ..utils import data_utils
 from ..utils import model_utils
-from .base_model import BasePyTorchModel
+from .base_model import BaseModel
 from .modules.bert_for_joint_entity_and_relation_classification import \
     BertForJointEntityAndRelationExtraction
 
 
-class BertForJointNERAndRE(BasePyTorchModel):
+class BertForJointNERAndRE(BaseModel):
     """A PyTorch implementation of a BERT model for joint named entity recognition (NER) and
     relation extraction (RE).
 
@@ -54,6 +54,7 @@ class BertForJointNERAndRE(BasePyTorchModel):
 
         self.num_ent_labels, self.num_rel_labels = [], []
         for dataset in self.datasets:
+            # Required for dataset to be compatible with BERTs wordpiece tokenization
             if WORDPIECE not in dataset.type_to_idx['ent']:
                 dataset.type_to_idx['ent'][WORDPIECE] = len(dataset.type_to_idx['ent'])
                 dataset.get_idx_to_tag()
@@ -281,13 +282,12 @@ class BertForJointNERAndRE(BasePyTorchModel):
 
                 for metric in metrics:
                     # Need to feed epoch argument manually, as this is a Keras callback object
-                    metric.on_epoch_end(epoch=epoch)
+                    metric.on_epoch_end()
 
                 pbar.close()
 
             # Clear and rebuild the model at end of each fold (except for the last fold)
             if k_folds > 1 and fold < k_folds - 1:
-                torch.cuda.empty_cache()
                 self.reset_model()
                 optimizers = self.prepare_optimizers()
 
