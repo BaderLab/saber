@@ -25,7 +25,7 @@ class Dataset(object):
         replace_rare_tokens (bool): True if rare tokens should be replaced with a special unknown
             token. Threshold for considering tokens rare can be found at `saber.constants.NUM_RARE`.
     """
-    def __init__(self, dataset_folder=None, replace_rare_tokens=False, **kwargs):
+    def __init__(self, dataset_folder=None, replace_rare_tokens=False):
         self.dataset_folder = dataset_folder
         # Don't load corpus unless `dataset_folder` was passed on object construction
         if self.dataset_folder is not None:
@@ -41,9 +41,6 @@ class Dataset(object):
         self.idx_to_tag = {'ent': None, 'rel': None}
         # type_seq, but all words, characters and tags have been mapped to unique integer IDs
         self.idx_seq = {'train': None, 'valid': None, 'test': None}
-
-        for key, value in kwargs.items():
-            setattr(self, key, value)
 
     def load(self):
         """Coordinates the loading of a given data set at `self.dataset_folder`.
@@ -223,10 +220,8 @@ class CoNLL2003DatasetReader(Dataset):
         replace_rare_tokens (bool): True if rare tokens should be replaced with a special unknown
             token. Threshold for considering tokens rare can be found at `saber.constants.NUM_RARE`.
     """
-    def __init__(self, dataset_folder=None, replace_rare_tokens=False, **kwargs):
-        super(CoNLL2003DatasetReader, self).__init__(dataset_folder=dataset_folder,
-                                                     replace_rare_tokens=replace_rare_tokens,
-                                                     **kwargs)
+    def __init__(self, dataset_folder=None, replace_rare_tokens=False):
+        super(CoNLL2003DatasetReader, self).__init__(dataset_folder, replace_rare_tokens)
 
         if dataset_folder is not None:
             self.conll_parser = ConllCorpusReader(dataset_folder, '.conll', ('words', 'pos'))
@@ -282,10 +277,8 @@ class CoNLL2004DatasetReader(Dataset):
         replace_rare_tokens (bool): True if rare tokens should be replaced with a special unknown
             token. Threshold for considering tokens rare can be found at `saber.constants.NUM_RARE`.
     """
-    def __init__(self, dataset_folder=None, replace_rare_tokens=False, **kwargs):
-        super(CoNLL2004DatasetReader, self).__init__(dataset_folder=dataset_folder,
-                                                     replace_rare_tokens=replace_rare_tokens,
-                                                     **kwargs)
+    def __init__(self, dataset_folder=None, replace_rare_tokens=False):
+        super(CoNLL2004DatasetReader, self).__init__(dataset_folder, replace_rare_tokens)
 
     # TODO (John): Newline counter logic will append extra list if end of the file has two newlines.
     def _get_type_seq(self):

@@ -10,12 +10,12 @@ from ..constants import WORDPIECE
 from ..utils import bert_utils
 from ..utils import data_utils
 from ..utils import model_utils
-from .base_model import BasePyTorchModel
+from .base_model import BaseModel
 from .modules.bert_for_token_classification_multi_task import \
     BertForTokenClassificationMultiTask
 
 
-class BertForNER(BasePyTorchModel):
+class BertForNER(BaseModel):
     """A PyTorch implementation of a BERT model for named entity recognition (NER).
 
     A BERT for NER implementation in PyTorch. Supports multi-task learning by default, just pass
@@ -57,14 +57,14 @@ class BertForNER(BasePyTorchModel):
         self.n_gpus = 0
 
         self.num_labels = []
-        # Required for dataset to be compatible with BERTs wordpiece tokenization
         for dataset in self.datasets:
+            # Required for dataset to be compatible with BERTs wordpiece tokenization
             if WORDPIECE not in dataset.type_to_idx['ent']:
                 dataset.type_to_idx['ent'][WORDPIECE] = len(dataset.type_to_idx['ent'])
                 dataset.get_idx_to_tag()
             self.num_labels.append(len(dataset.idx_to_tag['ent']))
 
-        # Name or path of a pre-trained BERT model
+        # Name or path of a pre-trained PyTorch-Transformers BERT model
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
 
         self.model_name = 'bert-ner'
@@ -254,13 +254,12 @@ class BertForNER(BasePyTorchModel):
 
                 for metric in metrics:
                     # Need to feed epoch argument manually, as this is a keras callback object
-                    metric.on_epoch_end(epoch=epoch)
+                    metric.on_epoch_end()
 
                 pbar.close()
 
             # Clear and rebuild the model at end of each fold (except for the last fold)
             if k_folds > 1 and fold < k_folds - 1:
-                torch.cuda.empty_cache()
                 self.reset_model()
                 optimizers = self.prepare_optimizers()
 
