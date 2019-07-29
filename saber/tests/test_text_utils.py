@@ -1,3 +1,7 @@
+"""Test suite for the `text_utils` module (saber.utils.text_utils).
+"""
+
+
 class TestTextUtils(object):
     """Collects all unit tests for `saber.utils.bert_utils`.
     """

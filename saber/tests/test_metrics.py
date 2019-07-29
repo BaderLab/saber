@@ -1,4 +1,4 @@
-"""Any and all unit tests for the Metrics class (saber/metrics.py).
+"""Test suite for the `Metrics` class (saber.metrics.Metrics).
 """
 import os
 
@@ -16,7 +16,7 @@ class TestMetrics(object):
     """
     def test_attributes_after_initilization(self,
                                             dummy_config,
-                                            bilstm_crf_model_specify,
+                                            bert_for_ner_specify,
                                             conll2003datasetreader_load,
                                             dummy_training_data,
                                             dummy_output_dir,
@@ -24,7 +24,7 @@ class TestMetrics(object):
         """Asserts instance attributes are as expected."""
         # attributes that are passed to __init__
         assert dummy_metrics.config is dummy_config
-        assert dummy_metrics.model_ is bilstm_crf_model_specify
+        assert dummy_metrics.model_ is bert_for_ner_specify
         assert dummy_metrics.training_data is dummy_training_data
         assert dummy_metrics.idx_to_tag is conll2003datasetreader_load.idx_to_tag
         assert dummy_metrics.output_dir == dummy_output_dir[0]
@@ -145,13 +145,15 @@ class TestMetrics(object):
 
         assert expected == actual
 
-    def test_evaluate(self, dummy_training_data, dummy_metrics):
+    def test_evaluate(self, bert_for_ner_specify, dummy_metrics):
         """This test does not actually assert anything (which is surely bad practice) but at the
         very least, it will fail if evaluation was unsuccesful and therefore alert us when a code
         change has broke the evaluation loop.
         """
-        # _evaluate() exects one fold of one dataset
-        training_data = dummy_training_data[0][0]
+        # _evaluate() expects one fold of one dataset
+        training_data = bert_for_ner_specify.prepare_data_for_training()[0][0]
+
+        print(training_data)
 
         _ = dummy_metrics._evaluate(training_data)
 

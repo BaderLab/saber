@@ -1,4 +1,4 @@
-"""Any and all unit tests for the Embeddings class (saber/embeddings.py).
+"""Test suite for the `Embeddings` class (saber.embeddings.Embeddings).
 """
 import numpy as np
 

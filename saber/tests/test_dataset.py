@@ -1,4 +1,4 @@
-"""Contains any and all unit tests for the `Dataset` class (saber/dataset.py).
+"""Test suite for the `Dataset` class (saber.dataset.Dataset).
 """
 import os
 
@@ -40,8 +40,7 @@ class TestDataset(object):
         # Attributes that are passed to __init__
         assert dataset_no_dataset_folder.dataset_folder is None
         assert not dataset_no_dataset_folder.replace_rare_tokens
-        # Test that we can pass arbitrary keyword arguments
-        assert dataset_no_dataset_folder.totally_arbitrary == 'arbitrary'
+
         # Other instance attributes
         assert dataset_no_dataset_folder.type_seq == {'train': None, 'valid': None, 'test': None}
         assert dataset_no_dataset_folder.type_to_idx == \
@@ -58,8 +57,7 @@ class TestDataset(object):
             expected = os.path.join(PATH_TO_CONLL2003_DATASET, '{}.tsv'.format(partition))
             assert dataset.dataset_folder[partition] == expected
         assert not dataset.replace_rare_tokens
-        # Test that we can pass arbitrary keyword arguments
-        assert dataset.totally_arbitrary == 'arbitrary'
+
         # Other instance attributes
         assert dataset.type_seq == {'train': None, 'valid': None, 'test': None}
         assert dataset.type_to_idx == \
@@ -85,8 +83,7 @@ class TestCoNLL2003DatasetReader(object):
         # Attributes that are passed to __init__
         assert conll2003datasetreader_no_dataset_folder.dataset_folder is None
         assert not conll2003datasetreader_no_dataset_folder.replace_rare_tokens
-        # Test that we can pass arbitrary keyword arguments
-        assert conll2003datasetreader_no_dataset_folder.totally_arbitrary == 'arbitrary'
+
         # Other instance attributes
         assert conll2003datasetreader_no_dataset_folder.type_seq == \
             {'train': None, 'valid': None, 'test': None}
@@ -106,8 +103,7 @@ class TestCoNLL2003DatasetReader(object):
             actual = conll2003datasetreader.dataset_folder[partition]
             assert expected == actual
         assert not conll2003datasetreader.replace_rare_tokens
-        # Test that we can pass arbitrary keyword arguments
-        assert conll2003datasetreader.totally_arbitrary == 'arbitrary'
+
         # Other instance attributes
         assert conll2003datasetreader.type_seq == \
             {'train': None, 'valid': None, 'test': None}
@@ -265,8 +261,7 @@ class TestCoNLL2004DatasetReader(object):
         # Attributes that are passed to __init__
         assert conll2004datasetreader_no_dataset_folder.dataset_folder is None
         assert not conll2004datasetreader_no_dataset_folder.replace_rare_tokens
-        # Test that we can pass arbitrary keyword arguments
-        assert conll2004datasetreader_no_dataset_folder.totally_arbitrary == 'arbitrary'
+
         # Other instance attributes
         assert conll2004datasetreader_no_dataset_folder.type_seq == \
             {'train': None, 'valid': None, 'test': None}
@@ -286,8 +281,7 @@ class TestCoNLL2004DatasetReader(object):
             actual = conll2004datasetreader.dataset_folder[partition]
             assert expected == actual
         assert not conll2004datasetreader.replace_rare_tokens
-        # Test that we can pass arbitrary keyword arguments
-        assert conll2004datasetreader.totally_arbitrary == 'arbitrary'
+
         # Other instance attributes
         assert conll2004datasetreader.type_seq == \
             {'train': None, 'valid': None, 'test': None}
