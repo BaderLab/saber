@@ -1,4 +1,4 @@
-"""Contains any and all unit tests for the `Preprocessor` class (saber/preprocessor.py).
+"""Test suite for the `Preprocessor` class (saber.preprocessor.Preprocessor).
 """
 import pytest
 
