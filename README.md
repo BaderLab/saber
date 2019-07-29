@@ -42,7 +42,7 @@
 
 ## Installation
 
-To install Saber, you will need `python>=3.6`.
+Make sure you have python 3.6 or newer. You can then install Saber using pip. 
 
 ### Latest PyPI stable release
 
@@ -51,7 +51,7 @@ To install Saber, you will need `python>=3.6`.
 [![Libraries-Dependents](https://img.shields.io/librariesio/dependent-repos/pypi/saber.svg?colorB=blue&logo=koding&logoColor=white)](https://github.com/baderlab/saber/network/dependents)
 
 ```
-(saber) $ pip install saber
+$ pip install saber
 ```
 
 > The install from PyPI is currently broken, please install using the instructions below.
@@ -67,8 +67,18 @@ To install Saber, you will need `python>=3.6`.
 Pull and install in the current directory:
 
 ```
-(saber) $ pip install -e git+https://github.com/BaderLab/saber.git@master#egg=saber
+$ pip install -e git+https://github.com/BaderLab/saber.git@master#egg=saber
 ```
+
+### Other installation requirements
+
+Regardless of installation method, you will need to additionally download a [SpaCy](https://spacy.io/usage) language model
+
+```
+$ python -m spacy download en
+```
+
+For GPU support, make sure to install PyTorch 1.0.0+ with CUDA support. See [here](https://pytorch.org/get-started/locally/) for instructions.
 
 See the [documentation](https://baderlab.github.io/saber/installation/) for more detailed installation instructions.
 
