@@ -1,4 +1,4 @@
-"""Any and all unit tests for the generic_utils (saber/utils/generic_utils.py).
+"""Test suite for the `generic_utils` module (saber.utils.generic_utils).
 """
 import os
 import shutil
