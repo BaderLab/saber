@@ -4,12 +4,8 @@ import logging
 import os
 from time import strftime
 
-import numpy as np
 import torch
 from google_drive_downloader import GoogleDriveDownloader as gdd
-from keras import optimizers
-from keras.callbacks import ModelCheckpoint
-from keras.callbacks import TensorBoard
 
 from .. import constants
 from ..metrics import Metrics
@@ -101,63 +97,8 @@ def prepare_pretrained_model_dir(config):
 
 
 ####################################################################################################
-# Keras Callbacks
+# Callbacks
 ####################################################################################################
-
-
-def setup_checkpoint_callback(config, output_dir):
-    """Sets up per epoch model checkpointing.
-
-    Sets up model checkpointing by creating a Keras CallBack for each output directory in
-    `output_dir` (corresponding to individual datasets).
-
-    Args:
-        output_dir (list): A list of output directories, one for each dataset.
-
-    Returns:
-        A list of Keras CallBack objects for per epoch model checkpointing, one for each dataset
-        in `output_dir`.
-    """
-    checkpointers = []
-    for dir_ in output_dir:
-        # If only saving best weights, filepath needs to be the same so it gets overwritten
-        if config.save_all_weights:
-            filepath = os.path.join(dir_, 'weights_epoch_{epoch:03d}_val_loss_{val_loss:.4f}.hdf5')
-        else:
-            filepath = os.path.join(dir_, constants.WEIGHTS_FILENAME)
-
-        checkpointer = ModelCheckpoint(filepath=filepath,
-                                       monitor='val_loss',
-                                       save_best_only=(not config.save_all_weights),
-                                       save_weights_only=True)
-        checkpointers.append(checkpointer)
-
-    return checkpointers
-
-
-def setup_tensorboard_callback(output_dir):
-    """Setup logs for use with TensorBoard.
-
-    This callback writes a log for TensorBoard, which allows you to visualize dynamic graphs of
-    your training and test metrics, as well as activation histograms for the different layers in
-    your model. Logs are saved as `tensorboard_logs` at the top level of each directory in
-    `output_dir`.
-
-    Args:
-        output_dir (lst): A list of output directories, one for each dataset.
-
-    Returns:
-        A list of Keras CallBack object for logging TensorBoard visualizations.
-
-    Example:
-        >>> tensorboard --logdir=/path_to_tensorboard_logs
-    """
-    tensorboards = []
-    for dir_ in output_dir:
-        tensorboard_dir = os.path.join(dir_, 'tensorboard_logs')
-        tensorboards.append(TensorBoard(log_dir=tensorboard_dir))
-
-    return tensorboards
 
 
 def setup_metrics_callback(config, model, datasets, training_data, output_dirs):
@@ -190,91 +131,28 @@ def setup_metrics_callback(config, model, datasets, training_data, output_dirs):
     return metrics
 
 
-def setup_callbacks(config, output_dir):
-    """Returns a list of Keras Callback objects to use during training.
-
-    Args:
-        config (Config): A Config object which contains a set of harmonized arguments provided in
-            a *.ini file and, optionally, from the command line.
-        output_dir (list): A list of filepaths, one for each dataset in `self.datasets`.
-
-    Returns:
-        A list of Keras Callback objects to use during training.
-    """
-    callbacks = []
-    # Model checkpointing
-    callbacks.append(setup_checkpoint_callback(config, output_dir))
-    # Tensorboard
-    if config.tensorboard:
-        callbacks.append(setup_tensorboard_callback(output_dir))
-
-    return callbacks
-
-
-####################################################################################################
-# Evaluation
-####################################################################################################
-
-
-def mask_labels(y_true, y_pred, label):
-    """Masks all instances of `label` from `y_true` and `y_pred` where `y_true == label`.
-
-    Masks (removes) all indices in `y_true` and `y_pred` where `y_true` is equal to
-    `label`. This step is necessary for discarding the sequence pad labels (and predictions made on
-    these sequence pad labels) from the gold labels and model predictions before performance metrics
-    are computed. Note that the returned elements are lists.
-
-    Args:
-        y_true (array_like): 2D array containing gold labels.
-        y_pred (array_like): 2D array containing predicted labels.
-        label (int): The label, or index to mask from the sequences `y_true` and `y_pred`.
-
-    Returns:
-        A tuple of lists, containing `y_true` and `y_pred`, where all indices where `y_true` was
-        equal to `label` have been removed.
-    """
-    mask = y_true == label
-
-    y_true_masked = np.ma.masked_array(y_true, mask).tolist()
-    y_pred_masked = np.ma.masked_array(y_pred, mask).tolist()
-
-    y_true = [[y for y in sent if y is not None] for sent in y_true_masked]
-    y_pred = [[y for y in sent if y is not None] for sent in y_pred_masked]
-
-    return y_true, y_pred
-
-
 ####################################################################################################
 # Saving/loading
 ####################################################################################################
 
 
-def load_pretrained_model(config, datasets, model_filepath, weights_filepath=None, **kwargs):
+def load_pretrained_model(config, datasets, model_filepath, **kwargs):
     """Loads a pre-trained Saber model.
 
-    Loads a pre-trained Saber model serialized at `model_filepath`. Keras models also required
-    `weights_filepath` to be specified, as the architecture and trained weights are serialized in
-    seperate files. The type of model to load is specificed in `config.model_name`.
+    Loads a pre-trained PyTorch model serialized at `model_filepath`. The type of model to load is
+    specificed in `config.model_name`.
 
     Args:
         config (Config): config (Config): A Config object which contains a set of harmonized
             arguments provided in a *.ini file and, optionally, from the command line.
         datasets (Dataset): A list of Dataset objects.
-        model_filepath (str): A filepath to the architecture of a pre-trained model. For PyTorch
-            models, this contains everything we need to load the model. For Keras models, you
-            must additionally supply the weights in `weights_filepath`.
-        weights_filepath (str): A filepath to the weights of a pre-trained model. This is not
-            required for PyTorch models. Defaults to None.
+        model_filepath (str): Filepath to architecture and weights of a pre-trained PyTorch model.
 
     Returns:
         A pre-trained Saber model.
     """
-    # import statements are here to prevent circular imports
-    if config.model_name == 'bilstm-crf-ner':
-        from ..models.bilstm_crf import BiLSTMCRF
-        model = BiLSTMCRF(config, datasets)
-        model.load(model_filepath, weights_filepath)
-    elif config.model_name == 'bert-ner':
+    # Import statements are here to prevent circular imports
+    if config.model_name == 'bert-ner':
         from ..models.bert_for_ner import BertForNER
         model = BertForNER(config, datasets, kwargs['pretrained_model_name_or_path'])
         model.load(model_filepath)
@@ -282,8 +160,6 @@ def load_pretrained_model(config, datasets, model_filepath, weights_filepath=Non
         from ..models.bert_for_ner import BertForNERAndRC
         model = BertForNERAndRC(config, datasets, kwargs['pretrained_model_name_or_path'])
         model.load(model_filepath)
-
-    model.compile()
 
     return model
 
@@ -314,73 +190,6 @@ def download_model_from_gdrive(pretrained_model, extract=True):
         return dest_path
 
     return f'{dest_path}.tar.bz2'
-
-
-####################################################################################################
-# Keras Helper Functions
-####################################################################################################
-
-
-def get_keras_optimizer(optimizer, lr=0.01, decay=0.0, clipnorm=0.0):
-    """A Keras helper function that initializes and returns the optimizer specified by `optimizer`.
-
-    Args:
-        optimizer (str): Name of a valid Keras optimizer.
-        lr (float): Optional, learning rate of the optimizer. Defaults to 0.01.
-        decay (float): Optional, decay rate of the optimizer. Defaults to 0.0.
-        clipnorm (float): Optional, L2 norm to clip all gradients to. Defaults to 0.0.
-
-    Returns:
-        An initialized Keras optimizer with name `optimizer`.
-    """
-    # The parameters of these optimizers can be freely tuned.
-    if optimizer == 'sgd':
-        optimizer = optimizers.SGD(lr=lr, decay=decay, clipnorm=clipnorm)
-    elif optimizer == 'adam':
-        optimizer = optimizers.Adam(lr=lr, decay=decay, clipnorm=clipnorm)
-    elif optimizer == 'adamax':
-        optimizer = optimizers.Adamax(lr=lr, decay=decay, clipnorm=clipnorm)
-    # It is recommended to leave the parameters of this optimizer at their
-    # default values (except the learning rate, which can be freely tuned).
-    # This optimizer is usually a good choice for recurrent neural networks
-    elif optimizer == 'rmsprop':
-        optimizer = optimizers.RMSprop(lr=lr, clipnorm=clipnorm)
-    # It is recommended to leave the parameters of these optimizers at their
-    # default values.
-    elif optimizer == 'adagrad':
-        optimizer = optimizers.Adagrad(clipnorm=clipnorm)
-    elif optimizer == 'adadelta':
-        optimizer = optimizers.Adadelta(clipnorm=clipnorm)
-    elif optimizer == 'nadam':
-        optimizer = optimizers.Nadam(clipnorm=clipnorm)
-    else:
-        err_msg = (f'Expected `optimizer` to be a string representing a valid optimizer name in'
-                   ' Keras. Got: {optimizer}')
-        LOGGER.error('ValueError %s', err_msg)
-        raise ValueError(err_msg)
-
-    return optimizer
-
-
-def freeze_output_layers(model, model_idx):
-    """Freeze output layers of Keras model `model` besides layer at `model_idx`.
-
-    Freezes all output layers of a Keras model (`model`) besides the `model_idx` numbered output
-    layer.
-
-    Args:
-        model (keras.models.Model): Keras model to modify.
-        model_idx (int): Index into the output layer to remain trainable (unfrozen).
-    """
-    n_outputs = len(model.output)
-    n_layers = len(model.layers)
-
-    for i, _ in enumerate(model.output):
-        layer = model.get_layer(index=n_layers - n_outputs + i)
-        if i == model_idx:
-            layer.trainable = True
-        else:
-            layer.trainable = False
 
 
 ####################################################################################################
