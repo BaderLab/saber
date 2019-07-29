@@ -45,9 +45,6 @@ setuptools.setup(
         'nltk>=3.3',
         'neuralcoref>=4.0.0',
         'googledrivedownloader>=0.3',
-        # Packages not on PyPI
-        'keras-contrib @ git+https://www.github.com/keras-team/keras-contrib.git',
-        'en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-2.1.0/en_core_web_lg-2.1.0.tar.gz',
     ],
     include_package_data=True,
     # allows us to install + run tests with `python setup.py test`
