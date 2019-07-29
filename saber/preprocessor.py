@@ -18,7 +18,7 @@ from .utils import text_utils
 LOGGER = logging.getLogger(__name__)
 
 
-class Preprocessor():
+class Preprocessor(object):
     """A class for processing text data."""
     def __init__(self):
         # SpaCy object for processing natural language

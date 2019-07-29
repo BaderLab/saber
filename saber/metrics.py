@@ -8,7 +8,6 @@ import logging
 import pathlib
 from statistics import mean
 
-from keras.callbacks import Callback
 from prettytable import PrettyTable
 from sklearn.metrics import precision_recall_fscore_support
 
@@ -24,7 +23,7 @@ from .constants import PARTITIONS
 LOGGER = logging.getLogger(__name__)
 
 
-class Metrics(Callback):
+class Metrics(object):
     """A class for handling performance metrics, inherits from Callback.
 
     Args:
@@ -65,7 +64,7 @@ class Metrics(Callback):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def on_epoch_end(self, epoch, logs={}):
+    def on_epoch_end(self):
         """Computes, accumulates and prints train/valid/test scores at the end of each epoch.
         """
         training_data = self.training_data[self.fold]
