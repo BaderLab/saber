@@ -1,4 +1,4 @@
-"""Any and all unit tests for the grounding_utils (saber/utils/grounding_utils.py).
+"""Test suite for the `grounding_utils` module (saber.utils.grounding_utils).
 """
 import copy
 
