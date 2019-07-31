@@ -17,9 +17,6 @@
   <a href='https://coveralls.io/github/BaderLab/saber?branch=master'>
     <img src='https://coveralls.io/repos/github/BaderLab/saber/badge.svg?branch=master' alt='Coverage Status'/>
   </a>
-  <a href='https://spacy.io'>
-    <img src='https://img.shields.io/badge/spaCy-v2-09a3d5.svg' alt='Spacy Version'/>
-  </a>
   <a href='http://makeapullrequest.com'>
     <img src='https://img.shields.io/badge/PRs-welcome-blue.svg?style=shields' alt='PRs Welcome'/>
   </a>
@@ -29,6 +26,11 @@
     <a href='https://colab.research.google.com/drive/1WD7oruVuTo6p_908MQWXRBdLF3Vw2MPo'>
     <img src='https://img.shields.io/badge/launch-Google%20Colab-orange.svg' alt='Colab'/>
   </a>
+  </a>
+    <a href='https://join.slack.com/t/saber-nlp/shared_invite/enQtNzE0MzY5ODM3MTc0LWZmY2VjMTY5MjllMmIzNDhkM2VhZjk5ODE1MDYyZjE5OGFjYWVhY2I2NDk5Yjk1N2Q3NTI4YTdhMTI5MjRiOGY'>
+    <img src='https://img.shields.io/badge/slack-@saber--nlp-blueviolet.svg?logo=slack' alt='Slack'/>
+  </a>
+  
 </p>
 
 <p align="center"><b>Saber</b> (<b>S</b>equence <b>A</b>nnotator for <b>B</b>iomedical <b>E</b>ntities and <b>R</b>elations) is a deep-learning based tool for <b>information extraction</b> in the biomedical domain.
@@ -188,3 +190,7 @@ or pass the `--help` flag to any of the command-line interfaces
 ```
 python -m src.cli.train --help
 ```
+
+Feel free to open an issue or reach out to us on our slack channel ([![Slack](https://img.shields.io/badge/slack-@saber--nlp-blueviolet.svg?logo=slack)](https://join.slack.com/t/saber-nlp/shared_invite/enQtNzE0MzY5ODM3MTc0LWZmY2VjMTY5MjllMmIzNDhkM2VhZjk5ODE1MDYyZjE5OGFjYWVhY2I2NDk5Yjk1N2Q3NTI4YTdhMTI5MjRiOGY)) for more help.
+
+
