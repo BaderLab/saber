@@ -23,9 +23,6 @@ class TestBaseModel(object):
         # Other instance attributes
         assert base_model.model is None
 
-        # Test that we can pass arbitrary keyword arguments
-        assert base_model.totally_arbitrary == 'arbitrary'
-
     def test_initialization_mt(self,
                                dummy_config_compound_dataset,
                                conll2003datasetreader_load,
@@ -44,9 +41,6 @@ class TestBaseModel(object):
 
         # Other instance attributes
         assert base_model_mt.model is None
-
-        # Test that we can pass arbitrary keyword arguments
-        assert base_model_mt.totally_arbitrary == 'arbitrary'
 
     def test_reset_model(self, bert_for_ner_specify):
         """Asserts that a new model object was created after call to `reset_model()`.

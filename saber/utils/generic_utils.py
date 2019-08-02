@@ -71,3 +71,9 @@ def compress_directory(directory):
 
     shutil.make_archive(base_name=directory, format='bztar', root_dir=root_dir, base_dir=base_dir)
     shutil.rmtree(directory)
+
+
+# https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
+class MissingStepException(Exception):
+    """Exception subclass for signalling to user that some required previous step was missed."""
+    pass
