@@ -153,8 +153,6 @@ class TestMetrics(object):
         # _evaluate() expects one fold of one dataset
         training_data = bert_for_ner_specify.prepare_data_for_training()[0][0]
 
-        print(training_data)
-
         _ = dummy_metrics._evaluate(training_data)
 
     def test_write_evaluations_to_disk(self, dummy_metrics):
