@@ -1,11 +1,9 @@
 """A collection of PyTest fixtures used for Sabers unit test (saber/tests/test_*.py)
 """
-import os
-
 import pytest
 import spacy
 from keras.utils import to_categorical
-from pytorch_pretrained_bert import BertTokenizer
+from pytorch_transformers import BertTokenizer
 
 from .. import constants
 from ..config import Config
@@ -15,8 +13,8 @@ from ..dataset import Dataset
 from ..embeddings import Embeddings
 from ..metrics import Metrics
 from ..models.base_model import BaseModel
-from ..models.bert_for_joint_ner_and_re import BertForJointNERAndRE
 from ..models.bert_for_ner import BertForNER
+from ..models.bert_for_ner_and_re import BertForNERAndRE
 from ..preprocessor import Preprocessor
 from ..saber import Saber
 from ..utils import data_utils
@@ -29,7 +27,6 @@ from .resources.constants import PATH_TO_CONLL2004_DATASET
 from .resources.constants import PATH_TO_DUMMY_CONFIG
 from .resources.constants import PATH_TO_DUMMY_DATASET_2
 from .resources.constants import PATH_TO_DUMMY_EMBEDDINGS
-
 
 ####################################################################################################
 # Generic
@@ -434,20 +431,19 @@ def dummy_training_data(conll2003datasetreader_load):
 @pytest.fixture
 def base_model(dummy_config, conll2003datasetreader_load):
     """Returns an instance of BiLSTMCRF initialized with the default configuration."""
-    model = BaseModel(config=dummy_config,
-                      datasets=[conll2003datasetreader_load],
-                      # to test passing of arbitrary keyword args to constructor
-                      totally_arbitrary='arbitrary')
+    model = BaseModel(config=dummy_config, datasets=[conll2003datasetreader_load])
+
     return model
 
 
 @pytest.fixture
 def base_model_mt(dummy_config_compound_dataset, conll2003datasetreader_load, dummy_dataset_2):
     """Returns an instance of BiLSTMCRF initialized with the default configuration."""
-    model = BaseModel(config=dummy_config_compound_dataset,
-                      datasets=[conll2003datasetreader_load, dummy_dataset_2],
-                      # to test passing of arbitrary keyword args to constructor
-                      totally_arbitrary='arbitrary')
+    model = BaseModel(
+        config=dummy_config_compound_dataset,
+        datasets=[conll2003datasetreader_load, dummy_dataset_2]
+    )
+
     return model
 
 
@@ -471,10 +467,8 @@ def bert_tokenizer():
 def bert_for_ner(dummy_config, conll2003datasetreader_load):
     """Returns an instance of BertForTokenClassification initialized with the default
     configuration."""
-    model = BertForNER(config=dummy_config,
-                       datasets=[conll2003datasetreader_load],
-                       # to test passing of arbitrary keyword args to constructor
-                       totally_arbitrary='arbitrary')
+    model = BertForNER(config=dummy_config, datasets=[conll2003datasetreader_load])
+
     return model
 
 
@@ -482,10 +476,11 @@ def bert_for_ner(dummy_config, conll2003datasetreader_load):
 def bert_for_ner_mt(dummy_config_compound_dataset, conll2003datasetreader_load, dummy_dataset_2):
     """Returns an instance of BertForTokenClassification initialized with the default
     configuration."""
-    model = BertForNER(config=dummy_config_compound_dataset,
-                       datasets=[conll2003datasetreader_load, dummy_dataset_2],
-                       # to test passing of arbitrary keyword args to constructor
-                       totally_arbitrary='arbitrary')
+    model = BertForNER(
+        config=dummy_config_compound_dataset,
+        datasets=[conll2003datasetreader_load, dummy_dataset_2]
+    )
+
     return model
 
 
@@ -512,11 +507,10 @@ def bert_for_ner_save(dummy_dir, bert_for_ner_specify):
     """Saves a model by calling `single_bert_for_ner_specify.save()` and returns the
     filepath to the saved model."""
     model = bert_for_ner_specify
-    model_filepath = os.path.join(dummy_dir, constants.PRETRAINED_MODEL_FILENAME)
 
-    bert_for_ner_specify.save(model_filepath=model_filepath)
+    bert_for_ner_specify.save(directory=dummy_dir)
 
-    return model, model_filepath
+    return model, dummy_dir
 
 
 @pytest.fixture
@@ -524,45 +518,40 @@ def bert_for_ner_save_mt(dummy_dir, bert_for_ner_specify_mt):
     """Saves a model by calling `single_bert_for_ner_specify.save()` and returns the
     filepath to the saved model."""
     model = bert_for_ner_specify_mt
-    model_filepath = os.path.join(dummy_dir, constants.PRETRAINED_MODEL_FILENAME)
 
-    bert_for_ner_specify_mt.save(model_filepath=model_filepath)
+    bert_for_ner_specify_mt.save(directory=dummy_dir)
 
-    return model, model_filepath
+    return model, dummy_dir
 
 
-# BertForJointNERAndRE
+# BertForNERAndRE
 
 @pytest.fixture
-def bert_for_joint_ner_and_re(dummy_config, conll2004datasetreader_load):
+def bert_for_ner_and_re(dummy_config, conll2004datasetreader_load):
     """Returns an instance of BertForTokenClassification initialized with the default
     configuration."""
-    model = BertForJointNERAndRE(config=dummy_config,
-                                 datasets=[conll2004datasetreader_load],
-                                 # to test passing of arbitrary keyword args to constructor
-                                 totally_arbitrary='arbitrary')
+    model = BertForNERAndRE(config=dummy_config, datasets=[conll2004datasetreader_load])
     return model
 
 
 @pytest.fixture
-def bert_for_joint_ner_and_re_specify(bert_for_joint_ner_and_re):
+def bert_for_ner_and_re_specify(bert_for_ner_and_re):
     """Returns an instance of BertForTokenClassification initialized with the default configuration
     file and a single specified model."""
-    bert_for_joint_ner_and_re.specify()
+    bert_for_ner_and_re.specify()
 
-    return bert_for_joint_ner_and_re
+    return bert_for_ner_and_re
 
 
 @pytest.fixture
-def bert_for_joint_ner_and_re_save(dummy_dir, bert_for_joint_ner_and_re_specify):
+def bert_for_ner_and_re_save(dummy_dir, bert_for_ner_and_re_specify):
     """Saves a model by calling `single_bert_for_ner_specify.save()` and returns the
     filepath to the saved model."""
-    model = bert_for_joint_ner_and_re_specify
-    model_filepath = os.path.join(dummy_dir, constants.PRETRAINED_MODEL_FILENAME)
+    model = bert_for_ner_and_re_specify
 
-    bert_for_joint_ner_and_re_specify.save(model_filepath=model_filepath)
+    bert_for_ner_and_re_specify.save(directory=dummy_dir)
 
-    return model, model_filepath
+    return model, dummy_dir
 
 
 ####################################################################################################

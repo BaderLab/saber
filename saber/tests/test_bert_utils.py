@@ -1,7 +1,7 @@
 """Test suite for the `bert_utils` module (saber.utils.bert_utils).
 """
 import torch
-from pytorch_pretrained_bert.optimization import BertAdam
+from pytorch_transformers.optimization import AdamW
 from torch.utils.data import RandomSampler
 from torch.utils.data import SequentialSampler
 
@@ -37,7 +37,7 @@ tag_to_idx = {
     WORDPIECE: 4
 }
 
-attention_masks = torch.as_tensor([
+attention_mask = torch.as_tensor([
     [1.] * len(bert_tokens[0]) + [0.] * (MAX_SENT_LEN - len(bert_tokens[0])),
     [1.] * len(bert_tokens[1]) + [0.] * (MAX_SENT_LEN - len(bert_tokens[1])),
 ])
@@ -115,7 +115,7 @@ class TestBertUtils(object):
         """Asserts that `bert_utils.index_pad_mask_bert_tokens()` returns the expected values for a
         simple input when input argument `labels` is None.
         """
-        actual_indexed_tokens, actual_orig_to_tok_map, actual_attention_masks = \
+        actual_indexed_tokens, actual_orig_to_tok_map, actual_attention_mask = \
             bert_utils.index_pad_mask_bert_tokens(bert_tokens,
                                                   orig_to_tok_map=orig_to_tok_map,
                                                   tokenizer=bert_tokenizer)
@@ -127,13 +127,13 @@ class TestBertUtils(object):
         # Just check for shape, as token indicies will depend on specific BERT model used
         assert actual_indexed_tokens.shape == (2, constants.MAX_SENT_LEN)
         assert torch.equal(expected_orig_to_tok_map, actual_orig_to_tok_map)
-        assert torch.equal(attention_masks, actual_attention_masks)
+        assert torch.equal(attention_mask, actual_attention_mask)
 
     def test_index_pad_mask_bert_tokens_labels(self, bert_tokenizer):
         """Asserts that `bert_utils.index_pad_mask_bert_tokens()` returns the expected values for a
         simple input when input argument `labels` is not None.
         """
-        (actual_indexed_tokens, actual_orig_to_tok_map, actual_attention_masks,
+        (actual_indexed_tokens, actual_orig_to_tok_map, actual_attention_mask,
          actual_indexed_labels) = \
             bert_utils.index_pad_mask_bert_tokens(tokens=bert_tokens,
                                                   orig_to_tok_map=orig_to_tok_map,
@@ -152,7 +152,7 @@ class TestBertUtils(object):
         # Just check for shape, as token indicies will depend on specific BERT model used
         assert actual_indexed_tokens.shape == (2, constants.MAX_SENT_LEN)
         assert torch.equal(expected_orig_to_tok_map, actual_orig_to_tok_map)
-        assert torch.equal(attention_masks, actual_attention_masks)
+        assert torch.equal(attention_mask, actual_attention_mask)
         assert torch.equal(expected_indexed_labels, actual_indexed_labels)
 
     def test_get_dataloader_for_bert_conll2003(self, conll2003datasetreader_load, bert_tokenizer):
@@ -219,4 +219,4 @@ class TestBertUtils(object):
 
         actual = bert_utils.get_bert_optimizer(model, config)
 
-        assert isinstance(actual, BertAdam)
+        assert isinstance(actual, AdamW)

@@ -2,9 +2,11 @@
 """
 import os
 
-from pytorch_pretrained_bert import BertForTokenClassification
-from pytorch_pretrained_bert import BertTokenizer
-from pytorch_pretrained_bert.optimization import BertAdam
+from pytorch_transformers import CONFIG_NAME
+from pytorch_transformers import WEIGHTS_NAME
+from pytorch_transformers import BertForTokenClassification
+from pytorch_transformers import BertTokenizer
+from pytorch_transformers.optimization import AdamW
 
 from ..constants import PARTITIONS
 from ..constants import WORDPIECE
@@ -49,9 +51,6 @@ class TestBertForNER(object):
 
         assert bert_for_ner.model_name == 'bert-ner'
 
-        # Test that we can pass arbitrary keyword arguments
-        assert bert_for_ner.totally_arbitrary == 'arbitrary'
-
     def test_initialization_mt(self,
                                dummy_config_compound_dataset,
                                conll2003datasetreader_load,
@@ -89,9 +88,6 @@ class TestBertForNER(object):
         assert bert_for_ner_mt.pretrained_model_name_or_path == 'bert-base-cased'
         assert bert_for_ner_mt.model_name == 'bert-ner'
 
-        # Test that we can pass arbitrary keyword arguments
-        assert bert_for_ner_mt.totally_arbitrary == 'arbitrary'
-
     def test_specify(self,
                      dummy_config,
                      conll2003datasetreader_load,
@@ -127,9 +123,6 @@ class TestBertForNER(object):
                                          BertForTokenClassification)
         )
         assert isinstance(bert_for_ner_specify.tokenizer, BertTokenizer)
-
-        # Test that we can pass arbitrary keyword arguments
-        assert bert_for_ner_specify.totally_arbitrary == 'arbitrary'
 
     def test_specify_mt(self,
                         dummy_config_compound_dataset,
@@ -178,34 +171,43 @@ class TestBertForNER(object):
             bert_for_ner_specify_mt.num_labels
         assert isinstance(bert_for_ner_specify_mt.tokenizer, BertTokenizer)
 
-        # Test that we can pass arbitrary keyword arguments
-        assert bert_for_ner_specify_mt.totally_arbitrary == 'arbitrary'
-
     def test_save(self, bert_for_ner_save):
         """Asserts that the expected file(s) exists after call to `BertForNER.save()`.
         """
-        _, model_filepath = bert_for_ner_save
+        _, save_dir = bert_for_ner_save
 
-        assert os.path.isfile(model_filepath)
+        output_model_file = os.path.join(save_dir, WEIGHTS_NAME)
+        output_config_file = os.path.join(save_dir, CONFIG_NAME)
+        output_vocab_file = os.path.join(save_dir, 'vocab.txt')
+
+        assert os.path.isfile(output_model_file)
+        assert os.path.isfile(output_config_file)
+        assert os.path.isfile(output_vocab_file)
 
     def test_save_mt(self, bert_for_ner_save_mt):
         """Asserts that the expected file(s) exists after call to `BertForNER.save()` for a
         multi-task smodel.
         """
-        _, model_filepath = bert_for_ner_save_mt
+        _, save_dir = bert_for_ner_save_mt
 
-        assert os.path.isfile(model_filepath)
+        output_model_file = os.path.join(save_dir, WEIGHTS_NAME)
+        output_config_file = os.path.join(save_dir, CONFIG_NAME)
+        output_vocab_file = os.path.join(save_dir, 'vocab.txt')
+
+        assert os.path.isfile(output_model_file)
+        assert os.path.isfile(output_config_file)
+        assert os.path.isfile(output_vocab_file)
 
     def test_load(self, bert_for_ner, bert_for_ner_save):
         """Asserts that the attributes of a BertForNER object are expected after call to
         `BertForNER.load()`.
         """
-        model, model_filepath = bert_for_ner_save
+        model, save_dir = bert_for_ner_save
 
         expected_pretrained_model_name_or_path = model.pretrained_model_name_or_path
         expected_num_labels = model.num_labels
 
-        bert_for_ner.load(model_filepath)
+        bert_for_ner.load(save_dir)
 
         actual_pretrained_model_name_or_path = bert_for_ner.pretrained_model_name_or_path
         actual_num_labels = bert_for_ner.num_labels
@@ -325,7 +327,7 @@ class TestBertForNER(object):
         """
         actual = bert_for_ner_specify.prepare_optimizers()
 
-        assert all(isinstance(opt, BertAdam) for opt in actual)
+        assert all(isinstance(opt, AdamW) for opt in actual)
 
     def test_prepare_optimizers_mt(self, bert_for_ner_specify_mt):
         """Asserts that the returned optimizer object is as expected after call to
@@ -333,4 +335,4 @@ class TestBertForNER(object):
         """
         actual = bert_for_ner_specify_mt.prepare_optimizers()
 
-        assert all(isinstance(opt, BertAdam) for opt in actual)
+        assert all(isinstance(opt, AdamW) for opt in actual)
