@@ -1,9 +1,12 @@
 """Contains the BaseModel class, the parent class to all Keras models in Saber.
 """
 import logging
+import os
 
 import torch
 from torch import nn
+
+from ..constants import PRETRAINED_MODEL_FILENAME
 
 LOGGER = logging.getLogger(__name__)
 
@@ -18,16 +21,13 @@ class BaseModel(object):
         embeddings (Embeddings): An object containing loaded word embeddings.
         models (nn.Module): A PyTorch model.
     """
-    def __init__(self, config, datasets, embeddings=None, **kwargs):
+    def __init__(self, config, datasets, embeddings=None):
         self.config = config  # Hyperparameters and model details
         self.datasets = datasets  # Dataset(s) tied to this instance
         self.embeddings = embeddings  # Pre-trained word embeddings tied to this instance
         self.model = None  # Saber model tied to this instance
 
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-    def save(self, model_filepath):
+    def save(self, directory):
         """Save a PyTorch model to disk at `model_filepath`.
 
         Saves a PyTorch model to disk, by saving its architecture and weights as a `.bin` file
@@ -37,8 +37,9 @@ class BaseModel(object):
             model_filepath (str): Filepath to save the models architecture and weights.
 
         Returns:
-            `model_filepath`, the filepath to which the models architecture and weight were saved.
+            `model_filepath`, the filepath to where the model was saved.
         """
+        model_filepath = os.path.join(directory, PRETRAINED_MODEL_FILENAME)
         torch.save(self.model.state_dict(), model_filepath)
 
         return model_filepath

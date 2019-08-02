@@ -108,7 +108,7 @@ MAX_SENT_LEN = 256
 MAX_CHAR_LEN = 25
 
 # Possible models
-MODEL_NAMES = ['bert-ner', 'bert-ner-rc']
+MODEL_NAMES = ['bert-ner', 'bert-ner-re']
 
 # Which pre-trained BERT model to use
 PYTORCH_BERT_MODEL = 'biobert_v1.1_pubmed'

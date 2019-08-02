@@ -1,6 +1,7 @@
 """Test suite for the `Saber` class (saber.saber.Saber).
 """
 import os
+from glob import glob
 
 import pytest
 
@@ -17,7 +18,6 @@ from .resources.constants import DUMMY_TOKEN_MAP
 from .resources.constants import PATH_TO_CONLL2003_DATASET
 from .resources.constants import PATH_TO_DUMMY_DATASET_2
 from .resources.constants import PATH_TO_DUMMY_EMBEDDINGS
-
 
 # TODO (johngiorgi): Write tests for compound dataset
 
@@ -120,13 +120,12 @@ class TestSaber(object):
         saved_directory = saber_bert_for_ner.save(directory=model_save_dir, compress=False)
 
         model_attributes_filepath = os.path.join(saved_directory, constants.ATTRIBUTES_FILENAME)
-        model_filepath = os.path.join(saved_directory, constants.PRETRAINED_MODEL_FILENAME)
+        model_filepath = \
+            glob(os.path.join(saved_directory, f'*{constants.PRETRAINED_MODEL_FILENAME}'))[0]
 
         assert os.path.isdir(saved_directory)
         assert os.path.isfile(model_attributes_filepath)
         assert os.path.isfile(model_filepath)
-
-    # TODO (John): Repeat the above two tests but for a PyTorch model.
 
     def test_load(self, saber_saved_model):
         """Tests that the attributes of a loaded model are as expected after `Saber.load()` is called.
@@ -137,8 +136,6 @@ class TestSaber(object):
         assert saber.models[-1].config == model.config
         assert saber.models[-1].datasets[-1].type_to_idx == dataset.type_to_idx
         assert saber.models[-1].datasets[-1].idx_to_tag == dataset.idx_to_tag
-
-    # TODO (John): Repeat the above test but for a PyTorch model.
 
     def test_load_single_dataset(self, saber_single_dataset):
         """Assert that the `datasets` attribute of a `Saber` instance was updated as expected after

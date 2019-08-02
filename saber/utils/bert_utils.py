@@ -1,6 +1,6 @@
 import torch
 from keras.preprocessing.sequence import pad_sequences
-from pytorch_pretrained_bert.optimization import BertAdam
+from pytorch_transformers.optimization import AdamW
 from torch.utils import data
 
 from saber import constants
@@ -61,7 +61,7 @@ def process_dataset_for_bert(dataset, tokenizer):
                                          labels=dataset.type_seq[partition]['ent'])
 
             # Index, pad and mask BERT tokens
-            indexed_tokens, orig_to_tok_map, attention_masks, indexed_labels = \
+            indexed_tokens, orig_to_tok_map, attention_mask, indexed_labels = \
                 index_pad_mask_bert_tokens(tokens=bert_tokens,
                                            orig_to_tok_map=orig_to_tok_map,
                                            tokenizer=tokenizer,
@@ -69,7 +69,7 @@ def process_dataset_for_bert(dataset, tokenizer):
                                            tag_to_idx=dataset.type_to_idx['ent'])
 
             processed_dataset[partition] = {
-                'x': [indexed_tokens, attention_masks], 'y': indexed_labels,
+                'x': [indexed_tokens, attention_mask], 'y': indexed_labels,
                 'orig_to_tok_map': orig_to_tok_map
             }
 
@@ -151,11 +151,11 @@ def index_pad_mask_bert_tokens(tokens, orig_to_tok_map, tokenizer, labels=None, 
 
     Returns:
         If `labels` is not `None`:
-            A tuple of `torch.Tensor`'s: `indexed_tokens`, `attention_masks`, and `indexed_labels`
+            A tuple of `torch.Tensor`'s: `indexed_tokens`, `attention_mask`, and `indexed_labels`
             that can be used as input to to train a BERT model. Note that if `labels` is not `None`,
             `tag_to_idx` must also be provided.
         If `labels` is `None`:
-            A tuple of `torch.Tensor`'s: `indexed_tokens`, and `attention_masks`, representing
+            A tuple of `torch.Tensor`'s: `indexed_tokens`, and `attention_mask`, representing
             tokens mapped to indices and corresponding attention masks that can be used as input to
             a BERT model.
     """
@@ -179,7 +179,7 @@ def index_pad_mask_bert_tokens(tokens, orig_to_tok_map, tokenizer, labels=None, 
     orig_to_tok_map = torch.as_tensor(orig_to_tok_map)
 
     # Generate attention masks for pad values
-    attention_masks = torch.as_tensor([[float(idx > 0) for idx in sent] for sent in indexed_tokens])
+    attention_mask = torch.as_tensor([[float(idx > 0) for idx in sent] for sent in indexed_tokens])
 
     if labels:
         indexed_labels = pad_sequences(
@@ -192,9 +192,9 @@ def index_pad_mask_bert_tokens(tokens, orig_to_tok_map, tokenizer, labels=None, 
         )
         indexed_labels = torch.as_tensor(indexed_labels)
 
-        return indexed_tokens, orig_to_tok_map, attention_masks, indexed_labels
+        return indexed_tokens, orig_to_tok_map, attention_mask, indexed_labels
 
-    return indexed_tokens, orig_to_tok_map, attention_masks
+    return indexed_tokens, orig_to_tok_map, attention_mask
 
 
 def get_dataloader_for_bert(processed_dataset, batch_size, model_idx=-1):
@@ -247,7 +247,7 @@ def get_bert_optimizer(model, config):
             optionally, from the command line.
 
     Returns:
-        An initialized `BertAdam` optimizer for the training of a BERT model (`model`).
+        An initialized `AdamW` optimizer for the training of a BERT model (`model`).
     """
     if FULL_FINETUNING:
         param_optimizer = list(model.named_parameters())
@@ -264,7 +264,6 @@ def get_bert_optimizer(model, config):
         param_optimizer = list(model.classifier.named_parameters())
         optimizer_grouped_parameters = [{'params': [p for n, p in param_optimizer]}]
 
-    optimizer = BertAdam(optimizer_grouped_parameters,
-                         lr=config.learning_rate,)
+    optimizer = AdamW(optimizer_grouped_parameters, lr=config.learning_rate, correct_bias=False)
 
     return optimizer
