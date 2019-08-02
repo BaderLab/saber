@@ -228,13 +228,13 @@ def get_data_partitions(training_data, train_valid_indices):
         training_data_cv[-1]['valid'] = {'x': [x_valid_word, x_valid_char], 'y': y_valid}
 
         # TODO (John): This is a hotfix to support RC
-        if training_data['train']['orig_to_tok_map'] is not None:
+        if 'orig_to_tok_map' in training_data['train']:
             training_data_cv[-1]['train']['orig_to_tok_map'] = \
                 training_data['train']['orig_to_tok_map'][train_indices]
             training_data_cv[-1]['valid']['orig_to_tok_map'] = \
                 training_data['train']['orig_to_tok_map'][valid_indices]
 
-        if training_data['train']['rel_labels'] is not None:
+        if 'rel_labels' in training_data['train']:
             training_data_cv[-1]['train']['rel_labels'] = \
                 [training_data['train']['rel_labels'][k] for k in train_indices]
             training_data_cv[-1]['valid']['rel_labels'] = \
@@ -283,12 +283,12 @@ def get_valid_data(training_data, validation_split=0.10):
     training_data_split['valid'] = {'x': (x_valid_word, x_valid_char), 'y': y_valid}
 
     # TODO (John): This is a hotfix to support RC
-    if training_data_split['train']['orig_to_tok_map'] is not None:
+    if 'orig_to_tok_map' in training_data_split['train']:
         train_orig_to_tok_map = training_data_split['train']['orig_to_tok_map'][train_index]
         valid_orig_to_tok_map = training_data_split['train']['orig_to_tok_map'][valid_index]
         training_data_split['train']['orig_to_tok_map'] = train_orig_to_tok_map
         training_data_split['valid']['orig_to_tok_map'] = valid_orig_to_tok_map
-    if training_data_split['train']['rel_labels'] is not None:
+    if 'rel_labels' in training_data_split['train']:
         train_rel_labels = [training_data_split['train']['rel_labels'][k] for k in train_index]
         valid_rel_labels = [training_data_split['train']['rel_labels'][k] for k in valid_index]
         training_data_split['train']['rel_labels'] = train_rel_labels
