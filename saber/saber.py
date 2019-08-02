@@ -1,6 +1,5 @@
 """Contains the Saber class, which exposes all of Sabers main functionality.
 """
-import glob
 import logging
 import os
 import pickle
@@ -23,6 +22,7 @@ from .utils import data_utils
 from .utils import generic_utils
 from .utils import grounding_utils
 from .utils import model_utils
+from .utils.generic_utils import MissingStepException
 
 LOGGER = logging.getLogger(__name__)
 
@@ -187,11 +187,10 @@ class Saber(object):
                             'idx_to_tag': idx_to_tag,
                             }
 
-        if model.model_name == 'bert-ner' or model.model_name == 'bert-ner-rc':
+        if model.model_name == 'bert-ner' or model.model_name == 'bert-ner-re':
             model_attributes['pretrained_model_name_or_path'] = model.pretrained_model_name_or_path
 
-        model_filepath = os.path.join(directory, constants.PRETRAINED_MODEL_FILENAME)
-        model.save(model_filepath)
+        model.save(directory)
 
         pickle.dump(model_attributes, open(attributes_filepath, 'wb'))
 
@@ -222,16 +221,16 @@ class Saber(object):
         if not isinstance(directory, list):
             directory = [directory]
 
-        for dir_ in directory:
+        for model_dir in directory:
             # If directory is an available pretained model, download it from Google Drive
-            if dir_ in constants.PRETRAINED_MODELS:
-                dir_ = model_utils.download_model_from_gdrive(pretrained_model=dir_)
+            if model_dir in constants.PRETRAINED_MODELS:
+                model_dir = model_utils.download_model_from_gdrive(pretrained_model=model_dir)
 
-            dir_ = generic_utils.clean_path(dir_)
-            generic_utils.extract_directory(dir_)
+            model_dir = generic_utils.clean_path(model_dir)
+            generic_utils.extract_directory(model_dir)
 
             # Load only the objects we need for model prediction
-            attributes_filepath = os.path.join(dir_, constants.ATTRIBUTES_FILENAME)
+            attributes_filepath = os.path.join(model_dir, constants.ATTRIBUTES_FILENAME)
             model_attributes = pickle.load(open(attributes_filepath, "rb"))
 
             # Easiest to use a Dataset object to hold these data objects
@@ -248,22 +247,23 @@ class Saber(object):
 
                 datasets.append(dataset)
 
-            # Prevents user from having to specify pre-trained models name
-            self.config.model_name = model_attributes['model_name']
-
-            # Need to know what pre-trained BERT model was used to load the correct weights
-            if model_attributes['model_name'].startswith('bert'):
-                pretrained_model_name_or_path = \
-                    model_attributes.get('pretrained_model_name_or_path')
-
-            model_filepath = glob.glob(os.path.join(dir_, 'model.*'))[0]
-
-            model = model_utils.load_pretrained_model(
-                config=self.config,
-                datasets=datasets,
-                model_filepath=model_filepath,
-                pretrained_model_name_or_path=pretrained_model_name_or_path
-            )
+            # Import statements are here to prevent circular imports
+            if self.config.model_name == 'bert-ner':
+                from .models.bert_for_ner import BertForNER
+                model = BertForNER(
+                    config=self.config,
+                    datasets=datasets,
+                    pretrained_model_name_or_path=model_attributes['pretrained_model_name_or_path']
+                )
+                model.load(model_dir)
+            elif self.config.model_name == 'bert-ner-re':
+                from .models.bert_for_ner import BertForNERAndRC
+                model = BertForNERAndRC(
+                    config=self.config,
+                    datasets=datasets,
+                    pretrained_model_name_or_path=model_attributes['pretrained_model_name_or_path']
+                )
+                model.load(model_dir)
 
             self.models.append(model)
 
@@ -420,16 +420,16 @@ class Saber(object):
             model = BertForNER(config=self.config,
                                datasets=self.datasets,
                                pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
-        elif self.config.model_name == 'bert-ner-rc':
-            print('Building the BERT model for joint NER and RC...', end=' ', flush=True)
-            from .models.bert_for_joint_ner_and_re import BertForJointNERAndRE
-            model = BertForJointNERAndRE(config=self.config,
-                                         datasets=self.datasets,
-                                         pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
+        elif self.config.model_name == 'bert-ner-re':
+            print('Building the BERT model for joint NER and RE...', end=' ', flush=True)
+            from .models.bert_for_ner_and_re import BertForNERAndRE
+            model = BertForNERAndRE(config=self.config,
+                                    datasets=self.datasets,
+                                    pretrained_model_name_or_path=constants.PYTORCH_BERT_MODEL)
         # TODO: This should be handled in config, by supplying a list of options.
         else:
-            err_msg = (f'`model_name` must be one of: {constants.MODEL_NAMES},'
-                       ' got {self.config.model_name}')
+            err_msg = (f'model_name must be one of: {constants.MODEL_NAMES},'
+                       f' got {self.config.model_name}')
             LOGGER.error('ValueError: %s ', err_msg)
             raise ValueError(err_msg)
 
@@ -464,9 +464,3 @@ class Saber(object):
         metrics = self.models[model_idx].train()
 
         return metrics
-
-
-# https://stackoverflow.com/questions/1319615/proper-way-to-declare-custom-exceptions-in-modern-python
-class MissingStepException(Exception):
-    """Exception subclass for signalling to user that some required previous step was missed."""
-    pass

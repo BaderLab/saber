@@ -1,10 +1,13 @@
+import copy
 from itertools import permutations
 
 import torch
-from pytorch_pretrained_bert import BertForTokenClassification
-from pytorch_pretrained_bert import BertModel
 from torch import nn
 from torch.nn import CrossEntropyLoss
+
+# TODO (John): This can be shortned to from pytorch_transformers import x after next release
+from pytorch_transformers.modeling_bert import BertPreTrainedModel
+from pytorch_transformers import BertModel
 
 from ...constants import CHUNK_END_TAGS
 from ...constants import NEG_VALUE
@@ -12,68 +15,96 @@ from ...constants import TOK_MAP_PAD
 from .biaffine_classifier import BiaffineAttention
 
 
-class BertForJointEntityAndRelationExtraction(BertForTokenClassification):
+class BertForEntityAndRelationExtraction(BertPreTrainedModel):
     """A BERT based model for joint named entity recognition (NER) and relation extraction (RE).
 
     Arguments:
         config (BertConfig): `BertConfig` class instance with a configuration to build a new model.
-        idx_to_ent (dict): A mapping of integers to their entity label (e.g. BIO, IOBES, etc.).
-        num_ent_labels (int): the number of classes for the entity classifier. Defaults to `2`.
-        num_rel_labels (int): the number of classes for the relation classifier. Defaults to `2`.
 
     Inputs:
-        input_ids: A `torch.LongTensor` of shape `[batch_size, sequence_length]` with the word token
-            indices in the vocabulary.
-        orig_to_tok_map: A `torch.LongTensor` of shape `[batch_size, sequence_length]` which
+        input_ids (torch.LongTensor): Of shape `(batch_size, sequence_length)`, indices of input
+            sequence tokens in the vocabulary. To match pre-training, BERT input sequence should be
+            formatted with [CLS] and [SEP] tokens as follows:
+
+            (a) For sequence pairs:
+                tokens:         [CLS] is this jack ##son ##ville ? [SEP] no it is not . [SEP]
+                token_type_ids:   0   0  0    0    0     0       0   0   1  1  1  1   1   1
+
+            (b) For single sequences:
+                tokens:         [CLS] the dog is hairy . [SEP]
+                token_type_ids:   0   0   0   0  0     0   0
+
+            Indices can be obtained using `pytorch_transformers.BertTokenizer`. See
+            `pytorch_transformers.PreTrainedTokenizer.encode` and
+            `pytorch_transformers.PreTrainedTokenizer.convert_tokens_to_ids` for details.
+        orig_to_tok_map (torch.LongTensor): Of shape `[batch_size, sequence_length]` which
             contains the original tokens positions before WordPiece tokenization was applied.
-        token_type_ids: An optional `torch.LongTensor` of shape `[batch_size, sequence_length]`
-            with the token types indices selected in `[0, 1]`. Type `0` corresponds to a
-            `sentence A` and type `1` corresponds to a `sentence B` token (see BERT paper for more
-            details).
-        `attention_mask`: an optional `torch.LongTensor` of shape `[batch_size, sequence_length]`
-            with indices selected in `[0, 1]`. It's a mask to be used if the input sequence length
-            is smaller than the max input sequence length in the current batch. It's the mask that
-            we typically use for attention when a batch has varying length sentences.
-        `ent_labels`: Labels for the entity classification output: `torch.LongTensor` of shape
-            `[batch_size, sequence_length]` with indices selected in `[0, ..., num_ent_labels]`.
-        `rel_labels`: Labels for the relation classification output: `torch.LongTensor` of shape
-            `[batch_size, sequence_length]` with indices selected in `[0, ..., num_rel_labels]`.
+        token_type_ids (torch.LongTensor): Optional, of shape `(batch_size, sequence_length)`.
+            Segment token indices to indicate first and second portions of the inputs. Indices are
+            selected in `[0, 1]`: `0` corresponds to a `sentence A` token, `1` corresponds to a
+            `sentence B` token (see `BERT: Pre-training of Deep Bidirectional Transformers for
+            Language Understanding`_ for more details).
+        attention_mask (torch.LongTensor): Optional, of shape `(batch_size, sequence_length)`.
+            Mask to avoid performing attention on padding token indices. Mask values selected in
+            `[0, 1]`: 1` for tokens that are NOT MASKED, `0` for MASKED tokens.
+        labels (torch.LongTensor): Optional, of shape `(batch_size, sequence_length)` containing
+            labels for computing the token classification loss. Indices should be in
+            `[0, ..., config.num_labels]`.
+        ent_labels (torch.LongTensor): Optional, of shape `(batch_size, sequence_length)` containing
+            labels for computing the token classification loss. Indices should be in
+            `[0, ..., config.num_labels]`.
+        rel_labels: TODO.
+        position_ids (torch.LongTensor): Optional, of shape `(batch_size, sequence_length)`. Indices
+            of positions of each input sequence tokens in the position embeddings. Selected in the
+            range `[0, config.max_position_embeddings - 1]`.
+        head_mask (torch.FloatTensor): Optional, of shape `(num_heads,)` or
+            `(num_layers, num_heads)`: Mask to nullify selected heads of the self-attention modules.
+            Mask values selected in `[0, 1]`: `1` indicates the head is not masked, `0` indicates
+            the head is masked.
 
     # TODO (John): This is in flux, update it when we settle on an output structure.
-    Outputs:
-        if `labels` is not `None`:
-            Outputs the CrossEntropy classification loss of the output with the labels.
-        if `labels` is `None`:
-            Outputs the classification logits of shape [batch_size, sequence_length, num_labels].
+    Outputs (Tuple): Comprising various elements depending on the configuration (`config`) and inputs:
+        loss (torch.FloatTensor): Optional, returned when `labels` is provided, of shape `(1,)`.
+            Classification loss.
+        scores (torch.FloatTensor): Of shape `(batch_size, sequence_length, config.num_labels)`
+            Classification scores (before SoftMax).
+        hidden_states (list): Optional, returned when `config.output_hidden_states=True`. `list` of
+            `torch.FloatTensor` (one for the output of each layer + the output of the embeddings) of
+            shape (batch_size, sequence_length, hidden_size)`. Hidden-states of the model at the
+            output of each layer plus the initial embedding outputs.
+        attentions (list): Optional, returned when config.output_attentions=True`. `list` of
+            torch.FloatTensor` (one for each layer) of shape
+            `(batch_size, num_heads, sequence_length, sequence_length)`. Attentions weights after
+            the attention softmax, used to compute the weighted average in the self-attention heads.
 
     # TODO (John): This is in flux, update it when we settle on an output structure.
-    Example usage:
-    ```python
-    # Already been converted into WordPiece token ids
-    input_ids = torch.LongTensor([[31, 51, 99], [15, 5, 0]])
-    input_mask = torch.LongTensor([[1, 1, 1], [1, 1, 0]])
-    token_type_ids = torch.LongTensor([[0, 0, 1], [0, 1, 0]])
-    config = BertConfig(vocab_size_or_config_json_file=32000, hidden_size=768,
-        num_hidden_layers=12, num_attention_heads=12, intermediate_size=3072)
-    num_labels = 2
-    model = BertForTokenClassification(config, num_labels)
-    logits = model(input_ids, token_type_ids, input_mask)
-    ```
+    Example:
+
+        >>> config = BertConfig.from_pretrained('bert-base-uncased')
+        >>> tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        >>>
+        >>> model = BertForEntityAndRelationExtraction(config)
+        >>> input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute")).unsqueeze(0)  # Batch size 1
+        >>> labels = torch.tensor([1] * input_ids.size(1)).unsqueeze(0)  # Batch size 1
+        >>> outputs = model(input_ids, labels=labels)
+        >>> loss, scores = outputs[:2]
     """
-    def __init__(self, config, idx_to_ent, num_ent_labels, num_rel_labels, **kwargs):
-        super(BertForJointEntityAndRelationExtraction, self).__init__(config, num_ent_labels[0])
+    def __init__(self, config):
+        super(BertForEntityAndRelationExtraction, self).__init__(config)
+        # TODO (John): Eventually support MTL.
+        self.idx_to_ent = self.config.idx_to_ent[0]
+        self.num_ent_labels = self.config.num_ent_labels[0]
+        self.num_rel_labels = self.config.num_rel_labels[0]
 
-        # TODO (John): Eventually support MTL. For now, assume training on self.datasets[0]
-        self.idx_to_ent = idx_to_ent[0]
-        self.num_ent_labels = num_ent_labels[0]
-        self.num_rel_labels = num_rel_labels[0]
+        self.ent_class_weights = self.config.__dict__.get('ent_class_weights')
+        self.rel_class_weights = self.config.__dict__.get('rel_class_weights')
 
         # NER Module
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        del self.classifier  # Remove classifier the model comes with
         self.ent_classifier = nn.Linear(config.hidden_size, self.num_ent_labels)
-        self.apply(self.init_bert_weights)
+
+        self.apply(self.init_weights)
 
         # TODO (John): Once I settle on some kind of structure of hyperparams (a dict?) place
         # these there.
@@ -82,7 +113,7 @@ class BertForJointEntityAndRelationExtraction(BertForTokenClassification):
         entity_embed_size = 128
         head_tail_ffnns_size = 512
 
-        # RC module
+        # RE module
         self.embed = nn.Embedding(self.num_ent_labels, entity_embed_size)
 
         # encoder_layer = nn.TransformerEncoderLayer(config.hidden_size + entity_embed_size, 2)
@@ -90,7 +121,7 @@ class BertForJointEntityAndRelationExtraction(BertForTokenClassification):
         # self.transformer_encoder = nn.TransformerEncoder(encoder_layer, 2, encoder_norm)
 
         # MLPs for head and tail projections
-        self.ffnn_head = nn.Sequential(
+        projection = nn.Sequential(
             nn.Linear(config.hidden_size + entity_embed_size, head_tail_ffnns_size),
             nn.ReLU(),
             nn.Dropout(config.hidden_dropout_prob),
@@ -98,33 +129,18 @@ class BertForJointEntityAndRelationExtraction(BertForTokenClassification):
             nn.ReLU(),
             nn.Dropout(config.hidden_dropout_prob),
         )
-        self.ffnn_tail = nn.Sequential(
-            nn.Linear(config.hidden_size + entity_embed_size, head_tail_ffnns_size),
-            nn.ReLU(),
-            nn.Dropout(config.hidden_dropout_prob),
-            nn.Linear(head_tail_ffnns_size, head_tail_ffnns_size // 2),
-            nn.ReLU(),
-            nn.Dropout(config.hidden_dropout_prob),
-        )
+        self.ffnn_head = copy.deepcopy(projection)
+        self.ffnn_tail = copy.deepcopy(projection)
 
         self.rel_classifier = BiaffineAttention(head_tail_ffnns_size // 2, self.num_rel_labels)
 
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-    def forward(self,
-                input_ids,
-                orig_to_tok_map,
-                token_type_ids=None,
-                attention_mask=None,
-                ent_labels=None,
-                rel_labels=None):
-
+    def forward(self, input_ids, orig_to_tok_map, token_type_ids=None, attention_mask=None,
+                ent_labels=None, rel_labels=None, position_ids=None, head_mask=None):
         # Forward pass through BERT
-        sequence_output, _ = self.bert(input_ids=input_ids,
-                                       token_type_ids=token_type_ids,
-                                       attention_mask=attention_mask,
-                                       output_all_encoded_layers=False)
+        outputs = self.bert(input_ids, position_ids=position_ids, token_type_ids=token_type_ids,
+                            attention_mask=attention_mask, head_mask=head_mask)
+        sequence_output = outputs[0]
+
         sequence_output = self.dropout(sequence_output)
 
         # NER classification
@@ -170,25 +186,32 @@ class BertForJointEntityAndRelationExtraction(BertForTokenClassification):
             ent_indices = None
             re_logits = None
 
+        # Add hidden states and attention if they are present
+        outputs = (ner_logits, re_logits, ) + outputs[2:]
         if ent_labels is not None and rel_labels is not None:
-            self.rel_class_weight = self.rel_class_weight.to(input_ids.device)
-            loss_fct_ner = CrossEntropyLoss(weight=self.__dict__.get("ent_class_weight"))
-            loss_fct_re = CrossEntropyLoss(weight=self.rel_class_weight)
-            # loss_fct_re = CrossEntropyLoss(weight=self.__dict__.get("rel_class_weight"))
+            # TODO (John): Need better API for this.
+            ent_class_weights = (torch.tensor(self.ent_class_weights).to(input_ids) if
+                                 self.ent_class_weights is not None else None)
+            rel_class_weights = (torch.tensor(self.rel_class_weights).to(input_ids) if
+                                 self.rel_class_weights is not None else None)
+
+            loss_fct_ner = CrossEntropyLoss(weight=ent_class_weights)
+            loss_fct_re = CrossEntropyLoss(weight=rel_class_weights)
 
             # Computing NER loss
             # Only keep active parts of the loss
             if attention_mask is not None:
                 active_loss = attention_mask.view(-1) == 1
-                active_logits = ner_logits.view(-1, self.num_labels)[active_loss]
+                active_logits = ner_logits.view(-1, self.num_ent_labels)[active_loss]
                 active_labels = ent_labels.view(-1)[active_loss]
                 ner_loss = loss_fct_ner(active_logits, active_labels.long())
             else:
-                ner_loss = loss_fct_ner(ner_logits.view(-1, self.num_labels), ent_labels.view(-1))
+                ner_loss = \
+                    loss_fct_ner(ner_logits.view(-1, self.num_ent_labels), ent_labels.view(-1))
 
             # Computing RE loss
             # If no relations were predicted, we assign 0 vector for each true relation (this
-            # represents a maximially confused classifier.)
+            # represents a maximally confused classifier.)
             if re_logits is None:
                 re_logits = torch.zeros((proj_rel_labels.size(0), self.num_rel_labels),
                                         device=input_ids.device)
@@ -200,12 +223,12 @@ class BertForJointEntityAndRelationExtraction(BertForTokenClassification):
                                                  device=input_ids.device)
                     re_logits = torch.cat((re_logits, missing_logits))
 
-            re_loss = loss_fct_re(re_logits.view(-1, self.num_rel_labels),
-                                  proj_rel_labels.view(-1))
+            re_loss = loss_fct_re(re_logits.view(-1, self.num_rel_labels), proj_rel_labels.view(-1))
 
-            return ner_logits, re_logits, ner_loss, re_loss, proj_rel_labels
-        else:
-            return ner_logits, re_logits
+            outputs = (ner_loss, re_loss, proj_rel_labels, ner_logits, re_logits) + outputs[2:]
+
+        # (ner_loss, re_loss, proj_rel_labels), ner_logits, re_logits, (hidden_states), (attentions)
+        return outputs
 
     # TODO (John): This is a disaster. It works, but I should find a way to clean it up and drop
     # as many explict for loops as possible.

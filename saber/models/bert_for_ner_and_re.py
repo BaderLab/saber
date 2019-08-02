@@ -1,7 +1,9 @@
+import logging
 from itertools import zip_longest
 
 import torch
-from pytorch_pretrained_bert import BertTokenizer
+from pytorch_transformers import BertConfig
+from pytorch_transformers import BertTokenizer
 from tqdm import tqdm
 
 from .. import constants
@@ -10,12 +12,15 @@ from ..constants import WORDPIECE
 from ..utils import bert_utils
 from ..utils import data_utils
 from ..utils import model_utils
+from ..utils.generic_utils import MissingStepException
 from .base_model import BaseModel
-from .modules.bert_for_joint_entity_and_relation_classification import \
-    BertForJointEntityAndRelationExtraction
+from .modules.bert_for_entity_and_relation_extraction import \
+    BertForEntityAndRelationExtraction
+
+LOGGER = logging.getLogger(__name__)
 
 
-class BertForJointNERAndRE(BaseModel):
+class BertForNERAndRE(BaseModel):
     """A PyTorch implementation of a BERT model for joint named entity recognition (NER) and
     relation extraction (RE).
 
@@ -24,29 +29,21 @@ class BertForJointNERAndRE(BaseModel):
             optionally, from the command line.
         datasets (list): A list of Dataset objects.
         pretrained_model_name_or_path: either:
-                - a str with the name of a pre-trained model to load selected in the list of:
-                    . `bert-base-uncased`
-                    . `bert-large-uncased`
-                    . `bert-base-cased`
-                    . `bert-large-cased`
-                    . `bert-base-multilingual-uncased`
-                    . `bert-base-multilingual-cased`
-                    . `bert-base-chinese`
-                - a path or url to a pretrained model archive containing:
-                    . `bert_config.json` a configuration file for the model
-                    . `pytorch_model.bin` a PyTorch dump of a BertForPreTraining instance
-                - a path or url to a pretrained model archive containing:
-                    . `bert_config.json` a configuration file for the model
-                    . `model.chkpt` a TensorFlow checkpoint
+                - a string with the `shortcut name` of a pre-trained model configuration to load
+                    from cache or download and cache if not already stored in cache
+                    (e.g. 'bert-base-uncased').
+                - a path to a `directory` containing a configuration file saved
+                    using the `save_pretrained(save_directory)` method.
+                - a path or url to a saved configuration `file`.
 
     References:
         - BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding:
             https://arxiv.org/abs/1810.04805
         - PyTorch Implementation of BERT by Huggingface:
-            https://github.com/huggingface/pytorch-pretrained-BERT
+            https://github.com/huggingface/pytorch-transformers
     """
-    def __init__(self, config, datasets, pretrained_model_name_or_path='bert-base-cased', **kwargs):
-        super(BertForJointNERAndRE, self).__init__(config, datasets, **kwargs)
+    def __init__(self, config, datasets, pretrained_model_name_or_path='bert-base-cased'):
+        super(BertForNERAndRE, self).__init__(config, datasets)
 
         # Place the model on the CPU by default
         self.device = torch.device("cpu")
@@ -64,36 +61,46 @@ class BertForJointNERAndRE(BaseModel):
         # Name or path of a pre-trained BERT model
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
 
-        self.model_name = 'bert-ner-rc'
+        self.model_name = 'bert-ner-re'
 
-    def load(self, model_filepath):
-        """Loads a PyTorch `BertForJointEntityAndRelationExtraction` model from disk.
-
-        Loads a PyTorch `BertForJointEntityAndRelationExtraction` model and its corresponding
-        tokenizer (both saved with `BertForNER.save()`) from disk by loading its architecture and
-        weights from a `.bin` file at `model_filepath`.
+    def save(self, directory):
+        """Saves the `BertPreTrainedModel` model at `self.model`, its `BertConfig` and its
+        `BertTokenizer` to disk."
 
         Args:
-            model_filepath (str): filepath to the models architecture (`.bin` file).
+            directory (str): Directory to save the models weights, config and tokenizer.
 
         Returns:
-            The loaded PyTorch BERT model and the corresponding Tokenizer.
+            `directory`, the path to the directory where the model was saved.
+
+        Raises:
+            MissingStepException: If either `self.model` or `self.tokenizer` is None.
         """
-        model_state_dict = torch.load(model_filepath, map_location=lambda storage, loc: storage)
+        self.model, self.tokenizer = self.__dict__.get("model"), self.__dict__.get("tokenizer")
 
-        # A trick to get the number of labels for each classifier
-        # TODO (John): These are lists because in the future we would like to support MTL.
-        num_ent_labels = [model_state_dict['ent_classifier.weight'].size(0)]
-        num_rel_labels = [model_state_dict['rel_classifier.linear.weight'].size(0)]
+        if self.model is None or self.tokenizer is None:
+            err_msg = ('self.model or self.tokenizer is None. Make sure to initialize a model'
+                       ' before saving with BertForNERAndRE.specify() or BertForNERAndRE.load()')
+            LOGGER.error('MissingStepException: %s', err_msg)
+            raise MissingStepException(err_msg)
 
-        model = BertForJointEntityAndRelationExtraction.from_pretrained(
-            pretrained_model_name_or_path=self.pretrained_model_name_or_path,
-            idx_to_ent=[dataset.idx_to_tag['ent'] for dataset in self.datasets],
-            num_ent_labels=num_ent_labels,
-            num_rel_labels=num_rel_labels,
-        )
-        tokenizer = BertTokenizer.from_pretrained(self.pretrained_model_name_or_path,
-                                                  do_lower_case=False)
+        # Saves model / config to directory/pytorch_model.bin / directory/config.json respectively
+        self.model.save_pretrained(directory)
+        self.tokenizer.save_vocabulary(directory)
+
+        return directory
+
+    def load(self, directory):
+        """Loads a PyTorch `BertForEntityAndRelationExtraction` model from disk.
+
+        Args:
+            directory (str): Directory to save the models weights, config and tokenizer.
+
+        Returns:
+            The loaded PyTorch `BertPreTrainedModel` model and its corresponding `BertTokenizer`.
+        """
+        tokenizer = BertTokenizer.from_pretrained(directory)
+        model = BertForEntityAndRelationExtraction.from_pretrained(directory)
 
         # Get the device the model will live on, along with number of GPUs available
         self.device, self.n_gpus = model_utils.get_device(model)
@@ -104,30 +111,40 @@ class BertForJointNERAndRE(BaseModel):
         return model, tokenizer
 
     def specify(self):
-        """Specifies a PyTorch `BertForJointEntityAndRelationExtraction` model and its tokenizer.
+        """Initializes a PyTorch `BertForEntityAndRelationExtraction` model and its tokenizer.
 
         Returns:
-            The loaded PyTorch `BertForJointEntityAndRelationExtraction` model and its
-            corresponding Tokenizer.
+            The loaded PyTorch `BertPreTrainedModel` model and its corresponding `BertTokenizer`.
         """
         # If this is one of our preprocessed BERT models, download it from GDrive first
         if self.pretrained_model_name_or_path in constants.PRETRAINED_MODELS:
             self.pretrained_model_name_or_path = \
                 model_utils.download_model_from_gdrive(self.pretrained_model_name_or_path)
 
+        # Anything we need to add to BertConfig goes here
+        idx_to_ent = [dataset.idx_to_tag['ent'] for dataset in self.datasets]
+        num_ent_labels = self.num_ent_labels
+        num_rel_labels = self.num_rel_labels
         # TODO (John): Temporary, need a better API for this.
-        rel_class_weight = self.datasets[0].compute_class_weight()['rel'].tolist()
-        rel_class_weight = torch.tensor([1] + rel_class_weight)
+        rel_class_weight = [1] + self.datasets[0].compute_class_weight()['rel'].tolist()
 
-        model = BertForJointEntityAndRelationExtraction.from_pretrained(
+        config = BertConfig.from_pretrained(self.pretrained_model_name_or_path)
+
+        # Manually add these values to the BERT config.
+        config.__dict__['idx_to_ent'] = idx_to_ent
+        config.__dict__['num_ent_labels'] = num_ent_labels
+        config.__dict__['num_rel_labels'] = num_rel_labels
+        config.__dict__['rel_class_weight'] = rel_class_weight
+
+        tokenizer = BertTokenizer.from_pretrained(
             pretrained_model_name_or_path=self.pretrained_model_name_or_path,
-            idx_to_ent=[dataset.idx_to_tag['ent'] for dataset in self.datasets],
-            num_ent_labels=self.num_ent_labels,
-            num_rel_labels=self.num_rel_labels,
-            rel_class_weight=rel_class_weight,
+            do_lower_case=False
         )
-        tokenizer = BertTokenizer.from_pretrained(self.pretrained_model_name_or_path,
-                                                  do_lower_case=False)
+        # Initializes the model using our modified config
+        model = BertForEntityAndRelationExtraction.from_pretrained(
+            pretrained_model_name_or_path=self.pretrained_model_name_or_path,
+            config=config
+        )
 
         # Get the device the model will live on, along with number of GPUs available
         self.device, self.n_gpus = model_utils.get_device(model)
@@ -190,11 +207,13 @@ class BertForJointNERAndRE(BaseModel):
         training_data = self.prepare_data_for_training()
         output_dirs = model_utils.prepare_output_directory(self.config)
 
-        metrics = model_utils.setup_metrics_callback(config=self.config,
-                                                     model=self,
-                                                     datasets=self.datasets,
-                                                     training_data=training_data,
-                                                     output_dirs=output_dirs,)
+        metrics = model_utils.setup_metrics_callback(
+            config=self.config,
+            model=self,
+            datasets=self.datasets,
+            training_data=training_data,
+            output_dirs=output_dirs,
+        )
 
         # Training loop
         k_folds = len(training_data[0])
@@ -219,38 +238,36 @@ class BertForJointNERAndRE(BaseModel):
                 else:
                     desc = f'Epoch: {epoch + 1}/{self.config.epochs}'
 
-                pbar = tqdm(zip_longest(*dataloaders),
-                            unit='batch',
-                            desc=desc,
-                            total=total,
-                            dynamic_ncols=True)
+                pbar = tqdm(
+                    zip_longest(*dataloaders),
+                    unit='batch',
+                    desc=desc,
+                    total=total,
+                    dynamic_ncols=True
+                )
 
                 for _, batches in enumerate(pbar):
                     for batch in batches:
                         if batch is not None:
-                            (batch_indices, input_ids, attention_mask, ent_labels,
-                                orig_to_tok_map, model_idx) = batch
-
-                            input_ids = input_ids.to(self.device)
-                            attention_mask = attention_mask.to(self.device)
-                            ent_labels = ent_labels.to(self.device)
+                            (batch_indices, input_ids, attention_mask, ent_labels, orig_to_tok_map,
+                             model_idx) = batch
                             model_idx = model_idx[0].item()
 
-                            rel_labels = \
-                                [training_data[model_idx][fold]['train']['rel_labels'][idx]
-                                    for idx in batch_indices]
+                            inputs = {
+                                'input_ids': input_ids.to(self.device),
+                                'orig_to_tok_map': orig_to_tok_map.to(self.device),
+                                'token_type_ids': torch.zeros_like(input_ids).to(self.device),
+                                'attention_mask': attention_mask.to(self.device),
+                                'ent_labels': ent_labels.to(self.device),
+                                'rel_labels': [training_data[model_idx][fold]['train']['rel_labels'][idx]
+                                               for idx in batch_indices],
+                            }
 
                             optimizer = optimizers[model_idx]
                             optimizer.zero_grad()
 
-                            _, _, ner_loss, re_loss, _ = self.model(
-                                input_ids=input_ids,
-                                orig_to_tok_map=orig_to_tok_map,
-                                token_type_ids=torch.zeros_like(input_ids),
-                                attention_mask=attention_mask,
-                                ent_labels=ent_labels,
-                                rel_labels=rel_labels,
-                            )
+                            outputs = self.model(**inputs)
+                            ner_loss, re_loss = outputs[:2]
 
                             # TODO (John): Hotfix, this should be added to a config
                             if epoch > 0:
@@ -281,7 +298,6 @@ class BertForJointNERAndRE(BaseModel):
                         pbar.set_postfix(postfix)
 
                 for metric in metrics:
-                    # Need to feed epoch argument manually, as this is a Keras callback object
                     metric.on_epoch_end()
 
                 pbar.close()
@@ -296,7 +312,7 @@ class BertForJointNERAndRE(BaseModel):
 
         return metrics
 
-    def evaluate(self, training_data, partition='train', model_idx=None):
+    def evaluate(self, training_data, partition='train'):
         """Perform a prediction step using `self.model` on `training_data[partition]`.
 
         Performs prediction for the model at `self.model` and returns a four-tuple containing the
@@ -307,7 +323,6 @@ class BertForJointNERAndRE(BaseModel):
             training_data (dict): Contains the data (at key `partition_dataloader`).
             partition (str): Which partition to perform a prediction step on, must be one of
                 'train', 'valid', or 'test'.
-            model_idx (None): Unused argument. Retained for compatibility.
 
         Returns:
             A four-tuple containing the gold NER label sequences and corresponding predicted labels
@@ -315,31 +330,30 @@ class BertForJointNERAndRE(BaseModel):
         """
         self.model.eval()
 
-        y_true_ner, y_pred_ner, y_true_re, y_pred_re = [], [], [], []
-        eval_ner_loss, eval_re_loss, eval_joint_loss, eval_steps = 0, 0, 0, 0
+        with torch.no_grad():
 
-        dataloader = training_data[partition]['dataloader']
+            y_true_ner, y_pred_ner, y_true_re, y_pred_re = [], [], [], []
+            eval_ner_loss, eval_re_loss, eval_joint_loss, eval_steps = 0, 0, 0, 0
 
-        for batch in dataloader:
-            (batch_indices, input_ids, attention_mask, ent_labels, orig_to_tok_map,
-             model_idx) = batch
+            dataloader = training_data[partition]['dataloader']
 
-            input_ids = input_ids.to(self.device)
-            attention_mask = attention_mask.to(self.device)
-            ent_labels = ent_labels.to(self.device)
-            model_idx = model_idx[0].item()
+            for batch in dataloader:
+                (batch_indices, input_ids, attention_mask, ent_labels, orig_to_tok_map,
+                 model_idx) = batch
+                model_idx = model_idx[0].item()
 
-            rel_labels = [training_data[partition]['rel_labels'][idx] for idx in batch_indices]
+                inputs = {
+                    'input_ids': input_ids.to(self.device),
+                    'orig_to_tok_map': orig_to_tok_map.to(self.device),
+                    'token_type_ids': torch.zeros_like(input_ids).to(self.device),
+                    'attention_mask': attention_mask.to(self.device),
+                    'ent_labels': ent_labels.to(self.device),
+                    'rel_labels': [training_data[partition]['rel_labels'][idx] for idx in
+                                   batch_indices]
+                }
 
-            with torch.no_grad():
-                ner_logits, re_logits, ner_loss, re_loss, re_labels = self.model(
-                    input_ids=input_ids,
-                    orig_to_tok_map=orig_to_tok_map,
-                    token_type_ids=torch.zeros_like(input_ids),
-                    attention_mask=attention_mask,
-                    ent_labels=ent_labels,
-                    rel_labels=rel_labels
-                )
+                outputs = self.model(**inputs)
+                ner_loss, re_loss, re_labels, ner_logits, re_logits = outputs[:5]
 
                 loss = ner_loss + re_loss
                 ner_preds = ner_logits.argmax(dim=-1)
@@ -349,11 +363,14 @@ class BertForJointNERAndRE(BaseModel):
                 if self.n_gpus > 1:
                     loss = loss.mean()
 
+                # TODO (John): There has got to be a better way to do this?
                 # Mask [PAD] and WORDPIECE tokens
                 for preds, labels, tok_map in zip(ner_preds, ent_labels, orig_to_tok_map):
-                    orig_token_indices = torch.as_tensor([i for i in tok_map if i != TOK_MAP_PAD],
-                                                         device=self.device,
-                                                         dtype=torch.long)
+                    orig_token_indices = torch.as_tensor(
+                        [i for i in tok_map if i != TOK_MAP_PAD],
+                        device=self.device,
+                        dtype=torch.long
+                    )
 
                     masked_labels = torch.index_select(labels, -1, orig_token_indices).tolist()
                     masked_preds = torch.index_select(preds, -1, orig_token_indices).tolist()
@@ -398,50 +415,55 @@ class BertForJointNERAndRE(BaseModel):
         """
         self.model.eval()
 
-        # Prepare data for input to model
-        bert_tokens, orig_to_tok_map = bert_utils.wordpiece_tokenize_sents(tokens, self.tokenizer)
-        input_ids, orig_to_tok_map, attention_masks = \
-            bert_utils.index_pad_mask_bert_tokens(tokens=bert_tokens,
-                                                  orig_to_tok_map=orig_to_tok_map,
-                                                  tokenizer=self.tokenizer)
-
-        input_ids = input_ids.to(self.device)
-        orig_to_tok_map = orig_to_tok_map.to(self.device)
-        attention_masks = attention_masks.to(self.device)
-
-        # Actual prediction happens here
         with torch.no_grad():
-            ner_logits, re_logits = self.model(
-                input_ids=input_ids,
-                orig_to_tok_map=orig_to_tok_map,
-                token_type_ids=torch.zeros_like(input_ids),
-                attention_mask=attention_masks)
 
-        ner_preds = ner_logits.argmax(dim=-1)
-        re_preds = re_logits.argmax(dim=-1) if re_logits is not None else re_logits
+            # Prepare data for input to model
+            bert_tokens, orig_to_tok_map = \
+                bert_utils.wordpiece_tokenize_sents(tokens, tokenizer=self.tokenizer)
+            input_ids, orig_to_tok_map, attention_mask = \
+                bert_utils.index_pad_mask_bert_tokens(bert_tokens,
+                                                      orig_to_tok_map=orig_to_tok_map,
+                                                      tokenizer=self.tokenizer)
 
-        # If y_preds 2D matrix, this is a STM. Add dummy first dimension
-        if len(list(ner_preds.size())) < 3:
-            ner_preds = torch.unsqueeze(ner_preds, dim=0)
+            # Actual prediction happens here
+            inputs = {
+                'input_ids': input_ids.to(self.device),
+                'orig_to_tok_map': orig_to_tok_map.to(self.device),
+                'token_type_ids': torch.zeros_like(input_ids).to(self.device),
+                'attention_mask': attention_mask.to(self.device),
+            }
 
-        # TODO (John): There has got to be a better way to do this?
-        # Mask [PAD] and WORDPIECE tokens
-        ner_preds_masked = []
-        for output, dataset in zip(ner_preds, self.datasets):
-            ner_preds_masked.append([])
-            for pred, tok_map in zip(output, orig_to_tok_map):
-                orig_token_indices = torch.as_tensor([i for i in tok_map if i != TOK_MAP_PAD])
-                orig_token_indices = orig_token_indices.to(self.device).long()
+            outputs = self.model(**inputs)
+            ner_logits, re_logits = outputs[:2]
 
-                masked_logits = torch.index_select(pred, -1, orig_token_indices)
-                masked_logits = masked_logits.detach().tolist()
+            ner_preds = ner_logits.argmax(dim=-1)
+            re_preds = re_logits.argmax(dim=-1) if re_logits is not None else re_logits
 
-                predicted_labels = [dataset.idx_to_tag['ent'][idx] for idx in masked_logits]
-                ner_preds_masked[-1].append(predicted_labels)
+            # If y_preds 2D matrix, this is a STM. Add dummy first dimension
+            if len(list(ner_preds.size())) < 3:
+                ner_preds = torch.unsqueeze(ner_preds, dim=0)
 
-        # If STM, return only a list of lists
-        if len(ner_preds_masked) == 1:
-            ner_preds_masked = ner_preds_masked[0]
+            # TODO (John): There has got to be a better way to do this?
+            # Mask [PAD] and WORDPIECE tokens
+            ner_preds_masked = []
+            for output, dataset in zip(ner_preds, self.datasets):
+                ner_preds_masked.append([])
+                for pred, tok_map in zip(output, orig_to_tok_map):
+                    orig_token_indices = torch.as_tensor(
+                        [i for i in tok_map if i != TOK_MAP_PAD],
+                        device=self.device,
+                        dtype=torch.long
+                    )
+
+                    masked_logits = torch.index_select(pred, -1, orig_token_indices)
+                    masked_logits = masked_logits.detach().tolist()
+
+                    predicted_labels = [dataset.idx_to_tag['ent'][idx] for idx in masked_logits]
+                    ner_preds_masked[-1].append(predicted_labels)
+
+            # If STM, return only a list of lists
+            if len(ner_preds_masked) == 1:
+                ner_preds_masked = ner_preds_masked[0]
 
         return ner_preds_masked, re_preds
 
