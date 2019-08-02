@@ -273,9 +273,7 @@ class Metrics(object):
         eval_scores = {}
 
         # Get predictions and gold labels
-        eval_results = self.model_.evaluate(training_data,
-                                            partition=partition,
-                                            model_idx=self.model_idx)
+        eval_results = self.model_.evaluate(training_data, partition=partition)
 
         # TODO (John): This is brittle.
         if len(eval_results) > 2:

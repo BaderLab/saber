@@ -136,34 +136,6 @@ def setup_metrics_callback(config, model, datasets, training_data, output_dirs):
 ####################################################################################################
 
 
-def load_pretrained_model(config, datasets, model_filepath, **kwargs):
-    """Loads a pre-trained Saber model.
-
-    Loads a pre-trained PyTorch model serialized at `model_filepath`. The type of model to load is
-    specificed in `config.model_name`.
-
-    Args:
-        config (Config): config (Config): A Config object which contains a set of harmonized
-            arguments provided in a *.ini file and, optionally, from the command line.
-        datasets (Dataset): A list of Dataset objects.
-        model_filepath (str): Filepath to architecture and weights of a pre-trained PyTorch model.
-
-    Returns:
-        A pre-trained Saber model.
-    """
-    # Import statements are here to prevent circular imports
-    if config.model_name == 'bert-ner':
-        from ..models.bert_for_ner import BertForNER
-        model = BertForNER(config, datasets, kwargs['pretrained_model_name_or_path'])
-        model.load(model_filepath)
-    elif config.model_name == 'bert-ner-rc':
-        from ..models.bert_for_ner import BertForNERAndRC
-        model = BertForNERAndRC(config, datasets, kwargs['pretrained_model_name_or_path'])
-        model.load(model_filepath)
-
-    return model
-
-
 def download_model_from_gdrive(pretrained_model, extract=True):
     """Downloads a pre-trained Saber model from Google Drive.
 

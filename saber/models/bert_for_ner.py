@@ -1,7 +1,8 @@
+import logging
 from itertools import zip_longest
 
 import torch
-from pytorch_pretrained_bert import BertTokenizer
+from pytorch_transformers import BertTokenizer
 from tqdm import tqdm
 
 from .. import constants
@@ -10,47 +11,37 @@ from ..constants import WORDPIECE
 from ..utils import bert_utils
 from ..utils import data_utils
 from ..utils import model_utils
+from ..utils.generic_utils import MissingStepException
 from .base_model import BaseModel
 from .modules.bert_for_token_classification_multi_task import \
     BertForTokenClassificationMultiTask
 
+LOGGER = logging.getLogger(__name__)
+
 
 class BertForNER(BaseModel):
     """A PyTorch implementation of a BERT model for named entity recognition (NER).
-
-    A BERT for NER implementation in PyTorch. Supports multi-task learning by default, just pass
-    multiple Dataset objects via `datasets` to the constructor and the model will share the
-    parameters of all layers, except for the final output layer, across all datasets, where each
-    dataset represents a NER task.
 
     Args:
         config (Config): Contains a set of harmonzied arguments provided in a *.ini file and,
             optionally, from the command line.
         datasets (list): A list of Dataset objects.
         pretrained_model_name_or_path: either:
-                - a str with the name of a pre-trained model to load selected in the list of:
-                    . `bert-base-uncased`
-                    . `bert-large-uncased`
-                    . `bert-base-cased`
-                    . `bert-large-cased`
-                    . `bert-base-multilingual-uncased`
-                    . `bert-base-multilingual-cased`
-                    . `bert-base-chinese`
-                - a path or url to a pretrained model archive containing:
-                    . `bert_config.json` a configuration file for the model
-                    . `pytorch_model.bin` a PyTorch dump of a BertForPreTraining instance
-                - a path or url to a pretrained model archive containing:
-                    . `bert_config.json` a configuration file for the model
-                    . `model.chkpt` a TensorFlow checkpoint
+                - a string with the `shortcut name` of a pre-trained model configuration to load
+                    from cache or download and cache if not already stored in cache
+                    (e.g. 'bert-base-uncased').
+                - a path to a `directory` containing a configuration file saved
+                    using the `save_pretrained(save_directory)` method.
+                - a path or url to a saved configuration `file`.
 
     References:
         - BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding:
             https://arxiv.org/abs/1810.04805
         - PyTorch Implementation of BERT by Huggingface:
-            https://github.com/huggingface/pytorch-pretrained-BERT
+            https://github.com/huggingface/pytorch-transformers
     """
-    def __init__(self, config, datasets, pretrained_model_name_or_path='bert-base-cased', **kwargs):
-        super(BertForNER, self).__init__(config, datasets, **kwargs)
+    def __init__(self, config, datasets, pretrained_model_name_or_path='bert-base-cased'):
+        super(BertForNER, self).__init__(config, datasets)
 
         # Place the model on the CPU by default
         self.device = torch.device("cpu")
@@ -69,32 +60,44 @@ class BertForNER(BaseModel):
 
         self.model_name = 'bert-ner'
 
-    def load(self, model_filepath):
-        """Loads a PyTorch `BertForTokenClassificationMultiTask` model from disk.
-
-        Loads a PyTorch `BertForTokenClassificationMultiTask` model and its corresponding tokenizer
-        (both saved with `BertForNER.save()`) from disk by loading its architecture and weights
-        from a `.bin` file at `model_filepath`.
+    def save(self, directory):
+        """Saves the `BertPreTrainedModel` model at `self.model`, its `BertConfig` and its
+        `BertTokenizer` to disk."
 
         Args:
-            model_filepath (str): Filepath to the models architecture (`.bin` file).
+            directory (str): Directory to save the models weights, config and tokenizer.
 
         Returns:
-            The loaded PyTorch BERT model and the corresponding Tokenizer.
+            `directory`, the path to the directory where the model was saved.
+
+        Raises:
+            MissingStepException: If either `self.model` or `self.tokenizer` is None.
         """
-        model_state_dict = torch.load(model_filepath, map_location=lambda storage, loc: storage)
+        self.model, self.tokenizer = self.__dict__.get("model"), self.__dict__.get("tokenizer")
 
-        # A trick to get the number of labels for each classifier
-        num_labels = []
-        while f'classifier.{len(num_labels)}.weight' in model_state_dict:
-            num_labels.append(model_state_dict[f'classifier.{len(num_labels)}.weight'].size(0))
+        if self.model is None or self.tokenizer is None:
+            err_msg = ('self.model or self.tokenizer is None. Make sure to initialize a model'
+                       ' before saving with BertForNER.specify() or BertForNER.load()')
+            LOGGER.error('MissingStepException: %s', err_msg)
+            raise MissingStepException(err_msg)
 
-        model = \
-            BertForTokenClassificationMultiTask.from_pretrained(self.pretrained_model_name_or_path,
-                                                                num_labels=num_labels,
-                                                                state_dict=model_state_dict)
-        tokenizer = BertTokenizer.from_pretrained(self.pretrained_model_name_or_path,
-                                                  do_lower_case=False)
+        # Saves model / config to directory/pytorch_model.bin / directory/config.json respectively
+        self.model.save_pretrained(directory)
+        self.tokenizer.save_vocabulary(directory)
+
+        return directory
+
+    def load(self, directory):
+        """Loads a PyTorch `BertForTokenClassificationMultiTask` model from disk.
+
+        Args:
+            directory (str): Directory to save the models weights, config and tokenizer.
+
+        Returns:
+            The loaded PyTorch `BertPreTrainedModel` model and its corresponding `BertTokenizer`.
+        """
+        tokenizer = BertTokenizer.from_pretrained(directory)
+        model = BertForTokenClassificationMultiTask.from_pretrained(directory)
 
         # Get the device the model will live on, along with number of GPUs available
         self.device, self.n_gpus = model_utils.get_device(model)
@@ -105,20 +108,25 @@ class BertForNER(BaseModel):
         return model, tokenizer
 
     def specify(self):
-        """Specifies a PyTorch `BertForTokenClassificationMultiTask` model and its tokenizer.
+        """Initializes a PyTorch `BertForTokenClassificationMultiTask` model and its tokenizer.
 
         Returns:
-            The loaded PyTorch `BertForNER` model and its corresponding Tokenizer.
+            The loaded PyTorch `BertPreTrainedModel` model and its corresponding `BertTokenizer`.
         """
+        # If this is one of our preprocessed BERT models, download it from GDrive first
         if self.pretrained_model_name_or_path in constants.PRETRAINED_MODELS:
             self.pretrained_model_name_or_path = \
                 model_utils.download_model_from_gdrive(self.pretrained_model_name_or_path)
 
-        model = \
-            BertForTokenClassificationMultiTask.from_pretrained(self.pretrained_model_name_or_path,
-                                                                num_labels=self.num_labels)
-        tokenizer = BertTokenizer.from_pretrained(self.pretrained_model_name_or_path,
-                                                  do_lower_case=False)
+        tokenizer = BertTokenizer.from_pretrained(
+            pretrained_model_name_or_path=self.pretrained_model_name_or_path,
+            do_lower_case=False
+        )
+        model = BertForTokenClassificationMultiTask.from_pretrained(
+            pretrained_model_name_or_path=self.pretrained_model_name_or_path,
+            # Replace num_labels with our list
+            num_labels=self.num_labels
+        )
 
         # Get the device the model will live on, along with number of GPUs available
         self.device, self.n_gpus = model_utils.get_device(model)
@@ -181,11 +189,13 @@ class BertForNER(BaseModel):
         training_data = self.prepare_data_for_training()
         output_dirs = model_utils.prepare_output_directory(self.config)
 
-        metrics = model_utils.setup_metrics_callback(config=self.config,
-                                                     model=self,
-                                                     datasets=self.datasets,
-                                                     training_data=training_data,
-                                                     output_dirs=output_dirs,)
+        metrics = model_utils.setup_metrics_callback(
+            config=self.config,
+            model=self,
+            datasets=self.datasets,
+            training_data=training_data,
+            output_dirs=output_dirs,
+        )
 
         # Training loop
         k_folds = len(training_data[0])
@@ -208,30 +218,33 @@ class BertForNER(BaseModel):
                 else:
                     desc = f'Epoch: {epoch + 1}/{self.config.epochs}'
 
-                pbar = tqdm(zip_longest(*dataloaders),
-                            unit='batch',
-                            desc=desc,
-                            total=total,
-                            dynamic_ncols=True)
+                pbar = tqdm(
+                    zip_longest(*dataloaders),
+                    unit='batch',
+                    desc=desc,
+                    total=total,
+                    dynamic_ncols=True
+                )
 
                 for _, batches in enumerate(pbar):
                     for batch in batches:
                         if batch is not None:
                             _, input_ids, attention_mask, labels, _, model_idx = batch
-
-                            input_ids = input_ids.to(self.device)
-                            attention_mask = attention_mask.to(self.device)
-                            labels = labels.to(self.device)
                             model_idx = model_idx[0].item()
+
+                            inputs = {
+                                'input_ids': input_ids.to(self.device),
+                                'token_type_ids': torch.zeros_like(input_ids).to(self.device),
+                                'attention_mask': attention_mask.to(self.device),
+                                'labels': labels.to(self.device),
+                                'model_idx': model_idx,
+                            }
 
                             optimizer = optimizers[model_idx]
                             optimizer.zero_grad()
 
-                            loss = self.model(input_ids,
-                                              token_type_ids=torch.zeros_like(input_ids),
-                                              attention_mask=attention_mask,
-                                              labels=labels,
-                                              model_idx=model_idx)
+                            outputs = self.model(**inputs)
+                            loss = outputs[0]
 
                             loss.backward()
 
@@ -268,7 +281,7 @@ class BertForNER(BaseModel):
 
         return metrics
 
-    def evaluate(self, training_data, partition='train', model_idx=None):
+    def evaluate(self, training_data, partition='train'):
         """Perform a prediction step using `self.model` on `training_data[partition]`.
 
         Performs prediction for the model at `self.model` and returns a two-tuple containing the
@@ -278,60 +291,61 @@ class BertForNER(BaseModel):
             training_data (dict): Contains the data (at key `[partition]['dataloader']`).
             partition (str): Which partition to perform a prediction step on, must be one of
                 'train', 'valid', or 'test'.
-            model_idx (None): Unused argument. Retained for compatibility.
 
         Returns:
             A two-tuple containing the gold NER label sequences and corresponding predicted labels.
         """
         self.model.eval()
 
-        y_true, y_pred = [], []
-        eval_loss, eval_steps = 0, 0
+        with torch.no_grad():
 
-        dataloader = training_data[partition]['dataloader']
+            y_true, y_pred = [], []
+            eval_loss, eval_steps = 0, 0
 
-        for batch in dataloader:
-            _, input_ids, attention_mask, labels, orig_to_tok_map, model_idx = batch
+            dataloader = training_data[partition]['dataloader']
 
-            input_ids = input_ids.to(self.device)
-            attention_mask = attention_mask.to(self.device)
-            labels = labels.to(self.device)
-            model_idx = model_idx[0].item()
+            for batch in dataloader:
+                _, input_ids, attention_mask, labels, orig_to_tok_map, model_idx = batch
+                model_idx = model_idx[0].item()
 
-            with torch.no_grad():
-                loss = self.model(input_ids,
-                                  token_type_ids=torch.zeros_like(input_ids),
-                                  attention_mask=attention_mask,
-                                  labels=labels,
-                                  model_idx=model_idx)
-                logits = self.model(input_ids,
-                                    token_type_ids=torch.zeros_like(input_ids),
-                                    attention_mask=attention_mask,
-                                    model_idx=model_idx)
-                ner_preds = logits.argmax(dim=-1)
+                inputs = {
+                    'input_ids': input_ids.to(self.device),
+                    'token_type_ids': torch.zeros_like(input_ids).to(self.device),
+                    'attention_mask': attention_mask.to(self.device),
+                    'labels': labels.to(self.device),
+                    'model_idx': model_idx,
+                }
+
+                outputs = self.model(**inputs)
+                loss, logits = outputs[:2]
+
+                preds = logits.argmax(dim=-1)
 
                 # Loss object is a vector of size n_gpus, need to average if more than 1
                 if self.n_gpus > 1:
                     loss = loss.mean()
 
-            # TODO (John): There has got to be a better way to do this?
-            # Mask [PAD] and WORDPIECE tokens
-            for preds, labels, tok_map in zip(ner_preds, labels, orig_to_tok_map):
-                orig_token_indices = torch.as_tensor([i for i in tok_map if i != TOK_MAP_PAD])
-                orig_token_indices = orig_token_indices.to(self.device).long()
+                # TODO (John): There has got to be a better way to do this?
+                # Mask [PAD] and WORDPIECE tokens
+                for pred, labels, tok_map in zip(preds, labels, orig_to_tok_map):
+                    orig_token_indices = torch.as_tensor(
+                        [i for i in tok_map if i != TOK_MAP_PAD],
+                        device=self.device,
+                        dtype=torch.long
+                    )
 
-                masked_labels = torch.index_select(labels, -1, orig_token_indices).tolist()
-                masked_preds = torch.index_select(preds, -1, orig_token_indices).tolist()
+                    masked_labels = torch.index_select(labels, -1, orig_token_indices).tolist()
+                    masked_preds = torch.index_select(pred, -1, orig_token_indices).tolist()
 
-                # Map predictions to tags
-                y_true.append([self.datasets[model_idx].idx_to_tag['ent'][idx]
-                               for idx in masked_labels])
-                y_pred.append([self.datasets[model_idx].idx_to_tag['ent'][idx]
-                               for idx in masked_preds])
+                    # Map predictions to tags
+                    y_true.append([self.datasets[model_idx].idx_to_tag['ent'][idx]
+                                  for idx in masked_labels])
+                    y_pred.append([self.datasets[model_idx].idx_to_tag['ent'][idx]
+                                  for idx in masked_preds])
 
-            # TODO (John): We don't actually do anything with this?
-            eval_loss += loss.item()
-            eval_steps += 1
+                # TODO (John): We don't actually do anything with this?
+                eval_loss += loss.item()
+                eval_steps += 1
 
         return y_true, y_pred
 
@@ -355,44 +369,53 @@ class BertForNER(BaseModel):
         """
         self.model.eval()
 
-        # Prepare data for input to model
-        bert_tokens, orig_to_tok_map = bert_utils.wordpiece_tokenize_sents(tokens, self.tokenizer)
-        input_ids, orig_to_tok_map, attention_masks = \
-            bert_utils.index_pad_mask_bert_tokens(tokens=bert_tokens,
-                                                  orig_to_tok_map=orig_to_tok_map,
-                                                  tokenizer=self.tokenizer)
-
-        input_ids = input_ids.to(self.device)
-        attention_masks = attention_masks.to(self.device)
-
-        # Actual prediction happens here
         with torch.no_grad():
-            logits = self.model(input_ids=input_ids,
-                                token_type_ids=torch.zeros_like(input_ids),
-                                attention_mask=attention_masks)
-        y_preds = torch.argmax(logits, dim=-1)
+            # Prepare data for input to model
+            bert_tokens, orig_to_tok_map = \
+                bert_utils.wordpiece_tokenize_sents(tokens, tokenizer=self.tokenizer)
+            input_ids, orig_to_tok_map, attention_mask = \
+                bert_utils.index_pad_mask_bert_tokens(bert_tokens,
+                                                      orig_to_tok_map=orig_to_tok_map,
+                                                      tokenizer=self.tokenizer)
 
-        # If y_preds 2D matrix, this is a STM. Add dummy first dimension
-        if len(y_preds.size()) < 3:
-            y_preds = torch.unsqueeze(y_preds, dim=0)
+            # Actual prediction happens here
+            inputs = {
+                'input_ids': input_ids.to(self.device),
+                'token_type_ids': torch.zeros_like(input_ids).to(self.device),
+                'attention_mask': attention_mask.to(self.device),
+            }
 
-        # Mask [PAD] and WORDPIECE tokens
-        y_preds_masked = []
-        for output, dataset in zip(y_preds, self.datasets):
-            y_preds_masked.append([])
-            for y_pred, tok_map in zip(output, orig_to_tok_map):
-                org_tok_idxs = torch.as_tensor([idx for idx in tok_map if idx != TOK_MAP_PAD])
+            outputs = self.model(**inputs)
+            logits = outputs[0]
 
-                masked_logits = torch.index_select(y_pred, -1, org_tok_idxs)
-                masked_logits = masked_logits.detach().tolist()
+            y_preds = torch.argmax(logits, dim=-1)
 
-                predicted_labels = [dataset.idx_to_tag['ent'][idx] for idx in masked_logits]
+            # If y_preds 2D matrix, this is a STM. Add dummy first dimension
+            if len(y_preds.size()) < 3:
+                y_preds = torch.unsqueeze(y_preds, dim=0)
 
-                y_preds_masked[-1].append(predicted_labels)
+            # TODO (John): There has got to be a better way to do this?
+            # Mask [PAD] and WORDPIECE tokens
+            y_preds_masked = []
+            for output, dataset in zip(y_preds, self.datasets):
+                y_preds_masked.append([])
+                for y_pred, tok_map in zip(output, orig_to_tok_map):
+                    orig_token_indices = torch.as_tensor(
+                        [i for i in tok_map if i != TOK_MAP_PAD],
+                        device=self.device,
+                        dtype=torch.long
+                    )
 
-        # If STM, return only a list of lists
-        if len(y_preds_masked) == 1:
-            y_preds_masked = y_preds_masked[0]
+                    masked_logits = torch.index_select(y_pred, -1, orig_token_indices)
+                    masked_logits = masked_logits.detach().tolist()
+
+                    predicted_labels = [dataset.idx_to_tag['ent'][idx] for idx in masked_logits]
+
+                    y_preds_masked[-1].append(predicted_labels)
+
+            # If STM, return only a list of lists
+            if len(y_preds_masked) == 1:
+                y_preds_masked = y_preds_masked[0]
 
         return y_preds_masked
 
