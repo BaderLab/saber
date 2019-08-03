@@ -45,9 +45,8 @@ class BertForNERAndRE(BaseModel):
     def __init__(self, config, datasets, pretrained_model_name_or_path='bert-base-cased'):
         super(BertForNERAndRE, self).__init__(config, datasets)
 
-        # Place the model on the CPU by default
-        self.device = torch.device("cpu")
-        self.n_gpus = 0
+        # Get any CUDA devices that are available
+        self.device, self.n_gpus = model_utils.get_device()
 
         self.num_ent_labels, self.num_rel_labels = [], []
         for dataset in self.datasets:
@@ -79,8 +78,8 @@ class BertForNERAndRE(BaseModel):
         self.model, self.tokenizer = self.__dict__.get("model"), self.__dict__.get("tokenizer")
 
         if self.model is None or self.tokenizer is None:
-            err_msg = ('self.model or self.tokenizer is None. Make sure to initialize a model'
-                       ' before saving with BertForNERAndRE.specify() or BertForNERAndRE.load()')
+            err_msg = ('self.model or self.tokenizer is None. Did you initialize a model'
+                       ' before saving with BertForNERAndRE.specify() or BertForNERAndRE.load()?')
             LOGGER.error('MissingStepException: %s', err_msg)
             raise MissingStepException(err_msg)
 
@@ -99,16 +98,10 @@ class BertForNERAndRE(BaseModel):
         Returns:
             The loaded PyTorch `BertPreTrainedModel` model and its corresponding `BertTokenizer`.
         """
-        tokenizer = BertTokenizer.from_pretrained(directory)
-        model = BertForEntityAndRelationExtraction.from_pretrained(directory)
+        self.tokenizer = BertTokenizer.from_pretrained(directory)
+        self.model = BertForEntityAndRelationExtraction.from_pretrained(directory).to(self.device)
 
-        # Get the device the model will live on, along with number of GPUs available
-        self.device, self.n_gpus = model_utils.get_device(model)
-
-        self.model = model
-        self.tokenizer = tokenizer
-
-        return model, tokenizer
+        return self.model, self.tokenizer
 
     def specify(self):
         """Initializes a PyTorch `BertForEntityAndRelationExtraction` model and its tokenizer.
@@ -136,23 +129,18 @@ class BertForNERAndRE(BaseModel):
         config.__dict__['num_rel_labels'] = num_rel_labels
         config.__dict__['rel_class_weight'] = rel_class_weight
 
-        tokenizer = BertTokenizer.from_pretrained(
+        # Initializes the model using our modified config
+        self.model = BertForEntityAndRelationExtraction.from_pretrained(
+            pretrained_model_name_or_path=self.pretrained_model_name_or_path,
+            config=config
+        ).to(self.device)
+
+        self.tokenizer = BertTokenizer.from_pretrained(
             pretrained_model_name_or_path=self.pretrained_model_name_or_path,
             do_lower_case=False
         )
-        # Initializes the model using our modified config
-        model = BertForEntityAndRelationExtraction.from_pretrained(
-            pretrained_model_name_or_path=self.pretrained_model_name_or_path,
-            config=config
-        )
 
-        # Get the device the model will live on, along with number of GPUs available
-        self.device, self.n_gpus = model_utils.get_device(model)
-
-        self.model = model
-        self.tokenizer = tokenizer
-
-        return model, tokenizer
+        return self.model, self.tokenizer
 
     def prepare_data_for_training(self):
         """Returns a list containing data which has been processed for training with `self.model`.
@@ -218,12 +206,25 @@ class BertForNERAndRE(BaseModel):
         # Training loop
         k_folds = len(training_data[0])
         for fold in range(k_folds):
+            # Use mixed precision training if Apex is available
+            try:
+                from apex import amp
+                model, optimizers = amp.initialize(self.model, optimizers, opt_level='O1')
+                LOGGER.info("Imported Apex. Training with mixed precision (opt_level='O1').")
+            except ImportError:
+                print(("Install Apex for faster training times and reduced memory usage"
+                       " (https://github.com/NVIDIA/apex)."))
+                LOGGER.info("Couldn't import Apex. Training with standard precision.")
+
+            # Use multiple-GPUS if available
+            if self.n_gpus > 1:
+                model = torch.nn.DataParallel(model)
+
             # Collect dataloaders, we don't need the other data
             dataloaders = [data[fold]['train']['dataloader'] for data in training_data]
             total = len(max(dataloaders, key=len))
 
             for epoch in range(self.config.epochs):
-
                 self.model.train()
 
                 train_ner_loss = [0] * len(self.num_ent_labels)
@@ -275,11 +276,20 @@ class BertForNERAndRE(BaseModel):
                             else:
                                 loss = ner_loss
 
-                            loss.backward()
-
                             # Loss is a vector of size n_gpus, need to average if more than 1
                             if self.n_gpus > 1:
                                 loss = loss.mean()
+
+                            # TODO (John): grad_norm should be a config arg
+                            try:
+                                with amp.scale_loss(loss, optimizer) as scaled_loss:
+                                    scaled_loss.backward()
+                                torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), 1.0)
+                            except (ImportError, UnboundLocalError) as e:
+                                loss.backward()
+                                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+
+                                LOGGER.error(e)
 
                             # Track train loss
                             train_ner_loss[model_idx] += ner_loss
@@ -342,17 +352,21 @@ class BertForNERAndRE(BaseModel):
                  model_idx) = batch
                 model_idx = model_idx[0].item()
 
-                inputs = {
-                    'input_ids': input_ids.to(self.device),
-                    'orig_to_tok_map': orig_to_tok_map.to(self.device),
-                    'token_type_ids': torch.zeros_like(input_ids).to(self.device),
-                    'attention_mask': attention_mask.to(self.device),
-                    'ent_labels': ent_labels.to(self.device),
-                    'rel_labels': [training_data[partition]['rel_labels'][idx] for idx in
-                                   batch_indices]
-                }
+                input_ids = input_ids.to(self.device)
+                orig_to_tok_map = orig_to_tok_map.to(self.device)
+                token_type_ids = torch.zeros_like(input_ids)
+                attention_mask = attention_mask.to(self.device)
+                ent_labels = ent_labels.to(self.device)
+                rel_labels = [training_data[partition]['rel_labels'][idx] for idx in batch_indices]
 
-                outputs = self.model(**inputs)
+                outputs = self.model(
+                    input_ids=input_ids,
+                    orig_to_tok_map=orig_to_tok_map,
+                    token_type_ids=token_type_ids,
+                    attention_mask=attention_mask,
+                    ent_labels=ent_labels,
+                    rel_labels=rel_labels,
+                )
                 ner_loss, re_loss, re_labels, ner_logits, re_logits = outputs[:5]
 
                 loss = ner_loss + re_loss
