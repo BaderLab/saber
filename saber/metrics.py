@@ -260,7 +260,7 @@ class Metrics(object):
 
         Performs a prediction step for the given inputs (`self.training_data[partition]['x']`) and
         targets (`self.training_data[partition]['y']`) using `self.model_`. Returns a dictionary
-        keyed by the task (e.g. 'ner', 'rc').
+        keyed by the task (e.g. 'ner', 're').
 
         Args:
             partition (str): Which partition to perform a prediction step on, must be one of
@@ -298,7 +298,7 @@ class Metrics(object):
             y_true_rc = list(itertools.chain(*y_true_rc))
             y_pred_rc = list(itertools.chain(*y_pred_rc))
 
-            eval_scores['rc'] = self.precision_recall_f1_support_multi_class(y_true=y_true_rc,
+            eval_scores['re'] = self.precision_recall_f1_support_multi_class(y_true=y_true_rc,
                                                                              y_pred=y_pred_rc)
 
         return eval_scores
