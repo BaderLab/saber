@@ -8,7 +8,7 @@ from collections import Counter
 
 import neuralcoref
 import spacy
-from keras.preprocessing.sequence import pad_sequences
+from keras_preprocessing.sequence import pad_sequences
 
 from . import constants
 from .constants import UNK

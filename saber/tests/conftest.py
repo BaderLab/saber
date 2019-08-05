@@ -2,7 +2,6 @@
 """
 import pytest
 import spacy
-from keras.utils import to_categorical
 from pytorch_transformers import BertTokenizer
 
 from .. import constants
@@ -425,7 +424,7 @@ def dummy_training_data(conll2003datasetreader_load):
         'train': {
             'x': [conll2003datasetreader_load.idx_seq['train']['word'],
                   conll2003datasetreader_load.idx_seq['train']['char']],
-            'y': to_categorical(conll2003datasetreader_load.idx_seq['train']['ent'])
+            'y': conll2003datasetreader_load.idx_seq['train']['ent'],
         },
         'valid': None,
         'test': None,

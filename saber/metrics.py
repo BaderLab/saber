@@ -1,5 +1,5 @@
 """Contains the Metrics class, which computes, stores, prints and saves performance metrics
-for a Keras model.
+for a Saber model.
 """
 import copy
 import itertools

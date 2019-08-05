@@ -33,11 +33,10 @@ setuptools.setup(
     ],
     install_requires=[
         'scikit-learn>=0.20.1',
-        'tensorflow>=1.12.0',
         'pytorch-transformers>=1.0.0',
         'Flask>=1.0.2',
         'waitress>=1.1.0',
-        'keras>=2.2.4',
+        'Keras-Preprocessing>=1.1.0',
         'PTable>=0.9.2',
         'seqeval>=0.0.12',
         'spacy==2.1.0',
