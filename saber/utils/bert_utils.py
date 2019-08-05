@@ -1,5 +1,5 @@
 import torch
-from keras.preprocessing.sequence import pad_sequences
+from keras_preprocessing.sequence import pad_sequences
 from pytorch_transformers.optimization import AdamW
 from torch.utils import data
 
