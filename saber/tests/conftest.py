@@ -360,6 +360,18 @@ def saber_bert_for_ner_mt(dummy_config_compound_dataset):
 
 
 @pytest.fixture
+def saber_bert_for_ner_and_re(dummy_config):
+    """Returns an instance of `Saber` initialized with the dummy config file, a single dataset
+    a Keras model."""
+    dummy_config.dataset_reader = 'conll2004datasetreader'
+    saber = Saber(config=dummy_config)
+    saber.load_dataset(directory=PATH_TO_CONLL2004_DATASET)
+    saber.build(model_name='bert-ner-re')
+
+    return saber
+
+
+@pytest.fixture
 def saber_single_dataset_embeddings(dummy_config):
     """Returns instance of `Saber` initialized with the dummy config file, a single dataset and
     embeddings.
