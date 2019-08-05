@@ -246,8 +246,6 @@ class BertForNER(BaseModel):
                             outputs = self.model(**inputs)
                             loss = outputs[0]
 
-                            loss.backward()
-
                             # Loss is a vector of size n_gpus, need to average if more than 1
                             if self.n_gpus > 1:
                                 loss = loss.mean()
@@ -329,6 +327,7 @@ class BertForNER(BaseModel):
                     token_type_ids=token_type_ids,
                     attention_mask=attention_mask,
                     labels=labels,
+                    model_idx=model_idx,
                 )
                 loss, logits = outputs[:2]
 
