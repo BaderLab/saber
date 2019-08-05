@@ -169,21 +169,12 @@ def download_model_from_gdrive(pretrained_model, extract=True):
 ####################################################################################################
 
 
-def get_device(model=None):
-    """Places `model` on CUDA device if available, returns PyTorch device, number of available GPUs.
-
-    Returns a PyTorch device and number of available GPUs. If `model` is provided, and a CUDA device
-    is available, the model is placed on the CUDA device. If multiple GPUs are available, the model
-    is parallized with `torch.nn.DataParallel(model)`.
-
-    Args:
-        (Torch.nn.Module): A PyTorch model. If CUDA device is available this function will place the
-        model on the CUDA device with `model.to(device)`. If multiple CUDA devices are available,
-        the model is parallized with `torch.nn.DataParallel(model)`.
+def get_device():
+    """Returns a tuple of (a) PyTorch device(s) ('cpu' or 'cuda'), and number of CUDA devices
+    available.
 
     Returns:
-        A two-tuple containing a PyTorch device ('cpu' or 'cuda'), and number of CUDA devices
-        available.
+        A tuple of (a) PyTorch device(s) ('cpu' or 'cuda'), and number of CUDA devices available.
     """
     n_gpu = 0
 
@@ -191,15 +182,14 @@ def get_device(model=None):
     if torch.cuda.is_available():
         device = torch.device('cuda')
         n_gpu = torch.cuda.device_count()
-        # if model is provided, we place it on the GPU and parallize it (if possible)
-        if model:
-            model.to(device)
-            if n_gpu > 1:
-                model = torch.nn.DataParallel(model)
-        model_names = ', '.join([torch.cuda.get_device_name(i) for i in range(n_gpu)])
-        print('Using CUDA device(s) with name(s): {}.'.format(model_names))
+
+        device_names = ', '.join([torch.cuda.get_device_name(i) for i in range(n_gpu)])
+        LOGGER.info('Using CUDA device(s) with name(s) %s', device_names)
+        print(f'Using CUDA device(s) with name(s): {device_names}.')
     else:
         device = torch.device('cpu')
+
+        LOGGER.info('No GPU available. Using CPU.')
         print('No GPU available. Using CPU.')
 
     return device, n_gpu
