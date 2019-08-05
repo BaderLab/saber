@@ -45,32 +45,6 @@ class TestSaber(object):
             with pytest.raises(ValueError):
                 saber_bert_for_ner.annotate(text=test)
 
-    def test_annotate_with_bilstm_crf(self, saber_bert_for_ner):
-        """Asserts that call to `Saber.annotate()` returns the expected results with a single dataset
-        loaded."""
-        test = "This is a simple test. With multiple sentences."
-        expected = {'text': test, 'title': '', 'ents': [],
-                    # TODO (John): This is temp, fixes SpaCy bug.
-                    'settings': {}}
-
-        actual = saber_bert_for_ner.annotate(test)
-        actual['ents'] = []  # wipe the predicted ents as they are stochastic.
-
-        assert expected == actual
-
-    def test_annotate_with_mt_bilstm_crf(self, saber_bert_for_ner_mt):
-        """Asserts that call to `Saber.annotate()` returns the expected results with a single dataset
-        loaded."""
-        test = "This is a simple test. With multiple sentences."
-        expected = {'text': test, 'title': '', 'ents': [],
-                    # TODO (John): This is temp, fixes SpaCy bug.
-                    'settings': {}}
-
-        actual = saber_bert_for_ner_mt.annotate(test)
-        actual['ents'] = []  # wipe the predicted ents as they are stochastic.
-
-        assert expected == actual
-
     def test_annotate_with_bert_for_ner(self, saber_bert_for_ner):
         """Asserts that call to `Saber.annotate()` returns the expected results with a single dataset
         loaded."""
@@ -85,8 +59,8 @@ class TestSaber(object):
         assert expected == actual
 
     def test_annotate_with_bert_for_ner_mt(self, saber_bert_for_ner_mt):
-        """Asserts that call to `Saber.annotate()` returns the expected results with a single dataset
-        loaded."""
+        """Asserts that call to `Saber.annotate()` returns the expected results with a BertForNER
+        model loaded."""
         test = "This is a simple test. With multiple sentences."
         expected = {'text': test, 'title': '', 'ents': [],
                     # TODO (John): This is temp, fixes SpaCy bug.
@@ -96,6 +70,18 @@ class TestSaber(object):
         actual['ents'] = []  # wipe the predicted ents as they are stochastic.
 
         assert expected == actual
+
+    # TODO (John): Implement this when we settle on an interface for annotation
+    def test_annotate_with_bert_for_ner_and_re(self, saber_bert_for_ner_and_re):
+        """Asserts that call to `Saber.annotate()` returns the expected results with a
+        BertForNERAndRE model loaded."""
+        pass
+
+    # TODO (John): Implement this when we get the MT model working
+    def test_annotate_with_bert_for_ner_and_re_mt(self, saber_bert_for_ner_and_re):
+        """Asserts that call to `Saber.annotate()` returns the expected results with a multi-task
+        BertForNERAndRE model loaded."""
+        pass
 
     def test_save_missing_step_exception(self, saber_blank):
         """Asserts that `Saber` object raises a MissingStepException when we try to call `Saber.save()`
