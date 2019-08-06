@@ -328,7 +328,7 @@ def prepare_data_for_eval(config, training_data):
         If `training_data['valid'] is None and `training_data['test'] is None and config.k_folds`:
             Returns a list containing copies of `training_data`, each partitioned into train and
             test paritions (`training_data['train'], `training_data['test']), for `k_folds` folds of
-            cross-validation, created by splitting `training_data['train']`. 
+            cross-validation, created by splitting `training_data['train']`.
         If `training_data['valid'] is not None and `training_data['test'] is None
             and `config.k_folds` and `config.validation_split`:
             Returns a list containing copies of `training_data`, each partitioned into train and
