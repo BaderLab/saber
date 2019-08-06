@@ -38,9 +38,14 @@ Of course, not all corpora are distributed in the CoNLL format:
 - Corpora in the **Standoff** format can be converted to **CoNLL** format using [this](https://github.com/spyysalo/standoff2conll) tool.
 - Corpora in **PubTator** format can be converted to **Standoff** first using [this](https://github.com/spyysalo/pubtator) tool.
 
-Saber infers the "training strategy" based on the structure of the dataset folder:
+### Partitioning Datasets for Evaluation
 
-- If `valid.*` and/or `test.*` files are provided, they will be used for validation/evaluation respectively.
+Saber infers the _partitioning strategy_ based on the structure of the dataset folder and the arguments `k_folds`, `validation_split`.
+
+- To use k-fold cross-validation, provide only a `train.*` file under `dataset_folder`. Choose the number of folds with the `k_folds` argument. Optionally, specify a proportion of examples to hold-out at random in each fold as a validation set with `validation_split`.
+- To create a validation split from the train set, provide a `train.*` file (and optionally, a `test.*` file) under `dataset_folder` and specify the proportion of training examples to hold-out for a validation set with `validation_split`.
+
+Otherwise, provide the partitions yourself with the files `train.*`, `valid.*` and `test.*` under `dataset_folder` and leave `k_folds` and `validation_split` equal to `0`.
 
 E.g.
 
@@ -52,12 +57,8 @@ E.g.
 │   └── test.tsv
 ```
 
-- Otherwise, to use k-fold cross-validation, simply provide a `train.*` file in your dataset folder and specify the number of folds with `k_folds`
-- To create a validation split from your `train.*` file instead, specify the size of the split with `validation_split`.
-
 !!! note
-      If no `valid.*` file is provided and `k_folds > 0 and validation_split > 0`, `k_folds` will take precedence.
-
+      `k_folds` will be ignored if either a `valid.*` or `test.*` file is found under `dataset_folder`. Both arguments `k_folds` and `validation_split` will be ignored if a `valid.*` file is found under `dataset_folder`. 
 
 ## Word embeddings
 
