@@ -24,10 +24,10 @@ from ..models.modules.bert_for_entity_and_relation_extraction import \
 class TestBertForNERAndRE(object):
     """Collects all unit tests for `saber.models.bert_for_ner_and_re.BertForNERAndRE`.
     """
-    def test_initialization(self,
-                            dummy_config,
-                            conll2004datasetreader_load,
-                            bert_for_ner_and_re):
+    def test_attributes_after_initilization(self,
+                                            dummy_config,
+                                            conll2004datasetreader_load,
+                                            bert_for_ner_and_re):
         """Asserts instance attributes are as expected after initialization of a
         `BertForNERAndRE` model.
         """
@@ -58,10 +58,10 @@ class TestBertForNERAndRE(object):
         assert bert_for_ner_and_re.pretrained_model_name_or_path == 'bert-base-cased'
         assert bert_for_ner_and_re.model_name == 'bert-ner-re'
 
-    def test_initialization_mt(self,
-                               dummy_config,
-                               conll2004datasetreader_load,
-                               bert_for_ner_and_re):
+    def test_attributes_after_initilization_mt(self,
+                                               dummy_config,
+                                               conll2004datasetreader_load,
+                                               bert_for_ner_and_re):
         """Asserts instance attributes are as expected after initialization of a multi-task
         `BertForNERAndRE` model.
         """

@@ -117,3 +117,52 @@ class TestDataUtils(object):
 
         assert all(dummy_dataset_2.type_to_idx[type_] == source_type_to_idx[type_]
                    for type_ in ['word', 'char'])
+
+    # TODO (John): This should check data directly instead of just looking at lens. Also,
+    # we need additional tests for when validation_split > 0.
+    def test_get_k_folds_no_validation_split(self, dummy_training_data):
+        """Asserts that the correct number of training examples exist in each fold after a call
+        to `data_utils.get_k_folds()`.
+        """
+        k_folds = 2
+        actual = data_utils.get_k_folds(training_data=dummy_training_data, k_folds=k_folds)
+
+        # Check that we created 2 folds
+        assert len(actual) == k_folds
+
+        # Check that the expected partitions exist with the correct number of training examples
+        for fold in actual:
+            # Train
+            assert len(fold['train']['x'][0]) == 1
+            assert len(fold['train']['x'][1]) == 1
+            assert len(fold['train']['y']) == 1
+
+            # Test
+            assert len(fold['test']['x'][0]) == 1
+            assert len(fold['test']['x'][1]) == 1
+            assert len(fold['test']['y']) == 1
+
+            # Valid
+            assert not fold['valid']
+
+    # TODO (John): This should check data directly instead of just looking at lens.
+    def test_get_validation_split(self, dummy_training_data):
+        """Asserts that the correct number of training examples exist in each fold after a call
+        to `data_utils.get_k_folds()`.
+        """
+        actual = data_utils.get_validation_split(training_data=dummy_training_data,
+                                                 validation_split=0.5)
+
+        # Check that the expected partitions exist with the correct number of training examples
+        # Train
+        assert len(actual['train']['x'][0]) == 1
+        assert len(actual['train']['x'][1]) == 1
+        assert len(actual['train']['y']) == 1
+
+        # Valid
+        assert len(actual['valid']['x'][0]) == 1
+        assert len(actual['valid']['x'][1]) == 1
+        assert len(actual['valid']['y']) == 1
+
+        # Test
+        assert not actual['test']

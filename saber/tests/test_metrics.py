@@ -25,7 +25,7 @@ class TestMetrics(object):
         # attributes that are passed to __init__
         assert dummy_metrics.config is dummy_config
         assert dummy_metrics.model_ is bert_for_ner_specify
-        assert dummy_metrics.training_data is dummy_training_data
+        assert dummy_metrics.training_data[0][0] is dummy_training_data
         assert dummy_metrics.idx_to_tag is conll2003datasetreader_load.idx_to_tag
         assert dummy_metrics.output_dir == dummy_output_dir[0]
         # other instance attributes

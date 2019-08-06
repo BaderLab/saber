@@ -9,7 +9,10 @@ from ..models.base_model import BaseModel
 class TestBaseModel(object):
     """Collects all unit tests for `saber.models.base_model.BaseModel`.
     """
-    def test_initialization(self, dummy_config, conll2003datasetreader_load, base_model):
+    def test_attributes_after_initilization(self,
+                                            dummy_config,
+                                            conll2003datasetreader_load,
+                                            base_model):
         """Asserts instance attributes are initialized correctly when single `BaseModel` model is
         initialized.
         """
@@ -23,11 +26,11 @@ class TestBaseModel(object):
         # Other instance attributes
         assert base_model.model is None
 
-    def test_initialization_mt(self,
-                               dummy_config_compound_dataset,
-                               conll2003datasetreader_load,
-                               dummy_dataset_2,
-                               base_model_mt):
+    def test_attributes_after_initilization_mt(self,
+                                               dummy_config_compound_dataset,
+                                               conll2003datasetreader_load,
+                                               dummy_dataset_2,
+                                               base_model_mt):
         """Asserts instance attributes are initialized correctly when compound `BaseModel` model is
         initialized.
         """
