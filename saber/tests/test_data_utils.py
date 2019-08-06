@@ -166,3 +166,31 @@ class TestDataUtils(object):
 
         # Test
         assert not actual['test']
+
+    # TODO (John): This should check data directly instead of just looking at lens.
+    # we need additional tests for when validation_split > 0.
+    def test_prepare_data_for_eval_k_folds(self, dummy_config, dummy_training_data):
+        """Asserts that the correct number of training examples exist in each fold after a call
+        to `data_utils.get_k_folds()`.
+        """
+        dummy_config.k_folds = 2
+        actual = data_utils.prepare_data_for_eval(config=dummy_config,
+                                                  training_data=dummy_training_data)
+
+        # Check that we created 2 folds
+        assert len(actual) == dummy_config.k_folds
+
+        # Check that the expected partitions exist with the correct number of training examples
+        for fold in actual:
+            # Train
+            assert len(fold['train']['x'][0]) == 1
+            assert len(fold['train']['x'][1]) == 1
+            assert len(fold['train']['y']) == 1
+
+            # Test
+            assert len(fold['test']['x'][0]) == 1
+            assert len(fold['test']['x'][1]) == 1
+            assert len(fold['test']['y']) == 1
+
+            # Valid
+            assert not fold['valid']
