@@ -167,22 +167,32 @@ def setup_dataset_for_transfer(dataset, type_to_idx):
 def get_k_folds(training_data, k_folds, shuffle=True, validation_split=0.0):
     """Splits `training_data` into `k_folds` number of folds for cross-validation.
 
-    Returns a list of dictionaries, of length `len(k_folds)` containing copies of `training_data`
-    which has been partitioned for k-fold cross-validation.
+    Returns a list of dictionaries, of length `k_folds` containing copies of `training_data` which
+    has been partitioned for k-fold cross-validation.
 
     Args:
         training_data (dict): A dict containing training data (inputs and targets) for a given
             dataset. Keyed by partition ('train', 'test', 'dev') and inputs ('x') and targets ('y')
             for each partition.
-        k_folds (int): Number of folds to generate indices for.
-        shuffle (bool): Optional, True if the data should be shuffled before splitting.
-            Defaults to True.
-        validation_split (float): Percentage of the training examples in each fold to hold-out as a
-            validation set.
+        k_folds (int): Number of folds to partition data into.
+        shuffle (bool): Optional, True if the data should be shuffled before splitting. Defaults to
+            True.
+        validation_split (float): Optional, if `validation_split`, proportion of
+            the total number of training examples to hold-out at random from the train set
+            (`training_data['train']) as a validation set (`training_data['valid']`). Defaults to
+            `0`.
 
     Returns:
-        A list of len of dictionaries, each containing a copy of `training_data` that has been
-        partitioned for a fold of `k_folds` cross-validation.
+        If `not validation_split`:
+            A list containing copies of `training_data`, each partitioned into train and test
+            paritions (`training_data['train'], `training_data['test']), for `k_folds` folds of
+            cross-validation, created by splitting `training_data['train']`.
+        If `validation_split`:
+            A list containing copies of `training_data`, each partitioned into train and test
+            paritions (`training_data['train'], `training_data['test']), for `k_folds` folds of
+            cross-validation, created by splitting `training_data['train']`. Additionally,
+            `config.validation_split` proportion of examples in each fold are held-out at random
+            to create a validation set (`training_data['valid']`).
     """
     training_data_cv = []
 
@@ -221,6 +231,12 @@ def get_k_folds(training_data, k_folds, shuffle=True, validation_split=0.0):
 
         # Additionally hold-out validation_split proportion of training examples as a valid set
         if validation_split:
+            # Need to resize validation_split so that we are using validation_split proportion of
+            # the TOTAL number of examples from the train set as a valid set, not validation_split
+            # proportion of the train set
+            X_train, _ = training_data_cv[-1]['train']['x']
+            validation_split = validation_split * len(X) / len(X_train)
+
             training_data_cv[-1] = get_validation_split(training_data_cv[-1], validation_split)
 
     return training_data_cv
@@ -237,13 +253,15 @@ def get_validation_split(training_data, validation_split=0.10):
         training_data (dict): A dict containing training data (inputs and targets) for a given
             dataset. Keyed by partition ('train', 'test', 'dev') and inputs ('x') and targets ('y')
             for each partition.
-        validation_split (float): Optional, proportion of the training examples in each fold to
-            hold-out as a validation set. Defaults to 0.10.
+        validation_split (float): Optional, if `validation_split`, proportion of
+            the total number of training examples to hold-out at random from the train set
+            (`training_data['train']) as a validation set (`training_data['valid']`). Defaults to
+            `0.10`.
 
     Returns:
-        A copy of `training_data`, where `validation_split` proportion of training examples
-        at `training_data['train']` have been held-out to create a validation set at
-        `training_data['valid']`.
+        A copy of `training_data`, containing an additional validation set
+        (`training_data['valid']`), created from `config.validation_split` proportion of examples
+        held-out at random from `training_data['train']`.
     """
     training_data_split = copy.deepcopy(training_data)  # don't modify original dict
     rs = ShuffleSplit(n_splits=1, test_size=validation_split, random_state=RANDOM_STATE)
@@ -279,21 +297,21 @@ def get_validation_split(training_data, validation_split=0.10):
 
 
 def prepare_data_for_eval(config, training_data):
-    """Partitions data into a validation set and/or k-folds based on arguments in `config`.
+    """Partitions data based on partitions in `training_data` and arguments in `config`.
 
-    If there is no validation data provided (`training_data['valid'] is None`), then a validation
-    set is created using one of three strategies.
+    If there is no validation data provided (`training_data['valid'] is None`), then a partitioning
+    strategy is chosen according to the following criteria:
 
-    1. `config.k_folds` and not `config.validation_split`:
+    1. training_data['test'] is None and `config.k_folds` and not `config.validation_split`:
         Training examples (`training_data['train']`) are partitioned into `config.k_folds` for
         cross-validation.
-    2. `config.k_folds` and `config.validation_split`:
-        Data is partitioned into `config.k_folds` for cross-validation. In each fold,
-        `config.validation_split` proportion of training examples (`training_data['train']`) are
-        held-out as a validation set.
+    2. training_data['test'] is None and `config.k_folds` and `config.validation_split`:
+        Training examples (`training_data['train']`) are partitioned into `config.k_folds` for
+        cross-validation. `config.validation_split` proportion of examples are held out at random
+        in each fold for validation.
     3. not `config.k_folds` and `config.validation_split`:
         `config.validation_split` proportion of training examples (`training_data['train']`) are
-        held-out as a validation set.
+        held-out for validation.
 
     Otherwise, a copy of `training_data` is returned, unmodified.
 
@@ -307,49 +325,51 @@ def prepare_data_for_eval(config, training_data):
     Returns:
         If `training_data['valid'] is not None`:
             A copy of `training_data`, unmodified.
-        If `training_data['valid'] is not None and config.k_folds`:
-            Returns `training_data_with_validation_set`, which is a list containing dictionaries,
-            each storing one of `config.k_folds` folds for cross-validation, created by splitting
-            `training_data['train']`.
-        If `training_data['valid'] is not None and `config.k_folds` and `config.validation_split`:
-            Returns a list containing dictionaries, each storing one of `config.k_folds` folds for
-            cross-validation, created by splitting `training_data['train']` where
-            `config.validation_split` proportion of training examples in each fold are held-out as a
-            validation set.
-        If `training_data['valid'] is not None and not `config.k_folds` and `config.validation_split`:
+        If `training_data['valid'] is None and `training_data['test'] is None and config.k_folds`:
+            Returns a list containing copies of `training_data`, each partitioned into train and
+            test paritions (`training_data['train'], `training_data['test']), for `k_folds` folds of
+            cross-validation, created by splitting `training_data['train']`. 
+        If `training_data['valid'] is not None and `training_data['test'] is None
+            and `config.k_folds` and `config.validation_split`:
+            Returns a list containing copies of `training_data`, each partitioned into train and
+            test paritions (`training_data['train'], `training_data['test']), for `k_folds` folds of
+            cross-validation, created by splitting `training_data['train']`. Additionally,
+            `config.validation_split` proportion of examples in each fold are held-out at random
+            to create a validation set (`training_data['valid']`).
+        If `training_data['valid'] is not None and not `config.k_folds`
+            and `config.validation_split`:
             Returns a copy of `training_data`, containing an additional validation set
-            (training_data['valid']`), created from `config.validation_split` proportion of examples
-            in `training_data['train']`.
+            (`training_data['valid']`), created from `config.validation_split` proportion of
+            examples held-out at random from `training_data['train']`.
     """
     training_data_eval = copy.deepcopy(training_data)  # don't modify original dict
 
     if training_data['valid'] is None:
         start = time.time()
-
         if config.k_folds:
-            user_msg = f'Creating {config.k_folds}-folds for k-fold cross-validation'
-            if config.validation_split:
-                user_msg += (f'. Holding out {config.validation_split:.2%} of train data in each'
-                             ' fold as a validation set')
-            print(user_msg + '...', end=' ', flush=True)
+            if training_data['test'] is None:
+                user_msg = f'Creating {config.k_folds}-folds for k-fold cross-validation'
+                if config.validation_split:
+                    user_msg += (f'. Holding out {config.validation_split:.2%} of examples'
+                                 ' in each fold as a validation set')
+                print(user_msg + '...', end=' ', flush=True)
 
-            training_data_eval = get_k_folds(training_data=training_data,
-                                             k_folds=config.k_folds,
-                                             validation_split=config.validation_split)
+                training_data_eval = get_k_folds(training_data=training_data,
+                                                 k_folds=config.k_folds,
+                                                 validation_split=config.validation_split)
 
-            LOGGER.info(f'Partitioned data into {config.k_folds} folds for cross-validation. Used'
-                        f'{config.validation_split:.2%} of the train set at random for validation.')
-            print(f'Done ({time.time() - start:.2f} seconds).')
+                LOGGER.info(user_msg)
+                print(f'Done ({time.time() - start:.2f} seconds).')
 
         elif config.validation_split:
-            print((f'Creating a validation set using a random {config.validation_split:.2%} of the'
-                  ' train set...'), end=' ', flush=True)
+            usr_msg = (f'Creating a validation set using a random {config.validation_split:.2%} of'
+                       ' the train set...')
+            print(usr_msg + '...', end=' ', flush=True)
 
             training_data_eval = get_validation_split(training_data=training_data,
                                                       validation_split=config.validation_split)
 
-            LOGGER.info((f'Used {config.validation_split:.2%} of the train set at random for'
-                         ' validation.'))
+            LOGGER.info(usr_msg)
             print(f'Done ({time.time() - start:.2f} seconds).')
 
     return training_data_eval
