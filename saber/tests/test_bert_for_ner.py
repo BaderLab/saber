@@ -23,7 +23,10 @@ from ..models.modules.bert_for_token_classification_multi_task import \
 class TestBertForNER(object):
     """Collects all unit tests for `saber.models.bert_for_ner.BertForNER`.
     """
-    def test_initialization(self, dummy_config, conll2003datasetreader_load, bert_for_ner):
+    def test_attributes_after_initilization(self,
+                                            dummy_config,
+                                            conll2003datasetreader_load,
+                                            bert_for_ner):
         """Asserts instance attributes are as expected after initialization of a `BertForNER` model.
         """
         assert isinstance(
@@ -51,11 +54,11 @@ class TestBertForNER(object):
 
         assert bert_for_ner.model_name == 'bert-ner'
 
-    def test_initialization_mt(self,
-                               dummy_config_compound_dataset,
-                               conll2003datasetreader_load,
-                               dummy_dataset_2,
-                               bert_for_ner_mt):
+    def test_attributes_after_initilization_mt(self,
+                                               dummy_config_compound_dataset,
+                                               conll2003datasetreader_load,
+                                               dummy_dataset_2,
+                                               bert_for_ner_mt):
         """Asserts instance attributes are as expected after initialization of a multi-task
         `BertForNER` model.
         """

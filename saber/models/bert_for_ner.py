@@ -144,7 +144,7 @@ class BertForNER(BaseModel):
             # Re-process the dataset to be compatible with BERT models
             processed_dataset = bert_utils.process_dataset_for_bert(dataset, self.tokenizer)
             # If no valid set provide, create one from the train set (or generate k-folds)
-            processed_dataset = data_utils.get_validation_set(self.config, processed_dataset)
+            processed_dataset = data_utils.prepare_data_for_eval(self.config, processed_dataset)
 
             # A hack to ensure that training data is always a list (datasets) of lists (folds)
             if not isinstance(processed_dataset, list):

@@ -430,8 +430,7 @@ def dummy_training_data(conll2003datasetreader_load):
         'test': None,
     }
 
-    # A list of lists which represents data for each fold (inner list) of each dataset (outer list)
-    return [[training_data]]
+    return training_data
 
 
 ####################################################################################################
@@ -580,7 +579,8 @@ def dummy_metrics(dummy_config,
     """
     metrics = Metrics(config=dummy_config,
                       model_=bert_for_ner_specify,
-                      training_data=dummy_training_data,
+                      # list of lists represents data for each fold of each dataset
+                      training_data=[[dummy_training_data]],
                       idx_to_tag=conll2003datasetreader_load.idx_to_tag,
                       output_dir=dummy_output_dir[0],
                       model_idx=0,

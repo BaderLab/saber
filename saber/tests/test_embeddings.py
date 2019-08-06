@@ -16,8 +16,9 @@ from .resources.constants import PATH_TO_DUMMY_EMBEDDINGS
 class TestEmbeddings(object):
     """Collects all unit tests for `saber.utils.bert_utils`.
     """
-    def test_initialization(self, dummy_embeddings_before_load):
-        """Asserts that Embeddings object contains the expected attribute values after initialization.
+    def test_attributes_after_initilization(self, dummy_embeddings_before_load):
+        """Asserts that Embeddings object contains the expected attribute values after
+        initialization.
         """
         # test attributes whos values are passed to the constructor
         assert dummy_embeddings_before_load.filepath == PATH_TO_DUMMY_EMBEDDINGS
