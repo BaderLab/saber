@@ -188,11 +188,15 @@ class BertForNER(BaseModel):
         # Training loop
         k_folds = len(training_data[0])
         for fold in range(k_folds):
-            # Use mixed precision training if Apex is available
+            # Use mixed precision training if Apex is installed and CUDA device available
             try:
-                from apex import amp
-                model, optimizers = amp.initialize(self.model, optimizers, opt_level='O1')
-                LOGGER.info("Imported Apex. Training with mixed precision (opt_level='O1').")
+                if self.device == 'cuda':
+                    from apex import amp
+                    model, optimizers = amp.initialize(self.model, optimizers, opt_level='O1')
+                    LOGGER.info("Imported Apex. Training with mixed precision (opt_level='O1').")
+                else:
+                    LOGGER.info(('Apex is installed but no CUDA device is available. Training with'
+                                 ' standard precision.'))
             except ImportError:
                 print(("Install Apex for faster training times and reduced memory usage"
                        " (https://github.com/NVIDIA/apex)."))
@@ -254,12 +258,12 @@ class BertForNER(BaseModel):
                             try:
                                 with amp.scale_loss(loss, optimizer) as scaled_loss:
                                     scaled_loss.backward()
-                                torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), 1.0)
-                            except (ImportError, UnboundLocalError) as e:
+                                torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer),
+                                                               self.config.grad_norm)
+                            except (ImportError, UnboundLocalError):
                                 loss.backward()
-                                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
-
-                                LOGGER.error(e)
+                                torch.nn.utils.clip_grad_norm_(self.model.parameters(),
+                                                               self.config.grad_norm)
 
                             # Track train loss
                             train_loss[model_idx] += loss.item()

@@ -84,14 +84,14 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         >>> tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         >>>
         >>> model = BertForEntityAndRelationExtraction(config)
-        >>> input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute")).unsqueeze(0)  # Batch size 1
+        >>> input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute")).unsqueeze(0)
         >>> labels = torch.tensor([1] * input_ids.size(1)).unsqueeze(0)  # Batch size 1
         >>> outputs = model(input_ids, labels=labels)
         >>> loss, scores = outputs[:2]
     """
     def __init__(self, config):
         super(BertForEntityAndRelationExtraction, self).__init__(config)
-        # TODO (John): Eventually support MTL.
+        # TODO (John): We plan to eventually support MTL, hence these are lists.
         self.idx_to_ent = self.config.idx_to_ent[0]
         self.num_ent_labels = self.config.num_ent_labels[0]
         self.num_rel_labels = self.config.num_rel_labels[0]
@@ -106,19 +106,24 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
 
         self.apply(self.init_weights)
 
+        # RE module
         # TODO (John): Once I settle on some kind of structure of hyperparams (a dict?) place
         # these there.
-        # entity_embed_size = self.saber_config.entity_embed_size
-        # head_tail_ffnns_size = self.saber_config.head_tail_ffnns_size
         entity_embed_size = 128
         head_tail_ffnns_size = 512
+        num_attn_heads = 2
+        num_encoder_layers = 2
 
-        # RE module
+        # Embedding layer for predicted entities
         self.embed = nn.Embedding(self.num_ent_labels, entity_embed_size)
 
-        # encoder_layer = nn.TransformerEncoderLayer(config.hidden_size + entity_embed_size, 2)
-        # encoder_norm = nn.LayerNorm(config.hidden_size + entity_embed_size)
-        # self.transformer_encoder = nn.TransformerEncoder(encoder_layer, 2, encoder_norm)
+        # Transformer Encoder
+        encoder_layer = nn.TransformerEncoderLayer(d_model=config.hidden_size + entity_embed_size,
+                                                   nhead=num_attn_heads)
+        encoder_norm = nn.LayerNorm(config.hidden_size + entity_embed_size)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layer,
+                                                         num_layers=num_encoder_layers,
+                                                         norm=encoder_norm)
 
         # MLPs for head and tail projections
         projection = nn.Sequential(
@@ -132,6 +137,7 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         self.ffnn_head = copy.deepcopy(projection)
         self.ffnn_tail = copy.deepcopy(projection)
 
+        # Biaffine transformation for relation classification
         self.rel_classifier = BiaffineAttention(head_tail_ffnns_size // 2, self.num_rel_labels)
 
     def forward(self, input_ids, orig_to_tok_map, token_type_ids=None, attention_mask=None,
@@ -154,11 +160,22 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         # entity aware contextualized word embeddings
         sequence_output = torch.cat((sequence_output, embed_ent_labels), dim=-1)
 
-        # TODO (John): Need to add back in attention masks here
-        # See https://github.com/pytorch/pytorch/issues/22374
-        # sequence_output = self.transformer_encoder(sequence_output,
-        #                                            src_key_padding_mask=attention_mask)
+        # Learn a second set of latent features over the entity aware contextualized word embeddings
+        # transformer_encoder expects sequence_output to be of shape S (sequence length),
+        # N (batch size), E (feature dim)
+        sequence_output = torch.transpose(sequence_output, 0, 1)
+        # transformer_encoder expects src_key_padding_mask to be of shape (N, S), and True where
+        # values should be masked
+        src_key_padding_mask = torch.bitwise_not(attention_mask.bool())
 
+        sequence_output = torch.transpose(
+            self.transformer_encoder(sequence_output, src_key_padding_mask=src_key_padding_mask),
+            0, 1
+        )
+
+        # ent_indices contains all indices in sequence_output corresponding to the final tag of a
+        # predicted entity. proj_rel_labels contains the true relation labels for each pair of
+        # entities in ent_indices
         with torch.no_grad():
             ent_indices, proj_rel_labels = self._get_entities_and_labels(
                 orig_to_tok_map=orig_to_tok_map,
@@ -171,6 +188,7 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
             ent_indices = ent_indices.to(input_ids.device)
             proj_rel_labels = proj_rel_labels.to(input_ids.device)
 
+        # The RE module is only invoked if there were predicted entities
         if ent_indices.nelement() > 0:
             heads = sequence_output[ent_indices[:, 0], ent_indices[:, 1], :]
             tails = sequence_output[ent_indices[:, 0], ent_indices[:, 2], :]
@@ -181,7 +199,6 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
 
             # RE classification
             re_logits = self.rel_classifier(heads, tails)
-
         else:
             ent_indices = None
             re_logits = None

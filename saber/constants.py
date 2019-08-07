@@ -102,9 +102,9 @@ PRETRAINED_MODELS = {
 
 # Batch size to use when performing model prediction
 PRED_BATCH_SIZE = 256
-# Max length of a sentence
+# Max length of a sentence, set to None to use the length of the longest sentence
 MAX_SENT_LEN = 256
-# Max length of a character sequence (word)
+# Max length of a character sequence (word), set to None to use the length of the longest word
 MAX_CHAR_LEN = 25
 
 # Possible models
