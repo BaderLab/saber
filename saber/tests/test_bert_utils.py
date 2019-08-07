@@ -5,7 +5,6 @@ from pytorch_transformers.optimization import AdamW
 from torch.utils.data import RandomSampler
 from torch.utils.data import SequentialSampler
 
-from .. import constants
 from ..constants import CLS
 from ..constants import MAX_SENT_LEN
 from ..constants import PAD
@@ -61,10 +60,10 @@ class TestBertUtils(object):
 
         # Check shape instead of content, as content is checked in different unit tests
         for partition in conll2003datasetreader_load.dataset_folder:
-            assert actual[partition]['x'][0].size() == (2, constants.MAX_SENT_LEN)
-            assert actual[partition]['x'][1].size() == (2, constants.MAX_SENT_LEN)
-            assert actual[partition]['y'].size() == (2, constants.MAX_SENT_LEN)
-            assert actual[partition]['orig_to_tok_map'].size() == (2, constants.MAX_SENT_LEN)
+            assert actual[partition]['x'][0].size() == (2, MAX_SENT_LEN)
+            assert actual[partition]['x'][1].size() == (2, MAX_SENT_LEN)
+            assert actual[partition]['y'].size() == (2, MAX_SENT_LEN)
+            assert actual[partition]['orig_to_tok_map'].size() == (2, MAX_SENT_LEN)
             # This is a CoNLL2003 formatted dataset so there should be no rel labels
             assert 'rel_labels' not in actual[partition]
 
@@ -83,10 +82,10 @@ class TestBertUtils(object):
 
         # Check shape instead of content, as content is checked in different unit tests
         for partition in conll2004datasetreader_load.dataset_folder:
-            assert actual[partition]['x'][0].size() == (3, constants.MAX_SENT_LEN)
-            assert actual[partition]['x'][1].size() == (3, constants.MAX_SENT_LEN)
-            assert actual[partition]['y'].size() == (3, constants.MAX_SENT_LEN)
-            assert actual[partition]['orig_to_tok_map'].size() == (3, constants.MAX_SENT_LEN)
+            assert actual[partition]['x'][0].size() == (3, MAX_SENT_LEN)
+            assert actual[partition]['x'][1].size() == (3, MAX_SENT_LEN)
+            assert actual[partition]['y'].size() == (3, MAX_SENT_LEN)
+            assert actual[partition]['orig_to_tok_map'].size() == (3, MAX_SENT_LEN)
             assert actual[partition]['rel_labels'] == \
                 conll2004datasetreader_load.idx_seq[partition]['rel']
 
@@ -125,7 +124,7 @@ class TestBertUtils(object):
         )
 
         # Just check for shape, as token indicies will depend on specific BERT model used
-        assert actual_indexed_tokens.shape == (2, constants.MAX_SENT_LEN)
+        assert actual_indexed_tokens.shape == (2, MAX_SENT_LEN)
         assert torch.equal(expected_orig_to_tok_map, actual_orig_to_tok_map)
         assert torch.equal(attention_mask, actual_attention_mask)
 
@@ -150,7 +149,7 @@ class TestBertUtils(object):
         )
 
         # Just check for shape, as token indicies will depend on specific BERT model used
-        assert actual_indexed_tokens.shape == (2, constants.MAX_SENT_LEN)
+        assert actual_indexed_tokens.shape == (2, MAX_SENT_LEN)
         assert torch.equal(expected_orig_to_tok_map, actual_orig_to_tok_map)
         assert torch.equal(attention_mask, actual_attention_mask)
         assert torch.equal(expected_indexed_labels, actual_indexed_labels)
