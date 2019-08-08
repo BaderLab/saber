@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="saber",
-    version="0.1.0-alpha",
+    version="0.1.0a0",
     author="John Giorgi",
     author_email="johnmgiorgi@gmail.com",
     license="MIT",

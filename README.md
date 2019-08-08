@@ -1,43 +1,41 @@
 <p align="center">
-  <img src="docs/img/saber_logo.png", style="height:150px">
+<img src="docs/img/saber_logo.png", style="height:150px">
 </p>
 
 <h1 align="center">
-  Saber
+Saber
 </h1>
 
 <p align="center">
-  <a href="https://travis-ci.org/BaderLab/saber">
-    <img src="https://travis-ci.org/BaderLab/saber.svg?branch=master"
-         alt="Travis CI">
-  </a>
-  <a href="https://www.codacy.com/app/JohnGiorgi/Saber?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=BaderLab/saber&amp;utm_campaign=Badge_Grade">
-    <img src="https://api.codacy.com/project/badge/Grade/d122e87152d84f959ee6d97b71d616cb" alt='Codacy Status'/>
-  </a>
-  <a href='https://coveralls.io/github/BaderLab/saber?branch=master'>
-    <img src='https://coveralls.io/repos/github/BaderLab/saber/badge.svg?branch=master' alt='Coverage Status'/>
-  </a>
-  <a href='https://spacy.io'>
-    <img src='https://img.shields.io/badge/spaCy-v2-09a3d5.svg' alt='Spacy Version'/>
-  </a>
-  <a href='http://makeapullrequest.com'>
-    <img src='https://img.shields.io/badge/PRs-welcome-blue.svg?style=shields' alt='PRs Welcome'/>
-  </a>
-  <a href='https://opensource.org/licenses/MIT'>
-    <img src='https://img.shields.io/badge/License-MIT-blue.svg' alt='License'/>
-  </a>
-    <a href='https://colab.research.google.com/drive/1WD7oruVuTo6p_908MQWXRBdLF3Vw2MPo'>
-    <img src='https://img.shields.io/badge/launch-Google%20Colab-orange.svg' alt='Colab'/>
-  </a>
+<a href="https://travis-ci.org/BaderLab/saber">
+<img src="https://travis-ci.org/BaderLab/saber.svg?branch=master" alt="Travis CI">
+</a>
+<a href="https://www.codacy.com/app/JohnGiorgi/Saber?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=BaderLab/saber&amp;utm_campaign=Badge_Grade">
+<img src="https://api.codacy.com/project/badge/Grade/d122e87152d84f959ee6d97b71d616cb" alt='Codacy Status'/>
+</a>
+<a href='https://coveralls.io/github/BaderLab/saber?branch=master'>
+<img src='https://coveralls.io/repos/github/BaderLab/saber/badge.svg?branch=master' alt='Coverage Status'/>
+</a>
+<a href='https://spacy.io'>
+<img src='https://img.shields.io/badge/spaCy-v2-09a3d5.svg' alt='Spacy Version'/>
+</a>
+<a href='http://makeapullrequest.com'>
+<img src='https://img.shields.io/badge/PRs-welcome-blue.svg?style=shields' alt='PRs Welcome'/>
+</a>
+<a href='https://opensource.org/licenses/MIT'>
+<img src='https://img.shields.io/badge/License-MIT-blue.svg' alt='License'/>
+</a>
+<a href='https://colab.research.google.com/drive/1WD7oruVuTo6p_908MQWXRBdLF3Vw2MPo'>
+<img src='https://img.shields.io/badge/launch-Google%20Colab-orange.svg' alt='Colab'/>
+</a>
 </p>
 
-<p align="center"><b>Saber</b> (<b>S</b>equence <b>A</b>nnotator for <b>B</b>iomedical <b>E</b>ntities and <b>R</b>elations) is a deep-learning based tool for <b>information extraction</b> in the biomedical domain.
-</p>
+<p align="center"><b>Saber</b> (<b>S</b>equence <b>A</b>nnotator for <b>B</b>iomedical <b>E</b>ntities and <b>R</b>elations) is a deep-learning based tool for <b>information extraction</b> in the biomedical domain.</p>
 
 <p align="center">
-  <a href="#installation">Installation</a> •
-  <a href="#quickstart">Quickstart</a> •
-  <a href="#documentation">Documentation</a>
+<a href="#installation">Installation</a> •
+<a href="#quickstart">Quickstart</a> •
+<a href="#documentation">Documentation</a>
 </p>
 
 ## Installation
@@ -111,7 +109,7 @@ There are currently two endpoints, `/annotate/text` and `/annotate/pmid`. Both e
 
 ```json
 {
-  "text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."
+"text": "The phosphorylation of Hdm2 by MK2 promotes the ubiquitination of p53."
 }
 ```
 
@@ -119,7 +117,7 @@ or
 
 ```json
 {
-  "pmid": 11835401
+"pmid": 11835401
 }
 ```
 
