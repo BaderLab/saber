@@ -2,14 +2,14 @@
 """
 from pkg_resources import resource_filename
 
-__version__ = '0.1.0-alpha'
+__version__ = '0.1.0a0'
 
 ####################################################################################################
 # SpaCy options
 ####################################################################################################
 
 # The spaCy model to load. Defaults to the large sized English model.
-SPACY_MODEL = 'en_core_web_lg'
+SPACY_MODEL = 'en_core_web_md'
 
 # Entity colours
 COLOURS = {'PRGE': 'linear-gradient(90deg, #aa9cfc, #fc9ce7)',

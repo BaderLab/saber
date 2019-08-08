@@ -208,9 +208,9 @@ class BertForNERAndRE(BaseModel):
         for fold in range(k_folds):
             # Use mixed precision training if Apex is installed and CUDA device available
             try:
-                if self.device == 'cuda':
+                if torch.cuda.is_available():
                     from apex import amp
-                    model, optimizers = amp.initialize(self.model, optimizers, opt_level='O1')
+                    self.model, optimizers = amp.initialize(self.model, optimizers, opt_level='O1')
                     LOGGER.info("Imported Apex. Training with mixed precision (opt_level='O1').")
                 else:
                     LOGGER.info(('Apex is installed but no CUDA device is available. Training with'
@@ -222,7 +222,7 @@ class BertForNERAndRE(BaseModel):
 
             # Use multiple-GPUS if available
             if self.n_gpus > 1:
-                model = torch.nn.DataParallel(model)
+                self.model = torch.nn.DataParallel(self.model)
 
             # Collect dataloaders, we don't need the other data
             dataloaders = [data[fold]['train']['dataloader'] for data in training_data]
@@ -274,17 +274,17 @@ class BertForNERAndRE(BaseModel):
                             outputs = self.model(**inputs)
                             ner_loss, re_loss = outputs[:2]
 
+                            # Loss is a vector of size n_gpus, need to average if more than 1
+                            if self.n_gpus > 1:
+                                ner_loss = ner_loss.mean()
+                                re_loss = re_loss.mean()
+
                             # TODO (John): Hotfix, this should be added to a config
                             if epoch > 0:
                                 loss = ner_loss + re_loss
                             else:
                                 loss = ner_loss
 
-                            # Loss is a vector of size n_gpus, need to average if more than 1
-                            if self.n_gpus > 1:
-                                loss = loss.mean()
-
-                            # TODO (John): grad_norm should be a config arg
                             try:
                                 with amp.scale_loss(loss, optimizer) as scaled_loss:
                                     scaled_loss.backward()
@@ -296,7 +296,7 @@ class BertForNERAndRE(BaseModel):
                                                                self.config.grad_norm)
 
                             # Track train loss
-                            train_ner_loss[model_idx] += ner_loss
+                            train_ner_loss[model_idx] += ner_loss.item()
                             train_re_loss[model_idx] += re_loss.item()
                             train_loss_joint[model_idx] += loss.item()
                             train_steps[model_idx] += 1
@@ -373,13 +373,15 @@ class BertForNERAndRE(BaseModel):
                 )
                 ner_loss, re_loss, re_labels, ner_logits, re_logits = outputs[:5]
 
+                # Loss is a vector of size n_gpus, need to average if more than 1
+                if self.n_gpus > 1:
+                    ner_loss = ner_loss.mean()
+                    re_loss = re_loss.mean()
+
                 loss = ner_loss + re_loss
+
                 ner_preds = ner_logits.argmax(dim=-1)
                 re_preds = re_logits.argmax(dim=-1)
-
-                # Loss object is a vector of size n_gpus, need to average if more than 1
-                if self.n_gpus > 1:
-                    loss = loss.mean()
 
                 # TODO (John): There has got to be a better way to do this?
                 # Mask [PAD] and WORDPIECE tokens

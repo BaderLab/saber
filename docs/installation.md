@@ -49,7 +49,7 @@ Pull and install in the current directory:
 Regardless of installation method, you will need to additionally download a [SpaCy](https://spacy.io/usage) language model
 
 ```
-(saber) $ python -m spacy download en
+(saber) $ python -m spacy download en_core_web_md
 ```
 
 For GPU support, make sure to install PyTorch 1.0.0+ with CUDA support. See [here](https://pytorch.org/get-started/locally/) for instructions.

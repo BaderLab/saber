@@ -190,9 +190,9 @@ class BertForNER(BaseModel):
         for fold in range(k_folds):
             # Use mixed precision training if Apex is installed and CUDA device available
             try:
-                if self.device == 'cuda':
+                if torch.cuda.is_available():
                     from apex import amp
-                    model, optimizers = amp.initialize(self.model, optimizers, opt_level='O1')
+                    self.model, optimizers = amp.initialize(self.model, optimizers, opt_level='O1')
                     LOGGER.info("Imported Apex. Training with mixed precision (opt_level='O1').")
                 else:
                     LOGGER.info(('Apex is installed but no CUDA device is available. Training with'
@@ -202,8 +202,9 @@ class BertForNER(BaseModel):
                        " (https://github.com/NVIDIA/apex)."))
                 LOGGER.info("Couldn't import Apex. Training with standard precision.")
 
+            # Use multiple-GPUS if available
             if self.n_gpus > 1:
-                model = torch.nn.DataParallel(model)
+                self.model = torch.nn.DataParallel(self.model)
 
             # Collect dataloaders, we don't need the other data
             dataloaders = [data[fold]['train']['dataloader'] for data in training_data]
@@ -254,7 +255,6 @@ class BertForNER(BaseModel):
                             if self.n_gpus > 1:
                                 loss = loss.mean()
 
-                            # TODO (John): grad_norm should be a config arg
                             try:
                                 with amp.scale_loss(loss, optimizer) as scaled_loss:
                                     scaled_loss.backward()
