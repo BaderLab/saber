@@ -1,6 +1,9 @@
 # Include README(s)
 include README.md CONTRIBUTING.md
 
+# Include all .py files under main directory
+recursive-include saber *.py
+
 # Include license file
 include LICENSE.txt
 
@@ -19,5 +22,11 @@ graft saber/tests
 # Include docs
 graft docs
 
+# Don't include .tox directory
+prune .tox
+
 # Don't include notebooks
 prune notebooks
+
+# Don't include pycache or .pyc files
+global-exclude __pycache__ *.pyc 
