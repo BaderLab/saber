@@ -4,8 +4,8 @@ import pytest
 import spacy
 from pytorch_transformers import BertTokenizer
 
-from .. import constants
 from ..config import Config
+from ..constants import SPACY_MODEL
 from ..dataset import CoNLL2003DatasetReader
 from ..dataset import CoNLL2004DatasetReader
 from ..dataset import Dataset
@@ -466,7 +466,7 @@ def base_model_mt(dummy_config_compound_dataset, conll2003datasetreader_load, du
 def bert_tokenizer():
     """Tokenizer for pre-trained BERT model.
     """
-    bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=False)
+    bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
     return bert_tokenizer
 
@@ -477,7 +477,11 @@ def bert_tokenizer():
 def bert_for_ner(dummy_config, conll2003datasetreader_load):
     """Returns an instance of BertForTokenClassification initialized with the default
     configuration."""
-    model = BertForNER(config=dummy_config, datasets=[conll2003datasetreader_load])
+    model = BertForNER(
+        config=dummy_config,
+        datasets=[conll2003datasetreader_load],
+        pretrained_model_name_or_path='bert-base-uncased'
+    )
 
     return model
 
@@ -488,7 +492,8 @@ def bert_for_ner_mt(dummy_config_compound_dataset, conll2003datasetreader_load, 
     configuration."""
     model = BertForNER(
         config=dummy_config_compound_dataset,
-        datasets=[conll2003datasetreader_load, dummy_dataset_2]
+        datasets=[conll2003datasetreader_load, dummy_dataset_2],
+        pretrained_model_name_or_path='bert-base-uncased'
     )
 
     return model
@@ -540,7 +545,12 @@ def bert_for_ner_save_mt(dummy_dir, bert_for_ner_specify_mt):
 def bert_for_ner_and_re(dummy_config, conll2004datasetreader_load):
     """Returns an instance of BertForTokenClassification initialized with the default
     configuration."""
-    model = BertForNERAndRE(config=dummy_config, datasets=[conll2004datasetreader_load])
+    model = BertForNERAndRE(
+        config=dummy_config,
+        datasets=[conll2004datasetreader_load],
+        pretrained_model_name_or_path='bert-base-uncased'
+    )
+
     return model
 
 
@@ -664,8 +674,8 @@ def preprocessor():
 
 @pytest.fixture
 def nlp():
-    """Returns Sacy NLP model."""
-    nlp = spacy.load(constants.SPACY_MODEL)
+    """Returns a loaded SpaCy English language model."""
+    nlp = spacy.load(SPACY_MODEL)
 
     return nlp
 

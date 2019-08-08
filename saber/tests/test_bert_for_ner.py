@@ -50,7 +50,7 @@ class TestBertForNER(object):
 
         # +1 necessary to account for 'X' tag introduced by wordpiece tokenization
         assert bert_for_ner.num_labels == [len(conll2003datasetreader_load.idx_to_tag['ent'])]
-        assert bert_for_ner.pretrained_model_name_or_path == 'bert-base-cased'
+        assert bert_for_ner.pretrained_model_name_or_path == 'bert-base-uncased'
 
         assert bert_for_ner.model_name == 'bert-ner'
 
@@ -88,7 +88,7 @@ class TestBertForNER(object):
             len(dummy_dataset_2.idx_to_tag['ent']),
         ]
 
-        assert bert_for_ner_mt.pretrained_model_name_or_path == 'bert-base-cased'
+        assert bert_for_ner_mt.pretrained_model_name_or_path == 'bert-base-uncased'
         assert bert_for_ner_mt.model_name == 'bert-ner'
 
     def test_specify(self,
@@ -113,7 +113,7 @@ class TestBertForNER(object):
         assert bert_for_ner_specify.embeddings is None
         assert bert_for_ner_specify.device.type == 'cpu'
         assert bert_for_ner_specify.n_gpus == 0
-        assert bert_for_ner_specify.pretrained_model_name_or_path == 'bert-base-cased'
+        assert bert_for_ner_specify.pretrained_model_name_or_path == 'bert-base-uncased'
 
         # +1 necessary to account for 'X' tag introduced by wordpiece tokenization
         assert bert_for_ner_specify.num_labels == \
@@ -162,7 +162,7 @@ class TestBertForNER(object):
         ]
 
         assert bert_for_ner_specify_mt.pretrained_model_name_or_path == \
-            'bert-base-cased'
+            'bert-base-uncased'
         assert bert_for_ner_specify_mt.model_name == 'bert-ner'
 
         # Model and tokenizer

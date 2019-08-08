@@ -55,7 +55,7 @@ class TestBertForNERAndRE(object):
         assert bert_for_ner_and_re.num_rel_labels == \
             [len(conll2004datasetreader_load.idx_to_tag['rel'])]
 
-        assert bert_for_ner_and_re.pretrained_model_name_or_path == 'bert-base-cased'
+        assert bert_for_ner_and_re.pretrained_model_name_or_path == 'bert-base-uncased'
         assert bert_for_ner_and_re.model_name == 'bert-ner-re'
 
     def test_attributes_after_initilization_mt(self,
@@ -90,7 +90,7 @@ class TestBertForNERAndRE(object):
         assert bert_for_ner_and_re_specify.device.type == 'cpu'
         assert bert_for_ner_and_re_specify.n_gpus == 0
         assert bert_for_ner_and_re_specify.pretrained_model_name_or_path == \
-            'bert-base-cased'
+            'bert-base-uncased'
 
         assert bert_for_ner_and_re_specify.num_ent_labels == \
             [len(conll2004datasetreader_load.idx_to_tag['ent'])]
