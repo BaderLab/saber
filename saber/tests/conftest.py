@@ -9,7 +9,6 @@ from ..constants import SPACY_MODEL
 from ..dataset import CoNLL2003DatasetReader
 from ..dataset import CoNLL2004DatasetReader
 from ..dataset import Dataset
-from ..embeddings import Embeddings
 from ..metrics import Metrics
 from ..models.base_model import BaseModel
 from ..models.bert_for_ner import BertForNER
@@ -20,12 +19,10 @@ from ..utils import data_utils
 from ..utils import model_utils
 from ..utils import text_utils
 from .resources.constants import DUMMY_COMMAND_LINE_ARGS
-from .resources.constants import DUMMY_TOKEN_MAP
 from .resources.constants import PATH_TO_CONLL2003_DATASET
 from .resources.constants import PATH_TO_CONLL2004_DATASET
 from .resources.constants import PATH_TO_DUMMY_CONFIG
 from .resources.constants import PATH_TO_DUMMY_DATASET_2
-from .resources.constants import PATH_TO_DUMMY_EMBEDDINGS
 
 ####################################################################################################
 # Generic
@@ -209,99 +206,6 @@ def conll2004datasetreader_load():
 
 
 ####################################################################################################
-# Embeddings
-####################################################################################################
-
-
-@pytest.fixture
-def dummy_embeddings(conll2003datasetreader_load):
-    """Returns an instance of an `Embeddings()` object AFTER the `.load()` method is called.
-    """
-    embeddings = Embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS,
-                            token_map=conll2003datasetreader_load.idx_to_tag)
-    embeddings.load(binary=False)  # txt file format is easier to test
-    return embeddings
-
-
-@pytest.fixture
-def dummy_embedding_idx():
-    """Returns embedding index from call to `Embeddings._prepare_embedding_index()`.
-    """
-    embeddings = Embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, token_map=DUMMY_TOKEN_MAP)
-    embedding_idx = embeddings._prepare_embedding_index(binary=False)
-    return embedding_idx
-
-
-@pytest.fixture
-def dummy_embedding_matrix_and_type_to_idx():
-    """Returns the `embedding_matrix` and `type_to_index` objects from call to
-    `Embeddings._prepare_embedding_matrix(load_all=False)`.
-    """
-    embeddings = Embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, token_map=DUMMY_TOKEN_MAP)
-    embedding_idx = embeddings._prepare_embedding_index(binary=False)
-    embeddings.num_found = len(embedding_idx)
-    embeddings.dimension = len(list(embedding_idx.values())[0])
-    embedding_matrix, type_to_idx = embeddings._prepare_embedding_matrix(embedding_idx,
-                                                                         load_all=False)
-    embeddings.num_embed = embedding_matrix.shape[0]  # num of embedded words
-
-    return embedding_matrix, type_to_idx
-
-
-@pytest.fixture
-def dummy_embedding_matrix_and_type_to_idx_load_all():
-    """Returns the embedding matrix and type to index objects from call to
-    `Embeddings._prepare_embedding_matrix(load_all=True)`.
-    """
-    # this should be different than DUMMY_TOKEN_MAP for a reliable test
-    test = {"This": 0, "is": 1, "a": 2, "test": 3}
-
-    embeddings = Embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, token_map=test)
-    embedding_idx = embeddings._prepare_embedding_index(binary=False)
-    embeddings.num_found = len(embedding_idx)
-    embeddings.dimension = len(list(embedding_idx.values())[0])
-    embedding_matrix, type_to_idx = embeddings._prepare_embedding_matrix(embedding_idx,
-                                                                         load_all=True)
-    embeddings.num_embed = embedding_matrix.shape[0]  # num of embedded words
-
-    return embedding_matrix, type_to_idx
-
-
-@pytest.fixture
-def dummy_embeddings_before_load():
-    """Returns an instance of an Embeddings() object BEFORE the `Embeddings.load()` method is
-    called.
-    """
-    return Embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS,
-                      token_map=DUMMY_TOKEN_MAP,
-                      # to test passing of arbitrary keyword args to constructor
-                      totally_arbitrary='arbitrary')
-
-
-@pytest.fixture
-def dummy_embeddings_after_load():
-    """Returns an instance of an Embeddings() object AFTER `Embeddings.load(load_all=False)` is
-    called.
-    """
-    embeddings = Embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, token_map=DUMMY_TOKEN_MAP)
-    embeddings.load(binary=False, load_all=False)  # txt file format is easier to test
-    return embeddings
-
-
-@pytest.fixture
-def dummy_embeddings_after_load_with_load_all():
-    """Returns an instance of an Embeddings() object AFTER `Embeddings.load(load_all=True)` is
-    called.
-    """
-    # this should be different than DUMMY_TOKEN_MAP for a reliable test
-    test = {"This": 0, "is": 1, "a": 2, "test": 3}
-
-    embeddings = Embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, token_map=test)
-    embeddings.load(binary=False, load_all=True)  # txt file format is easier to test
-    return embeddings
-
-
-####################################################################################################
 # Saber
 ####################################################################################################
 
@@ -366,18 +270,6 @@ def saber_bert_for_ner_and_re(dummy_config):
     saber = Saber(config=dummy_config)
     saber.load_dataset(directory=PATH_TO_CONLL2004_DATASET)
     saber.build(model_name='bert-ner-re')
-
-    return saber
-
-
-@pytest.fixture
-def saber_single_dataset_embeddings(dummy_config):
-    """Returns instance of `Saber` initialized with the dummy config file, a single dataset and
-    embeddings.
-    """
-    saber = Saber(config=dummy_config)
-    saber.load_dataset(directory=PATH_TO_CONLL2003_DATASET)
-    saber.load_embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS, binary=False)
 
     return saber
 

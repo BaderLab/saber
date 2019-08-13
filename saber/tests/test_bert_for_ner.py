@@ -43,7 +43,6 @@ class TestBertForNER(object):
 
         # Other instance attributes
         assert bert_for_ner.model is None
-        assert bert_for_ner.embeddings is None
 
         assert bert_for_ner.device.type == 'cpu'
         assert bert_for_ner.n_gpus == 0
@@ -77,7 +76,6 @@ class TestBertForNER(object):
             len(dummy_dataset_2.type_to_idx['ent']) - 1
         # Other instance attributes
         assert bert_for_ner_mt.model is None
-        assert bert_for_ner_mt.embeddings is None
 
         assert bert_for_ner_mt.device.type == 'cpu'
         assert bert_for_ner_mt.n_gpus == 0
@@ -110,7 +108,6 @@ class TestBertForNER(object):
             len(conll2003datasetreader_load.type_to_idx['ent']) - 1
 
         # Other instance attributes
-        assert bert_for_ner_specify.embeddings is None
         assert bert_for_ner_specify.device.type == 'cpu'
         assert bert_for_ner_specify.n_gpus == 0
         assert bert_for_ner_specify.pretrained_model_name_or_path == 'bert-base-uncased'
@@ -150,8 +147,6 @@ class TestBertForNER(object):
             len(dummy_dataset_2.type_to_idx['ent']) - 1
 
         # Other instance attributes
-        assert bert_for_ner_specify_mt.embeddings is None
-
         assert bert_for_ner_specify_mt.device.type == 'cpu'
         assert bert_for_ner_specify_mt.n_gpus == 0
 

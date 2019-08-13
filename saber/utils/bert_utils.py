@@ -232,11 +232,9 @@ def get_dataloader_for_bert(processed_dataset, batch_size, model_idx=-1):
 
             # TODO (John): This is a temporary hack to speed up evaluation.
             # In the future, this should be an option in the config file.
-            batch_size = batch_size if partition == 'train' else batch_size * 4
+            bs = batch_size if partition == 'train' else batch_size * 4
 
-            dataloaders[partition] = data.DataLoader(dataset,
-                                                     sampler=sampler,
-                                                     batch_size=batch_size)
+            dataloaders[partition] = data.DataLoader(dataset, sampler=sampler, batch_size=bs)
         else:
             dataloaders[partition] = None
 

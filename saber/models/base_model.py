@@ -18,13 +18,11 @@ class BaseModel(object):
         config (Config): A Config object which contains a set of harmonized arguments provided in a
             *.ini file and, optionally, from the command line.
         datasets (list): A list containing one or more Dataset objects.
-        embeddings (Embeddings): An object containing loaded word embeddings.
         models (nn.Module): A PyTorch model.
     """
-    def __init__(self, config, datasets, embeddings=None):
+    def __init__(self, config, datasets):
         self.config = config  # Hyperparameters and model details
         self.datasets = datasets  # Dataset(s) tied to this instance
-        self.embeddings = embeddings  # Pre-trained word embeddings tied to this instance
         self.model = None  # Saber model tied to this instance
 
     def save(self, directory):
@@ -50,6 +48,7 @@ class BaseModel(object):
         Clear and rebuilds the model(s) at `self.models`. This is useful, for example, at the end
         of a cross-validation fold.
         """
+        del self.model
         torch.cuda.empty_cache()
 
         self.specify()

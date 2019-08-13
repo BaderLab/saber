@@ -32,9 +32,6 @@ def main():
 
     # Don't build a new model if pre-trained one was provided
     if not config.pretrained_model:
-        # Don't load embeddings if a pre-trained model was provided
-        if config.pretrained_embeddings:
-            saber.load_embeddings()
         saber.build()
 
     try:
