@@ -1,6 +1,6 @@
 # Resources
 
-Saber is ready to go out-of-the box when using the __web-service__ or a __pre-trained model__. However, if you plan on training you own models, you will need to provide a dataset (or datasets!) and, ideally, pre-trained word embeddings.
+Saber is ready to go out-of-the box when using the __web-service__ or a __pre-trained model__. However, if you plan on training you own models, you will need to provide a dataset (or datasets!).
 
 ## Pre-trained models
 
@@ -59,41 +59,3 @@ E.g.
 
 !!! note
       `k_folds` will be ignored if either a `valid.*` or `test.*` file is found under `dataset_folder`. Both arguments `k_folds` and `validation_split` will be ignored if a `valid.*` file is found under `dataset_folder`. 
-
-## Word embeddings
-
-When training new models, you can (and should) provide your own pre-trained word embeddings with the `pretrained_embeddings` argument (either at the command line or in the configuration file). Saber expects all word embeddings to be in the `word2vec` file format. [Pyysalo _et al_. 2013](https://pdfs.semanticscholar.org/e2f2/8568031e1902d4f8ee818261f0f2c20de6dd.pdf) provide word embeddings that work quite well in the biomedical domain, which can be downloaded [here](http://bio.nlplab.org). Alternatively, from the command line call:
-
-```
-# Replace this with a location you want to save the embeddings to
-$ mkdir path/to/word_embeddings
-# Note: this file is over 4GB
-$ wget http://evexdb.org/pmresources/vec-space-models/wikipedia-pubmed-and-PMC-w2v.bin -O path/to/word_embeddings/wikipedia-pubmed-and-PMC-w2v.bin
-```
-
-To use these word embeddings with Saber, provide their path in the `pretrained_embeddings` argument (either in the `config` file or at the command line). Alternatively, pass their path to `Saber.load_embeddings()`. For example:
-
-```python
-from saber import Saber
-
-saber = Saber()
-
-saber.load_dataset('path/to/dataset')
-# load the embeddings here
-saber.load_embeddings('path/to/word_embeddings')
-
-saber.build()
-saber.train()
-```
-
-### GloVe
-
-To use [GloVe](https://nlp.stanford.edu/projects/glove/) embeddings, just convert them to the [word2vec](https://code.google.com/archive/p/word2vec/) format first:
-
-```
-(saber) $ python
->>> from gensim.scripts.glove2word2vec import glove2word2vec
->>> glove_input_file = 'glove.txt'
->>> word2vec_output_file = 'word2vec.txt'
->>> glove2word2vec(glove_input_file, word2vec_output_file)
-```

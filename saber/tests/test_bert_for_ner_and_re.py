@@ -45,7 +45,6 @@ class TestBertForNERAndRE(object):
 
         # Other instance attributes
         assert bert_for_ner_and_re.model is None
-        assert bert_for_ner_and_re.embeddings is None
 
         assert bert_for_ner_and_re.device.type == 'cpu'
         assert bert_for_ner_and_re.n_gpus == 0
@@ -86,7 +85,6 @@ class TestBertForNERAndRE(object):
             len(conll2004datasetreader_load.type_to_idx['ent']) - 1
 
         # Other instance attributes
-        assert bert_for_ner_and_re_specify.embeddings is None
         assert bert_for_ner_and_re_specify.device.type == 'cpu'
         assert bert_for_ner_and_re_specify.n_gpus == 0
         assert bert_for_ner_and_re_specify.pretrained_model_name_or_path == \

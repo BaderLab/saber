@@ -16,7 +16,6 @@ from . import constants
 from .config import Config
 from .dataset import CoNLL2003DatasetReader
 from .dataset import CoNLL2004DatasetReader
-from .embeddings import Embeddings
 from .preprocessor import Preprocessor
 from .utils import data_utils
 from .utils import generic_utils
@@ -43,7 +42,6 @@ class Saber(object):
 
         self.preprocessor = None  # object for text processing
         self.datasets = []  # dataset(s) tied to this instance
-        self.embeddings = None  # pre-trained token embeddings tied to this instance
         self.models = []  # model(s) object tied to this instance
 
         if self.config.verbose:
@@ -320,74 +318,6 @@ class Saber(object):
             self.models[-1].prepare_for_transfer(self.datasets)
 
         print(f'Done ({time.time() - start:.2f} seconds).')
-
-    def load_embeddings(self, filepath=None, binary=True, load_all=None):
-        """Loads pre-trained token embeddings at `filepath`.
-
-        Args:
-            filepath (str): Optional, Path to pre-trained embeddings file. If not None, overwrites
-                'self.config.pretrained_embeddings'. Defaults to None.
-            binary (bool): Optional, True if pre-trained embeddings are in C binary format, False if
-                they are in C text format.
-            load_all (bool): Optional, True if all pre-trained embeddings should be loaded.
-                Otherwise only embeddings for tokens found in the training set are loaded. Defaults
-                to None.
-
-        Raises:
-            MissingStepException: If no dataset has been loaded (`self.datasets` is `None`).
-            ValueError: If 'self.config.pretrained_embeddings' is `None` and `filepath` is `None`.
-        """
-        start = time.time()
-        print('Loading embeddings...', end=' ', flush=True)
-
-        # Allow user to provide select args in function call
-        if load_all is not None:
-            self.config.load_all_embeddings = load_all
-        if filepath is not None:
-            filepath = generic_utils.clean_path(filepath)
-            self.config.pretrained_embeddings = filepath
-
-        if not self.datasets:
-            err_msg = ('`Saber.datasets` is empty. Make sure to load at least one dataset with'
-                       ' `Saber.load_dataset()` before calling `Saber.load_embeddings()`.')
-            LOGGER.error('MissingStepException: %s', err_msg)
-            raise MissingStepException(err_msg)
-
-        if not self.config.pretrained_embeddings:
-            err_msg = ('Expected a valid path in "filepath" or "self.config.pretrained_embeddings".'
-                       f' Got {filepath} and {self.config.pretrained_embeddings} respectively')
-            LOGGER.error('ValueError %s', err_msg)
-            raise ValueError(err_msg)
-
-        # Load the embeddings
-        self.embeddings = Embeddings(filepath=self.config.pretrained_embeddings,
-                                     token_map=self.datasets[0].type_to_idx['word'],
-                                     debug=self.config.debug)
-
-        # When all embeddings loaded, new type_to_idx mapping is generated, so update datasets
-        # current type_to_idx mappings
-        if self.config.load_all_embeddings:
-            type_to_idx = self.embeddings.load(binary, load_all=self.config.load_all_embeddings)
-            for dataset in self.datasets:
-                word_types = list(dataset.type_to_idx['word'])
-                char_types = list(dataset.type_to_idx['char'])
-                dataset.type_to_idx['word'] = \
-                    Preprocessor.type_to_idx(word_types, type_to_idx['word'])
-                dataset.type_to_idx['char'] = \
-                    Preprocessor.type_to_idx(char_types, type_to_idx['char'])
-                dataset.get_idx_seq()
-        else:
-            self.embeddings.load(binary)
-
-        embed = self.embeddings.num_embed
-        found = self.embeddings.num_found
-        dims = self.embeddings.dimension
-
-        info_msg = f'Loaded {embed}/{found} word vectors of dimension {dims}.'
-        print(info_msg)
-        print(f'Done ({time.time() - start:.2f} seconds).')
-
-        LOGGER.info(info_msg)
 
     def build(self, model_name=None):
         """Specifies the chosen sequence model, given by 'self.config.model_name'.

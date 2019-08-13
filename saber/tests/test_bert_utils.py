@@ -175,12 +175,12 @@ class TestBertUtils(object):
             assert torch.equal(expected_orig_to_tok_map, dataloader.dataset.orig_to_tok_map)
             assert expected_model_idx == dataloader.dataset.model_idx
 
-            assert dataloader.batch_size == 32
-
             if partition == 'train':
+                assert dataloader.batch_size == 32
                 assert isinstance(dataloader.sampler, RandomSampler)
             else:
                 assert isinstance(dataloader.sampler, SequentialSampler)
+                assert dataloader.batch_size == 32 * 4
 
     def test_get_dataloader_for_bert_conll2004(self, conll2004datasetreader_load, bert_tokenizer):
         """Asserts that `bert_utils.get_dataloader_for_bert()` returns the expected values for a
@@ -203,12 +203,12 @@ class TestBertUtils(object):
             assert torch.equal(expected_orig_to_tok_map, dataloader.dataset.orig_to_tok_map)
             assert expected_model_idx == dataloader.dataset.model_idx
 
-            assert dataloader.batch_size == 32
-
             if partition == 'train':
+                assert dataloader.batch_size == 32
                 assert isinstance(dataloader.sampler, RandomSampler)
             else:
                 assert isinstance(dataloader.sampler, SequentialSampler)
+                assert dataloader.batch_size == 32 * 4
 
     def test_get_bert_optimizer(self, bert_for_ner_specify):
         """Asserts that the returned optimizer object is as expected after call to

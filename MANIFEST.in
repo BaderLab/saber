@@ -25,8 +25,5 @@ graft docs
 # Don't include .tox directory
 prune .tox
 
-# Don't include notebooks
-prune notebooks
-
 # Don't include pycache or .pyc files
 global-exclude __pycache__ *.pyc 

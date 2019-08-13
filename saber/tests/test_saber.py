@@ -7,17 +7,11 @@ import pytest
 
 from .. import constants
 from ..dataset import Dataset
-from ..embeddings import Embeddings
 from ..models.base_model import BaseModel
 from ..models.bert_for_ner import BertForNER
-from ..preprocessor import Preprocessor
 from ..saber import MissingStepException
-from .resources import helpers
-from .resources.constants import DUMMY_CHAR_MAP
-from .resources.constants import DUMMY_TOKEN_MAP
 from .resources.constants import PATH_TO_CONLL2003_DATASET
 from .resources.constants import PATH_TO_DUMMY_DATASET_2
-from .resources.constants import PATH_TO_DUMMY_EMBEDDINGS
 
 # TODO (johngiorgi): Write tests for compound dataset
 
@@ -32,7 +26,6 @@ class TestSaber(object):
 
         assert saber_blank.preprocessor is None
         assert saber_blank.datasets == []
-        assert saber_blank.embeddings is None
         assert saber_blank.models == []
 
     def test_annotate_value_error(self, saber_bert_for_ner):
@@ -184,50 +177,6 @@ class TestSaber(object):
             saber_compound_dataset_model.load_dataset(
                 [PATH_TO_CONLL2003_DATASET, PATH_TO_DUMMY_DATASET_2]
             )
-
-    def test_load_embeddings(self, saber_single_dataset_embeddings):
-        """Assert that the `embeddings` attribute of a `Saber` instance was updated as expected after
-        call to `Saber.load_embeddings()`
-        """
-        assert isinstance(saber_single_dataset_embeddings.embeddings, Embeddings)
-
-    def test_load_embeddings_with_load_all(self, saber_single_dataset):
-        """Assert that the `datasets` and `embeddings` attributes of a `Saber` instance are updated as
-        expected after call to `Saber.load_embeddings()`
-        """
-        # get the dataset object
-        dataset = saber_single_dataset.datasets[0]
-        # create our expected values
-        word_types = list(dataset.type_to_idx['word'])
-        char_types = list(dataset.type_to_idx['char'])
-        expected = {'word': Preprocessor.type_to_idx(word_types, DUMMY_TOKEN_MAP),
-                    'char': Preprocessor.type_to_idx(char_types, DUMMY_CHAR_MAP)}
-
-        # load the embeddings
-        saber_single_dataset.load_embeddings(filepath=PATH_TO_DUMMY_EMBEDDINGS,
-                                             binary=False,
-                                             load_all=True)
-
-        # test for saber.datasets
-        helpers.assert_type_to_idx_as_expected(dataset.type_to_idx, expected)
-        # tests for saber.embeddings
-        assert isinstance(saber_single_dataset.embeddings, Embeddings)
-
-    def test_load_embeddings_missing_step_exception(self, saber_blank):
-        """Asserts that `Saber` object raises a MissingStepException when we try to load embeddings
-        without first loading a dataset (`Saber.datasets` is None).
-        """
-        with pytest.raises(MissingStepException):
-            saber_blank.load_embeddings()
-
-    def test_load_embeddings_value_error(self, saber_single_dataset):
-        """Asserts that `Saber` object raises a ValueError when we try to load embeddings but have
-        not specified a filepath to any embeddings (`Saber.config.pretrained_embeddings` is False).
-        """
-        # set pre-trained embedding argument to empty string so we can test exception
-        saber_single_dataset.config.pretrained_embeddings = ''
-        with pytest.raises(ValueError):
-            saber_single_dataset.load_embeddings()
 
     def test_build_single_dataset(self, saber_single_dataset):
         """Assert that the `model` attribute of a `Saber` instance was updated as expected after

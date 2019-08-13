@@ -21,7 +21,6 @@ class TestBaseModel(object):
         # Attributes that are passed to __init__
         assert base_model.config is dummy_config
         assert base_model.datasets[0] is conll2003datasetreader_load
-        assert base_model.embeddings is None
 
         # Other instance attributes
         assert base_model.model is None
@@ -40,7 +39,6 @@ class TestBaseModel(object):
         assert base_model_mt.config is dummy_config_compound_dataset
         assert base_model_mt.datasets[0] is conll2003datasetreader_load
         assert base_model_mt.datasets[1] is dummy_dataset_2
-        assert base_model_mt.embeddings is None
 
         # Other instance attributes
         assert base_model_mt.model is None

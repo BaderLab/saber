@@ -13,33 +13,7 @@ PATH_TO_CONLL2003_DATASET = resource_filename(__name__, 'conll2003_dataset')
 PATH_TO_CONLL2004_DATASET = resource_filename(__name__, 'conll2004_dataset')
 PATH_TO_DUMMY_DATASET_2 = resource_filename(__name__, 'dummy_dataset_2')
 PATH_TO_DUMMY_CONFIG = resource_filename(__name__, 'dummy_config.ini')
-PATH_TO_DUMMY_EMBEDDINGS = \
-    resource_filename(__name__, 'dummy_word_embeddings/dummy_word_embeddings.txt')
 
-
-####################################################################################################
-# Dummy embeddings
-####################################################################################################
-
-
-DUMMY_TOKEN_MAP = {constants.PAD: 0, constants.UNK: 1, 'the': 2, 'quick': 3, 'brown': 4, 'fox': 5}
-DUMMY_CHAR_MAP = {constants.PAD: 0, constants.UNK: 1, 'r': 2, 'u': 3, 'c': 4, 'f': 5, 'e': 6,
-                  'o': 7, 'x': 8, 'h': 9, 'b': 10, 'n': 11, 'w': 12, 'i': 13, 't': 14, 'q': 15,
-                  'k': 16}
-DUMMY_EMBEDDINGS_INDEX = {
-    'the': [0.15580128, -0.07108746, 0.055198, -0.14199848, 0.0005317868],
-    'quick': [-0.011208724, 0.21213274, -0.17233513, -0.4401193, 0.13930725],
-    'brown': [0.12754257, -0.07938199, 0.083904505, -0.24103324, 0.0084449835],
-    'fox': [0.2947119, 0.14794342, 0.10318808, 0.09019197, -0.24244581]
-}
-DUMMY_EMBEDDINGS_MATRIX = np.array([
-    [0.0, 0.0, 0.0, 0.0, 0.0],
-    [0.0, 0.0, 0.0, 0.0, 0.0],
-    [0.15580128, -0.07108746, 0.055198, -0.14199848, 0.0005317868],
-    [-0.011208724, 0.21213274, -0.17233513, -0.4401193, 0.13930725],
-    [0.12754257, -0.07938199, 0.083904505, -0.24103324, 0.0084449835],
-    [0.2947119, 0.14794342, 0.10318808, 0.09019197, -0.24244581]
-])
 
 ####################################################################################################
 # CoNLL2003 dataset
@@ -134,9 +108,6 @@ DUMMY_ARGS_NO_PROCESSING = {'model_name': 'bert-ner',
                             'dataset_reader': 'CoNLL2003DatasetReader',
                             'output_folder': '../output',
                             'pretrained_model': '',
-                            'pretrained_embeddings': ('saber/tests/resources/'
-                                                      'dummy_word_embeddings/'
-                                                      'dummy_word_embeddings.txt'),
                             'word_embed_dim': '200',
                             'char_embed_dim': '30',
                             'optimizer': 'nadam',
@@ -155,8 +126,6 @@ DUMMY_ARGS_NO_PROCESSING = {'model_name': 'bert-ner',
                             'save_all_weights': 'False',
                             'tensorboard': 'False',
                             'replace_rare_tokens': 'False',
-                            'load_all_embeddings': 'False',
-                            'fine_tune_word_embeddings': 'False',
                             # TEMP
                             'variational_dropout': 'False',
                             }
@@ -167,7 +136,6 @@ DUMMY_ARGS_NO_CLI_ARGS = {'model_name': 'bert-ner',
                           'dataset_reader': 'conll2003datasetreader',
                           'output_folder': os.path.abspath('../output'),
                           'pretrained_model': '',
-                          'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
                           'word_embed_dim': 200,
                           'char_embed_dim': 30,
                           'optimizer': 'nadam',
@@ -186,8 +154,6 @@ DUMMY_ARGS_NO_CLI_ARGS = {'model_name': 'bert-ner',
                           'save_all_weights': False,
                           'tensorboard': False,
                           'replace_rare_tokens': False,
-                          'load_all_embeddings': False,
-                          'fine_tune_word_embeddings': False,
                           # TEMP
                           'variational_dropout': False,
                           }
@@ -197,11 +163,10 @@ DUMMY_COMMAND_LINE_ARGS = {'optimizer': 'sgd',
                            'learning_rate': 0.05,
                            'decay': 0.5,
                            'dropout_rate': [0.6, 0.6, 0.2],
-                           # the dataset and embeddings are used for test purposes so they must
+                           # the datasets are used for test purposes so they must
                            # point to the correct resources, this can be ensured by passing their
                            # paths here
                            'dataset_folder': [PATH_TO_CONLL2003_DATASET],
-                           'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
                            }
 DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'bert-ner',
                             'save_model': False,
@@ -209,7 +174,6 @@ DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'bert-ner',
                             'dataset_reader': 'conll2003datasetreader',
                             'output_folder': os.path.abspath('../output'),
                             'pretrained_model': '',
-                            'pretrained_embeddings': PATH_TO_DUMMY_EMBEDDINGS,
                             'word_embed_dim': 200,
                             'char_embed_dim': 30,
                             'optimizer': 'sgd',
@@ -228,8 +192,6 @@ DUMMY_ARGS_WITH_CLI_ARGS = {'model_name': 'bert-ner',
                             'save_all_weights': False,
                             'tensorboard': False,
                             'replace_rare_tokens': False,
-                            'load_all_embeddings': False,
-                            'fine_tune_word_embeddings': False,
                             # TEMP
                             'variational_dropout': False,
                             }
