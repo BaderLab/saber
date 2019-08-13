@@ -147,7 +147,6 @@ class Config(object):
             args['dataset_reader'] = config['data']['dataset_reader']
             args['output_folder'] = config['data']['output_folder']
             args['pretrained_model'] = config['data']['pretrained_model']
-            args['pretrained_embeddings'] = config['data']['pretrained_embeddings']
             # model
             args['word_embed_dim'] = config['model'].getint('word_embed_dim')
             args['char_embed_dim'] = config['model'].getint('char_embed_dim')
@@ -169,8 +168,6 @@ class Config(object):
             args['tensorboard'] = config['advanced'].getboolean('tensorboard')
             args['save_all_weights'] = config['advanced'].getboolean('save_all_weights')
             args['replace_rare_tokens'] = config['advanced'].getboolean('replace_rare_tokens')
-            args['load_all_embeddings'] = config['advanced'].getboolean('load_all_embeddings')
-            args['fine_tune_word_embeddings'] = config['advanced'].getboolean('fine_tune_word_embeddings')
             # TEMP
             args['variational_dropout'] = config['advanced'].getboolean('variational_dropout')
         # ConfigParser throws KeyError when key into object that does not exist
@@ -209,8 +206,6 @@ class Config(object):
         args['output_folder'] = generic_utils.clean_path(args['output_folder'])
         if args['pretrained_model'] and args['pretrained_model'] not in PRETRAINED_MODELS:
             args['pretrained_model'] = generic_utils.clean_path(args['pretrained_model'])
-        if args['pretrained_embeddings']:
-            args['pretrained_embeddings'] = generic_utils.clean_path(args['pretrained_embeddings'])
         # build dictionary for dropout rates
         args['dropout_rate'] = {
             'input': float(args['dropout_rate'][0]),
@@ -264,9 +259,6 @@ class Config(object):
                             help=('Expects three values, separated by a space, which specify the '
                                   'fraction of units to drop for input, output and recurrent '
                                   'connections respectively. Values must be between 0 and 1.'))
-        parser.add_argument('--fine_tune_word_embeddings', required=False, action='store_true',
-                            help=('Pass this argument if pre-trained word embedding should be '
-                                  'fine-tuned during training.'))
         parser.add_argument('--grad_norm', required=False, type=float,
                             help='Tau threshold value for gradient normalization, defaults to 1.')
         parser.add_argument('--k_folds', required=False, type=int,
@@ -275,10 +267,6 @@ class Config(object):
         parser.add_argument('--learning_rate', required=False, type=float,
                             help=('float >= 0. Learning rate. Note that for certain optimizers '
                                   'this value is ignored'))
-        parser.add_argument('--load_all_embeddings', required=False, action='store_true',
-                            help=('Pass this argument if all pre-trained embeddings should be '
-                                  'loaded, and not just those found in the dataset(s). Has no '
-                                  'effect if --pretrained_embeddings argument is empty.'))
         parser.add_argument('--epochs', required=False, type=int,
                             help=('Integer. Number of epochs to train the model. An epoch is an '
                                   'iteration over all data provided.'))
@@ -307,8 +295,6 @@ class Config(object):
                                   'these can be very large). Defaults to False.'))
         parser.add_argument('--word_embed_dim', required=False, type=int,
                             help='Dimension of dense embeddings to be learned for each word.')
-        parser.add_argument('--pretrained_embeddings', required=False, type=str,
-                            help='Filepath to pre-trained word embeddings.')
         parser.add_argument('--validation_split', required=False, type=float,
                             help=('TODO.'))
         parser.add_argument('--variational_dropout', required=False, action='store_true',
