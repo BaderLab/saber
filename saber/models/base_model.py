@@ -50,6 +50,7 @@ class BaseModel(object):
         Clear and rebuilds the model(s) at `self.models`. This is useful, for example, at the end
         of a cross-validation fold.
         """
+        del self.model
         torch.cuda.empty_cache()
 
         self.specify()
