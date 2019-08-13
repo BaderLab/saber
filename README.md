@@ -73,7 +73,7 @@ $ pip install -e git+https://github.com/BaderLab/saber.git@master#egg=saber
 Regardless of installation method, you will need to additionally download a [SpaCy](https://spacy.io/usage) language model
 
 ```
-$ python -m spacy download en
+$ python -m spacy download en_core_web_md
 ```
 
 For GPU support, make sure to install PyTorch 1.0.0+ with CUDA support. See [here](https://pytorch.org/get-started/locally/) for instructions.
