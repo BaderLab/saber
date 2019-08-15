@@ -191,8 +191,9 @@ class BertForNERAndRE(BaseModel):
         partition to be supplied in the Dataset objects at `self.datasets`.
         """
         # Gather everything we need to run a training session
-        optimizers = self.prepare_optimizers()
+        optimizers = self._prepare_optimizers()
         training_data = self.prepare_data_for_training()
+        k_folds = len(training_data[0])
         output_dirs = model_utils.prepare_output_directory(self.config)
 
         metrics = model_utils.setup_metrics_callback(
@@ -203,23 +204,23 @@ class BertForNERAndRE(BaseModel):
             output_dirs=output_dirs,
         )
 
-        # Training loop
-        k_folds = len(training_data[0])
-        for fold in range(k_folds):
-            # Use mixed precision training if Apex is installed and CUDA device available
-            try:
-                if torch.cuda.is_available():
-                    from apex import amp
-                    self.model, optimizers = amp.initialize(self.model, optimizers, opt_level='O1')
-                    LOGGER.info("Imported Apex. Training with mixed precision (opt_level='O1').")
-                else:
-                    LOGGER.info(('Apex is installed but no CUDA device is available. Training with'
-                                 ' standard precision.'))
-            except ImportError:
-                print(("Install Apex for faster training times and reduced memory usage"
-                       " (https://github.com/NVIDIA/apex)."))
-                LOGGER.info("Couldn't import Apex. Training with standard precision.")
+        # Use mixed precision training if Apex is installed , CUDA device available and we aren't
+        # cross-validating (see: https://github.com/NVIDIA/apex/issues/392)
+        try:
+            if torch.cuda.is_available() and k_folds == 1:
+                from apex import amp
+                self.model, optimizers = amp.initialize(self.model, optimizers, opt_level='O1')
+                LOGGER.info("Imported Apex. Training with mixed precision (opt_level='O1').")
+            else:
+                LOGGER.info(('Apex is installed but no CUDA device is available. Training with'
+                            ' standard precision.'))
+        except ImportError:
+            print(("Install Apex for faster training times and reduced memory usage"
+                   " (https://github.com/NVIDIA/apex)."))
+            LOGGER.info("Couldn't import Apex. Training with standard precision.")
 
+        # Training loop
+        for fold in range(k_folds):
             # Use multiple-GPUS if available
             if self.n_gpus > 1:
                 self.model = torch.nn.DataParallel(self.model)
@@ -269,7 +270,6 @@ class BertForNERAndRE(BaseModel):
                             }
 
                             optimizer = optimizers[model_idx]
-                            optimizer.zero_grad()
 
                             outputs = self.model(**inputs)
                             ner_loss, re_loss = outputs[:2]
@@ -302,14 +302,15 @@ class BertForNERAndRE(BaseModel):
                             train_steps[model_idx] += 1
 
                             optimizer.step()
+                            optimizer.zero_grad()
 
-                        # Update train loss in progress bar
-                        postfix = {
-                            'NER_loss': f'{train_ner_loss[model_idx] / train_steps[model_idx]:.4f}',
-                            'RE_loss': f'{train_re_loss[model_idx] / train_steps[model_idx]:.4f}',
-                            'joint_loss': f'{train_loss_joint[model_idx] / train_steps[model_idx]:.4f}',
-                        }
-                        pbar.set_postfix(postfix)
+                            # Update train loss in progress bar
+                            postfix = {
+                                'NER_loss': f'{train_ner_loss[model_idx] / train_steps[model_idx]:.4f}',
+                                'RE_loss': f'{train_re_loss[model_idx] / train_steps[model_idx]:.4f}',
+                                'joint_loss': f'{train_loss_joint[model_idx] / train_steps[model_idx]:.4f}',
+                            }
+                            pbar.set_postfix(postfix)
 
                 for metric in metrics:
                     metric.on_epoch_end()
@@ -319,7 +320,7 @@ class BertForNERAndRE(BaseModel):
             # Clear and rebuild the model at end of each fold (except for the last fold)
             if k_folds > 1 and fold < k_folds - 1:
                 self.reset_model()
-                optimizers = self.prepare_optimizers()
+                optimizers = self._prepare_optimizers()
 
                 for metric in metrics:
                     metric.on_fold_end()  # bumps internal fold counter
@@ -487,7 +488,7 @@ class BertForNERAndRE(BaseModel):
 
         return ner_preds_masked, re_preds
 
-    def prepare_optimizers(self):
+    def _prepare_optimizers(self):
         """Returns a list of PyTorch optimizers, one per output layer in `self.model`.
 
         For each output layer in `self.model`, creates an optmizer based on the given config at
