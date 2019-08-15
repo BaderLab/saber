@@ -321,16 +321,16 @@ class TestBertForNER(object):
 
     def test_prepare_optimizers(self, bert_for_ner_specify):
         """Asserts that the returned optimizer object is as expected after call to
-        `BertForNER.prepare_optimizers()`.
+        `BertForNER._prepare_optimizers()`.
         """
-        actual = bert_for_ner_specify.prepare_optimizers()
+        actual = bert_for_ner_specify._prepare_optimizers()
 
         assert all(isinstance(opt, AdamW) for opt in actual)
 
     def test_prepare_optimizers_mt(self, bert_for_ner_specify_mt):
         """Asserts that the returned optimizer object is as expected after call to
-        `BertForNER.prepare_optimizers()` for a multi-task model.
+        `BertForNER._prepare_optimizers()` for a multi-task model.
         """
-        actual = bert_for_ner_specify_mt.prepare_optimizers()
+        actual = bert_for_ner_specify_mt._prepare_optimizers()
 
         assert all(isinstance(opt, AdamW) for opt in actual)

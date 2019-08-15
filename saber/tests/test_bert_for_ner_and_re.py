@@ -212,14 +212,14 @@ class TestBertForNERAndRE(object):
 
     def test_prepare_optimizers(self, bert_for_ner_and_re_specify):
         """Asserts that the returned optimizer object is as expected after call to
-        `BertForNERAndRE.prepare_optimizers()`.
+        `BertForNERAndRE._prepare_optimizers()`.
         """
-        actual = bert_for_ner_and_re_specify.prepare_optimizers()
+        actual = bert_for_ner_and_re_specify._prepare_optimizers()
 
         assert all(isinstance(opt, AdamW) for opt in actual)
 
     def test_prepare_optimizers_mt(self):
         """Asserts that the returned optimizer object is as expected after call to
-        `BertForNERAndRE.prepare_optimizers()` for a multi-task model.
+        `BertForNERAndRE._prepare_optimizers()` for a multi-task model.
         """
         pass

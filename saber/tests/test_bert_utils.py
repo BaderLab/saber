@@ -212,7 +212,7 @@ class TestBertUtils(object):
 
     def test_get_bert_optimizer(self, bert_for_ner_specify):
         """Asserts that the returned optimizer object is as expected after call to
-        `BertForNER.prepare_optimizers()` for a single-task model.
+        `bert_utils.get_bert_optimizer()` for a single-task model.
         """
         model, config = bert_for_ner_specify.model, bert_for_ner_specify.config
 
