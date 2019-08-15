@@ -38,6 +38,11 @@ class BiaffineAttention(torch.nn.Module):
         self.bilinear = torch.nn.Bilinear(in_features, in_features, out_features, bias=False)
         self.linear = torch.nn.Linear(2 * in_features, out_features, bias=True)
 
+        self.reset_parameters()
+
     def forward(self, x_1, x_2):
-        # return self.bilinear(x_1, x_2) + self.linear(torch.cat((x_1, x_2), dim=-1))
-        return self.bilinear(x_1, x_2)
+        return self.bilinear(x_1, x_2) + self.linear(torch.cat((x_1, x_2), dim=-1))
+
+    def reset_parameters(self):
+        self.bilinear.reset_parameters()
+        self.linear.reset_parameters()
