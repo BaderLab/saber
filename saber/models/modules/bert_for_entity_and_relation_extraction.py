@@ -2,15 +2,15 @@ import copy
 from itertools import permutations
 
 import torch
+from pytorch_transformers import BertModel
+# TODO (John): This can be shortned to from pytorch_transformers import x after next release
+from pytorch_transformers.modeling_bert import BertPreTrainedModel
 from torch import nn
 from torch.nn import CrossEntropyLoss
 
-# TODO (John): This can be shortned to from pytorch_transformers import x after next release
-from pytorch_transformers.modeling_bert import BertPreTrainedModel
-from pytorch_transformers import BertModel
-
 from ...constants import CHUNK_END_TAGS
 from ...constants import NEG_VALUE
+from ...constants import PAD_VALUE
 from ...constants import TOK_MAP_PAD
 from .biaffine_classifier import BiaffineAttention
 
@@ -101,7 +101,7 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
 
         # NER Module
         self.bert = BertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.dropout_rate)
         self.ent_classifier = nn.Linear(config.hidden_size, self.num_ent_labels)
 
         self.apply(self.init_weights)
@@ -116,12 +116,18 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         dim_transformer_encoder = 1048
 
         # Embedding layer for predicted entities
-        self.embed = nn.Embedding(self.num_ent_labels, entity_embed_size)
+        self.embed = nn.Sequential(
+            nn.Embedding(self.num_ent_labels, entity_embed_size,
+                         padding_idx=PAD_VALUE, scale_grad_by_freq=True),
+            nn.Dropout(config.dropout_rate)
+        )
+        self.dropout_2d = nn.Dropout2d(config.dropout_rate)
 
         # Transformer Encoder
         encoder_layer = nn.TransformerEncoderLayer(d_model=config.hidden_size + entity_embed_size,
                                                    nhead=num_attn_heads,
-                                                   dim_feedforward=dim_transformer_encoder)
+                                                   dim_feedforward=dim_transformer_encoder,
+                                                   dropout=self.config.dropout_rate)
         encoder_norm = nn.LayerNorm(config.hidden_size + entity_embed_size)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layer,
                                                          num_layers=num_encoder_layers,
@@ -131,10 +137,10 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         projection = nn.Sequential(
             nn.Linear(config.hidden_size + entity_embed_size, head_tail_ffnns_size),
             nn.ReLU(),
-            nn.Dropout(config.hidden_dropout_prob),
+            nn.Dropout(config.dropout_rate),
             nn.Linear(head_tail_ffnns_size, head_tail_ffnns_size // 2),
             nn.ReLU(),
-            nn.Dropout(config.hidden_dropout_prob),
+            nn.Dropout(config.dropout_rate),
         )
         self.ffnn_head = copy.deepcopy(projection)
         self.ffnn_tail = copy.deepcopy(projection)
@@ -161,6 +167,7 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         # Concatenate output of BERT with embeddings of predicted token labels to get
         # entity aware contextualized word embeddings
         sequence_output = torch.cat((sequence_output, embed_ent_labels), dim=-1)
+        sequence_output = self.dropout_2d(sequence_output)
 
         # Learn a second set of latent features over the entity aware contextualized word embeddings
         # transformer_encoder expects sequence_output to be of shape S (sequence length),
@@ -169,9 +176,10 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         sequence_output = \
             self.transformer_encoder(sequence_output,
                                      # transformer_encoder expects src_key_padding_mask to be of
-                                     # shape (N, S), and True where  values should be masked
+                                     # shape (N, S), and True where values should be masked
                                      src_key_padding_mask=torch.bitwise_not(attention_mask.bool()))
         sequence_output = torch.transpose(sequence_output, 0, 1)
+        sequence_output = self.dropout(sequence_output)
 
         # ent_indices contains all indices in sequence_output corresponding to the final tag of a
         # predicted entity. proj_rel_labels contains the true relation labels for each pair of

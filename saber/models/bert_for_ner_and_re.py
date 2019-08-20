@@ -128,6 +128,8 @@ class BertForNERAndRE(BaseModel):
         config.__dict__['num_ent_labels'] = num_ent_labels
         config.__dict__['num_rel_labels'] = num_rel_labels
         config.__dict__['rel_class_weight'] = rel_class_weight
+        # This is different than BERTs hidden layer dropout rate
+        config.__dict__['dropout_rate'] = self.config.dropout_rate
 
         # Initializes the model using our modified config
         self.model = BertForEntityAndRelationExtraction.from_pretrained(

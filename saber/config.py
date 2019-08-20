@@ -156,7 +156,7 @@ class Config(object):
             args['learning_rate'] = config['training'].getfloat('learning_rate')
             args['decay'] = config['training'].getfloat('decay')
             args['grad_norm'] = config['training'].getfloat('grad_norm')
-            args['dropout_rate'] = config['training']['dropout_rate'].split(',')
+            args['dropout_rate'] = config['training'].getfloat('dropout_rate')
             args['batch_size'] = config['training'].getint('batch_size')
             args['validation_split'] = config['training'].getfloat('validation_split')
             args['k_folds'] = config['training'].getint('k_folds')
@@ -206,12 +206,6 @@ class Config(object):
         args['output_folder'] = generic_utils.clean_path(args['output_folder'])
         if args['pretrained_model'] and args['pretrained_model'] not in PRETRAINED_MODELS:
             args['pretrained_model'] = generic_utils.clean_path(args['pretrained_model'])
-        # build dictionary for dropout rates
-        args['dropout_rate'] = {
-            'input': float(args['dropout_rate'][0]),
-            'output': float(args['dropout_rate'][1]),
-            'recurrent': float(args['dropout_rate'][2]),
-        }
 
         return args
 
@@ -254,11 +248,8 @@ class Config(object):
         parser.add_argument('--decay', required=False, type=float,
                             help=('float >= 0. Learning rate decay over each update. Note that for '
                                   'certain optimizers this value is ignored. Defaults to 0.'))
-        parser.add_argument('--dropout_rate', required=False, nargs=3, type=float,
-                            metavar=('input', 'output', 'recurrent'),
-                            help=('Expects three values, separated by a space, which specify the '
-                                  'fraction of units to drop for input, output and recurrent '
-                                  'connections respectively. Values must be between 0 and 1.'))
+        parser.add_argument('--dropout_rate', required=False, type=float,
+                            help='float between 0 and 1. Fraction of the input units to drop.')
         parser.add_argument('--grad_norm', required=False, type=float,
                             help='Tau threshold value for gradient normalization, defaults to 1.')
         parser.add_argument('--k_folds', required=False, type=int,
