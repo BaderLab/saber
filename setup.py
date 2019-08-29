@@ -33,7 +33,7 @@ setuptools.setup(
     ],
     install_requires=[
         'scikit-learn>=0.20.1',
-        'pytorch-transformers>=1.0.0',
+        'pytorch-transformers>=1.1.0',
         'Flask>=1.0.2',
         'waitress>=1.1.0',
         'Keras-Preprocessing>=1.1.0',
