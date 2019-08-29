@@ -33,6 +33,7 @@ setuptools.setup(
     ],
     install_requires=[
         'scikit-learn>=0.20.1',
+        'torch>=1.2.0',
         'pytorch-transformers>=1.0.0',
         'Flask>=1.0.2',
         'waitress>=1.1.0',
