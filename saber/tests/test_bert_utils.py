@@ -216,6 +216,6 @@ class TestBertUtils(object):
         """
         model, config = bert_for_ner_specify.model, bert_for_ner_specify.config
 
-        actual = bert_utils.get_bert_optimizer(model, config)
+        actual = bert_utils.get_bert_optimizer(config, model)
 
         assert isinstance(actual, AdamW)
