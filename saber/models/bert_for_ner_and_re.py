@@ -233,6 +233,7 @@ class BertForNERAndRE(BaseModel):
 
             for epoch in range(self.config.epochs):
                 self.model.train()
+                self.model.zero_grad()
 
                 train_ner_loss = [0] * len(self.num_ent_labels)
                 train_re_loss = [0] * len(self.num_ent_labels)
@@ -281,11 +282,7 @@ class BertForNERAndRE(BaseModel):
                                 ner_loss = ner_loss.mean()
                                 re_loss = re_loss.mean()
 
-                            # TODO (John): Hotfix, this should be added to a config
-                            if epoch > 0:
-                                loss = ner_loss + re_loss
-                            else:
-                                loss = ner_loss
+                            loss = ner_loss + re_loss
 
                             try:
                                 with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -318,6 +315,9 @@ class BertForNERAndRE(BaseModel):
                     metric.on_epoch_end()
 
                 pbar.close()
+
+                # Delete anything that was placed on the GPU
+                del inputs, outputs
 
             # Clear and rebuild the model at end of each fold (except for the last fold)
             if k_folds > 1 and fold < k_folds - 1:
@@ -361,7 +361,6 @@ class BertForNERAndRE(BaseModel):
 
                 input_ids = input_ids.to(self.device)
                 orig_to_tok_map = orig_to_tok_map.to(self.device)
-                token_type_ids = torch.zeros_like(input_ids)
                 attention_mask = attention_mask.to(self.device)
                 ent_labels = ent_labels.to(self.device)
                 rel_labels = [training_data[partition]['rel_labels'][idx] for idx in batch_indices]
@@ -369,7 +368,6 @@ class BertForNERAndRE(BaseModel):
                 outputs = self.model(
                     input_ids=input_ids,
                     orig_to_tok_map=orig_to_tok_map,
-                    token_type_ids=token_type_ids,
                     attention_mask=attention_mask,
                     ent_labels=ent_labels,
                     rel_labels=rel_labels,
@@ -416,6 +414,9 @@ class BertForNERAndRE(BaseModel):
                 eval_joint_loss += loss.item()
                 eval_steps += 1
 
+        # Delete anything that was placed on the GPU
+        del input_ids, orig_to_tok_map, attention_mask, ent_labels
+
         return y_true_ner, y_pred_ner, y_true_re, y_pred_re
 
     def predict(self, tokens):
@@ -452,7 +453,6 @@ class BertForNERAndRE(BaseModel):
             inputs = {
                 'input_ids': input_ids.to(self.device),
                 'orig_to_tok_map': orig_to_tok_map.to(self.device),
-                'token_type_ids': torch.zeros_like(input_ids).to(self.device),
                 'attention_mask': attention_mask.to(self.device),
             }
 
@@ -488,6 +488,9 @@ class BertForNERAndRE(BaseModel):
             if len(ner_preds_masked) == 1:
                 ner_preds_masked = ner_preds_masked[0]
 
+        # Delete anything that was placed on the GPU
+        del inputs, outputs
+
         return ner_preds_masked, re_preds
 
     def _prepare_optimizers(self):
@@ -500,7 +503,7 @@ class BertForNERAndRE(BaseModel):
         Returns:
             A list of PyTorch optimizers initiated from the given config at `self.config`.
         """
-        optimizers = [bert_utils.get_bert_optimizer(self.model, self.config)
+        optimizers = [bert_utils.get_bert_optimizer(self.config, self.model)
                       for _, _ in enumerate(self.num_ent_labels)]
 
         return optimizers

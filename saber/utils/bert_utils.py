@@ -241,7 +241,7 @@ def get_dataloader_for_bert(processed_dataset, batch_size, model_idx=-1):
     return dataloaders
 
 
-def get_bert_optimizer(model, config):
+def get_bert_optimizer(config, model):
     """Returns an Adam optimizer configured for optimization of a BERT model (`model`).
 
     Args:

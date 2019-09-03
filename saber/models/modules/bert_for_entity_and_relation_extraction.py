@@ -116,12 +116,7 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         dim_transformer_encoder = 1048
 
         # Embedding layer for predicted entities
-        self.embed = nn.Sequential(
-            nn.Embedding(self.num_ent_labels, entity_embed_size,
-                         padding_idx=PAD_VALUE, scale_grad_by_freq=True),
-            nn.Dropout(config.dropout_rate)
-        )
-        self.dropout_2d = nn.Dropout2d(config.dropout_rate)
+        self.embed = nn.Embedding(self.num_ent_labels, entity_embed_size, padding_idx=PAD_VALUE, scale_grad_by_freq=True)
 
         # Transformer Encoder
         encoder_layer = nn.TransformerEncoderLayer(d_model=config.hidden_size + entity_embed_size,
@@ -155,31 +150,12 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
                             attention_mask=attention_mask, head_mask=head_mask)
         sequence_output = outputs[0]
 
-        sequence_output = self.dropout(sequence_output)
-
         # NER classification
-        ner_logits = self.ent_classifier(sequence_output)
+        ner_logits = self.ent_classifier(self.dropout(sequence_output))
 
         # Map predicted NER labels to embeddings
         ner_preds = torch.argmax(ner_logits, dim=-1)
         embed_ent_labels = self.embed(ner_preds)
-
-        # Concatenate output of BERT with embeddings of predicted token labels to get
-        # entity aware contextualized word embeddings
-        sequence_output = torch.cat((sequence_output, embed_ent_labels), dim=-1)
-        sequence_output = self.dropout_2d(sequence_output)
-
-        # Learn a second set of latent features over the entity aware contextualized word embeddings
-        # transformer_encoder expects sequence_output to be of shape S (sequence length),
-        # N (batch size), E (feature dim)
-        sequence_output = torch.transpose(sequence_output, 0, 1)
-        sequence_output = \
-            self.transformer_encoder(sequence_output,
-                                     # transformer_encoder expects src_key_padding_mask to be of
-                                     # shape (N, S), and True where values should be masked
-                                     src_key_padding_mask=torch.bitwise_not(attention_mask.bool()))
-        sequence_output = torch.transpose(sequence_output, 0, 1)
-        sequence_output = self.dropout(sequence_output)
 
         # ent_indices contains all indices in sequence_output corresponding to the final tag of a
         # predicted entity. proj_rel_labels contains the true relation labels for each pair of
@@ -198,6 +174,23 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
 
         # The RE module is only invoked if there were predicted entities
         if ent_indices.nelement() > 0:
+            # Concatenate output of BERT with embeddings of predicted token labels to get
+            # entity aware contextualized word embeddings
+            sequence_output = torch.cat((sequence_output, embed_ent_labels), dim=-1)
+            sequence_output = self.dropout(sequence_output)
+
+            # Learn a second set of latent features over the entity aware contextualized word embeddings
+            # transformer_encoder expects sequence_output to be of shape S (sequence length),
+            # N (batch size), E (feature dim)
+            sequence_output = torch.transpose(sequence_output, 0, 1)
+            sequence_output = \
+                self.transformer_encoder(sequence_output,
+                                         # transformer_encoder expects src_key_padding_mask to be of
+                                         # shape (N, S), and True where values should be masked
+                                         src_key_padding_mask=torch.bitwise_not(attention_mask.bool()))
+            sequence_output = torch.transpose(sequence_output, 0, 1)
+            sequence_output = self.dropout(sequence_output)
+
             heads = sequence_output[ent_indices[:, 0], ent_indices[:, 1], :]
             tails = sequence_output[ent_indices[:, 0], ent_indices[:, 2], :]
 

@@ -213,6 +213,7 @@ class BertForNER(BaseModel):
 
             for epoch in range(self.config.epochs):
                 self.model.train()
+                self.model.zero_grad()
 
                 train_loss = [0] * len(self.num_labels)
                 train_steps = [0] * len(self.num_labels)
@@ -240,7 +241,6 @@ class BertForNER(BaseModel):
 
                             inputs = {
                                 'input_ids': input_ids.to(self.device),
-                                'token_type_ids': torch.zeros_like(input_ids).to(self.device),
                                 'attention_mask': attention_mask.to(self.device),
                                 'labels': labels.to(self.device),
                                 'model_idx': model_idx,
@@ -285,6 +285,9 @@ class BertForNER(BaseModel):
 
                 pbar.close()
 
+                # Delete anything that was placed on the GPU
+                del inputs, outputs
+
             # Clear and rebuild the model at end of each fold (except for the last fold)
             if k_folds > 1 and fold < k_folds - 1:
                 self.reset_model()
@@ -323,13 +326,11 @@ class BertForNER(BaseModel):
                 model_idx = model_idx[0].item()
 
                 input_ids = input_ids.to(self.device)
-                token_type_ids = torch.zeros_like(input_ids)
                 attention_mask = attention_mask.to(self.device)
                 labels = labels.to(self.device)
 
                 outputs = self.model(
                     input_ids=input_ids,
-                    token_type_ids=token_type_ids,
                     attention_mask=attention_mask,
                     labels=labels,
                     model_idx=model_idx,
@@ -363,6 +364,9 @@ class BertForNER(BaseModel):
                 # TODO (John): We don't actually do anything with this?
                 eval_loss += loss.item()
                 eval_steps += 1
+
+        # Delete anything that was placed on the GPU
+        del input_ids, attention_mask, labels
 
         return y_true, y_pred
 
@@ -398,7 +402,6 @@ class BertForNER(BaseModel):
             # Actual prediction happens here
             inputs = {
                 'input_ids': input_ids.to(self.device),
-                'token_type_ids': torch.zeros_like(input_ids).to(self.device),
                 'attention_mask': attention_mask.to(self.device),
             }
 
@@ -434,6 +437,9 @@ class BertForNER(BaseModel):
             if len(y_preds_masked) == 1:
                 y_preds_masked = y_preds_masked[0]
 
+        # Delete anything that was placed on the GPU
+        del inputs, outputs
+
         return y_preds_masked
 
     def _prepare_optimizers(self):
@@ -446,7 +452,7 @@ class BertForNER(BaseModel):
         Returns:
             A list of PyTorch optimizers initiated from the given config at `self.config`.
         """
-        optimizers = [bert_utils.get_bert_optimizer(self.model, self.config)
+        optimizers = [bert_utils.get_bert_optimizer(self.config, self.model)
                       for _, _ in enumerate(self.num_labels)]
 
         return optimizers
