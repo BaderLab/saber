@@ -437,10 +437,14 @@ class BertForNER(BaseModel):
             if len(y_preds_masked) == 1:
                 y_preds_masked = y_preds_masked[0]
 
-        # Delete anything that was placed on the GPU
-        del inputs, outputs
+        # Return the hidden states and attention weights if they existed
+        outputs = tuple(output.to("cpu") for output in outputs)
+        outputs = (y_preds_masked, ) + outputs[2:]
 
-        return y_preds_masked
+        # Delete anything that was placed on the GPU
+        del inputs
+
+        return outputs  # y_preds_masked, (hidden_states), (attentions)
 
     def _prepare_optimizers(self):
         """Returns a list of PyTorch optimizers, one per output layer in `self.model`.

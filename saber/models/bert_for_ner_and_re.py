@@ -75,7 +75,7 @@ class BertForNERAndRE(BaseModel):
         Raises:
             MissingStepException: If either `self.model` or `self.tokenizer` is None.
         """
-        self.model, self.tokenizer = self.__dict__.get("model"), self.__dict__.get("tokenizer")
+        self.tokenizer = self.__dict__.get("tokenizer")
 
         if self.model is None or self.tokenizer is None:
             err_msg = ('self.model or self.tokenizer is None. Did you initialize a model'
@@ -459,6 +459,8 @@ class BertForNERAndRE(BaseModel):
             outputs = self.model(**inputs)
             ner_logits, re_logits = outputs[:2]
 
+            torch.save(outputs[-1], '/Users/johngiorgi/Desktop/attention_weights.pt',)
+
             ner_preds = ner_logits.argmax(dim=-1)
             re_preds = re_logits.argmax(dim=-1) if re_logits is not None else re_logits
 
@@ -488,10 +490,15 @@ class BertForNERAndRE(BaseModel):
             if len(ner_preds_masked) == 1:
                 ner_preds_masked = ner_preds_masked[0]
 
-        # Delete anything that was placed on the GPU
-        del inputs, outputs
+        # Return the hidden states and attention weights if they existed
+        outputs = tuple(output.to("cpu") for output in outputs)
+        outputs = (ner_preds_masked, ) + outputs[2:]
 
-        return ner_preds_masked, re_preds
+        # Delete anything that was placed on the GPU
+        del inputs
+
+        # ner_preds_masked, re_preds, (hidden_states), (attentions)
+        return outputs
 
     def _prepare_optimizers(self):
         """Returns a list of PyTorch optimizers, one per output layer in `self.model`.

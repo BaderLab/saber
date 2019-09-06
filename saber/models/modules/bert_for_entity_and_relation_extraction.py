@@ -260,6 +260,8 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         """
         ent_indices, proj_rel_labels, missed_rel_labels = [], [], []
 
+        idx_to_ent = {int(key): value for key, value in idx_to_ent.items()}
+
         for sent_idx, (tok_map, ner_pred) in enumerate(zip(orig_to_tok_map, ner_preds)):
             tok_map, ner_pred = orig_to_tok_map[sent_idx], ner_preds[sent_idx]
             # Get all indices representing original tokens that were predicted to be a

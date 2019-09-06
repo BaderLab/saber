@@ -117,7 +117,8 @@ class TestBertUtils(object):
         actual_indexed_tokens, actual_orig_to_tok_map, actual_attention_mask = \
             bert_utils.index_pad_mask_bert_tokens(bert_tokens,
                                                   orig_to_tok_map=orig_to_tok_map,
-                                                  tokenizer=bert_tokenizer)
+                                                  tokenizer=bert_tokenizer,
+                                                  maxlen=MAX_SENT_LEN)
 
         expected_orig_to_tok_map = torch.as_tensor(
             [tm + [TOK_MAP_PAD] * (MAX_SENT_LEN - len(tm)) for tm in orig_to_tok_map]
@@ -137,6 +138,7 @@ class TestBertUtils(object):
             bert_utils.index_pad_mask_bert_tokens(tokens=bert_tokens,
                                                   orig_to_tok_map=orig_to_tok_map,
                                                   tokenizer=bert_tokenizer,
+                                                  maxlen=MAX_SENT_LEN,
                                                   labels=bert_labels,
                                                   tag_to_idx=tag_to_idx)
 

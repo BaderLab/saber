@@ -53,6 +53,10 @@ def process_dataset_for_bert(dataset, tokenizer):
     processed_dataset = {}
 
     for partition in constants.PARTITIONS:
+        # Don't truncate the eval partitions, this could lead us to drop labels, preventing us from
+        # fairly comparing to others.
+        maxlen = constants.MAX_SENT_LEN if partition == 'train' else None
+
         if dataset.type_seq[partition] is not None:
             # Tokenize pre-tokenized text using WordPiece tokenizer
             bert_tokens, orig_to_tok_map, bert_labels = \
@@ -65,6 +69,7 @@ def process_dataset_for_bert(dataset, tokenizer):
                 index_pad_mask_bert_tokens(tokens=bert_tokens,
                                            orig_to_tok_map=orig_to_tok_map,
                                            tokenizer=tokenizer,
+                                           maxlen=maxlen,
                                            labels=bert_labels,
                                            tag_to_idx=dataset.type_to_idx['ent'])
 
@@ -137,7 +142,7 @@ def wordpiece_tokenize_sents(tokens, tokenizer, labels=None):
     return bert_tokens, orig_to_tok_map
 
 
-def index_pad_mask_bert_tokens(tokens, orig_to_tok_map, tokenizer, labels=None, tag_to_idx=None):
+def index_pad_mask_bert_tokens(tokens, orig_to_tok_map, tokenizer, maxlen=None, labels=None, tag_to_idx=None):
     """Convert `tokens`, `orig_to_tok_map` to indices, pads them, and generates the corresponding
     attention masks.
 
@@ -146,6 +151,7 @@ def index_pad_mask_bert_tokens(tokens, orig_to_tok_map, tokenizer, labels=None, 
         orig_to_tok_map (list). A list of list mapping token indices of pre-bert-tokenized text to
             token indices in post-bert-tokenized text.
         tokenizer (BertTokenizer): An object with methods for tokenizing text for input to BERT.
+        maxlen (int): TODO.
         labels (list): A list of lists containing token-level labels for a collection of sentences.
         tag_to_idx (dictionary): A dictionary mapping token-level tags/labels to unique integers.
 
@@ -162,7 +168,7 @@ def index_pad_mask_bert_tokens(tokens, orig_to_tok_map, tokenizer, labels=None, 
     # Convert sequences to indices and pad
     indexed_tokens = pad_sequences(
         sequences=[tokenizer.convert_tokens_to_ids(sent) for sent in tokens],
-        maxlen=constants.MAX_SENT_LEN,
+        maxlen=maxlen,
         dtype='long',
         padding='post',
         truncating='post',
@@ -171,7 +177,7 @@ def index_pad_mask_bert_tokens(tokens, orig_to_tok_map, tokenizer, labels=None, 
 
     orig_to_tok_map = pad_sequences(
         sequences=orig_to_tok_map,
-        maxlen=constants.MAX_SENT_LEN,
+        maxlen=maxlen,
         dtype='long',
         padding='post',
         truncating='post',
@@ -184,7 +190,7 @@ def index_pad_mask_bert_tokens(tokens, orig_to_tok_map, tokenizer, labels=None, 
     if labels:
         indexed_labels = pad_sequences(
             sequences=[[tag_to_idx[lab] for lab in sent] for sent in labels],
-            maxlen=constants.MAX_SENT_LEN,
+            maxlen=maxlen,
             dtype='long',
             padding="post",
             truncating="post",

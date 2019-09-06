@@ -8,12 +8,12 @@ from itertools import chain
 from operator import itemgetter
 from pprint import pprint
 
-from spacy import displacy
-
 from seqeval.metrics.sequence_labeling import get_entities
+from spacy import displacy
 
 from . import constants
 from .config import Config
+from .constants import CONFIG_FILENAME
 from .dataset import CoNLL2003DatasetReader
 from .dataset import CoNLL2004DatasetReader
 from .preprocessor import Preprocessor
@@ -92,13 +92,13 @@ class Saber(object):
                       'settings': {}}
 
         for model in self.models:
-            y_preds = model.predict(sents)
-            for y_pred in y_preds:
+            outputs = model.predict(sents)
+            for pred in outputs[0]:
                 # Accumulate predicted entities
-                for chunk in get_entities(y_pred):
+                for chunk in get_entities(pred):
                     # Chunks are tuples (label, start, end), offsets is a lists of lists of tuples
                     start = char_offsets[chunk[1]][0]
-                    end = char_offsets[chunk[-1] - 1][-1]
+                    end = char_offsets[chunk[-1]][-1]
                     text = processed_text[start:end]
                     label = chunk[0]
 
@@ -231,14 +231,18 @@ class Saber(object):
             attributes_filepath = os.path.join(model_dir, constants.ATTRIBUTES_FILENAME)
             model_attributes = pickle.load(open(attributes_filepath, "rb"))
 
+            # This is the config that was used when training the model
+            loaded_config = Config(os.path.join(model_dir, CONFIG_FILENAME))
+
             # Easiest to use a Dataset object to hold these data objects
             datasets = []
-            attributes_for_inference = zip(model_attributes['type_to_idx'],
-                                           model_attributes['idx_to_tag'])
+            attributes_for_inference = zip(
+                model_attributes['type_to_idx'], model_attributes['idx_to_tag']
+            )
             for type_to_idx, idx_to_tag in attributes_for_inference:
-                if self.config.dataset_reader == 'conll2003datasetreader':
+                if loaded_config.dataset_reader == 'conll2003datasetreader':
                     dataset = CoNLL2003DatasetReader()
-                elif self.config.dataset_reader == 'conll2004datasetreader':
+                elif loaded_config.dataset_reader == 'conll2004datasetreader':
                     dataset = CoNLL2004DatasetReader()
                 dataset.type_to_idx = type_to_idx
                 dataset.idx_to_tag = idx_to_tag
@@ -246,18 +250,18 @@ class Saber(object):
                 datasets.append(dataset)
 
             # Import statements are here to prevent circular imports
-            if self.config.model_name == 'bert-ner':
+            if loaded_config.model_name == 'bert-ner':
                 from .models.bert_for_ner import BertForNER
                 model = BertForNER(
-                    config=self.config,
+                    config=loaded_config,
                     datasets=datasets,
                     pretrained_model_name_or_path=model_attributes['pretrained_model_name_or_path']
                 )
                 model.load(model_dir)
-            elif self.config.model_name == 'bert-ner-re':
-                from .models.bert_for_ner import BertForNERAndRC
-                model = BertForNERAndRC(
-                    config=self.config,
+            elif loaded_config.model_name == 'bert-ner-re':
+                from .models.bert_for_ner_and_re import BertForNERAndRE
+                model = BertForNERAndRE(
+                    config=loaded_config,
                     datasets=datasets,
                     pretrained_model_name_or_path=model_attributes['pretrained_model_name_or_path']
                 )
