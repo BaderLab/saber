@@ -179,15 +179,19 @@ def index_pad_mask_bert_tokens(tokens, orig_to_tok_map, tokenizer, labels=None, 
     orig_to_tok_map = torch.as_tensor(orig_to_tok_map)
 
     # Generate attention masks for pad values
-    attention_mask = torch.as_tensor([[float(idx > 0) for idx in sent] for sent in indexed_tokens])
+    attention_mask = torch.where(
+        indexed_tokens == constants.PAD_VALUE,
+        torch.zeros_like(indexed_tokens),
+        torch.ones_like(indexed_tokens)
+    )
 
     if labels:
         indexed_labels = pad_sequences(
             sequences=[[tag_to_idx[lab] for lab in sent] for sent in labels],
             maxlen=constants.MAX_SENT_LEN,
             dtype='long',
-            padding="post",
-            truncating="post",
+            padding='post',
+            truncating='post',
             value=constants.PAD_VALUE
         )
         indexed_labels = torch.as_tensor(indexed_labels)
@@ -250,22 +254,29 @@ def get_bert_optimizer(config, model):
 
     Returns:
         An initialized `AdamW` optimizer for the training of a BERT model (`model`).
-    """
-    if FULL_FINETUNING:
-        param_optimizer = list(model.named_parameters())
-        no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
-        optimizer_grouped_parameters = [
-            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
-             'weight_decay': 0.01,
-             },
-            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
-             'weight_decay': 0.0,
-             }
-        ]
-    else:
-        param_optimizer = list(model.classifier.named_parameters())
-        optimizer_grouped_parameters = [{'params': [p for n, p in param_optimizer]}]
 
-    optimizer = AdamW(optimizer_grouped_parameters, lr=config.learning_rate, correct_bias=False)
+    References:
+        - https://raberrytv.wordpress.com/2017/10/29/pytorch-weight-decay-made-easy/
+    """
+    # These are hardcoded because PytorchTransformers named them to match to TF implementations
+    decay_blacklist = {'LayerNorm.bias', 'LayerNorm.weight'}
+
+    decay, no_decay = [], []
+
+    for name, param in model.named_parameters():
+        # Frozen weights
+        if not param.requires_grad:
+            continue
+        # A shape of len 1 indicates a normalization layer
+        if len(param.shape) == 1 or name.endswith('.bias') or name in decay_blacklist:
+            no_decay.append(param)
+        else:
+            decay.append(param)
+
+    grouped_parameters = [
+        {'params': no_decay, 'weight_decay': 0.0}, {'params': decay, 'weight_decay': 0.01}
+    ]
+
+    optimizer = AdamW(grouped_parameters, lr=config.learning_rate, correct_bias=False)
 
     return optimizer

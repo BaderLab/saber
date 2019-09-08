@@ -89,7 +89,7 @@ class BertForTokenClassificationMultiTask(BertPreTrainedModel):
             [nn.Linear(config.hidden_size, nl) for nl in self.num_labels]
         )
 
-        self.apply(self.init_weights)
+        self.init_weights()
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None,
                 position_ids=None, head_mask=None, model_idx=-1):
