@@ -103,7 +103,7 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         self.dropout = nn.Dropout(config.dropout_rate)
         self.ent_classifier = nn.Linear(config.hidden_size, self.num_ent_labels)
 
-        self.apply(self.init_weights)
+        self.init_weights()
 
         # RE module
         # TODO (John): Once I settle on some kind of structure of hyperparams (a dict?) place
