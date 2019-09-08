@@ -10,7 +10,6 @@ from torch.nn import CrossEntropyLoss
 
 from ...constants import CHUNK_END_TAGS
 from ...constants import NEG_VALUE
-from ...constants import PAD_VALUE
 from ...constants import TOK_MAP_PAD
 from .biaffine_classifier import BiaffineAttention
 
@@ -111,22 +110,9 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         # these there.
         entity_embed_size = 128
         head_tail_ffnns_size = 512
-        num_attn_heads = 4
-        num_encoder_layers = 1
-        dim_transformer_encoder = 1048
 
         # Embedding layer for predicted entities
-        self.embed = nn.Embedding(self.num_ent_labels, entity_embed_size, padding_idx=PAD_VALUE, scale_grad_by_freq=True)
-
-        # Transformer Encoder
-        encoder_layer = nn.TransformerEncoderLayer(d_model=config.hidden_size + entity_embed_size,
-                                                   nhead=num_attn_heads,
-                                                   dim_feedforward=dim_transformer_encoder,
-                                                   dropout=self.config.dropout_rate)
-        encoder_norm = nn.LayerNorm(config.hidden_size + entity_embed_size)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layer,
-                                                         num_layers=num_encoder_layers,
-                                                         norm=encoder_norm)
+        self.embed = nn.Embedding(self.num_ent_labels, entity_embed_size, scale_grad_by_freq=True)
 
         # MLPs for head and tail projections
         projection = nn.Sequential(
@@ -177,18 +163,6 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
             # Concatenate output of BERT with embeddings of predicted token labels to get
             # entity aware contextualized word embeddings
             sequence_output = torch.cat((sequence_output, embed_ent_labels), dim=-1)
-            sequence_output = self.dropout(sequence_output)
-
-            # Learn a second set of latent features over the entity aware contextualized word embeddings
-            # transformer_encoder expects sequence_output to be of shape S (sequence length),
-            # N (batch size), E (feature dim)
-            sequence_output = torch.transpose(sequence_output, 0, 1)
-            sequence_output = \
-                self.transformer_encoder(sequence_output,
-                                         # transformer_encoder expects src_key_padding_mask to be of
-                                         # shape (N, S), and True where values should be masked
-                                         src_key_padding_mask=torch.bitwise_not(attention_mask.bool()))
-            sequence_output = torch.transpose(sequence_output, 0, 1)
             sequence_output = self.dropout(sequence_output)
 
             heads = sequence_output[ent_indices[:, 0], ent_indices[:, 1], :]
