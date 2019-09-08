@@ -179,15 +179,19 @@ def index_pad_mask_bert_tokens(tokens, orig_to_tok_map, tokenizer, labels=None, 
     orig_to_tok_map = torch.as_tensor(orig_to_tok_map)
 
     # Generate attention masks for pad values
-    attention_mask = torch.as_tensor([[float(idx > 0) for idx in sent] for sent in indexed_tokens])
+    attention_mask = torch.where(
+        indexed_tokens == constants.PAD_VALUE,
+        torch.zeros_like(indexed_tokens),
+        torch.ones_like(indexed_tokens)
+    )
 
     if labels:
         indexed_labels = pad_sequences(
             sequences=[[tag_to_idx[lab] for lab in sent] for sent in labels],
             maxlen=constants.MAX_SENT_LEN,
             dtype='long',
-            padding="post",
-            truncating="post",
+            padding='post',
+            truncating='post',
             value=constants.PAD_VALUE
         )
         indexed_labels = torch.as_tensor(indexed_labels)
