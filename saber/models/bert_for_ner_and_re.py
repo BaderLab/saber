@@ -255,7 +255,7 @@ class BertForNERAndRE(BaseModel):
                     dynamic_ncols=True
                 )
 
-                for step, batches in enumerate(pbar):
+                for _, batches in enumerate(pbar):
                     for batch in batches:
                         if batch is not None:
                             (batch_indices, input_ids, attention_mask, ent_labels, orig_to_tok_map,
@@ -282,8 +282,7 @@ class BertForNERAndRE(BaseModel):
                                 ner_loss = ner_loss.mean()
                                 re_loss = re_loss.mean()
 
-                            delay_coef = 1 if epoch else step / len(dataloaders[0])
-                            loss = ner_loss + delay_coef * re_loss
+                            loss = ner_loss + re_loss
 
                             try:
                                 with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -309,7 +308,6 @@ class BertForNERAndRE(BaseModel):
                                 'NER_loss': f'{train_ner_loss[model_idx] / train_steps[model_idx]:.4f}',
                                 'RE_loss': f'{train_re_loss[model_idx] / train_steps[model_idx]:.4f}',
                                 'joint_loss': f'{train_loss_joint[model_idx] / train_steps[model_idx]:.4f}',
-                                'delay_coef': f'{delay_coef:.2f}'
                             }
                             pbar.set_postfix(postfix)
 
