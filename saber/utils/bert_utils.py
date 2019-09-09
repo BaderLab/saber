@@ -274,7 +274,7 @@ def get_bert_optimizer(config, model):
             decay.append(param)
 
     grouped_parameters = [
-        {'params': no_decay, 'weight_decay': 0.0}, {'params': decay, 'weight_decay': 0.01}
+        {'params': no_decay, 'weight_decay': 0.0}, {'params': decay, 'weight_decay': config.weight_decay}
     ]
 
     optimizer = AdamW(grouped_parameters, lr=config.learning_rate, correct_bias=False)
