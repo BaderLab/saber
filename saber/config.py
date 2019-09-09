@@ -154,7 +154,7 @@ class Config(object):
             args['optimizer'] = config['training']['optimizer']
             args['activation'] = config['training']['activation']
             args['learning_rate'] = config['training'].getfloat('learning_rate')
-            args['decay'] = config['training'].getfloat('decay')
+            args['weight_decay'] = config['training'].getfloat('weight_decay')
             args['grad_norm'] = config['training'].getfloat('grad_norm')
             args['dropout_rate'] = config['training'].getfloat('dropout_rate')
             args['batch_size'] = config['training'].getint('batch_size')
@@ -245,9 +245,8 @@ class Config(object):
         parser.add_argument('--debug', required=False, action='store_true',
                             help=('If provided, only a small proportion of the dataset, and any '
                                   'provided embeddings, are loaded. Useful for debugging.'))
-        parser.add_argument('--decay', required=False, type=float,
-                            help=('float >= 0. Learning rate decay over each update. Note that for '
-                                  'certain optimizers this value is ignored. Defaults to 0.'))
+        parser.add_argument('--weight_decay', required=False, type=float,
+                            help=('0 <= float <= 1. Weight decay.'))
         parser.add_argument('--dropout_rate', required=False, type=float,
                             help='float between 0 and 1. Fraction of the input units to drop.')
         parser.add_argument('--grad_norm', required=False, type=float,
