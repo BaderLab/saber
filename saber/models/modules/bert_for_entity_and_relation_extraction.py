@@ -95,9 +95,6 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         self.num_ent_labels = self.config.num_ent_labels[0]
         self.num_rel_labels = self.config.num_rel_labels[0]
 
-        self.ent_class_weights = self.config.__dict__.get('ent_class_weights')
-        self.rel_class_weights = self.config.__dict__.get('rel_class_weights')
-
         # NER Module
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.dropout_rate)
@@ -181,14 +178,8 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         # Add hidden states and attention if they are present
         outputs = (ner_logits, re_logits, ) + outputs[2:]
         if ent_labels is not None and rel_labels is not None:
-            # TODO (John): Need better API for this.
-            ent_class_weights = (torch.tensor(self.ent_class_weights).to(input_ids) if
-                                 self.ent_class_weights is not None else None)
-            rel_class_weights = (torch.tensor(self.rel_class_weights).to(input_ids) if
-                                 self.rel_class_weights is not None else None)
-
-            loss_fct_ner = CrossEntropyLoss(weight=ent_class_weights)
-            loss_fct_re = CrossEntropyLoss(weight=rel_class_weights)
+            loss_fct_ner = CrossEntropyLoss()
+            loss_fct_re = CrossEntropyLoss()
 
             # Computing NER loss
             # Only keep active parts of the loss
