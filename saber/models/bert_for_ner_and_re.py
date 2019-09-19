@@ -136,7 +136,7 @@ class BertForNERAndRE(BaseModel):
 
         self.tokenizer = BertTokenizer.from_pretrained(
             pretrained_model_name_or_path=self.pretrained_model_name_or_path,
-            do_lower_case=False
+            do_lower_case=True
         )
 
         return self.model, self.tokenizer
@@ -311,8 +311,11 @@ class BertForNERAndRE(BaseModel):
                             }
                             pbar.set_postfix(postfix)
 
-                for metric in metrics:
-                    metric.on_epoch_end()
+                if epoch > 4:
+                    for metric in metrics:
+                        metric.on_epoch_end()
+                else:
+                    metric.epoch += 1
 
                 pbar.close()
 

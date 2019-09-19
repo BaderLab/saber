@@ -119,7 +119,7 @@ class BertForNER(BaseModel):
 
         self.tokenizer = BertTokenizer.from_pretrained(
             pretrained_model_name_or_path=self.pretrained_model_name_or_path,
-            do_lower_case=False
+            do_lower_case=True
         )
 
         return self.model, self.tokenizer
