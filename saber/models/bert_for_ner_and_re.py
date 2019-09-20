@@ -314,9 +314,6 @@ class BertForNERAndRE(BaseModel):
                 if epoch > 4:
                     for metric in metrics:
                         metric.on_epoch_end()
-                else:
-                    for metric in metrics:
-                        metric.epoch += 1
 
                 pbar.close()
 
