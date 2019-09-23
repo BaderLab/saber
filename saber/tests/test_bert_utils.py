@@ -39,7 +39,7 @@ tag_to_idx = {
 attention_mask = torch.as_tensor([
     [1.] * len(bert_tokens[0]) + [0.] * (MAX_SENT_LEN - len(bert_tokens[0])),
     [1.] * len(bert_tokens[1]) + [0.] * (MAX_SENT_LEN - len(bert_tokens[1])),
-])
+], dtype=torch.long)
 
 
 class TestBertUtils(object):

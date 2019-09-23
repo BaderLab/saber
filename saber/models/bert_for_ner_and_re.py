@@ -118,8 +118,6 @@ class BertForNERAndRE(BaseModel):
         idx_to_ent = [dataset.idx_to_tag['ent'] for dataset in self.datasets]
         num_ent_labels = self.num_ent_labels
         num_rel_labels = self.num_rel_labels
-        # TODO (John): Temporary, need a better API for this.
-        rel_class_weight = [1] + self.datasets[0].compute_class_weight()['rel'].tolist()
 
         config = BertConfig.from_pretrained(self.pretrained_model_name_or_path)
 
@@ -127,7 +125,6 @@ class BertForNERAndRE(BaseModel):
         config.__dict__['idx_to_ent'] = idx_to_ent
         config.__dict__['num_ent_labels'] = num_ent_labels
         config.__dict__['num_rel_labels'] = num_rel_labels
-        config.__dict__['rel_class_weight'] = rel_class_weight
         # This is different than BERTs hidden layer dropout rate
         config.__dict__['dropout_rate'] = self.config.dropout_rate
 
@@ -255,7 +252,7 @@ class BertForNERAndRE(BaseModel):
                     dynamic_ncols=True
                 )
 
-                for _, batches in enumerate(pbar):
+                for step, batches in enumerate(pbar):
                     for batch in batches:
                         if batch is not None:
                             (batch_indices, input_ids, attention_mask, ent_labels, orig_to_tok_map,
@@ -282,7 +279,10 @@ class BertForNERAndRE(BaseModel):
                                 ner_loss = ner_loss.mean()
                                 re_loss = re_loss.mean()
 
-                            loss = ner_loss + re_loss
+                            # Implements entity pre-training using a linear weighting on the re loss
+                            # objective for the first epoch only.
+                            delay_coef = 1 if epoch else step / total
+                            loss = ner_loss + delay_coef * re_loss
 
                             try:
                                 with amp.scale_loss(loss, optimizer) as scaled_loss:

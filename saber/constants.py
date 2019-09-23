@@ -133,7 +133,7 @@ EUTILS_API_ENDPOINT = ('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcg
                        'pubmed&id=')
 # CONFIG
 CONFIG_ARGS = ['model_name', 'save_model', 'dataset_folder', 'output_folder',
-               'pretrained_model', 'optimizer', 'activation', 'learning_rate', 'decay', 'grad_norm',
-               'dropout_rate', 'batch_size', 'k_folds', 'epochs', 'criteria', 'verbose', 'debug',
-               'save_all_weights', 'tensorboard', 'replace_rare_tokens', 'validation_split',
-               'dataset_reader']
+               'pretrained_model', 'optimizer', 'activation', 'learning_rate', 'weight_decay',
+               'grad_norm', 'dropout_rate', 'batch_size', 'k_folds', 'epochs', 'criteria',
+               'verbose', 'debug', 'save_all_weights', 'tensorboard', 'replace_rare_tokens', 
+               'validation_split', 'dataset_reader']

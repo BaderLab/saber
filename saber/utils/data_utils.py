@@ -7,7 +7,7 @@ import os
 import time
 from itertools import chain
 
-from sklearn.model_selection import KFold
+from skmultilearn.model_selection import IterativeStratification
 from sklearn.model_selection import ShuffleSplit
 
 from ..constants import INITIAL_MAPPING
@@ -164,7 +164,7 @@ def setup_dataset_for_transfer(dataset, type_to_idx):
 ####################################################################################################
 
 
-def get_k_folds(training_data, k_folds, shuffle=True, validation_split=0.0):
+def get_k_folds(training_data, k_folds, validation_split=0.0):
     """Splits `training_data` into `k_folds` number of folds for cross-validation.
 
     Returns a list of dictionaries, of length `k_folds` containing copies of `training_data` which
@@ -175,8 +175,6 @@ def get_k_folds(training_data, k_folds, shuffle=True, validation_split=0.0):
             dataset. Keyed by partition ('train', 'test', 'dev') and inputs ('x') and targets ('y')
             for each partition.
         k_folds (int): Number of folds to partition data into.
-        shuffle (bool): Optional, True if the data should be shuffled before splitting. Defaults to
-            True.
         validation_split (float): Optional, if `validation_split`, proportion of
             the total number of training examples to hold-out at random from the train set
             (`training_data['train']) as a validation set (`training_data['valid']`). Defaults to
@@ -197,10 +195,12 @@ def get_k_folds(training_data, k_folds, shuffle=True, validation_split=0.0):
     training_data_cv = []
 
     X, _ = training_data['train']['x']
-    kf = KFold(n_splits=k_folds, shuffle=shuffle, random_state=RANDOM_STATE)
+    y = training_data['train']['y']
+
+    kf = IterativeStratification(n_splits=k_folds, random_state=RANDOM_STATE)
 
     # Loop over folds
-    for train_indices, test_indices in kf.split(X):
+    for train_indices, test_indices in kf.split(X, y):
         # Don't modify original dict
         training_data_cv.append(copy.deepcopy(training_data))
 
