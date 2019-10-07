@@ -1,6 +1,6 @@
 import torch
 from keras_preprocessing.sequence import pad_sequences
-from pytorch_transformers.optimization import AdamW
+from transformers.optimization import AdamW
 from torch.utils import data
 
 from saber import constants

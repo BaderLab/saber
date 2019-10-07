@@ -3,11 +3,11 @@
 """
 import os
 
-from pytorch_transformers import CONFIG_NAME
-from pytorch_transformers import WEIGHTS_NAME
-from pytorch_transformers import BertForTokenClassification
-from pytorch_transformers import BertTokenizer
-from pytorch_transformers.optimization import AdamW
+from transformers import CONFIG_NAME
+from transformers import WEIGHTS_NAME
+from transformers import BertForTokenClassification
+from transformers import BertTokenizer
+from transformers.optimization import AdamW
 
 from ..constants import PARTITIONS
 from ..constants import WORDPIECE

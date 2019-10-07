@@ -3,8 +3,8 @@ import logging
 from torch import nn
 from torch.nn import CrossEntropyLoss
 
-from pytorch_transformers.modeling_bert import BertPreTrainedModel
-from pytorch_transformers import BertModel
+from transformers.modeling_bert import BertPreTrainedModel
+from transformers import BertModel
 
 logger = logging.getLogger(__name__)
 
@@ -91,10 +91,9 @@ class BertForTokenClassificationMultiTask(BertPreTrainedModel):
 
         self.init_weights()
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None,
-                position_ids=None, head_mask=None, model_idx=-1):
-        outputs = self.bert(input_ids, position_ids=position_ids, token_type_ids=token_type_ids,
-                            attention_mask=attention_mask, head_mask=head_mask)
+    def forward(self, input_ids, attention_mask=None, token_type_ids=None, position_ids=None,
+                head_mask=None, labels=None, model_idx=-1):
+        outputs = self.bert(input_ids, attention_mask, token_type_ids, position_ids, head_mask)
         sequence_output = outputs[0]
 
         sequence_output = self.dropout(sequence_output)

@@ -2,8 +2,8 @@ import logging
 from itertools import zip_longest
 
 import torch
-from pytorch_transformers import BertConfig
-from pytorch_transformers import BertTokenizer
+from transformers import BertConfig
+from transformers import BertTokenizer
 from tqdm import tqdm
 
 from .. import constants
