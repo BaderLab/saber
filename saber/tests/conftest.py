@@ -2,7 +2,7 @@
 """
 import pytest
 import spacy
-from pytorch_transformers import BertTokenizer
+from transformers import BertTokenizer
 
 from ..config import Config
 from ..constants import SPACY_MODEL

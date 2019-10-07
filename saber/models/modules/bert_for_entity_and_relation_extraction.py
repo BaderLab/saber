@@ -2,9 +2,9 @@ import copy
 from itertools import permutations
 
 import torch
-from pytorch_transformers import BertModel
-# TODO (John): This can be shortned to from pytorch_transformers import x after next release
-from pytorch_transformers.modeling_bert import BertPreTrainedModel
+from transformers import BertModel
+# TODO (John): This can be shortned to from transformers import x after next release
+from transformers.modeling_bert import BertPreTrainedModel
 from torch import nn
 from torch.nn import CrossEntropyLoss
 
@@ -126,11 +126,10 @@ class BertForEntityAndRelationExtraction(BertPreTrainedModel):
         # Biaffine transformation for relation classification
         self.rel_classifier = BiaffineAttention(head_tail_ffnns_size // 2, self.num_rel_labels)
 
-    def forward(self, input_ids, orig_to_tok_map, token_type_ids=None, attention_mask=None,
-                ent_labels=None, rel_labels=None, position_ids=None, head_mask=None):
+    def forward(self, input_ids, orig_to_tok_map, attention_mask=None, token_type_ids=None,
+                position_ids=None, head_mask=None, ent_labels=None, rel_labels=None):
         # Forward pass through BERT
-        outputs = self.bert(input_ids, position_ids=position_ids, token_type_ids=token_type_ids,
-                            attention_mask=attention_mask, head_mask=head_mask)
+        outputs = self.bert(input_ids, attention_mask, token_type_ids, position_ids, head_mask)
         sequence_output = outputs[0]
 
         # NER classification

@@ -1,7 +1,7 @@
 """Test suite for the `bert_utils` module (saber.utils.bert_utils).
 """
 import torch
-from pytorch_transformers.optimization import AdamW
+from transformers.optimization import AdamW
 from torch.utils.data import RandomSampler
 from torch.utils.data import SequentialSampler
 
